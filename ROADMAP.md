@@ -245,6 +245,9 @@ second cast while a deliberate hold still repeats after completion. SQ
 sequences, faster-cast-rate/equipment timing, overlay light/1-of-N, character,
 and multi-direction details, client-only curse missiles, interruption/refund, and
 remaining semantic event families remain explicit presentation work. A
+strict client-function-30 visual probe now gates the curse missiles on a
+fingerprinted owned Expansion 1.14d empty/single/multi-target matrix rather
+than recovered/community behavior. A
 matched frontend profile also
 removed the title-to-main-menu
 localization stall by buffering each small MPQ-backed TBL once before decoding;
@@ -309,7 +312,7 @@ policy**, and **unresolved**.
 | --- | --- | --- |
 | M0-M14 engine/application foundations | complete | Reproducible core, layered content, Lua runtime, ECS, rendering composition, application host, and service-mesh retirement are established. |
 | M15 asset knowledge | partial | Typed/recovered coverage is broad. The owned 1.14d Expansion Skills/Missiles report now inventories 357 skill rows, 172 server behavior signatures, 11 exact-ID implementations, 346 missing skills, and winning-layer provenance. A second exact-ID report joins Skills/SkillDesc formulas to layered locale TBL text, replacement tokens, and cross-skill references. Retail `MonPreset.txt`, `MonStats2.txt`, `MonLvl.txt`, and `SkillDesc.txt` members omitted from incomplete listfiles are explicitly discovered and pinned into the same immutable generation; unresolved records and source-sensitive mappings remain research work. |
-| M16 presentation primitives | partial | MPQ-backed render/audio primitives exist. Missile entities select record-authored travel/impact DCCs, sounds, exact 1/4/8/16/32-way direction order, authored ground origins, and table-specific luminous blend; semantic timed states resolve States/Overlay records into shared active/apply/remove world overlays without skill branches. MonStats2 `OverlayHeight` now selects Overlay.txt `Height1..4` attachment offsets for live monsters, players use the authored Height2 category, and connected cues retain that category through an ECS presentation anchor. Admitted Skills rows drive SC actor action timing, semantic start/effect cues, cast sounds, and cast overlays through the same world renderer. Connected clients receive a bounded reliable cast/state event tail and mirror only post-baseline facts into their disposable ECS, so the same Lua presentation path runs offline and online without replaying history after join/reconnect. Client assembly consumes a backend-neutral desktop contract; Raylib is the production default and the `ebitengine` tag supplies an experimental retained-composition/input/capture adapter. SQ/FCR/equipment action timing, exact overlay light/variant/character/multi-direction semantics, client-only skill missiles, remaining semantic event families, Ebitengine native audio, console drawing, and GPU palette parity remain. |
+| M16 presentation primitives | partial | MPQ-backed render/audio primitives exist. Missile entities select record-authored travel/impact DCCs, sounds, exact 1/4/8/16/32-way direction order, authored ground origins, and table-specific luminous blend; semantic timed states resolve States/Overlay records into shared active/apply/remove world overlays without skill branches. MonStats2 `OverlayHeight` now selects Overlay.txt `Height1..4` attachment offsets for live monsters, players use the authored Height2 category, and connected cues retain that category through an ECS presentation anchor. Admitted Skills rows drive SC actor action timing, semantic start/effect cues, cast sounds, and cast overlays through the same world renderer. Connected clients receive a bounded reliable cast/state event tail and mirror only post-baseline facts into their disposable ECS, so the same Lua presentation path runs offline and online without replaying history after join/reconnect. A strict owned-runtime probe now gates client-function-30 curse attachment/motion on a complete six-case target matrix. Client assembly consumes a backend-neutral desktop contract; Raylib is the production default and the `ebitengine` tag supplies an experimental retained-composition/input/capture adapter. SQ/FCR/equipment action timing, exact overlay light/variant/character/multi-direction semantics, client-only skill missiles, remaining semantic event families, Ebitengine native audio, console drawing, and GPU palette parity remain. |
 | M17 front end | foundation complete | The Lua-authored front end and Realm flow exist. MPQ-backed locale tables now cross one sequential buffering boundary instead of issuing decoder-granularity random archive reads. Startup warms only title/main-menu assets, secondary destinations use visible main-menu think time, and character interaction animations remain scoped to character creation. Remaining work is UI fidelity, not the former multi-second transition stall or whole-frontend eager preload. |
 | M18 in-game shell | foundation complete | HUD and major overlay shells exist; the party panel now consumes an owner-scoped semantic projection, while remaining raw/ad hoc reads migrate as their gameplay domains mature. |
 | M19 character/item/save fidelity | partial | Canonical profile and Realm character persistence exist; the complete Dark Magic durable semantic character does not. Vanilla save interoperability is out of scope. |
@@ -1030,6 +1033,11 @@ runtime composition and the coverage report.
   new facts as short-lived spatial ECS entities in the disposable connected
   client world so the offline Lua cue/overlay/sound path remains the sole
   presentation consumer.
+- [x] Add a strict owned Expansion 1.14d visual capture/analyzer for client
+  function 30 that fingerprints provenance, rejects Classic/old/server/
+  community/imported-save evidence, normalizes both record-referenced missile
+  layers, and reports the missing empty/single/multi-target matrix without
+  promoting an attachment or motion role.
 - [x] Replace the provisional name-selected self-state placeholder with a
   definition-driven timed self-state/stat-source family: shared cast/mana,
   level and hard-point-synergy formulas, refresh/expiration, checkpoint, and
@@ -1465,8 +1473,16 @@ percentage rounding/ordering remains partial. Ice Bolt and other visually or
 structurally similar skills remain missing until their own Expansion 1.14d
 launch, motion, impact, state, and ordering semantics are verified.
 
-Next: acquire an owned Expansion 1.14d visual vector for client function 30,
-then add the record-referenced client-only curse missile layers without guessing
+The client-function-30 presentation gap now has a strict executable capture
+contract. `curse_presentation_probe` rejects Classic, earlier patches, servers,
+community tools, memory inspection, and imported saves; requires fixed-camera
+stationary visual logs plus owned-MPQ DCC identification; fingerprints the
+capture; normalizes anchor-relative timing/motion; and reports missing empty,
+single, and multi-target cases for both Amplify Damage and Weaken. It promotes
+no role until the six-case owned Expansion 1.14d matrix is populated.
+
+Next: populate and review that owned Expansion 1.14d client-function-30 visual
+matrix, then add the record-referenced client-only curse missile layers without guessing
 the `cltmissilea`/`cltmissilec` attachment and motion roles. Pin Overlay light,
 variant, character restriction, and multi-direction behavior without skill-
 specific renderer branches. Extend the typed connected event view

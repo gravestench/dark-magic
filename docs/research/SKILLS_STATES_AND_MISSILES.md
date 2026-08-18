@@ -337,6 +337,44 @@ target cold resistance/immunity, champion/boss modifiers, exact integer/tick
 ordering, presentation, and animation action timing remain absent. These edges
 must not be inferred from the older reconstruction.
 
+## Client-function-30 curse presentation probe
+
+Owned Expansion 1.14d Skills/Missiles rows establish the presentation inputs,
+but not their client-function-30 attachment roles. Amplify Damage (ID 66)
+references `curseamplifydamage` plus `cursecast`; Weaken (ID 72) references
+`curseweaken` plus `cursecast`. Their DCCs, frame counts, direction counts,
+transparency, and light/color fields are exact data. Those facts alone do not
+say whether each instance attaches to the caster, cursor, or affected target,
+whether one record translates between anchors, or how instance count changes
+with zero, one, or multiple affected targets.
+
+`internal/dev/tools/curse_presentation_probe` makes that missing visual vector
+explicit. It accepts only fixed-camera, stationary-actor video/manual frame
+logs from an executable-fingerprinted, owned Expansion 1.14d single-player
+runtime. Asset identification must use the owned MPQ DCCs. Classic, earlier
+patches, vanilla servers, community tools, memory inspection, and imported save
+characters are rejected. The analyzer fingerprints the sanitized capture,
+requires both record-referenced missile rows to be reported even when absent,
+and normalizes first/last frame, anchor-relative start/end offsets, translation,
+and follow behavior. It reports—but does not fill—coverage gaps for empty,
+single-target, and multi-target cases for both skills.
+Use `target_index` only with a `target` anchor (zero-based into the case's
+`targets` array); omit it for `caster` and `cursor` anchors. A referenced layer
+that is not visible must still be present with `present=false` and an empty
+`instances` array.
+
+Start from
+`docs/research/probes/curse-presentation-lod-114d-expansion.template.json` and
+run:
+
+```shell
+go run ./internal/dev/tools/curse_presentation_probe \
+  -input /path/to/sanitized-curse-presentation.json
+```
+
+No client-function-30 role is promoted into production until the report says
+the six-case matrix is complete and the underlying frame log is reviewed.
+
 Still open are complete skill-level formulas, target/range/LOS and delay policy,
 classification and implementation of the 349 missing configurations,
 additional impact/motion families, richer state/stat-source effects, summons,

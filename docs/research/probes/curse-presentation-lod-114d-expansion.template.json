@@ -1,0 +1,59 @@
+{
+  "schema": "d2legacy.curse_presentation_probe/v1",
+  "target": "diablo-ii-lod-1.14d-expansion",
+  "source": "owned-runtime",
+  "runtime": {
+    "patch": "1.14d",
+    "mode": "expansion",
+    "session": "single-player",
+    "character_origin": "probe-created",
+    "executable_sha256": "REPLACE_WITH_64_LOWERCASE_HEX_SHA256",
+    "observation": "video-frame-log",
+    "asset_identification": "owned-mpq-dcc-comparison",
+    "camera_fixed": true,
+    "actors_stationary": true
+  },
+  "cases": [
+    {
+      "id": "amplify-damage-single-target",
+      "skill_id": 66,
+      "skill_record": "Amplify Damage",
+      "difficulty": "normal",
+      "area": "blood_moor",
+      "caster": { "x": 100, "y": 200 },
+      "cursor": { "x": 300, "y": 220 },
+      "target_records": ["fallen1"],
+      "targets": [{ "x": 300, "y": 220 }],
+      "layers": [
+        {
+          "missile_record": "curseamplifydamage",
+          "present": true,
+          "instances": [
+            {
+              "first_frame": 0,
+              "last_frame": 19,
+              "anchor": "REPLACE_WITH_caster_cursor_OR_target",
+              "start": { "x": 0, "y": 0 },
+              "end": { "x": 0, "y": 0 },
+              "tracks_anchor": false
+            }
+          ]
+        },
+        {
+          "missile_record": "cursecast",
+          "present": true,
+          "instances": [
+            {
+              "first_frame": 0,
+              "last_frame": 24,
+              "anchor": "REPLACE_WITH_caster_cursor_OR_target",
+              "start": { "x": 0, "y": 0 },
+              "end": { "x": 0, "y": 0 },
+              "tracks_anchor": false
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}
