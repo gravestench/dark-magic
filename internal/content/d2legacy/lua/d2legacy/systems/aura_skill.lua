@@ -1,15 +1,38 @@
 -- Reconcile right-selected party auras into explicit ECS relationships.
 --
 -- Assignment owns activation; right-button use never casts the aura. Each
--- winning target relationship is co-composed with its stat source so losing
--- range, party membership, life, level, or selection removes the modifier by
--- destroying one entity. Multiple different state IDs compose, while one
--- deterministic highest-level source wins for an overlapping state ID.
+-- winning target relationship owns one or more ordinary stat sources through
+-- its stable source key. Reconciliation removes the relationship and every
+-- owned source together when eligibility changes. Multiple different state
+-- IDs compose, while one deterministic highest-level source wins for an
+-- overlapping state ID.
 
 local ecs = require("engine.ecs/v1")
 local party = require("d2legacy.policy.party")
 local progression = require("d2legacy.policy.skill_progression")
 local M = {}
+
+local function evaluated_stats(definition, level)
+    local result = {}
+    for _, stat in ipairs(definition.stats) do
+        local value
+        if stat.progression == "ln34" then
+            value = progression.linear(stat.value_base, stat.value_per_level, level)
+        elseif stat.progression == "dm34" then
+            value = progression.diminishing(stat.value_minimum, stat.value_maximum, level)
+        elseif stat.progression == "self_hard_level" then
+            value = level
+        else
+            error("unsupported aura stat progression " .. tostring(stat.progression))
+        end
+        result[#result + 1] = {
+            stat = stat.stat,
+            operation = stat.operation,
+            value = value,
+        }
+    end
+    return result
+end
 
 local function player_maps(entities)
     local by_id, levels = {}, {}
@@ -31,6 +54,7 @@ end
 local function emitter_values(context, player, definition, level, player_id, current)
     local activated = current and current:get("skill_id") == definition.skill_id and current:get("activated_tick")
         or context.tick
+    local stats = evaluated_stats(definition, level)
     return {
         source_id = "aura:" .. player_id .. ":" .. definition.skill_id,
         skill_id = definition.skill_id,
@@ -38,9 +62,10 @@ local function emitter_values(context, player, definition, level, player_id, cur
         state_id = definition.state_id,
         target_state_id = definition.target_state_id,
         radius = progression.linear(definition.radius_base, definition.radius_per_level, level),
-        stat = definition.stat,
-        operation = definition.stat_operation,
-        value = progression.linear(definition.stat_value_base, definition.stat_value_per_level, level),
+        stat = stats[1].stat,
+        operation = stats[1].operation,
+        value = stats[1].value,
+        stats = stats,
         refresh_delay = definition.record_refresh_delay,
         activated_tick = activated,
         entity = player,
@@ -151,6 +176,7 @@ local function desired_effects(entities, emitters, players)
                     stat = emitter.stat,
                     operation = emitter.operation,
                     value = emitter.value,
+                    stats = emitter.stats,
                     refresh_delay = emitter.refresh_delay,
                 }
                 if candidate_wins(candidate, result[key]) then
@@ -200,16 +226,75 @@ local function create_effect(structural, context, value)
             state_id = value.state_id,
             refresh_delay = value.refresh_delay,
         },
-        ["d2legacy.stat.source"] = {
-            target = value.target,
-            source_id = value.source_id,
-            stat = value.stat,
-            operation = value.operation,
-            value = value.value,
-            order = 250,
-        },
     })
     state_event(structural, "state_applied", context.tick, value, "aura_entered")
+end
+
+local function aura_stat_key(target, owner_source_id, stat)
+    return target:id() .. ":" .. owner_source_id .. ":" .. stat
+end
+
+local function desired_stat_sources(effects)
+    local result = {}
+    for _, effect in pairs(effects) do
+        for _, stat in ipairs(effect.stats) do
+            local key = aura_stat_key(effect.target, effect.source_id, stat.stat)
+            assert(not result[key], "duplicate aura stat source")
+            result[key] = {
+                target = effect.target,
+                owner_source_id = effect.source_id,
+                source_id = effect.source_id .. ":" .. stat.stat,
+                stat = stat.stat,
+                operation = stat.operation,
+                value = stat.value,
+                order = 250,
+            }
+        end
+    end
+    return result
+end
+
+local function is_aura_source(source)
+    return string.sub(source:get("owner_source_id"), 1, 5) == "aura:"
+end
+
+local function update_stat_source(source, values)
+    source:set("target", values.target)
+    source:set("owner_source_id", values.owner_source_id)
+    source:set("source_id", values.source_id)
+    source:set("stat", values.stat)
+    source:set("operation", values.operation)
+    source:set("value", values.value)
+    source:set("order", values.order)
+end
+
+local function reconcile_stat_sources(structural, entities, effects)
+    local desired = desired_stat_sources(effects)
+    local existing = {}
+    for _, entity in ipairs(entities) do
+        local source = ecs.get(entity, "d2legacy.stat.source")
+        if source and is_aura_source(source) then
+            local key = aura_stat_key(source:get("target"), source:get("owner_source_id"), source:get("stat"))
+            if existing[key] then
+                structural:destroy(entity)
+            else
+                existing[key] = entity
+            end
+        end
+    end
+    for _, key in ipairs(sorted_keys(desired)) do
+        local values = desired[key]
+        local entity = existing[key]
+        if entity then
+            update_stat_source(ecs.get(entity, "d2legacy.stat.source"), values)
+            existing[key] = nil
+        else
+            structural:create({ ["d2legacy.stat.source"] = values })
+        end
+    end
+    for _, key in ipairs(sorted_keys(existing)) do
+        structural:destroy(existing[key])
+    end
 end
 
 function M.register(definitions)
@@ -222,6 +307,7 @@ function M.register(definitions)
                 "d2legacy.player.learned_skill",
                 "d2legacy.skill.aura_emitter",
                 "d2legacy.skill.aura_effect",
+                "d2legacy.stat.source",
             },
         },
         read = {
@@ -278,13 +364,6 @@ function M.register(definitions)
                     effect:set("skill_id", value.skill_id)
                     effect:set("skill_level", value.skill_level)
                     effect:set("refresh_delay", value.refresh_delay)
-                    local source = assert(ecs.get(entity, "d2legacy.stat.source"), "aura effect has no stat source")
-                    source:set("target", value.target)
-                    source:set("source_id", value.source_id)
-                    source:set("stat", value.stat)
-                    source:set("operation", value.operation)
-                    source:set("value", value.value)
-                    source:set("order", 250)
                     existing[key] = nil
                 else
                     if effect then
@@ -311,6 +390,7 @@ function M.register(definitions)
                     structural:destroy(entity)
                 end
             end
+            reconcile_stat_sources(structural, entities, desired)
         end,
     })
 end

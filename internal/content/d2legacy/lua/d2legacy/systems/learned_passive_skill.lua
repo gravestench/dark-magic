@@ -29,7 +29,7 @@ local function desired_source(learned, definitions)
         source_id = source_id(owner, definition.skill_id),
         stat = passive.stat,
         operation = passive.operation,
-        value = level * passive.value_per_hard_level,
+        value = math.floor(level * passive.value_numerator / passive.value_divisor),
         order = 250,
     }
 end

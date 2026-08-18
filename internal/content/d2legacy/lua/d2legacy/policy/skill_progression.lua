@@ -6,6 +6,13 @@ function M.linear(base, per_level, level)
     return base + math.max(level - 1, 0) * per_level
 end
 
+-- Skills.txt dmXY uses staged integer arithmetic: first convert level to the
+-- bounded 110*level/(level+6) scale, then interpolate between both parameters.
+function M.diminishing(minimum, maximum, level)
+    local scale = math.floor(110 * math.max(level, 0) / (math.max(level, 0) + 6))
+    return minimum + math.floor(scale * (maximum - minimum) / 100)
+end
+
 -- Damage columns use five authored per-level bands: levels 2-8, 9-16,
 -- 17-22, 23-28, and 29+. Values are already shifted into 8.8 raw units by
 -- the definition decoder before they reach this function.

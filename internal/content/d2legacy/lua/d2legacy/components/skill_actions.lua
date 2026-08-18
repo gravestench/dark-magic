@@ -52,7 +52,7 @@ function M.register()
 
     -- A selected aura is durable capability on its owner, not a cast. The
     -- right-skill assignment drives this component while a separate relation
-    -- entity owns each currently affected target and its ordinary stat source.
+    -- entity owns each affected target and its keyed ordinary stat sources.
     ecs.component({
         name = "d2legacy.skill.aura_emitter",
         version = 1,
@@ -71,9 +71,9 @@ function M.register()
         },
     })
 
-    -- The relationship is the lifecycle owner for the co-composed stat source.
-    -- Leaving range, party, level, life, or the selected aura destroys one
-    -- entity and therefore cannot leave a detached modifier behind.
+    -- The relationship source key owns every stat-source entity it produces.
+    -- Leaving range, party, level, life, or the selected aura removes the
+    -- relationship and all keyed modifiers in one reconciliation pass.
     ecs.component({
         name = "d2legacy.skill.aura_effect",
         version = 1,

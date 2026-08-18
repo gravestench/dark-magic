@@ -82,12 +82,12 @@ The research program now has a baseline for every indexed workstream. Implementa
   existing ECS player, stops competing motion, and emits a generic relocation
   fact. Viewport/range, policy 2, invalid-target payment/fallback, owned units,
   and action/presentation timing remain probes.
-- G9 selected-aura tranche: active; exact-ID Might, Defiance, and Blessed Aim
-  use the same right-selected ECS emitter and target relationships co-composed
+- G9 selected-aura tranche: active; exact-ID Might, Defiance, Blessed Aim, and
+  Resist Fire use the same right-selected ECS emitter and target relationships
   with ordinary stat sources. Reviewed record recipes map Might to outgoing
   damage percent and Defiance to generic defense percent; a checkpoint test
-  proves independent
-  distinct-state stacking, while same-state suppression remains deterministic.
+  proves independent distinct-state stacking, while same-state suppression
+  remains deterministic.
   `ClientView/v11`/`WorldView/v5` projects only bounded target/
   state/record-period relationships and reconstructs disposable presentation
   entities against existing unit mirrors, so connected play reuses the offline
@@ -100,6 +100,12 @@ The research program now has a baseline for every indexed workstream. Implementa
   attack-rating source while the aura is not selected, and selecting the aura
   yields to the active party source. Soft-level and external-aura overlap
   ordering remain target-version probes.
+  Resist Fire generalizes one aura relationship to a keyed set of ordinary stat
+  sources: active `dm34` fire resistance and +1 max fire resistance per hard
+  point coexist, while the generic rational learned-passive recipe supplies
+  half the maximum-resistance bonus rounded down only while inactive. Shared
+  mitigation enforces the 95% cap; soft-level and item-source ordering remain
+  probes.
 - G8 combat fidelity tranche 1: active; shared direct-damage commit/result and
   typed six-channel ECS stage facts implemented; death attribution now uses an
   independent ECS consumer marker, and basic melee exposes generic hit/miss/
