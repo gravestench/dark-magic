@@ -62,9 +62,13 @@ The project deliberately targets:
   layering, and extension packages are part of the architecture rather than an
   afterthought.
 
-For the canonical implementation status and ordered gameplay work, see
-[ROADMAP.md](ROADMAP.md). For package ownership and dependency rules, see
-[docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
+Live implementation status and ordered work are tracked in the
+[Roadmap project](https://github.com/users/gravestench/projects/1),
+[issues](https://github.com/gravestench/dark-magic/issues), and
+[milestones](https://github.com/gravestench/dark-magic/milestones). See
+[ROADMAP.md](ROADMAP.md) for the stable high-level direction and
+[docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) for package ownership and
+dependency rules.
 
 ## Client, server, and Realm
 
@@ -144,7 +148,8 @@ live with the documents and packages that own them.
 
 | If you are interested in... | Start here |
 | --- | --- |
-| Current progress and next work | [ROADMAP.md](ROADMAP.md) |
+| Current progress and next work | [Roadmap project](https://github.com/users/gravestench/projects/1), [issues](https://github.com/gravestench/dark-magic/issues), and [milestones](https://github.com/gravestench/dark-magic/milestones) |
+| High-level product direction | [ROADMAP.md](ROADMAP.md) |
 | Engine boundaries and package ownership | [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) |
 | Diablo gameplay rules | [`internal/content/d2legacy`](internal/content/d2legacy) and its Lua modules |
 | Deterministic game/session mechanisms | [`internal/game`](internal/game) |

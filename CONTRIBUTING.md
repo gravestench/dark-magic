@@ -23,8 +23,12 @@ access to the current checkout and have it inspect the project before editing.
 At minimum, it should read:
 
 - [README.md](README.md) for the product and repository orientation;
-- [ROADMAP.md](ROADMAP.md) for current status, ordering, and acceptance
-  boundaries;
+- [ROADMAP.md](ROADMAP.md) for the stable product boundary and technical
+  direction;
+- the [Roadmap project](https://github.com/users/gravestench/projects/1),
+  [issues](https://github.com/gravestench/dark-magic/issues), and
+  [milestones](https://github.com/gravestench/dark-magic/milestones) for current
+  status, ordering, and acceptance boundaries;
 - [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) for dependency and ownership
   rules;
 - the relevant documents under [`docs/research`](docs/research), including the
@@ -33,18 +37,21 @@ At minimum, it should read:
   history for the area being changed; and
 - the issue, milestone, or pull request that defines the requested work.
 
-`ROADMAP.md` is the implementation-status authority. Research documents are the
-behavioral evidence authorities. Neither an LLM's recollection nor a plausible
-implementation upgrades an inferred behavior to verified behavior.
+The linked GitHub issue and milestone are the implementation-status authority;
+the Roadmap project is their live scheduling and organization view. Research
+documents are the behavioral evidence authorities. Neither an LLM's
+recollection nor a plausible implementation upgrades an inferred behavior to
+verified behavior.
 
 A useful starter prompt is:
 
 ```text
 Inspect this repository before editing. Read README.md, CONTRIBUTING.md,
-ROADMAP.md, docs/ARCHITECTURE.md, and the relevant research documents, source
-matrices, packages, and tests. Identify the exact acceptance boundary, the
-current owner of each mechanism and policy, the existing interfaces, and the
-repository evidence supporting the requested behavior.
+ROADMAP.md, the linked GitHub issue and milestone, docs/ARCHITECTURE.md, and the
+relevant research documents, source matrices, packages, and tests. Identify the
+exact acceptance boundary, the current owner of each mechanism and policy, the
+existing interfaces, and the repository evidence supporting the requested
+behavior.
 
 Propose a small coherent plan, then implement it without creating a parallel
 authority. Add executable acceptance coverage, run the relevant test suites,
@@ -59,7 +66,7 @@ evidence is the tie-breaker.
 
 ## Work in acceptance-sized slices
 
-Start by naming the roadmap gate, issue, or acceptance condition being advanced.
+Start by naming the milestone, issue, or acceptance condition being advanced.
 Inspect what already exists before proposing new abstractions. Do not add broad
 content before the mechanism beneath it is coherent, and do not create parallel
 stat, combat, skill, monster, item, quest, transition, session, party,
@@ -70,7 +77,8 @@ A strong contribution normally has one understandable through-line:
 1. establish the missing behavior or mechanism;
 2. connect it through the production path that owns it;
 3. prove the named boundary with executable evidence;
-4. update status or documentation without overstating what passed; and
+4. update the linked issue and any durable documentation without overstating
+   what passed; and
 5. remove temporary scaffolding that is no longer needed.
 
 Comments, unused helper functions, empty test files, test names, or assertions

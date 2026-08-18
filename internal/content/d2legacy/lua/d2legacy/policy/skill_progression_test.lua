@@ -57,6 +57,31 @@ return test.suite({
                     test.expect(progression.diminishing(7, 50, level)):equals(value)
                     test.expect(progression.linear(50, 25, level)):equals(25 + level * 25)
                 end
+                local thorns = {
+                    250,
+                    290,
+                    330,
+                    370,
+                    410,
+                    450,
+                    490,
+                    530,
+                    570,
+                    610,
+                    650,
+                    690,
+                    730,
+                    770,
+                    810,
+                    850,
+                    890,
+                    930,
+                    970,
+                    1010,
+                }
+                for level, value in ipairs(thorns) do
+                    test.expect(progression.linear(250, 40, level)):equals(value)
+                end
             end)
         end),
         test.case("applies_a_snapshotted_cross_skill_damage_percentage", function(t)

@@ -32,6 +32,30 @@ return test.suite({
                         perdelay = "50",
                     },
                     {
+                        Id = "103",
+                        skill = "Fixture Thorns",
+                        srvstfunc = "",
+                        srvdofunc = "65",
+                        aura = "1",
+                        immediate = "",
+                        leftskill = "",
+                        range = "none",
+                        InGame = "1",
+                        aurafilter = "73731",
+                        aurarangecalc = "ln12",
+                        aurastate = "thorns",
+                        auratargetstate = "thorns",
+                        aurastat1 = "thorns_percent",
+                        aurastatcalc1 = "ln34",
+                        mana = "0",
+                        lvlmana = "0",
+                        Param1 = "16",
+                        Param2 = "2",
+                        Param3 = "250",
+                        Param4 = "40",
+                        perdelay = "50",
+                    },
+                    {
                         Id = "998",
                         skill = "Fixture Defiance",
                         srvstfunc = "",
@@ -237,6 +261,7 @@ return test.suite({
                         if path == "data/global/excel/states.txt" then
                             return {
                                 { state = "might", aura = "1", stat = "damagepercent" },
+                                { state = "thorns", aura = "1", stat = "" },
                                 { state = "defiance", aura = "1", stat = "skill_armor_percent" },
                                 { state = "resistfire", aura = "1", stat = "fireresist" },
                                 { state = "passive_resistfire" },
@@ -254,11 +279,17 @@ return test.suite({
                     end,
                 }, { "load" })
                 test.unload_module("d2legacy.data.aura_skills")
-                local definitions = require("d2legacy.data.aura_skills").load({ 98, 100, 105, 110, 115, 125, 998, 999 })
+                local definitions =
+                    require("d2legacy.data.aura_skills").load({ 98, 100, 103, 105, 110, 115, 125, 998, 999 })
                 test.expect(definitions[98].activation):equals("selected_right")
                 test.expect(definitions[98].radius_base):equals(16)
                 test.expect(definitions[98].stat_value_base):equals(40)
                 test.expect(definitions[98].record_refresh_delay):equals(50)
+                test.expect(definitions[103].state_id):equals("thorns")
+                test.expect(definitions[103].stat):equals("thorns_percent")
+                test.expect(definitions[103].stat_operation):equals("add")
+                test.expect(definitions[103].stat_value_base):equals(250)
+                test.expect(definitions[103].stat_value_per_level):equals(40)
                 test.expect(definitions[998].radius_per_level):equals(1)
                 test.expect(definitions[998].stat_value_per_level):equals(5)
                 test.expect(definitions[998].stat):equals("defense")
@@ -298,6 +329,13 @@ return test.suite({
                 test.expect(definitions[999].learned_passive.operation):equals("percent")
                 test.expect(definitions[999].learned_passive.value_numerator):equals(5)
                 test.expect(definitions[999].learned_passive.value_divisor):equals(1)
+                skills[1].immediate = ""
+                test.unload_module("d2legacy.data.aura_skills")
+                local ok, err = pcall(require("d2legacy.data.aura_skills").load, { 98 })
+                test.assert(
+                    not ok and tostring(err):find("unsupported activation flags", 1, true),
+                    "blank immediate must remain scoped to an explicitly reviewed stat recipe"
+                )
             end)
         end),
     },

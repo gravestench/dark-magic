@@ -15,6 +15,13 @@ local stat_recipes = {
     skill_staminapercent = { stat = "skill_staminapercent", operation = "add", formula = "ln34" },
     skill_armor_percent = { stat = "defense", operation = "percent", formula = "ln34" },
     staminarecoverybonus = { stat = "staminarecoverybonus", operation = "add", formula = "ln34" },
+    thorns_percent = {
+        stat = "thorns_percent",
+        operation = "add",
+        formula = "ln34",
+        blank_state_stat = true,
+        blank_immediate = true,
+    },
     velocitypercent = { stat = "velocitypercent", operation = "add", formula = "dm56" },
 }
 
@@ -116,9 +123,19 @@ local function decode_aura_stats(row, label)
     return result
 end
 
+local function authored_stat_has_recipe_flag(row, flag)
+    for index_number = 1, 6 do
+        local recipe = stat_recipes[row["aurastat" .. index_number]]
+        if recipe and recipe[flag] then
+            return true
+        end
+    end
+    return false
+end
+
 local function state_stat_is_authored(row, state_stat, item_stats_by_name)
     if not state_stat or state_stat == "" then
-        return false
+        return authored_stat_has_recipe_flag(row, "blank_state_stat")
     end
     for index_number = 1, 6 do
         local authored_stat = row["aurastat" .. index_number]
@@ -142,7 +159,11 @@ local function decode(row, states_by_name, item_stats_by_name)
     local label = row.skill or ("skill " .. id)
     assert(row.srvstfunc == "" and row.srvdofunc == "65", label .. " has unsupported server functions")
     assert(
-        row.aura == "1" and row.immediate == "1" and row.leftskill == "" and row.range == "none" and row.InGame == "1",
+        row.aura == "1"
+            and (row.immediate == "1" or row.immediate == "" and authored_stat_has_recipe_flag(row, "blank_immediate"))
+            and row.leftskill == ""
+            and row.range == "none"
+            and row.InGame == "1",
         label .. " has unsupported activation flags"
     )
     assert(row.aurafilter == "73731", label .. " has unsupported target filter")

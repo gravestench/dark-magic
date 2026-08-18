@@ -24,8 +24,9 @@ cost. Do not let this ledger silently become architecture by citation alone.
 
 ## Relationship to the current roadmap
 
-`docs/CREATURE_ASSET_ROADMAP.md` defines the current M31-M43 creature-asset
-program. Many ideas below are already partially represented there: canonical
+`docs/CREATURE_ASSET_ROADMAP.md` preserves the proposed M31-M43 creature-asset
+program. GitHub issues, milestones, and the Roadmap project determine which
+slices are current. Many ideas below are already partially represented there: canonical
 schemas, glTF import, Creature Lab, arbitrary components and sockets, animation
 events, Blender authoring, palette-aware materials, sprite generation, modern
 sprite composition, legacy export, retargeting, build caching, and measured
@@ -34,8 +35,8 @@ runtime optimization.
 This ledger exists for ideas that are either broader than those milestones,
 insufficiently proven, or worth keeping visible as future research directions.
 The companion `docs/CREATURE_ASSET_RESEARCH_BACKLOG.md` turns these ideas into
-candidate research checkpoints without promoting them to numbered roadmap
-milestones yet.
+candidate research checkpoints without promoting them to scheduled GitHub
+issues and milestones yet.
 
 ## Historical first-party source
 

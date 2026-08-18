@@ -72,6 +72,9 @@ func TestOwnedStateOverlayPresentationRecordsAndAssets(t *testing.T) {
 		}
 	}
 	want := map[string]map[string]string{
+		"aura_thorns_front":    {"Filename": "AuraThornsFront", "Frames": "18", "AnimRate": "16", "Trans": "3", "PreDraw": "0", "Character": "Paladin", "Red": "255", "Green": "255", "Blue": "255"},
+		"aura_thorns_back":     {"Filename": "AuraThornsBack", "Frames": "18", "AnimRate": "16", "Trans": "3", "PreDraw": "1", "Character": "Paladin", "Red": "255", "Green": "255", "Blue": "255"},
+		"hit_thorns":           {"Filename": "AuraThornsHit", "Frames": "10", "AnimRate": "16", "Trans": "3", "PreDraw": "0", "Character": "Paladin", "Red": "255", "Green": "255", "Blue": "255"},
 		"staminafront":         {"Filename": "Stamina_front", "Frames": "16", "AnimRate": "8", "Trans": "3", "PreDraw": "0", "Character": "Paladin", "Red": "255", "Green": "255", "Blue": "255"},
 		"staminaback":          {"Filename": "Stamina_back", "Frames": "16", "AnimRate": "8", "Trans": "3", "PreDraw": "1", "Character": "Paladin", "Red": "255", "Green": "255", "Blue": "255"},
 		"aura_resistall_front": {"Filename": "AuraResistAllFront", "Frames": "20", "AnimRate": "16", "Trans": "3", "PreDraw": "0", "Character": "Paladin", "InitRadius": "6", "Radius": "6", "Red": "211", "Green": "148", "Blue": "255"},

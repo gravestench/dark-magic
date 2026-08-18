@@ -1,9 +1,11 @@
 # Creature asset, animation, and generation roadmap
 
-Status: planning and architecture only. This document defines the M31-M43
-program in `ROADMAP.md`; it does not authorize implementation of a particular
-game or mod. Normal CI uses redistributable synthetic assets. Optional legacy
-compatibility probes require legally supplied local data.
+Status: planning and architecture only. This document preserves the proposed
+M31-M43 technical program; GitHub issues, milestones, and the Roadmap project
+decide whether and when any slice is scheduled. It does not authorize
+implementation of a particular game or mod. Normal CI uses redistributable
+synthetic assets. Optional legacy-format research requires legally supplied
+local data and does not create a compatibility commitment.
 
 ## Outcome and dependency graph
 

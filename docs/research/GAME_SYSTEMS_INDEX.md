@@ -83,7 +83,7 @@ The research program now has a baseline for every indexed workstream. Implementa
   fact. Viewport/range, policy 2, invalid-target payment/fallback, owned units,
   and action/presentation timing remain probes.
 - G9 selected-aura tranche: active; exact-ID Might, Defiance, Blessed Aim,
-  Resist Fire, Resist Cold, Resist Lightning, Salvation, and Vigor use the same
+  Resist Fire, Resist Cold, Resist Lightning, Salvation, Vigor, and Thorns use the same
   right-selected ECS emitter and
   target relationships with ordinary stat sources. Reviewed record recipes map
   Might to outgoing
@@ -129,6 +129,16 @@ The research program now has a baseline for every indexed workstream. Implementa
   and production-motion consumers observe +100%, +100%, and +22% respectively.
   Selection removal and checkpoint parity remain ordinary ECS source lifecycle,
   with no skill-specific consumer branch.
+  Thorns admits the authored `thorns_percent` relationship despite its exact
+  blank state-stat and activation-flag fields through recipe-scoped validation.
+  A marked generic ECS consumer reacts only to successful melee results with
+  applied physical damage, bases reflection on post-defender-mitigation damage
+  capped by the committed amount, and sends returned physical through the
+  attacker's shared mitigation/death boundary. The official Expansion table
+  pins the level vector and melee-only intent; the precise damage ordering is
+  high-confidence recovered behavior pending a target-runtime confirmation.
+  PvP/hireling reduction and the `hit_thorns` reaction overlay remain explicit
+  gaps rather than inheriting older recovered semantics.
 - G8 combat fidelity tranche 1: active; shared direct-damage commit/result and
   typed six-channel ECS stage facts implemented; death attribution now uses an
   independent ECS consumer marker, and basic melee exposes generic hit/miss/
@@ -142,7 +152,7 @@ The research program now has a baseline for every indexed workstream. Implementa
   breadth, remaining consumers/retirement, drain/durations, and exact respawn/
   Hardcore death consequences remain.
 
-Use [NEXT_GAMEPLAY_IMPLEMENTATION_SEQUENCE.md](NEXT_GAMEPLAY_IMPLEMENTATION_SEQUENCE.md) for the reconciled dependency queue and post-first-loop ordering across combat fidelity, items, world interactions, economy, audio, UI, networking, and realm persistence. `ROADMAP.md` remains authoritative for checkbox completion and the current G8 cursor.
+Use [NEXT_GAMEPLAY_IMPLEMENTATION_SEQUENCE.md](NEXT_GAMEPLAY_IMPLEMENTATION_SEQUENCE.md) for historical dependency rationale across combat fidelity, items, world interactions, economy, audio, UI, networking, and realm persistence. The [Roadmap project](https://github.com/users/gravestench/projects/1), linked issues, and GitHub milestones own current ordering and completion.
 
 ## Current implementation handoffs
 
@@ -171,4 +181,5 @@ Use [NEXT_GAMEPLAY_IMPLEMENTATION_SEQUENCE.md](NEXT_GAMEPLAY_IMPLEMENTATION_SEQU
 - **baseline**: ownership, major state/data model, implementation slices, and actionable probes are documented.
 - **validated**: the important unresolved probes have been answered by owned-game traces, byte-exact fixtures, or multiple strong independent sources.
 
-Implementation status is deliberately tracked separately in `ROADMAP.md`.
+Implementation status is deliberately tracked separately in GitHub issues,
+milestones, and the Roadmap project.
