@@ -17,7 +17,23 @@ end
 
 local function aura_effects()
     local ecs = require("engine.ecs/v1")
-    return ecs.query({ all = { "d2legacy.skill.aura_effect", "d2legacy.stat.source" } })
+    return ecs.query({ all = { "d2legacy.skill.aura_effect" } })
+end
+
+local function aura_source(effect_entity, stat)
+    local ecs = require("engine.ecs/v1")
+    local effect = ecs.get(effect_entity, "d2legacy.skill.aura_effect")
+    for _, entity in ipairs(ecs.query({ all = { "d2legacy.stat.source" } })) do
+        local source = ecs.get(entity, "d2legacy.stat.source")
+        if
+            source:get("target"):id() == effect:get("target"):id()
+            and source:get("owner_source_id") == effect:get("source_id")
+            and (not stat or source:get("stat") == stat)
+        then
+            return source
+        end
+    end
+    return nil
 end
 
 return test.suite({
@@ -110,6 +126,37 @@ return test.suite({
                 perdelay = "50",
             },
             {
+                Id = "100",
+                skill = "Fixture Resist Fire",
+                skilldesc = "resist fire",
+                charclass = "pal",
+                srvstfunc = "",
+                srvdofunc = "65",
+                aura = "1",
+                immediate = "1",
+                leftskill = "",
+                range = "none",
+                InGame = "1",
+                aurafilter = "73731",
+                aurarangecalc = "ln12",
+                aurastate = "resistfire",
+                auratargetstate = "resistfire",
+                aurastat1 = "fireresist",
+                aurastatcalc1 = "dm34",
+                aurastat2 = "maxfireresist",
+                aurastatcalc2 = "skill('Fixture Resist Fire'.blvl)",
+                passivestate = "passive_resistfire",
+                passivestat1 = "maxfireresist",
+                passivecalc1 = "skill('Fixture Resist Fire'.blvl)/2",
+                mana = "0",
+                lvlmana = "0",
+                Param1 = "16",
+                Param2 = "2",
+                Param3 = "35",
+                Param4 = "150",
+                perdelay = "50",
+            },
+            {
                 Id = "108",
                 skill = "Fixture Blessed Aim",
                 skilldesc = "blessed aim",
@@ -145,12 +192,15 @@ return test.suite({
             { skilldesc = "idle", ListRow = "2", IconCel = "0" },
             { skilldesc = "defiance", ListRow = "3", IconCel = "16" },
             { skilldesc = "blessed aim", ListRow = "4", IconCel = "24" },
+            { skilldesc = "resist fire", ListRow = "5", IconCel = "8" },
         },
         ["data/global/excel/states.txt"] = {
             { state = "might", id = "33", aura = "1", stat = "damagepercent" },
             { state = "defiance", id = "37", aura = "1", stat = "skill_armor_percent" },
             { state = "blessedaim", id = "40", aura = "1", stat = "item_tohit_percent" },
             { state = "penetrate", id = "67" },
+            { state = "resistfire", id = "3", aura = "1", stat = "fireresist" },
+            { state = "passive_resistfire", id = "181" },
         },
     },
     cases = {
@@ -173,7 +223,7 @@ return test.suite({
                 local effects = aura_effects()
                 test.assert(#effects == 1, [=[#effects == 1]=])
                 local effect = ecs.get(effects[1], "d2legacy.skill.aura_effect")
-                local source = ecs.get(effects[1], "d2legacy.stat.source")
+                local source = aura_source(effects[1])
                 test.assert(
                     effect:get("source_id") == "aura:alice:98"
                         and effect:get("skill_level") == 1
@@ -221,7 +271,7 @@ return test.suite({
                 local effects = aura_effects()
                 test.assert(#effects == 2, [=[#effects == 2]=])
                 for _, entity in ipairs(effects) do
-                    test.expect(ecs.get(entity, "d2legacy.stat.source"):get("value")):equals(40)
+                    test.expect(aura_source(entity):get("value")):equals(40)
                 end
                 local applied = 0
                 for _, entity in ipairs(ecs.query({ all = { "d2legacy.state.event" } })) do
@@ -315,8 +365,8 @@ return test.suite({
                 local effects = aura_effects()
                 test.assert(#effects == 2, [=[same-state auras produce one relationship per target]=])
                 for _, entity in ipairs(effects) do
-                    local source = ecs.get(entity, "d2legacy.stat.source")
-                    test.expect(source:get("source_id")):equals("aura:alice:98")
+                    local source = aura_source(entity)
+                    test.expect(source:get("owner_source_id")):equals("aura:alice:98")
                     test.expect(source:get("value")):equals(40)
                 end
                 for _, entity in ipairs(ecs.query({ all = { "d2legacy.player.learned_skill" } })) do
@@ -335,7 +385,7 @@ return test.suite({
                 test.assert(#effects == 2, [=[stronger same-state aura still produces one relationship per target]=])
                 for _, entity in ipairs(effects) do
                     local effect = ecs.get(entity, "d2legacy.skill.aura_effect")
-                    local source = ecs.get(entity, "d2legacy.stat.source")
+                    local source = aura_source(entity)
                     test.expect(effect:get("source_id")):equals("aura:carol:98")
                     test.expect(effect:get("skill_level")):equals(2)
                     test.expect(source:get("value")):equals(50)
@@ -405,7 +455,7 @@ return test.suite({
                 local counts = { might = 0, defiance = 0 }
                 for _, entity in ipairs(effects) do
                     local effect = ecs.get(entity, "d2legacy.skill.aura_effect")
-                    local source = ecs.get(entity, "d2legacy.stat.source")
+                    local source = aura_source(entity)
                     local state = effect:get("state_id")
                     counts[state] = counts[state] + 1
                     if state == "might" then
@@ -498,8 +548,8 @@ return test.suite({
                 test.expect(passive_count):equals(0)
                 local effects = aura_effects()
                 test.expect(#effects):equals(1)
-                local source = ecs.get(effects[1], "d2legacy.stat.source")
-                test.expect(source:get("source_id")):equals("aura:alice:108")
+                local source = aura_source(effects[1])
+                test.expect(source:get("owner_source_id")):equals("aura:alice:108")
                 test.expect(source:get("value")):equals(90)
                 for _, player in ipairs(ecs.query({ all = { "d2legacy.player.combat_stats" } })) do
                     test.expect(ecs.get(player, "d2legacy.player.combat_stats"):get("attack_rating")):equals(313)
@@ -526,6 +576,102 @@ return test.suite({
                     end
                 end
                 test.expect(passive_count):equals(1)
+            end),
+        }),
+        test.case("multi_stat_resistance_aura_replaces_only_its_inactive_hard_point_passive", {
+            test.submit_system({
+                tick = 1,
+                sequence = 1,
+                kind = "system.player.enter",
+                payload = entry("alice", "Paladin", 10),
+            }),
+            test.step(2),
+            test.run(function()
+                local ecs = require("engine.ecs/v1")
+                for _, player in ipairs(ecs.query({ all = { "d2legacy.player.identity" } })) do
+                    if ecs.get(player, "d2legacy.player.identity"):get("player") == "alice" then
+                        ecs.create({
+                            ["d2legacy.player.learned_skill"] = {
+                                owner = player,
+                                skill_id = 100,
+                                level = 3,
+                                list_row = 5,
+                                left_allowed = false,
+                                right_allowed = true,
+                            },
+                        })
+                    end
+                end
+            end),
+            test.step(2),
+            test.restore_checkpoint(),
+            test.run(function()
+                local ecs = require("engine.ecs/v1")
+                local passive
+                for _, entity in
+                    ipairs(ecs.query({ all = { "d2legacy.player.learned_skill", "d2legacy.stat.source" } }))
+                do
+                    if ecs.get(entity, "d2legacy.player.learned_skill"):get("skill_id") == 100 then
+                        passive = ecs.get(entity, "d2legacy.stat.source")
+                    end
+                end
+                test.expect(passive:get("stat")):equals("max_fire_resist")
+                test.expect(passive:get("value")):equals(1)
+                for _, player in ipairs(ecs.query({ all = { "d2legacy.combat.defense" } })) do
+                    local defense = ecs.get(player, "d2legacy.combat.defense")
+                    test.expect(defense:get("fire_resist")):equals(0)
+                    test.expect(defense:get("max_fire_resist")):equals(76)
+                end
+            end),
+            test.submit({
+                tick = 6,
+                sequence = 1,
+                player = "alice",
+                kind = "player.assign_skills",
+                payload = { right = 100 },
+            }),
+            test.step(3),
+            test.restore_checkpoint(),
+            test.run(function()
+                local ecs = require("engine.ecs/v1")
+                local effects = aura_effects()
+                test.expect(#effects):equals(1)
+                local fire = aura_source(effects[1], "fire_resist")
+                local maximum = aura_source(effects[1], "max_fire_resist")
+                test.expect(fire:get("value")):equals(76)
+                test.expect(maximum:get("value")):equals(3)
+                test.expect(#ecs.query({ all = { "d2legacy.stat.source" } })):equals(2)
+                for _, player in ipairs(ecs.query({ all = { "d2legacy.combat.defense" } })) do
+                    local defense = ecs.get(player, "d2legacy.combat.defense")
+                    test.expect(defense:get("fire_resist")):equals(76)
+                    test.expect(defense:get("max_fire_resist")):equals(78)
+                end
+            end),
+            test.submit({
+                tick = 8,
+                sequence = 1,
+                player = "alice",
+                kind = "player.assign_skills",
+                payload = { right = 98 },
+            }),
+            test.step(3),
+            test.restore_checkpoint(),
+            test.run(function()
+                local ecs = require("engine.ecs/v1")
+                test.expect(#aura_effects()):equals(1)
+                local aura_sources = 0
+                local passive_sources = 0
+                for _, entity in ipairs(ecs.query({ all = { "d2legacy.stat.source" } })) do
+                    local source = ecs.get(entity, "d2legacy.stat.source")
+                    if source:get("owner_source_id") == "aura:alice:98" then
+                        aura_sources = aura_sources + 1
+                    elseif source:get("source_id"):find("skill%-passive:.*:100") then
+                        passive_sources = passive_sources + 1
+                        test.expect(source:get("value")):equals(1)
+                    end
+                end
+                test.expect(aura_sources):equals(1)
+                test.expect(passive_sources):equals(1)
             end),
         }),
     },

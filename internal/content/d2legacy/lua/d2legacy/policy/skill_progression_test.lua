@@ -39,6 +39,16 @@ return test.suite({
                 test.expect(progression.mana_cost(decreasing, 30)):equals(5 * 256)
             end)
         end),
+        test.case("uses_staged_integer_arithmetic_for_dm_parameter_pairs", function(t)
+            t:run(function()
+                local progression = require("d2legacy.policy.skill_progression")
+                local expected =
+                    { 52, 66, 76, 85, 92, 98, 102, 106, 110, 113, 116, 118, 121, 123, 124, 127, 128, 129, 130, 131 }
+                for level, value in ipairs(expected) do
+                    test.expect(progression.diminishing(35, 150, level)):equals(value)
+                end
+            end)
+        end),
         test.case("applies_a_snapshotted_cross_skill_damage_percentage", function(t)
             t:run(function()
                 local progression = require("d2legacy.policy.skill_progression")

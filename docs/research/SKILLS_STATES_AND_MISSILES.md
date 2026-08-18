@@ -114,8 +114,8 @@ only after a target-binary probe pins the roll and damage-result ordering.
 The target-locked `skill_behavior_coverage` tool now reads the winning mounted
 Skills.txt and Missiles.txt rows and groups every skill by its server start/do
 IDs plus referenced missile server-do IDs. Against the owned 1.14d Expansion
-archives on 2026-08-18 it reports 357 skill rows, 172 distinct signatures, 14
-explicitly admitted configurations, and 343 missing configurations. Every
+archives on 2026-08-18 it reports 357 skill rows, 172 distinct signatures, 15
+explicitly admitted configurations, and 342 missing configurations. Every
 consumer carries an implementation family or `missing_family: true` plus an
 evidence status. Exact declarations live in
 `manifests/skill-behavior-coverage.v1.json`, which runtime composition also
@@ -466,7 +466,7 @@ Mid-cast equipment/stat changes, interruption/refund behavior, other classes,
 and non-cast sequences remain separate target-runtime probes.
 
 Still open are complete skill-level formulas, target/range/LOS and delay policy,
-classification and implementation of the 343 missing configurations,
+classification and implementation of the 342 missing configurations,
 additional impact/motion families, richer state/stat-source effects, summons,
 corpse/item/object actions, and the rest of the behavior-family matrix below.
 
@@ -817,10 +817,11 @@ are consistent with the target rows; they do not substitute for unresolved
 Authority materializes one `d2legacy.skill.aura_emitter` on each living owner
 whose right assignment is an admitted aura. It reconciles living same-level
 party members inside the record-derived radius into
-`d2legacy.skill.aura_effect` relationship entities. Each relationship is
-co-composed with its ordinary `d2legacy.stat.source`, so leaving the party,
-level, range, life, active room, or selection destroys the modifier and its
-provenance atomically. Distinct aura state IDs use distinct target/state keys
+`d2legacy.skill.aura_effect` relationship entities. Each relationship owns a
+keyed set of ordinary `d2legacy.stat.source` entities, so leaving the party,
+level, range, life, active room, or selection removes every modifier and its
+provenance in the same reconciliation pass. Distinct aura state IDs use
+distinct target/state keys
 and therefore remain simultaneously effective. Duplicate copies of the same
 state select the strongest learned level, then the strongest value, with a
 stable source-ID tie breaker; this prevents a weaker duplicate from multiplying
@@ -901,6 +902,37 @@ pin 10% passive and 90% active values at level two across checkpoint restore.
 Owned-archive tests pin both state rows, formula fields, SkillDesc/TBL labels,
 sound key, Overlay rows, and DCC members. Item-granted soft levels and exact
 external-aura-plus-passive ordering remain target-runtime probes.
+
+Resist Fire is the fourth exact selected party-stat aura and the first admitted
+relationship with multiple active stats. Its owned Expansion 1.14d row declares
+`fireresist=dm34`, `maxfireresist=skill('Resist Fire'.blvl)`, and inactive
+`maxfireresist=skill('Resist Fire'.blvl)/2`. The active diminishing formula uses
+Params 3/4 (35/150) and staged integer arithmetic: truncate
+`110*level/(level+6)` before interpolating between the parameters. The resulting
+level-1..20 vector exactly matches Blizzard's published 52..131 table. The
+[official defensive-aura reference](https://classic.battle.net/diablo2exp/skills/paladin-defense.shtml)
+also states +1 active maximum resistance per hard point, half that value rounded
+down while inactive, no passive ordinary resistance, a 95% cap, and no passive
+increase from item-granted soft levels.
+
+One aura state can therefore own more than one modifier. The generic reconciler
+now derives a stable set of stat-source entities keyed by target, aura source,
+and stat, instead of relying on one modifier co-composed with the relationship.
+The relationship remains the lifecycle authority: losing eligibility removes
+every stale keyed source in the same reconciliation pass, and duplicate source
+keys collapse deterministically. The selected-aura decoder recognizes reviewed
+linear, diminishing, and self-hard-level formulas; the learned-passive decoder
+uses a generic integer numerator/divisor recipe. Neither path recognizes ID 100,
+the English name, or fire as a skill identity.
+
+At level three, checkpoint coverage pins 76 active fire resistance, +3 active
+maximum fire resistance, and +1 inactive maximum fire resistance. Shared fire
+mitigation already applies the 95% maximum cap. Owned archive tests pin the
+active and passive states, SkillDesc/TBL values, sound key, persistent/cast
+Overlay rows, and DCC members. The connected view remains unchanged because it
+projects only public target/state/period relationships, never modifier facts.
+Hireling/summon filter breadth, item-source ordering, and future hard-versus-soft
+level model integration remain target-version probes.
 
 The current target set is intentionally narrower than `aurafilter=73731`: only
 living player party members in the same level are admitted. Hirelings, summons,
