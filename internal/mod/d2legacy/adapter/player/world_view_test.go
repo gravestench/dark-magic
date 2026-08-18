@@ -16,6 +16,7 @@ func TestProjectWorldViewFiltersOrdersAndBoundsPublicState(t *testing.T) {
 	identity := registerProjectionStore(t, engine, "d2legacy.player.identity", []akara.Field{{Name: "character_id", Kind: akara.FieldString}, {Name: "player", Kind: akara.FieldString}, {Name: "name", Kind: akara.FieldString}, {Name: "class", Kind: akara.FieldString}})
 	position := registerProjectionStore(t, engine, "d2legacy.world.position", []akara.Field{{Name: "x", Kind: akara.FieldFloat64}, {Name: "y", Kind: akara.FieldFloat64}})
 	location := registerProjectionStore(t, engine, "d2legacy.world.location", []akara.Field{{Name: "act", Kind: akara.FieldInt64}, {Name: "level_id", Kind: akara.FieldInt64}})
+	velocity := registerProjectionStore(t, engine, "d2legacy.world.velocity", []akara.Field{{Name: "x", Kind: akara.FieldFloat64}, {Name: "y", Kind: akara.FieldFloat64}})
 	selectable := registerProjectionStore(t, engine, "d2legacy.world.selectable", []akara.Field{{Name: "id", Kind: akara.FieldString}, {Name: "kind", Kind: akara.FieldString}, {Name: "label", Kind: akara.FieldString}, {Name: "owner", Kind: akara.FieldString}, {Name: "radius", Kind: akara.FieldFloat64}, {Name: "priority", Kind: akara.FieldInt64}})
 	inactive := registerProjectionStore(t, engine, "d2legacy.world.inactive", nil)
 	monster := registerProjectionStore(t, engine, "d2legacy.monster.stats", []akara.Field{{Name: "health", Kind: akara.FieldInt64}, {Name: "max_health", Kind: akara.FieldInt64}, {Name: "hidden_damage", Kind: akara.FieldInt64}})
@@ -27,7 +28,7 @@ func TestProjectWorldViewFiltersOrdersAndBoundsPublicState(t *testing.T) {
 		{Name: "overlay_height", Kind: akara.FieldInt64},
 	})
 	monsterDeath := registerProjectionStore(t, engine, "d2legacy.monster.death", []akara.Field{{Name: "tick", Kind: akara.FieldInt64}, {Name: "drops", Kind: akara.FieldString}})
-	secret := registerProjectionStore(t, engine, "d2legacy.monster.ai", []akara.Field{{Name: "target_id", Kind: akara.FieldString}})
+	monsterAI := registerProjectionStore(t, engine, "d2legacy.monster.ai", []akara.Field{{Name: "target_id", Kind: akara.FieldString}, {Name: "state", Kind: akara.FieldString}})
 	player := engine.World().MustCreateEntity()
 	nearB := engine.World().MustCreateEntity()
 	nearA := engine.World().MustCreateEntity()
@@ -41,11 +42,13 @@ func TestProjectWorldViewFiltersOrdersAndBoundsPublicState(t *testing.T) {
 		_, _ = location.Set(entity, map[string]any{"act": int64(1), "level_id": int64(2)})
 		_, _ = selectable.Set(entity, map[string]any{"id": id, "kind": "monster", "label": "Fallen", "owner": "", "radius": 0.75, "priority": int64(2)})
 		_, _ = monster.Set(entity, map[string]any{"health": int64(8), "max_health": int64(10), "hidden_damage": int64(9999)})
-		_, _ = secret.Set(entity, map[string]any{"target_id": "alice-secret"})
+		_, _ = monsterAI.Set(entity, map[string]any{"target_id": "alice-secret"})
 	}
 	setPublic(nearB, "monster:b", 12, 10)
 	_, _ = inactive.Set(nearB, nil)
 	setPublic(nearA, "monster:a", 8, 10)
+	_, _ = velocity.Set(nearA, map[string]any{"x": 1.0, "y": 0.0})
+	_, _ = monsterAI.Set(nearA, map[string]any{"target_id": "alice-secret", "state": "attack"})
 	_, _ = monsterIdentity.Set(nearA, map[string]any{"spawn_id": "a", "definition_id": "fallen1"})
 	_, _ = monsterAppearance.Set(nearA, map[string]any{
 		"token": "FA", "mode": "NU", "weapon_class": "HTH", "components": "HD=LIT",
@@ -77,13 +80,33 @@ func TestProjectWorldViewFiltersOrdersAndBoundsPublicState(t *testing.T) {
 		t.Fatalf("world view = %#v", view)
 	}
 	living, dead := view.Entities[0], view.Entities[1]
-	if living.Token != "FA" || living.Mode != "NU" || living.DeathSound != "fallen_death" || living.OverlayHeight != 3 ||
+	if living.Token != "FA" || living.Mode != "A1" || living.DeathSound != "fallen_death" || living.OverlayHeight != 3 ||
 		dead.ID != "monster:corpse" || dead.Kind != "corpse" || dead.Label != "Fallen" || dead.Mode != "DT" || dead.SpawnID != "corpse" {
 		t.Fatalf("living=%#v corpse=%#v", living, dead)
 	}
 	if strings.Contains(string(payload), "9999") || strings.Contains(string(payload), "7777") || strings.Contains(string(payload), "server-only-drop") ||
-		strings.Contains(string(payload), "alice-secret") || strings.Contains(string(payload), "monster:b") || strings.Contains(string(payload), "monster:far") {
+		strings.Contains(string(payload), "alice-secret") || strings.Contains(string(payload), "attack") ||
+		strings.Contains(string(payload), "monster:b") || strings.Contains(string(payload), "monster:far") {
 		t.Fatalf("world view leaked hidden/far state: %s", payload)
+	}
+}
+
+func TestMonsterPresentationModePublishesOutcomeWithoutAIPolicy(t *testing.T) {
+	for name, test := range map[string]struct {
+		authored, ai string
+		velocityX    float64
+		want         string
+	}{
+		"authored idle": {authored: "NU", want: "NU"},
+		"movement":      {authored: "NU", ai: "chase", velocityX: 1, want: "WL"},
+		"attack":        {authored: "NU", ai: "attack", velocityX: 1, want: "A1"},
+		"death wins":    {authored: "DT", ai: "attack", velocityX: 1, want: "DT"},
+	} {
+		t.Run(name, func(t *testing.T) {
+			if got := monsterPresentationMode(test.authored, test.ai, test.velocityX, 0); got != test.want {
+				t.Fatalf("presentation mode = %q, want %q", got, test.want)
+			}
+		})
 	}
 }
 

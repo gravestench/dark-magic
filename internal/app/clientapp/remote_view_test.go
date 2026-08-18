@@ -179,7 +179,7 @@ func TestConnectedMonsterBecomesANonSelectableCorpseAndDeathCue(t *testing.T) {
 	alive := playeradapter.WorldEntity{
 		ID: "monster:fallen-a", Kind: "monster", Label: "Fallen", SpawnID: "fallen-a", DefinitionID: "fallen1",
 		Position: playeradapter.HUDPosition{X: 10, Y: 20}, Radius: .75, Health: &health, MaxHealth: &maximum,
-		Token: "FA", Mode: "NU", WeaponClass: "HTH", Components: "HD=LIT", DeathSound: "fallen_death",
+		Token: "FA", Mode: "A1", WeaponClass: "HTH", Components: "HD=LIT", DeathSound: "fallen_death",
 		OverlayHeight: 3, Act: 1, LevelID: 2,
 	}
 	if err := app.syncRemoteMirrors([]playeradapter.WorldEntity{alive}, location); err != nil {
@@ -193,6 +193,12 @@ func TestConnectedMonsterBecomesANonSelectableCorpseAndDeathCue(t *testing.T) {
 	}
 	if _, found := colliders.Get(entity); !found {
 		t.Fatal("living monster mirror has no collider")
+	}
+	appearances, _ := akara.GetDynamicStore(engine.World(), "d2legacy.monster.appearance")
+	appearance, _ := appearances.Get(entity)
+	mode, _ := appearance.Get("mode")
+	if mode != "A1" {
+		t.Fatalf("living monster presentation mode=%v, want A1", mode)
 	}
 
 	dead := alive
@@ -210,9 +216,8 @@ func TestConnectedMonsterBecomesANonSelectableCorpseAndDeathCue(t *testing.T) {
 	if _, found := colliders.Get(entity); found {
 		t.Fatal("corpse remained a locomotion obstacle in the disposable client ECS")
 	}
-	appearances, _ := akara.GetDynamicStore(engine.World(), "d2legacy.monster.appearance")
-	appearance, _ := appearances.Get(entity)
-	mode, _ := appearance.Get("mode")
+	appearance, _ = appearances.Get(entity)
+	mode, _ = appearance.Get("mode")
 	sound, _ := appearance.Get("death_sound")
 	if mode != "DT" || sound != "fallen_death" {
 		t.Fatalf("corpse appearance mode=%v death_sound=%v", mode, sound)
