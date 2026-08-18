@@ -375,6 +375,46 @@ go run ./internal/dev/tools/curse_presentation_probe \
 No client-function-30 role is promoted into production until the report says
 the six-case matrix is complete and the underlying frame log is reviewed.
 
+## Faster-cast-rate and SQ timing probe
+
+The owned Expansion 1.14d records identify the inputs but do not, by
+themselves, define the runtime timing formula. `ItemStatCost.txt` names signed
+stat ID 105 `item_fastercastrate`; `Properties.txt` maps `cast1`, `cast2`, and
+`cast3` to that stat; and the `ModStr4v` key resolves through the owned English
+`string.tbl` to the player-visible text `Faster Cast Rate`. Fire Bolt supplies
+an ordinary Sorceress `SC` action. Lightning supplies the distinct `SQ` action,
+`seqtrans=SC`, sequence 12, and `UseAttackRate=1`. These joins explain which
+data participates without assuming how 1.14d turns it into release and
+completion frames.
+
+`internal/dev/tools/cast_rate_probe` accepts only a 25 Hz visual frame log from
+an executable-fingerprinted, probe-created character in an owned Expansion
+1.14d single-player runtime. It rejects Classic, earlier patches, vanilla
+servers, imported saves, community-derived stat identification, and memory
+inspection. Each case preserves the exact skill action fields, equipped weapon
+class, every owned `cast1/2/3` item-property contribution, their summed raw FCR,
+the `ModStr4v` key and English localized text, and visually observed cast start/
+effect/neutral boundaries. The analyzer rejects a total that cannot be
+reproduced from those sources, fingerprints the capture, and normalizes the
+absolute frame numbers into effect and completion delays.
+
+The required matrix samples Fire Bolt's `SC` action at raw FCR 0 and paired
+8/9, 19/20, 36/37, 62/63, 104/105, and 199/200 values with `HTH`; repeats 0
+and 105 with `1HS` and `STF`; and samples Lightning's `SQ`/12 action at 0 and
+105 with `HTH`. Pairing both sides makes each observation useful even if 1.14d
+disproves a candidate transition. These are required measurements, not embedded
+breakpoint results. A complete report still requires human review before a
+formula or cap is promoted into the shared action-rate policy. Start from
+`docs/research/probes/cast-rate-lod-114d-expansion.template.json` and run:
+
+```shell
+go run ./internal/dev/tools/cast_rate_probe \
+  -input /path/to/sanitized-cast-rate.json
+```
+
+Mid-cast equipment/stat changes, interruption/refund behavior, other classes,
+and non-cast sequences remain separate target-runtime probes.
+
 Still open are complete skill-level formulas, target/range/LOS and delay policy,
 classification and implementation of the 349 missing configurations,
 additional impact/motion families, richer state/stat-source effects, summons,
@@ -817,9 +857,11 @@ Then add pierce, acceleration, child/spawn behavior, and special movement famili
 
 - User-owned Expansion 1.14d `patch_d2.mpq` Skills.txt and States.txt rows are
   the primary target data for the current self-state slice.
-- User-owned Expansion 1.14d ItemStatCost.txt, Properties.txt, Weapons.txt, and
-  `AnimData.d2` rows/records are the primary target data for action-rate names,
-  mappings, weapon inputs, and base animation timing.
+- User-owned Expansion 1.14d ItemStatCost.txt, Properties.txt, Weapons.txt,
+  Skills.txt, `AnimData.d2`, and layered TBL records are the primary target data
+  for action-rate names, mappings, weapon inputs, action kinds, localized
+  meaning, and base animation timing. They identify FCR's inputs but do not
+  substitute for runtime timing observations.
 - Blizzard's official [Sorceress Cold Spells](https://classic.battle.net/diablo2exp/skills/sorceress-cold.shtml)
   table supplies the published Frozen Armor effect, level vectors, synergies,
   PvP distinction, cold-armor exclusion, and difficulty cold-length warning.
