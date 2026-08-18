@@ -30,6 +30,7 @@ local missile_presentation = require("d2legacy.gameplay.missile_presentation")
 local cast_presentation = require("d2legacy.gameplay.cast_presentation")
 local held_skill_input = require("d2legacy.gameplay.held_skill_input")
 local state_overlay_presentation = require("d2legacy.gameplay.state_overlay_presentation")
+local aura_overlay_cycle = require("d2legacy.gameplay.aura_overlay_cycle")
 local interaction_approach = require("d2legacy.gameplay.interaction_approach")
 local skill_data = require("d2legacy.data.skill")
 local chunked_map = require("d2legacy.presentation.chunked_map")
@@ -97,6 +98,7 @@ local function destroy_state_overlays(self)
     end
     self.state_overlays = {}
     self.state_overlay_effects = {}
+    self.aura_overlay_cycles = {}
 end
 
 local function destroy_warps(self)
@@ -599,8 +601,11 @@ local function update_state_overlays(self, elapsed)
     end
     self.state_overlays = self.state_overlays or {}
     self.state_overlay_effects = self.state_overlay_effects or {}
+    local snapshots
+    snapshots, self.aura_overlay_cycles =
+        aura_overlay_cycle.select(self.gameplay_world.state_snapshots(), self.aura_overlay_cycles, elapsed)
     local seen = {}
-    for _, snapshot in ipairs(self.gameplay_world.state_snapshots()) do
+    for _, snapshot in ipairs(snapshots) do
         if snapshot.level_id == self.world_level_id then
             local state = state_overlay_presentation.resolve(snapshot.state_id)
             for index, recipe in ipairs(state and state.active or {}) do

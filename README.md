@@ -215,4 +215,4 @@ knowledge to the Diablo II community: thank you. Dark Magic is built on that
 shared body of work.
 
 Join development and discussion on the
-[Dark Magic Discord](https://discord.gg/gT9vTKfV8G).
+[Dark Magic Discord](https://discord.gg/eGfN7Faxur).

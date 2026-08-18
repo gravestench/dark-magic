@@ -57,6 +57,11 @@
       "skill_id": 72,
       "family": "state.point-area-curse",
       "evidence_status": "owned-target-records-and-localized-outgoing-damage-reduction-partial"
+    },
+    {
+      "skill_id": 98,
+      "family": "aura.selected-party-stat",
+      "evidence_status": "owned-target-records-localized-text-and-official-aura-control-partial"
     }
   ]
 }

@@ -18,6 +18,7 @@ return test.suite({
                 test.expect(coverage.by_family["state.targeted-timed"][1]):equals(52)
                 test.expect(coverage.by_family["state.point-area-curse"][1]):equals(66)
                 test.expect(coverage.by_family["state.point-area-curse"][2]):equals(72)
+                test.expect(coverage.by_family["aura.selected-party-stat"][1]):equals(98)
                 test.expect(coverage.by_id[36].evidence_status)
                     :equals("owned-target-records-and-localized-synergy-partial")
                 test.expect(coverage.by_id[39] == nil):is_true()
