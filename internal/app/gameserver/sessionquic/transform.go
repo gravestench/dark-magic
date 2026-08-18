@@ -45,11 +45,11 @@ func encodeTransformFrame(credential gameserver.SessionCredential, snapshot game
 		return nil, ErrWire
 	}
 	capacity := (MaxDatagramPayloadBytes - transformHeaderBytes) / transformEntityBytes
-	count := min(len(view.World.Entities), capacity)
+	count := min(len(view.World.Entities)+len(view.World.Missiles), capacity)
 	data := make([]byte, transformHeaderBytes+count*transformEntityBytes)
 	binary.BigEndian.PutUint16(data[0:2], transformMagic)
 	data[2] = TransformFrameVersion
-	if count < len(view.World.Entities) || view.World.Truncated {
+	if count < len(view.World.Entities)+len(view.World.Missiles) || view.World.Truncated {
 		data[3] = 1
 	}
 	binary.BigEndian.PutUint64(data[4:12], credentialHash(credential))
@@ -62,9 +62,29 @@ func encodeTransformFrame(credential gameserver.SessionCredential, snapshot game
 	data[40] = uint8(view.HUD.Animation.Direction)
 	copy(data[41:43], []byte(view.HUD.Animation.Mode))
 	binary.BigEndian.PutUint16(data[43:45], uint16(count))
+	// Both reliable collections are already nearest-first. Merge them by
+	// distance so a crowded monster room cannot starve fast projectile updates,
+	// and a missile storm cannot starve nearby actor movement.
+	entityIndex, missileIndex := 0, 0
 	for index := 0; index < count; index++ {
 		offset := transformHeaderBytes + index*transformEntityBytes
-		entity := view.World.Entities[index]
+		useMissile := missileIndex < len(view.World.Missiles) && (entityIndex >= len(view.World.Entities) ||
+			transformDistance2(view.World.Missiles[missileIndex].Position, view.World.Origin) <
+				transformDistance2(view.World.Entities[entityIndex].Position, view.World.Origin))
+		if useMissile {
+			missile := view.World.Missiles[missileIndex]
+			missileIndex++
+			binary.BigEndian.PutUint64(data[offset:offset+8], PublicIDHash(missile.ID))
+			putFloat32(data[offset+8:offset+12], missile.Position.X)
+			putFloat32(data[offset+12:offset+16], missile.Position.Y)
+			// Direction, actor mode, and animation-start age are irrelevant to
+			// standalone missile DCCs. Their record-authored visual fields remain
+			// on the reliable projection while this datagram carries only position.
+			binary.BigEndian.PutUint32(data[offset+19:offset+23], math.MaxUint32)
+			continue
+		}
+		entity := view.World.Entities[entityIndex]
+		entityIndex++
 		binary.BigEndian.PutUint64(data[offset:offset+8], PublicIDHash(entity.ID))
 		putFloat32(data[offset+8:offset+12], entity.Position.X)
 		putFloat32(data[offset+12:offset+16], entity.Position.Y)
@@ -76,6 +96,11 @@ func encodeTransformFrame(credential gameserver.SessionCredential, snapshot game
 		return nil, ErrWire
 	}
 	return data, nil
+}
+
+func transformDistance2(position, origin playeradapter.HUDPosition) float64 {
+	dx, dy := position.X-origin.X, position.Y-origin.Y
+	return dx*dx + dy*dy
 }
 
 func decodeTransformFrame(credential gameserver.SessionCredential, data []byte) (TransformFrame, error) {

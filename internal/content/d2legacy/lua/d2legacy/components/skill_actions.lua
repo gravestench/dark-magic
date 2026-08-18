@@ -145,6 +145,33 @@ function M.register()
         },
     })
 
+    -- Disposable connected clients receive only the fields required to draw a
+    -- live missile. Keeping this as a presentation component prevents damage,
+    -- collision, contact locks, and remaining lifetime from being mistaken for
+    -- local authority while still letting the ordinary world renderer consume
+    -- the same record-derived DCC recipe used by offline play.
+    ecs.component({
+        name = "d2legacy.presentation.missile",
+        version = 1,
+        fields = {
+            { name = "missile_id", type = "string" },
+            { name = "dcc", type = "string" },
+            { name = "palette", type = "string" },
+            { name = "velocity_x", type = "f64" },
+            { name = "velocity_y", type = "f64" },
+            -- -1 means that moving-projectile art derives direction from
+            -- velocity. Non-negative values pin stationary effect art.
+            { name = "logical_direction", type = "i64" },
+            { name = "directions", type = "i64" },
+            { name = "frames_per_second", type = "i64" },
+            { name = "loop", type = "bool" },
+            { name = "transparency_mode", type = "i64" },
+            { name = "offset_x", type = "f64" },
+            { name = "offset_y", type = "f64" },
+            { name = "offset_z", type = "f64" },
+        },
+    })
+
     -- One cast/target contact lock is its own ECS entity. Radial rays share a
     -- cast ID, so overlap policy composes without a Nova-specific hit path.
     ecs.component({

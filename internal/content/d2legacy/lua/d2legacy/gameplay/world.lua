@@ -432,7 +432,12 @@ function M.missile_snapshots()
     local result = {}
     -- Projectile schemas are d2legacy authority facts. Presentation copies
     -- either supported shape without deciding how the projectile behaves.
-    for _, component in ipairs({ "d2legacy.missile.instance", "d2legacy.missile.projectile", "d2legacy.missile.effect" }) do
+    for _, component in ipairs({
+        "d2legacy.missile.instance",
+        "d2legacy.missile.projectile",
+        "d2legacy.missile.effect",
+        "d2legacy.presentation.missile",
+    }) do
         local ok, entities = pcall(ecs.query, {
             all = {
                 component,
@@ -447,6 +452,9 @@ function M.missile_snapshots()
                 local location = ecs.get(entity, "d2legacy.world.location")
                 snapshot.entity_id = entity:id()
                 snapshot.owner_entity = nil
+                if snapshot.logical_direction and snapshot.logical_direction < 0 then
+                    snapshot.logical_direction = nil
+                end
                 snapshot.x, snapshot.y = position:get("x"), position:get("y")
                 snapshot.act, snapshot.level_id = location:get("act"), location:get("level_id")
                 result[#result + 1] = snapshot

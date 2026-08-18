@@ -12,9 +12,10 @@ import (
 )
 
 const (
-	WorldViewVersion     uint32 = 2
+	WorldViewVersion     uint32 = 3
 	WorldViewRadius             = 80.0
 	MaxWorldViewEntities        = 256
+	MaxWorldViewMissiles        = 512
 	maxWorldIDBytes             = 128
 	maxWorldKindBytes           = 32
 	maxWorldLabelBytes          = 256
@@ -23,11 +24,37 @@ const (
 var ErrWorldView = errors.New("player world view: invalid public projection")
 
 type WorldView struct {
-	Version   uint32        `json:"version"`
-	Tick      uint64        `json:"tick"`
-	Origin    HUDPosition   `json:"origin"`
-	Entities  []WorldEntity `json:"entities"`
-	Truncated bool          `json:"truncated"`
+	Version   uint32         `json:"version"`
+	Tick      uint64         `json:"tick"`
+	Origin    HUDPosition    `json:"origin"`
+	Entities  []WorldEntity  `json:"entities"`
+	Missiles  []WorldMissile `json:"missiles"`
+	Truncated bool           `json:"truncated"`
+}
+
+// WorldMissile is the bounded visual subset of an authoritative projectile or
+// aftermath entity. It deliberately omits damage, collision, ownership, hit
+// locks, and lifetime policy: a connected client can render these values but
+// cannot reconstruct or advance gameplay from them.
+type WorldMissile struct {
+	ID               string      `json:"id"`
+	Kind             string      `json:"kind"`
+	MissileID        string      `json:"missile_id"`
+	Position         HUDPosition `json:"position"`
+	Velocity         HUDPosition `json:"velocity"`
+	Act              int64       `json:"act"`
+	LevelID          int64       `json:"level_id"`
+	DCC              string      `json:"dcc"`
+	Palette          string      `json:"palette,omitempty"`
+	LogicalDirection int64       `json:"logical_direction"`
+	Directions       int64       `json:"directions"`
+	FramesPerSecond  int64       `json:"frames_per_second"`
+	Loop             bool        `json:"loop"`
+	TransparencyMode int64       `json:"transparency_mode"`
+	OffsetX          float64     `json:"offset_x"`
+	OffsetY          float64     `json:"offset_y"`
+	OffsetZ          float64     `json:"offset_z"`
+	distance2        float64
 }
 
 type WorldEntity struct {
@@ -86,10 +113,7 @@ func ProjectWorldView(playerID string, checkpoint simulation.Checkpoint) (json.R
 		return nil, ErrWorldView
 	}
 	originAct, originLevel := intField(originLocation, "act"), intField(originLocation, "level_id")
-	selectables, found := findComponent(snapshot, "d2legacy.world.selectable")
-	if !found {
-		return json.Marshal(WorldView{Version: WorldViewVersion, Tick: checkpoint.Tick, Origin: origin, Entities: []WorldEntity{}})
-	}
+	selectables, _ := findComponent(snapshot, "d2legacy.world.selectable")
 	inactive, _ := findComponent(snapshot, "d2legacy.world.inactive")
 	monsters, _ := findComponent(snapshot, "d2legacy.monster.stats")
 	players, _ := findComponent(snapshot, "d2legacy.player.identity")
@@ -97,7 +121,7 @@ func ProjectWorldView(playerID string, checkpoint simulation.Checkpoint) (json.R
 	animations, _ := findComponent(snapshot, "d2legacy.player.animation")
 	movementStats, _ := findComponent(snapshot, "d2legacy.player.movement_stats")
 	facings, _ := findComponent(snapshot, "d2legacy.world.facing")
-	view := WorldView{Version: WorldViewVersion, Tick: checkpoint.Tick, Origin: origin, Entities: []WorldEntity{}}
+	view := WorldView{Version: WorldViewVersion, Tick: checkpoint.Tick, Origin: origin, Entities: []WorldEntity{}, Missiles: []WorldMissile{}}
 	seen := make(map[string]struct{})
 	for _, instance := range selectables.Instances {
 		if instance.Entity == playerEntity {
@@ -164,6 +188,13 @@ func ProjectWorldView(playerID string, checkpoint simulation.Checkpoint) (json.R
 	})
 	if len(view.Entities) > MaxWorldViewEntities {
 		view.Entities, view.Truncated = view.Entities[:MaxWorldViewEntities], true
+	}
+	view.Missiles, found = projectWorldMissiles(snapshot, origin, originAct, originLevel)
+	if !found {
+		return nil, ErrWorldView
+	}
+	if len(view.Missiles) > MaxWorldViewMissiles {
+		view.Missiles, view.Truncated = view.Missiles[:MaxWorldViewMissiles], true
 	}
 	return json.Marshal(view)
 }

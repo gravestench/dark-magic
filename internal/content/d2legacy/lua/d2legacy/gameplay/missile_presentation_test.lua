@@ -51,6 +51,17 @@ return test.suite({
                 test.expect(adapter.direction(0, 1, 16), "positive Y world axis"):equals(0)
                 test.expect(adapter.direction(-1, 0, 16), "negative X world axis"):equals(1)
                 test.expect(adapter.direction(0, -1, 16), "negative Y world axis"):equals(2)
+                test.expect(
+                    adapter.resolve({
+                        dcc = "data/global/missiles/firebolt.dcc",
+                        velocity_x = 1,
+                        velocity_y = 0,
+                        logical_direction = -1,
+                        directions = 16,
+                        frames_per_second = 16,
+                    }).direction,
+                    "connected moving-missile sentinel"
+                ):equals(3)
                 test.assert(
                     adapter.resolve({ dcc = "", velocity_x = 0, velocity_y = 0, directions = 1 }) == nil,
                     [=[adapter.resolve({ dcc = "", velocity_x = 0, velocity_y = 0, directions = 1 }) == nil]=]

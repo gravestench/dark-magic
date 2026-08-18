@@ -78,6 +78,32 @@ func TestTransformFrameRejectsWrongCredentialAndMalformedLength(t *testing.T) {
 	}
 }
 
+func TestTransformFrameCarriesReliableMissileIdentityAndPosition(t *testing.T) {
+	missile := playeradapter.WorldMissile{ID: "missile:42", Position: playeradapter.HUDPosition{X: 12.25, Y: -3.5}}
+	view := playeradapter.ClientView{
+		Version: playeradapter.ClientViewVersion, Tick: 7,
+		HUD: playeradapter.HUD{Version: playeradapter.HUDVersion, Tick: 7},
+		World: playeradapter.WorldView{Version: playeradapter.WorldViewVersion, Tick: 7,
+			Missiles: []playeradapter.WorldMissile{missile}},
+		Private: playeradapter.PrivateView{Version: playeradapter.PrivateViewVersion, Tick: 7},
+		Events:  playeradapter.EventView{Version: playeradapter.EventViewVersion, Tick: 7, Events: []playeradapter.SemanticEvent{}},
+	}
+	payload, _ := json.Marshal(view)
+	encoded, err := encodeTransformFrame("credential", gameserver.Snapshot{Tick: 7, Payload: payload})
+	if err != nil {
+		t.Fatal(err)
+	}
+	decoded, err := decodeTransformFrame("credential", encoded)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(decoded.Entities) != 1 || decoded.Entities[0].IDHash != PublicIDHash(missile.ID) ||
+		decoded.Entities[0].X != 12.25 || decoded.Entities[0].Y != -3.5 ||
+		decoded.Entities[0].Mode != [2]byte{} || decoded.Entities[0].AnimationStartTick != 0 {
+		t.Fatalf("decoded missile transform = %+v", decoded.Entities)
+	}
+}
+
 func TestTransformAnimationAgePreservesUnknownStartAcrossLongSessions(t *testing.T) {
 	tick := uint64(1) << 33
 	if got := startTick(tick, tickAge(tick, 0)); got != 0 {

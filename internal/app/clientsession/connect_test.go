@@ -303,14 +303,17 @@ func TestStagedInputIsImmediatelyPredictableAndDefensive(t *testing.T) {
 
 func TestTransformFrameUpdatesKnownEntitiesWithoutInventingLifecycle(t *testing.T) {
 	session := &Session{
-		HUD:       playeradapter.HUD{Version: playeradapter.HUDVersion, Tick: 10},
-		World:     playeradapter.WorldView{Version: playeradapter.WorldViewVersion, Tick: 10, Entities: []playeradapter.WorldEntity{{ID: "known", Position: playeradapter.HUDPosition{X: 1, Y: 2}}}},
+		HUD: playeradapter.HUD{Version: playeradapter.HUDVersion, Tick: 10},
+		World: playeradapter.WorldView{Version: playeradapter.WorldViewVersion, Tick: 10,
+			Entities: []playeradapter.WorldEntity{{ID: "known", Position: playeradapter.HUDPosition{X: 1, Y: 2}}},
+			Missiles: []playeradapter.WorldMissile{{ID: "missile:1", Position: playeradapter.HUDPosition{X: 2, Y: 3}}}},
 		Admission: gameserver.JoinResponse{Snapshot: gameserver.Snapshot{Tick: 10, StepNanos: int64(40 * time.Millisecond)}},
 	}
 	delta, err := session.applyTransform(sessionquic.TransformFrame{
 		Tick: 11, OwnerX: 4, OwnerY: 5, VelocityX: 6, VelocityY: 7,
 		Entities: []sessionquic.TransformEntity{
 			{IDHash: sessionquic.PublicIDHash("known"), X: 8, Y: 9, Direction: 3, Mode: [2]byte{'W', 'L'}},
+			{IDHash: sessionquic.PublicIDHash("missile:1"), X: 10, Y: 11},
 			{IDHash: sessionquic.PublicIDHash("unknown"), X: 99, Y: 99},
 		},
 	})
@@ -319,6 +322,9 @@ func TestTransformFrameUpdatesKnownEntitiesWithoutInventingLifecycle(t *testing.
 	}
 	if session.World.Tick != 11 || len(session.World.Entities) != 1 || session.World.Entities[0].Position != (playeradapter.HUDPosition{X: 8, Y: 9}) {
 		t.Fatalf("transformed world = %#v", session.World)
+	}
+	if len(session.World.Missiles) != 1 || session.World.Missiles[0].Position != (playeradapter.HUDPosition{X: 10, Y: 11}) {
+		t.Fatalf("transformed missiles = %#v", session.World.Missiles)
 	}
 	if session.HUD.Position != (playeradapter.HUDPosition{X: 4, Y: 5}) || session.HUD.Movement.Velocity != (playeradapter.HUDPosition{X: 6, Y: 7}) {
 		t.Fatalf("transformed HUD = %#v", session.HUD)
@@ -356,13 +362,17 @@ func TestPresentationSnapshotsAreImmutableAtomicRevisions(t *testing.T) {
 }
 
 func TestReliableMergePreservesCanonicalInputAndNewerTransforms(t *testing.T) {
-	reliable := playeradapter.WorldView{Tick: 10, Entities: []playeradapter.WorldEntity{{ID: "known", Position: playeradapter.HUDPosition{X: 1}}}}
-	current := playeradapter.WorldView{Tick: 11, Origin: playeradapter.HUDPosition{X: 3}, Entities: []playeradapter.WorldEntity{{ID: "known", Position: playeradapter.HUDPosition{X: 2}}}}
+	reliable := playeradapter.WorldView{Tick: 10,
+		Entities: []playeradapter.WorldEntity{{ID: "known", Position: playeradapter.HUDPosition{X: 1}}},
+		Missiles: []playeradapter.WorldMissile{{ID: "missile:1", Position: playeradapter.HUDPosition{X: 4}}}}
+	current := playeradapter.WorldView{Tick: 11, Origin: playeradapter.HUDPosition{X: 3},
+		Entities: []playeradapter.WorldEntity{{ID: "known", Position: playeradapter.HUDPosition{X: 2}}},
+		Missiles: []playeradapter.WorldMissile{{ID: "missile:1", Position: playeradapter.HUDPosition{X: 5}}}}
 	_, merged := mergeReliablePresentation(playeradapter.HUD{Tick: 10}, reliable, playeradapter.HUD{Tick: 11}, current)
 	if reliable.Entities[0].Position.X != 1 {
 		t.Fatalf("canonical reliable projection was mutated: %#v", reliable)
 	}
-	if merged.Tick != 11 || merged.Entities[0].Position.X != 2 {
+	if merged.Tick != 11 || merged.Entities[0].Position.X != 2 || merged.Missiles[0].Position.X != 5 {
 		t.Fatalf("merged presentation = %#v", merged)
 	}
 }
