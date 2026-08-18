@@ -1,0 +1,70 @@
+error: could not lock config file /Users/dylanknuth/.gitconfig: Operation not permitted
+error: could not lock config file /Users/dylanknuth/.gitconfig: Operation not permitted
+error: could not lock config file /Users/dylanknuth/.gitconfig: Operation not permitted
+error: could not lock config file /Users/dylanknuth/.gitconfig: Operation not permitted
+name: Discord CI notifications
+
+on:
+  workflow_run:
+    workflows:
+      - CI
+      - Mod loading
+      - Network hardening
+    types: [completed]
+
+permissions:
+  contents: read
+
+jobs:
+  notify:
+    name: Notify Discord
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    env:
+      DISCORD_CI_WEBHOOK: ${{ secrets.DISCORD_CI_WEBHOOK }}
+    steps:
+      - name: Post workflow result
+        if: env.DISCORD_CI_WEBHOOK != ''
+        env:
+          CONCLUSION: ${{ github.event.workflow_run.conclusion }}
+          EVENT_NAME: ${{ github.event.workflow_run.event }}
+          HEAD_BRANCH: ${{ github.event.workflow_run.head_branch }}
+          HEAD_SHA: ${{ github.event.workflow_run.head_sha }}
+          HTML_URL: ${{ github.event.workflow_run.html_url }}
+          WORKFLOW_NAME: ${{ github.event.workflow_run.name }}
+        run: |
+          color=5763719
+          icon="✅"
+          if [ "$CONCLUSION" != "success" ]; then
+            color=15548997
+            icon="❌"
+          fi
+
+          payload="$(jq -n \
+            --arg username "Dark Magic CI" \
+            --arg title "$icon $WORKFLOW_NAME: $CONCLUSION" \
+            --arg url "$HTML_URL" \
+            --arg branch "$HEAD_BRANCH" \
+            --arg commit "${HEAD_SHA:0:7}" \
+            --arg event "$EVENT_NAME" \
+            --argjson color "$color" \
+            '{
+              username: $username,
+              allowed_mentions: {parse: []},
+              embeds: [{
+                title: $title,
+                url: $url,
+                color: $color,
+                fields: [
+                  {name: "Branch", value: $branch, inline: true},
+                  {name: "Commit", value: $commit, inline: true},
+                  {name: "Trigger", value: $event, inline: true}
+                ]
+              }]
+            }')"
+
+          curl --fail-with-body \
+            --retry 2 \
+            -H "Content-Type: application/json" \
+            -d "$payload" \
+            "$DISCORD_CI_WEBHOOK"
