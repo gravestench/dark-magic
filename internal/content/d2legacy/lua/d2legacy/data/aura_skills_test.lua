@@ -171,6 +171,36 @@ return test.suite({
                         perdelay = "50",
                     },
                     {
+                        Id = "115",
+                        skill = "Fixture Vigor",
+                        srvstfunc = "",
+                        srvdofunc = "65",
+                        aura = "1",
+                        immediate = "1",
+                        leftskill = "",
+                        range = "none",
+                        InGame = "1",
+                        aurafilter = "73731",
+                        aurarangecalc = "ln12",
+                        aurastate = "stamina",
+                        auratargetstate = "stamina",
+                        aurastat1 = "staminarecoverybonus",
+                        aurastatcalc1 = "ln34",
+                        aurastat2 = "skill_staminapercent",
+                        aurastatcalc2 = "ln34",
+                        aurastat3 = "velocitypercent",
+                        aurastatcalc3 = "dm56",
+                        mana = "0",
+                        lvlmana = "0",
+                        Param1 = "16",
+                        Param2 = "3",
+                        Param3 = "50",
+                        Param4 = "25",
+                        Param5 = "7",
+                        Param6 = "50",
+                        perdelay = "50",
+                    },
+                    {
                         Id = "999",
                         skill = "Fixture Aim",
                         srvstfunc = "",
@@ -204,23 +234,27 @@ return test.suite({
                         if path == "data/global/excel/skills.txt" then
                             return skills
                         end
-                        return {
-                            { state = "might", aura = "1", stat = "damagepercent" },
-                            { state = "defiance", aura = "1", stat = "skill_armor_percent" },
-                            { state = "resistfire", aura = "1", stat = "fireresist" },
-                            { state = "passive_resistfire" },
-                            { state = "resistcold", aura = "1", stat = "coldresist" },
-                            { state = "passive_resistcold" },
-                            { state = "resistlight", aura = "1", stat = "lightresist" },
-                            { state = "passive_resistltng" },
-                            { state = "resistall", aura = "1", stat = "lightresist" },
-                            { state = "blessedaim", aura = "1", stat = "item_tohit_percent" },
-                            { state = "penetrate" },
-                        }
+                        if path == "data/global/excel/states.txt" then
+                            return {
+                                { state = "might", aura = "1", stat = "damagepercent" },
+                                { state = "defiance", aura = "1", stat = "skill_armor_percent" },
+                                { state = "resistfire", aura = "1", stat = "fireresist" },
+                                { state = "passive_resistfire" },
+                                { state = "resistcold", aura = "1", stat = "coldresist" },
+                                { state = "passive_resistcold" },
+                                { state = "resistlight", aura = "1", stat = "lightresist" },
+                                { state = "passive_resistltng" },
+                                { state = "resistall", aura = "1", stat = "lightresist" },
+                                { state = "stamina", aura = "1", stat = "maxstamina" },
+                                { state = "blessedaim", aura = "1", stat = "item_tohit_percent" },
+                                { state = "penetrate" },
+                            }
+                        end
+                        return { { Stat = "skill_staminapercent", op = "1", ["op stat1"] = "maxstamina" } }
                     end,
                 }, { "load" })
                 test.unload_module("d2legacy.data.aura_skills")
-                local definitions = require("d2legacy.data.aura_skills").load({ 98, 100, 105, 110, 125, 998, 999 })
+                local definitions = require("d2legacy.data.aura_skills").load({ 98, 100, 105, 110, 115, 125, 998, 999 })
                 test.expect(definitions[98].activation):equals("selected_right")
                 test.expect(definitions[98].radius_base):equals(16)
                 test.expect(definitions[98].stat_value_base):equals(40)
@@ -249,6 +283,15 @@ return test.suite({
                 test.expect(definitions[125].stats[1].value_minimum):equals(50)
                 test.expect(definitions[125].stats[1].value_maximum):equals(120)
                 test.expect(definitions[125].learned_passive == nil):is_true()
+                test.expect(#definitions[115].stats):equals(3)
+                test.expect(definitions[115].stats[1].stat):equals("staminarecoverybonus")
+                test.expect(definitions[115].stats[1].value_base):equals(50)
+                test.expect(definitions[115].stats[1].value_per_level):equals(25)
+                test.expect(definitions[115].stats[2].stat):equals("skill_staminapercent")
+                test.expect(definitions[115].stats[3].stat):equals("velocitypercent")
+                test.expect(definitions[115].stats[3].progression):equals("dm56")
+                test.expect(definitions[115].stats[3].value_minimum):equals(7)
+                test.expect(definitions[115].stats[3].value_maximum):equals(50)
                 test.expect(definitions[999].stat):equals("item_tohit_percent")
                 test.expect(definitions[999].learned_passive.state_id):equals("penetrate")
                 test.expect(definitions[999].learned_passive.stat):equals("item_tohit_percent")

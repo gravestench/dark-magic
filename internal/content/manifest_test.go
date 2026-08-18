@@ -421,7 +421,10 @@ func TestD2LegacyPresentationAssetCoverageBaseline(t *testing.T) {
 	// Shared cast presentation now follows Skills.txt castoverlay into Overlay.txt;
 	// the focused adapter fixture adds FireCast2 to the static inventory while
 	// all owned cast overlays remain audited beneath the dynamic overlay prefix.
-	const auditedFingerprint = "17a4d67fb944c23f11f1d52e9728b03a637e23231643b6263fe03ce758119cb0"
+	// Vigor adds only its owned Stamina_front and Stamina_back DCC fixtures. Both
+	// remain record-selected beneath the existing dynamic overlay prefix; the
+	// static references pin the exact admitted presentation evidence.
+	const auditedFingerprint = "8104812705a5979877401bae3a0cc181fc99d1f3704f086f40d2fe5102587163"
 	if coverage.Fingerprint != auditedFingerprint {
 		t.Fatalf("presentation asset coverage changed: got %s, want audited %s; run `make presentation-coverage` and classify every changed path", coverage.Fingerprint, auditedFingerprint)
 	}

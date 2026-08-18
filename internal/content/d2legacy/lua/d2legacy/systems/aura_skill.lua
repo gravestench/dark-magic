@@ -18,7 +18,7 @@ local function evaluated_stats(definition, level)
         local value
         if stat.progression == "ln34" then
             value = progression.linear(stat.value_base, stat.value_per_level, level)
-        elseif stat.progression == "dm34" then
+        elseif string.sub(stat.progression, 1, 2) == "dm" then
             value = progression.diminishing(stat.value_minimum, stat.value_maximum, level)
         elseif stat.progression == "self_hard_level" then
             value = level

@@ -40,6 +40,9 @@ return test.suite({
     profile = "authority",
     tier = "fast",
     records = {
+        ["data/global/excel/ItemStatCost.txt"] = {
+            { Stat = "skill_staminapercent", op = "1", ["op stat1"] = "maxstamina" },
+        },
         ["data/global/excel/charstats.txt"] = {
             {
                 class = "Paladin",
@@ -219,6 +222,38 @@ return test.suite({
                 perdelay = "50",
             },
             {
+                Id = "115",
+                skill = "Fixture Vigor",
+                skilldesc = "vigor",
+                charclass = "pal",
+                srvstfunc = "",
+                srvdofunc = "65",
+                aura = "1",
+                immediate = "1",
+                leftskill = "",
+                range = "none",
+                InGame = "1",
+                aurafilter = "73731",
+                aurarangecalc = "ln12",
+                aurastate = "stamina",
+                auratargetstate = "stamina",
+                aurastat1 = "staminarecoverybonus",
+                aurastatcalc1 = "ln34",
+                aurastat2 = "skill_staminapercent",
+                aurastatcalc2 = "ln34",
+                aurastat3 = "velocitypercent",
+                aurastatcalc3 = "dm56",
+                mana = "0",
+                lvlmana = "0",
+                Param1 = "16",
+                Param2 = "3",
+                Param3 = "50",
+                Param4 = "25",
+                Param5 = "7",
+                Param6 = "50",
+                perdelay = "50",
+            },
+            {
                 Id = "125",
                 skill = "Fixture Salvation",
                 skilldesc = "salvation",
@@ -288,6 +323,7 @@ return test.suite({
             { skilldesc = "resist cold", ListRow = "6", IconCel = "18" },
             { skilldesc = "resist lightning", ListRow = "7", IconCel = "28" },
             { skilldesc = "salvation", ListRow = "8", IconCel = "58" },
+            { skilldesc = "vigor", ListRow = "9", IconCel = "26" },
         },
         ["data/global/excel/states.txt"] = {
             { state = "might", id = "33", aura = "1", stat = "damagepercent" },
@@ -301,6 +337,7 @@ return test.suite({
             { state = "resistlight", id = "5", aura = "1", stat = "lightresist" },
             { state = "passive_resistltng", id = "183" },
             { state = "resistall", id = "8", aura = "1", stat = "lightresist" },
+            { state = "stamina", id = "41", aura = "1", stat = "maxstamina" },
         },
     },
     cases = {
@@ -998,6 +1035,102 @@ return test.suite({
                     test.expect(defense:get("fire_resist")):equals(0)
                     test.expect(defense:get("cold_resist")):equals(0)
                     test.expect(defense:get("lightning_resist")):equals(0)
+                end
+            end),
+        }),
+        test.case("vigor_sources_drive_movement_recovery_and_maximum_stamina", {
+            test.submit_system({
+                tick = 1,
+                sequence = 1,
+                kind = "system.player.enter",
+                payload = entry("alice", "Paladin", 10),
+            }),
+            test.step(2),
+            test.run(function()
+                local ecs = require("engine.ecs/v1")
+                for _, player in ipairs(ecs.query({ all = { "d2legacy.player.identity" } })) do
+                    if ecs.get(player, "d2legacy.player.identity"):get("player") == "alice" then
+                        ecs.create({
+                            ["d2legacy.player.learned_skill"] = {
+                                owner = player,
+                                skill_id = 115,
+                                level = 3,
+                                list_row = 9,
+                                left_allowed = false,
+                                right_allowed = true,
+                            },
+                        })
+                    end
+                end
+            end),
+            test.submit({
+                tick = 4,
+                sequence = 1,
+                player = "alice",
+                kind = "player.assign_skills",
+                payload = { right = 115 },
+            }),
+            test.step(3),
+            test.restore_checkpoint(),
+            test.run(function()
+                local ecs = require("engine.ecs/v1")
+                local effects = aura_effects()
+                test.expect(#effects):equals(1)
+                test.expect(aura_source(effects[1], "staminarecoverybonus"):get("value")):equals(100)
+                test.expect(aura_source(effects[1], "skill_staminapercent"):get("value")):equals(100)
+                test.expect(aura_source(effects[1], "velocitypercent"):get("value")):equals(22)
+                local players = ecs.query({ all = { "d2legacy.player.movement_stats", "d2legacy.player.vitals" } })
+                test.expect(#players):equals(1)
+                local stats = ecs.get(players[1], "d2legacy.player.movement_stats")
+                local vitals = ecs.get(players[1], "d2legacy.player.vitals")
+                test.expect(stats:get("staminarecoverybonus")):equals(100)
+                test.expect(stats:get("velocitypercent")):equals(22)
+                test.expect(vitals:get("max_stamina_raw")):equals(178 * 256)
+                vitals:set("stamina_raw", 89 * 256)
+                vitals:set("stamina", 89)
+            end),
+            test.step(1),
+            test.run(function()
+                local ecs = require("engine.ecs/v1")
+                for _, player in ipairs(ecs.query({ all = { "d2legacy.player.vitals" } })) do
+                    test.expect(ecs.get(player, "d2legacy.player.vitals"):get("stamina_raw")):equals(89 * 256 + 356)
+                end
+            end),
+            test.run(function()
+                local ecs = require("engine.ecs/v1")
+                local player_motion = require("d2legacy.gameplay.player_motion")
+                for _, player in ipairs(ecs.query({ all = { "d2legacy.player.identity" } })) do
+                    player_motion.locomotion(player, { x = 1, y = 0, running = false })
+                end
+            end),
+            test.step(1),
+            test.run(function()
+                local ecs = require("engine.ecs/v1")
+                local moving_players = ecs.query({ all = { "d2legacy.player.identity", "d2legacy.world.velocity" } })
+                for _, player in ipairs(moving_players) do
+                    local velocity = ecs.get(player, "d2legacy.world.velocity")
+                    test.assert(
+                        math.abs(velocity:get("x") - 7.32) < 0.000000001,
+                        "Vigor walk velocity = " .. tostring(velocity:get("x"))
+                    )
+                end
+            end),
+            test.run(function()
+                local ecs = require("engine.ecs/v1")
+                for _, player in ipairs(ecs.query({ all = { "d2legacy.player.skill_assignment" } })) do
+                    ecs.get(player, "d2legacy.player.skill_assignment"):set("right", 98)
+                end
+            end),
+            test.step(3),
+            test.restore_checkpoint(),
+            test.run(function()
+                local ecs = require("engine.ecs/v1")
+                for _, player in ipairs(ecs.query({ all = { "d2legacy.player.movement_stats" } })) do
+                    local stats = ecs.get(player, "d2legacy.player.movement_stats")
+                    local vitals = ecs.get(player, "d2legacy.player.vitals")
+                    test.expect(stats:get("staminarecoverybonus")):equals(0)
+                    test.expect(stats:get("velocitypercent")):equals(0)
+                    test.expect(vitals:get("max_stamina_raw")):equals(89 * 256)
                 end
             end),
         }),

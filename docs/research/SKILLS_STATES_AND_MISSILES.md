@@ -114,8 +114,8 @@ only after a target-binary probe pins the roll and damage-result ordering.
 The target-locked `skill_behavior_coverage` tool now reads the winning mounted
 Skills.txt and Missiles.txt rows and groups every skill by its server start/do
 IDs plus referenced missile server-do IDs. Against the owned 1.14d Expansion
-archives on 2026-08-18 it reports 357 skill rows, 172 distinct signatures, 18
-explicitly admitted configurations, and 339 missing configurations. Every
+archives on 2026-08-18 it reports 357 skill rows, 172 distinct signatures, 19
+explicitly admitted configurations, and 338 missing configurations. Every
 consumer carries an implementation family or `missing_family: true` plus an
 evidence status. Exact declarations live in
 `manifests/skill-behavior-coverage.v1.json`, which runtime composition also
@@ -466,7 +466,7 @@ Mid-cast equipment/stat changes, interruption/refund behavior, other classes,
 and non-cast sequences remain separate target-runtime probes.
 
 Still open are complete skill-level formulas, target/range/LOS and delay policy,
-classification and implementation of the 339 missing configurations,
+classification and implementation of the 338 missing configurations,
 additional impact/motion families, richer state/stat-source effects, summons,
 corpse/item/object actions, and the rest of the behavior-family matrix below.
 
@@ -995,6 +995,32 @@ consumers reduce 1000 fire, cold, or lightning damage to 250 and remove all
 three sources atomically when selection changes. Owned `resistall` state,
 `paladin_aura_salvation` sound, front/back/cast Overlay rows, and DCC members
 pin presentation independently of the neighboring aura records.
+
+Vigor is the eighth exact selected party-stat aura and the first whose three
+ordinary sources are consumed by both locomotion and stamina systems. Its owned
+ID 115 row declares `staminarecoverybonus=ln34`,
+`skill_staminapercent=ln34`, and `velocitypercent=dm56`. Params 3/4 produce the
+linear stamina vector 50,75,...,525; Params 5/6 produce the independently
+published movement vector 13,18,22,25,28,30,32,33,35,36,37,38,39,40,40,41,41,
+42,42,43. Blizzard's [Expansion defensive-aura
+reference](https://classic.battle.net/diablo2exp/skills/paladin-defense.shtml)
+describes the same movement, maximum-stamina, and recovery effects.
+
+State 41 represents the effect with `maxstamina`, while Skills.txt authors
+`skill_staminapercent`. ItemStatCost.txt supplies the missing semantic edge:
+that authored percentage stat's operation targets `maxstamina`. The decoder
+uses this metadata to validate the relationship instead of weakening state
+validation or recognizing Vigor. It also derives any reviewed `dmXY` recipe's
+parameter columns, so `dm56` shares the progression evaluator without being
+treated as `dm34`.
+
+At level three, the relationship owns +100% stamina recovery, +100% maximum
+stamina, and +22% velocity sources. Existing consumers double the fixture
+Paladin's 89 base stamina, apply doubled fixed-point idle recovery, and raise
+production walk velocity from 6 to 7.32. Changing selection removes all three
+sources atomically, and checkpoint restore preserves the result. Owned locale
+text, `paladin_aura_stamina`, the `staminafront`/`staminaback` Overlay rows, and
+their DCC members pin intent and presentation independently.
 
 The current target set is intentionally narrower than `aurafilter=73731`: only
 living player party members in the same level are admitted. Hirelings, summons,

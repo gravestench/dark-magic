@@ -83,7 +83,7 @@ The research program now has a baseline for every indexed workstream. Implementa
   fact. Viewport/range, policy 2, invalid-target payment/fallback, owned units,
   and action/presentation timing remain probes.
 - G9 selected-aura tranche: active; exact-ID Might, Defiance, Blessed Aim,
-  Resist Fire, Resist Cold, Resist Lightning, and Salvation use the same
+  Resist Fire, Resist Cold, Resist Lightning, Salvation, and Vigor use the same
   right-selected ECS emitter and
   target relationships with ordinary stat sources. Reviewed record recipes map
   Might to outgoing
@@ -122,6 +122,13 @@ The research program now has a baseline for every indexed workstream. Implementa
   three keyed `dm34` sources. Level-three acceptance proves 75 fire/cold/
   lightning resistance, 250/1000 mitigation in each channel, and atomic removal;
   no passive or maximum-resistance effect is inferred.
+  Vigor admits three independently authored sources: linear stamina recovery
+  and maximum-stamina percentages plus `dm56` movement velocity. ItemStatCost
+  operation metadata validates the state's `maxstamina` vocabulary against
+  `skill_staminapercent`; at level three the existing recovery, derived-stamina,
+  and production-motion consumers observe +100%, +100%, and +22% respectively.
+  Selection removal and checkpoint parity remain ordinary ECS source lifecycle,
+  with no skill-specific consumer branch.
 - G8 combat fidelity tranche 1: active; shared direct-damage commit/result and
   typed six-channel ECS stage facts implemented; death attribution now uses an
   independent ECS consumer marker, and basic melee exposes generic hit/miss/
