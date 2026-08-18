@@ -9,6 +9,7 @@ secondary evidence where 1.14d behavior has not yet been measured.
 Research program: [GAME_SYSTEMS_RESEARCH_PROGRAM.md](GAME_SYSTEMS_RESEARCH_PROGRAM.md).
 Gameplay source inventory: [SYSTEMS_SOURCE_MATRIX.md](SYSTEMS_SOURCE_MATRIX.md).
 Current implementation sequence: [NEXT_GAMEPLAY_IMPLEMENTATION_SEQUENCE.md](NEXT_GAMEPLAY_IMPLEMENTATION_SEQUENCE.md).
+Historical patch context and target-inference rules: [DIABLO_II_PATCH_HISTORY.md](DIABLO_II_PATCH_HISTORY.md).
 
 | # | Workstream | Primary document | Research status | Current-engine context | Dependencies | Open probes |
 | --- | --- | --- | --- | --- | --- | --- |
@@ -185,6 +186,10 @@ Use [NEXT_GAMEPLAY_IMPLEMENTATION_SEQUENCE.md](NEXT_GAMEPLAY_IMPLEMENTATION_SEQU
 
 ## Existing cross-cutting research
 
+- [DIABLO_II_PATCH_HISTORY.md](DIABLO_II_PATCH_HISTORY.md) inventories the
+  Classic and Lord of Destruction patch line, separates patch identity from
+  game mode/content era, and defines how cumulative changelogs may be used to
+  infer—but not by themselves prove—Expansion 1.14d behavior.
 - [QUESTS_AND_WORLD.md](QUESTS_AND_WORLD.md) covers the five-act player route, world gates, required set pieces, and quest/world coupling.
 - [QUEST_RUNTIME_MODEL.md](QUEST_RUNTIME_MODEL.md) covers quest bits, live controller state, events, party credit, and authoritative quest ownership.
 - [riiablo-recovered-data.md](riiablo-recovered-data.md) records the imported declarative quest/dialogue/object mappings and their limits.
