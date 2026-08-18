@@ -570,11 +570,32 @@ local function update_sentries(context, entities, definitions, levels, structura
     end
 end
 
+local function has_periodic_state(entities, source, source_id)
+    for _, entity in ipairs(entities) do
+        local instance = ecs.get(entity, "d2legacy.state.instance")
+        if
+            instance
+            and instance:get("target"):id() == source:id()
+            and instance:get("source_id") == source_id
+        then
+            return true
+        end
+    end
+    return false
+end
+
 local function update_periodic_weapons(context, entities, definitions, structural)
     for _, source in ipairs(entities) do
         local periodic = ecs.get(source, "d2legacy.combat.periodic_weapon")
         if periodic then
-            if context.tick >= periodic:get("expires_tick") then
+            local applied_tick = periodic:get("next_tick") - periodic:get("period_ticks")
+            local state_missing = context.tick > applied_tick
+                and not has_periodic_state(entities, source, periodic:get("source_id"))
+            if
+                ecs.get(source, "d2legacy.player.death")
+                or context.tick >= periodic:get("expires_tick")
+                or state_missing
+            then
                 structural:remove(source, "d2legacy.combat.periodic_weapon")
             elseif context.tick >= periodic:get("next_tick") then
                 local definition = assert(definitions[periodic:get("skill_id")])
@@ -736,11 +757,17 @@ function M.register(definitions)
         id = "d2legacy.combat.periodic_weapon",
         phase = "combat",
         query = {
-            any = { "d2legacy.combat.periodic_weapon", "d2legacy.world.selectable" },
+            any = {
+                "d2legacy.combat.periodic_weapon",
+                "d2legacy.world.selectable",
+                "d2legacy.state.instance",
+            },
             none = { "d2legacy.world.inactive" },
         },
         read = {
             "d2legacy.combat.periodic_weapon",
+            "d2legacy.player.death",
+            "d2legacy.state.instance",
             "d2legacy.combat.melee_profile",
             "d2legacy.world.selectable",
             "d2legacy.world.position",

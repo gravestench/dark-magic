@@ -119,6 +119,133 @@ local function install_returning_weapon()
     ecs.create(components)
 end
 
+local function install_owned_sentry(inactive, shots)
+    local ecs = require("engine.ecs/v1")
+    local player = ecs.query({ all = { "d2legacy.player.identity" } })[1]
+    local components = {
+        ["d2legacy.world.position"] = { x = 0, y = 0 },
+        ["d2legacy.world.location"] = { act = 1, level_id = 1 },
+        ["d2legacy.world.selectable"] = {
+            id = "trap:alice:fixture",
+            kind = "owned",
+            label = "fixture sentry",
+        },
+        ["d2legacy.owned_unit"] = {
+            owner = player,
+            owner_id = "player:alice",
+            ultimate_owner_id = "player:alice",
+            category = "trap",
+            group = 1,
+            limit = 5,
+            replacement = "replace_oldest",
+            created_tick = 1,
+            expires_tick = 0,
+            durable_id = "",
+            durable = false,
+            unsummon = false,
+            warp_with_owner = false,
+            range_limited = true,
+            active = true,
+            survives_owner_death = false,
+        },
+        ["d2legacy.trap.autonomous"] = {
+            owner = player,
+            owner_id = "player:alice",
+            skill_id = 276,
+            skill_level = 1,
+            shots_remaining = shots or 1,
+            next_fire_tick = 2,
+            fire_interval = 10,
+            target_radius = 6,
+            cast_serial = 0,
+        },
+    }
+    if inactive then
+        components["d2legacy.world.inactive"] = {}
+    end
+    ecs.create(components)
+    ecs.create({
+        ["d2legacy.monster.identity"] = {
+            spawn_id = "active-target",
+            definition_id = "fallen",
+            seed = "active-target",
+        },
+        ["d2legacy.monster.stats"] = { level = 1, health = 100 * 256, max_health = 100 * 256 },
+        ["d2legacy.world.position"] = { x = 3, y = 0 },
+        ["d2legacy.world.location"] = { act = 1, level_id = 1 },
+        ["d2legacy.world.selectable"] = {
+            id = "monster:active-target",
+            kind = "hostile",
+            label = "active target",
+        },
+    })
+end
+
+local function install_interrupted_periodic_weapon()
+    local ecs = require("engine.ecs/v1")
+    local player = ecs.query({ all = { "d2legacy.player.identity" } })[1]
+    ecs.set(player, "d2legacy.combat.periodic_weapon", {
+        owner = player,
+        owner_id = "player:alice",
+        skill_id = 277,
+        skill_level = 1,
+        source_id = "skill:player:alice:277",
+        radius = 6,
+        weapon_fraction = 32,
+        next_tick = 2,
+        period_ticks = 25,
+        expires_tick = 100,
+    })
+    ecs.set(player, "d2legacy.player.death", {
+        tick = 1,
+        killer_id = "monster:killer",
+        credited_id = "monster:killer",
+        hardcore = false,
+    })
+    ecs.create({
+        ["d2legacy.monster.identity"] = {
+            spawn_id = "blade-shield-target",
+            definition_id = "fallen",
+            seed = "blade-shield-target",
+        },
+        ["d2legacy.monster.stats"] = { level = 1, health = 100 * 256, max_health = 100 * 256 },
+        ["d2legacy.world.position"] = { x = 2, y = 0 },
+        ["d2legacy.world.location"] = { act = 1, level_id = 1 },
+        ["d2legacy.world.selectable"] = {
+            id = "monster:blade-shield-target",
+            kind = "hostile",
+            label = "blade shield target",
+        },
+    })
+end
+
+local function install_periodic_weapon_with_state()
+    local ecs = require("engine.ecs/v1")
+    local player = ecs.query({ all = { "d2legacy.player.identity" } })[1]
+    ecs.set(player, "d2legacy.combat.periodic_weapon", {
+        owner = player,
+        owner_id = "player:alice",
+        skill_id = 277,
+        skill_level = 1,
+        source_id = "skill:player:alice:277",
+        radius = 6,
+        weapon_fraction = 32,
+        next_tick = 26,
+        period_ticks = 25,
+        expires_tick = 100,
+    })
+    ecs.create({
+        ["d2legacy.state.instance"] = {
+            target = player,
+            state_id = "blade-shield-fixture",
+            source_id = "skill:player:alice:277",
+            applied_tick = 1,
+            expires_tick = 100,
+            policy = "refresh_same_source",
+        },
+    })
+end
+
 return test.suite({
     name = "Assassin trap transactions",
     profile = "authority",
@@ -220,6 +347,165 @@ return test.suite({
                 local ecs = require("engine.ecs/v1")
                 test.expect(#ecs.query({ all = { "d2legacy.trap.returning_weapon" } })):equals(0)
             end),
+        }),
+        test.case("inactive_sentry_pauses_and_resumes_its_checkpointed_schedule", {
+            test.submit_system(fixtures.command("system.player.enter", fixtures.player_entry(), {
+                tick = 1,
+                sequence = 1,
+            })),
+            test.step(1),
+            test.run(function()
+                install_owned_sentry(true)
+            end),
+            test.step(1),
+            test.run(function()
+                local ecs = require("engine.ecs/v1")
+                local sentry = ecs.query({ all = { "d2legacy.trap.autonomous" } })[1]
+                local autonomous = ecs.get(sentry, "d2legacy.trap.autonomous")
+                test.expect(autonomous:get("shots_remaining")):equals(1)
+                test.expect(autonomous:get("cast_serial")):equals(0)
+            end),
+            test.expect_checkpoint_parity(1),
+            test.run(function()
+                local ecs = require("engine.ecs/v1")
+                local sentry = ecs.query({ all = { "d2legacy.trap.autonomous" } })[1]
+                ecs.remove(sentry, "d2legacy.world.inactive")
+            end),
+            test.step(1),
+            test.run(function()
+                local ecs = require("engine.ecs/v1")
+                local sentry = ecs.query({ all = { "d2legacy.trap.autonomous" } })[1]
+                local autonomous = ecs.get(sentry, "d2legacy.trap.autonomous")
+                test.expect(autonomous:get("shots_remaining")):equals(0)
+                test.expect(autonomous:get("cast_serial")):equals(1)
+            end),
+        }),
+        test.case("player_departure_removes_owned_sentries", {
+            test.submit_system(fixtures.command("system.player.enter", fixtures.player_entry(), {
+                tick = 1,
+                sequence = 1,
+            })),
+            test.step(1),
+            test.run(function()
+                install_owned_sentry(false)
+            end),
+            test.submit_system(fixtures.command("system.player.leave", { player = "alice" }, {
+                tick = 2,
+                sequence = 2,
+            })),
+            test.step(1),
+            test.run(function()
+                local ecs = require("engine.ecs/v1")
+                test.expect(#ecs.query({ all = { "d2legacy.owned_unit" } })):equals(0)
+                test.expect(#ecs.query({ all = { "d2legacy.trap.autonomous" } })):equals(0)
+                test.expect(#ecs.query({ all = { "d2legacy.player.identity" } })):equals(0)
+            end),
+        }),
+        test.case("sentry_retargets_and_retires_after_its_shot_budget", {
+            test.submit_system(fixtures.command("system.player.enter", fixtures.player_entry(), {
+                tick = 1,
+                sequence = 1,
+            })),
+            test.step(1),
+            test.run(function()
+                install_owned_sentry(false, 2)
+            end),
+            test.step(1),
+            test.run(function()
+                local ecs = require("engine.ecs/v1")
+                local sentry = ecs.query({ all = { "d2legacy.trap.autonomous" } })[1]
+                local autonomous = ecs.get(sentry, "d2legacy.trap.autonomous")
+                test.expect(autonomous:get("shots_remaining")):equals(1)
+                test.expect(autonomous:get("cast_serial")):equals(1)
+                for _, entity in ipairs(ecs.query({ all = { "d2legacy.world.selectable" } })) do
+                    local selectable = ecs.get(entity, "d2legacy.world.selectable")
+                    if selectable:get("id") == "monster:active-target" then
+                        ecs.destroy(entity)
+                    end
+                end
+                ecs.create({
+                    ["d2legacy.monster.identity"] = {
+                        spawn_id = "replacement-target",
+                        definition_id = "fallen",
+                        seed = "replacement-target",
+                    },
+                    ["d2legacy.monster.stats"] = {
+                        level = 1,
+                        health = 100 * 256,
+                        max_health = 100 * 256,
+                    },
+                    ["d2legacy.world.position"] = { x = 4, y = 0 },
+                    ["d2legacy.world.location"] = { act = 1, level_id = 1 },
+                    ["d2legacy.world.selectable"] = {
+                        id = "monster:replacement-target",
+                        kind = "hostile",
+                        label = "replacement target",
+                    },
+                })
+                autonomous:set("next_fire_tick", 3)
+            end),
+            test.step(1),
+            test.run(function()
+                local ecs = require("engine.ecs/v1")
+                local sentry = ecs.query({ all = { "d2legacy.trap.autonomous" } })[1]
+                local autonomous = ecs.get(sentry, "d2legacy.trap.autonomous")
+                test.expect(autonomous:get("shots_remaining")):equals(0)
+                test.expect(autonomous:get("cast_serial")):equals(2)
+                local found_retargeted_shot = false
+                for _, entity in ipairs(ecs.query({ all = { "d2legacy.missile.projectile" } })) do
+                    local projectile = ecs.get(entity, "d2legacy.missile.projectile")
+                    if projectile:get("target_x") == 4 then
+                        found_retargeted_shot = true
+                    end
+                end
+                test.expect(found_retargeted_shot):equals(true)
+                autonomous:set("next_fire_tick", 4)
+            end),
+            test.step(1),
+            test.run(function()
+                local ecs = require("engine.ecs/v1")
+                test.expect(#ecs.query({ all = { "d2legacy.trap.autonomous" } })):equals(0)
+                test.expect(#ecs.query({ all = { "d2legacy.owned_unit" } })):equals(0)
+            end),
+        }),
+        test.case("player_death_interrupts_periodic_weapon_damage", {
+            test.submit_system(fixtures.command("system.player.enter", fixtures.player_entry(), {
+                tick = 1,
+                sequence = 1,
+            })),
+            test.step(1),
+            test.run(install_interrupted_periodic_weapon),
+            test.step(1),
+            test.run(function()
+                local ecs = require("engine.ecs/v1")
+                local player = ecs.query({ all = { "d2legacy.player.identity" } })[1]
+                test.expect(ecs.get(player, "d2legacy.combat.periodic_weapon") == nil):equals(true)
+                test.expect(#ecs.query({ all = { "d2legacy.combat.event" } })):equals(0)
+            end),
+            test.expect_checkpoint_parity(1),
+        }),
+        test.case("state_removal_interrupts_periodic_weapon_damage", {
+            test.submit_system(fixtures.command("system.player.enter", fixtures.player_entry(), {
+                tick = 1,
+                sequence = 1,
+            })),
+            test.step(1),
+            test.run(install_periodic_weapon_with_state),
+            test.step(1),
+            test.run(function()
+                local ecs = require("engine.ecs/v1")
+                local player = ecs.query({ all = { "d2legacy.player.identity" } })[1]
+                test.expect(ecs.get(player, "d2legacy.combat.periodic_weapon") ~= nil):equals(true)
+                local instance = ecs.query({ all = { "d2legacy.state.instance" } })[1]
+                ecs.destroy(instance)
+            end),
+            test.step(1),
+            test.run(function()
+                local ecs = require("engine.ecs/v1")
+                local player = ecs.query({ all = { "d2legacy.player.identity" } })[1]
+                test.expect(ecs.get(player, "d2legacy.combat.periodic_weapon") == nil):equals(true)
+            end),
+            test.expect_checkpoint_parity(1),
         }),
     },
 })

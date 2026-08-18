@@ -1325,6 +1325,15 @@ checkpointed periodic weapon transaction. Synthetic family tests cover all ten
 IDs and the six shapes; focused system tests cover arrival impact, corpse
 ordering, return patrol, replacement facts, and checkpoint parity.
 
+Owned sentry lifecycle coverage also proves that inactive-room filtering pauses
+autonomous fire without spending a shot, reactivation resumes the checkpointed
+schedule, target loss causes deterministic reacquisition, an exhausted shot
+budget retires the sentry, and player departure removes owned traps through the
+shared ownership transaction. Blade Shield's periodic weapon transaction is
+explicitly coupled to its source-tagged state: player death or early state
+removal interrupts future strikes instead of preserving the component until its
+original duration boundary.
+
 This remains partial 1.14d fidelity. Exact sentry initial think phase, wave and
 charged-bolt angular layout, footprint/range units, Blade Sentinel patrol
 contact cadence, Blade Fury release timing, weapon modifier snapshot order,
