@@ -133,6 +133,7 @@ function M.components(command, game_player_count)
     end
     if definition.boss == true then
         result["d2legacy.monster.boss"] = {}
+        result["d2legacy.monster.freeze_immune"] = {}
     end
     if definition.prime_evil == true then
         result["d2legacy.monster.prime_evil"] = {}

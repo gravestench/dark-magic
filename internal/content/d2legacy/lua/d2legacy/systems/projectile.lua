@@ -102,6 +102,17 @@ local function apply_hit(context, projectile, target, structural)
     local bundle = damage_bundle.single(projectile:get("damage_channel"), amount)
     local result = damage.resolve(target.entity, bundle, ecs)
     emit_hit(context, projectile, target, result, structural)
+    if projectile:get("hit_sound") ~= "" then
+        structural:create({
+            ["d2legacy.presentation.effect_cue"] = {
+                kind = "missile_hit",
+                tick = context.tick,
+                target = target.entity,
+                overlay_id = "",
+                sound = projectile:get("hit_sound"),
+            },
+        })
+    end
     return result
 end
 
@@ -116,11 +127,15 @@ local function apply_on_hit_state(projectile, target, damage_result, structural)
         if not ecs.get(target.entity, "d2legacy.monster.stats") then
             return
         end
-        duration = cold_duration.monster_frames(duration, game_rules.difficulty())
+        duration = cold_duration.target_frames(duration, target.entity, game_rules.difficulty(), ecs)
+    elseif policy == "cold" then
+        duration = cold_duration.target_frames(duration, target.entity, game_rules.difficulty(), ecs)
     else
         assert(policy == "", "unsupported on-hit state duration policy")
     end
-    assert(duration > 0, "on-hit state duration must be positive")
+    if duration <= 0 then
+        return
+    end
     structural:create({
         ["d2legacy.state.request"] = {
             operation = "apply",
@@ -307,6 +322,7 @@ function M.register()
             "d2legacy.world.location",
             "d2legacy.world.room_resident",
             "d2legacy.state.request",
+            "d2legacy.presentation.effect_cue",
         },
         update = resolve_contacts,
     })

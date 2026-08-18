@@ -15,6 +15,8 @@ return test.suite({
                         overlay2 = "curse_back",
                         castoverlay = "curse_cast",
                         removerlay = "curse_remove",
+                        onsound = "curse_on",
+                        offsound = "curse_off",
                     },
                 }, {
                     {
@@ -68,7 +70,9 @@ return test.suite({
                 test.assert(
                     resolved.applied.path == overlay_path .. "Cast.dcc"
                         and not resolved.applied.loop
-                        and resolved.removed.path == overlay_path .. "Remove.dcc",
+                        and resolved.removed.path == overlay_path .. "Remove.dcc"
+                        and resolved.applied_sound == "curse_on"
+                        and resolved.removed_sound == "curse_off",
                     [=[cast/removal overlays remain one-shot recipes]=]
                 )
             end),

@@ -403,7 +403,7 @@ func TestAuthorityRestoresAllDeterministicParticipantsBeforeFirstTick(t *testing
 	if err != nil {
 		t.Fatal(err)
 	}
-	if _, err := authority.Random.Uint64n("d2legacy.combat.missile.damage", 100); err != nil {
+	if _, err := authority.Random.Uint64n("d2legacy.combat.damage.roll", 100); err != nil {
 		t.Fatal(err)
 	}
 	if err := session.Step(); err != nil {

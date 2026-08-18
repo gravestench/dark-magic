@@ -330,8 +330,9 @@ func TestCombatLabFixtureEntersBloodMoor(t *testing.T) {
 }
 
 // Spell Lab adds only ephemeral fixture learning and a read-only legend to the
-// production world. This acceptance path proves a straight missile and the
-// complete golem family cross their shared authoritative behavior systems.
+// production world. This acceptance path proves every admitted behavior is
+// available in the lab, then exercises representative families through shared
+// authoritative systems rather than lab-only implementations.
 func TestSpellLabCastsProductionSkillFamilies(t *testing.T) {
 	if os.Getenv("MPQ_DIRECTORY") == "" {
 		t.Skip("MPQ_DIRECTORY is not configured")
@@ -374,8 +375,8 @@ func TestSpellLabCastsProductionSkillFamilies(t *testing.T) {
 	if !ok {
 		t.Fatal("Spell Lab has no authoritative learned skills")
 	}
-	if learned.Len() != 31 {
-		t.Fatalf("Spell Lab learned skills = %d, want 31 exact-ID behaviors", learned.Len())
+	if learned.Len() != 33 {
+		t.Fatalf("Spell Lab learned skills = %d, want 33 exact-ID behaviors", learned.Len())
 	}
 	learnedIDs := map[int64]bool{}
 	for _, entity := range learned.Entities() {
@@ -387,7 +388,7 @@ func TestSpellLabCastsProductionSkillFamilies(t *testing.T) {
 			learnedIDs[id.(int64)] = level == int64(20)
 		}
 	}
-	for _, id := range []int64{0, 36, 40, 45, 47, 48, 52, 54, 55, 66, 70, 72, 75, 80, 85, 90, 94, 95, 98, 99, 100, 103, 104, 105, 108, 109, 110, 115, 120, 124, 125} {
+	for _, id := range []int64{0, 36, 40, 45, 47, 48, 50, 52, 54, 55, 60, 66, 70, 72, 75, 80, 85, 90, 94, 95, 98, 99, 100, 103, 104, 105, 108, 109, 110, 115, 120, 124, 125} {
 		if !learnedIDs[id] {
 			t.Fatalf("Spell Lab skill %d is missing or not level 20: %#v", id, learnedIDs)
 		}

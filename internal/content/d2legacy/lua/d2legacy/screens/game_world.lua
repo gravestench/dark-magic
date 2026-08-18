@@ -546,7 +546,9 @@ local function update_overlay_node(self, overlay, snapshot)
     local x, y = self.world:subtile_to_pixel(snapshot.x, snapshot.y)
     overlay.node:set_position(
         x - self.world_canvas_width / 2 + overlay.recipe.offset_x,
-        y - self.world_canvas_height / 2 + overlay.recipe.offset_y
+        y
+            - self.world_canvas_height / 2
+            + overlay.recipe.offset_y
             + state_overlay_presentation.height_offset(overlay.recipe, snapshot.overlay_height)
     )
     local behind = overlay.recipe.predraw or overlay.recipe.layer == "back"
@@ -580,13 +582,23 @@ local function queue_cast_overlay_effect(self, cue, recipe)
     overlay.remaining_seconds = recipe.duration_seconds
 end
 
+local function queue_record_overlay_effect(self, cue)
+    local recipe = state_overlay_presentation.overlay(cue.overlay_id, "front", false)
+    if not recipe or not cue.x or not cue.y or cue.level_id ~= self.world_level_id then
+        return
+    end
+    self.state_overlay_effects = self.state_overlay_effects or {}
+    local key = "effect:" .. tostring(cue.entity_id)
+    local overlay = retained_state_overlay(self, self.state_overlay_effects, key, recipe)
+    overlay.snapshot = cue
+    overlay.remaining_seconds = recipe.duration_seconds
+end
+
 local function update_held_skill_gate(self, primary_pressed, primary_down)
-    local active = self.gameplay and self.gameplay.hero
-        and self.gameplay_world.skill_action_active(self.gameplay.hero)
+    local active = self.gameplay and self.gameplay.hero and self.gameplay_world.skill_action_active(self.gameplay.hero)
         or false
     local ready
-    ready, self.held_skill_gate =
-        held_skill_input.update(self.held_skill_gate, primary_pressed, primary_down, active)
+    ready, self.held_skill_gate = held_skill_input.update(self.held_skill_gate, primary_pressed, primary_down, active)
     return ready
 end
 
@@ -655,6 +667,20 @@ local function observe_semantic_cues(self)
             end
             if cue.cue_type == "state" then
                 queue_state_overlay_effect(self, cue)
+                local state = state_overlay_presentation.resolve(cue.state_id)
+                local sound = state and (cue.kind == "state_removed" and state.removed_sound or state.applied_sound)
+                    or ""
+                if sound ~= "" and cue.kind ~= "state_rejected" then
+                    pcall(legacy_audio.play_record, sound, cue.tick or 0)
+                end
+            end
+            if cue.cue_type == "effect" then
+                if cue.sound and cue.sound ~= "" then
+                    pcall(legacy_audio.play_record, cue.sound, cue.tick or 0)
+                end
+                if cue.overlay_id and cue.overlay_id ~= "" then
+                    queue_record_overlay_effect(self, cue)
+                end
             end
             if cue.cue_type == "cast" then
                 local recipe = cast_presentation.resolve(cue.skill_id)

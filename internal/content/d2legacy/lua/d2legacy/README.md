@@ -203,31 +203,38 @@ owned State/Overlay/Missiles assets pin presentation vocabulary separately.
 The semantic event is not yet rendered, and exact radius units, target-runtime
 RNG ordering, and same-tick corpse eligibility remain probe-gated.
 
-## Timed self-state/stat execution order
+## Timed self-state/reactive execution order
 
-1. The target-locked behavior manifest admits one exact skill ID.
-2. `data/state_skills.lua` validates the owned server-function, state/stat, cost,
-   level, and hard-point-synergy fields into a `state.self-timed-stat` definition.
-3. The shared cast lifecycle validates the learned level and available mana;
-   funded casts pay exactly once, while underfunded requests have no effect and
-   preserve the partial balance.
-4. `systems/state_skill.lua` computes the authored duration/stat value and emits
-   one source-tagged state request at the effect tick.
-5. `systems/timed_state.lua` applies or refreshes the state and its named stat
-   source together; state-group replacement, explicit removal, or expiration
-   removes that exact source.
-6. `systems/reactive_state.lua` turns a factual successful melee hit into the
-   active state's configured response, never a skill-name callback.
-7. Generic disabled-action state facts stop monster AI and motion until the
-   timed state expires; `systems/derived_stats.lua` independently rebuilds
-   effective defense.
+1. The target-locked behavior manifest admits exact skill IDs; a shared decoder
+   joins Skills, States, Missiles, SkillDesc, and localized TBL evidence before
+   constructing a `state.self-timed-reactive` definition.
+2. The cast lifecycle validates assignment, learned level, and mana. A funded
+   cast pays once; an underfunded request creates neither a cast nor an effect.
+3. `systems/state_skill.lua` evaluates effective-level defense and duration
+   separately from authored `.blvl` hard-point synergies, then snapshots the
+   reaction values into a source-tagged state request.
+4. `systems/timed_state.lua` refreshes a same-source state or replaces another
+   member of its States group. The state and exact named stat source share one
+   lifecycle across replacement, removal, expiration, and checkpoint restore.
+5. `systems/reactive_state.lua` observes immutable combat results and selects a
+   decoded reaction by record event/function pair. It never dispatches by skill
+   name or numeric ID.
+6. Direct reaction damage uses the common mitigation and combat-event path.
+   Chilling Armor's return bolt uses the ordinary projectile materializer and
+   collision path. Authored state overlays, reaction overlays, and sounds leave
+   authority as bounded semantic presentation cues.
 
-Frozen Armor is the first configuration. Its defense, armor duration, PvM melee-
-hit freeze response, difficulty divisor, and cold-armor exclusion are backed by
-owned Expansion 1.14d rows and Blizzard's official table. PvP chill conversion,
-target cold resistance/immunity and monster-class duration modifiers, exact
-integer/tick ordering, presentation, and cast animation timing remain explicitly
-incomplete.
+Frozen Armor, Shiver Armor, and Chilling Armor are one admitted family. Their
+owned Expansion 1.14d rows define defense, duration, mana, mutual exclusion,
+hard-point synergies, event triggers, cold damage, and return-missile assets.
+Frozen Armor requires a successful damaging melee hit; Shiver Armor reacts to a
+melee attempt even when it misses; Chilling Armor reacts only to a missile hit.
+Players and monster classes carrying the empty `monster.freeze_immune` ECS
+capability receive chill instead of a hard freeze. Cold resistance changes
+effect length, immunity suppresses both damage and chill, and monster cold
+lengths use the immutable Normal/Nightmare/Hell divisor. Exact action-frame
+timing and any unrepresented monster-quality source remain explicit follow-up
+work rather than hidden skill-specific exceptions.
 
 ## Player population and `/players X`
 

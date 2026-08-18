@@ -439,6 +439,44 @@ func TestConnectedSemanticEventsBaselineHistoryAndMirrorOnlyNewCues(t *testing.T
 	}
 }
 
+func TestConnectedSemanticEffectPreservesRecordOverlayAndSoundOnly(t *testing.T) {
+	engine := gameecs.New()
+	registerRemoteViewSchemas(t, engine)
+	app := &application{clientSimulation: engine}
+	client := newClientWorld()
+	if err := client.reconcileSemanticEvents(app, playeradapter.EventView{
+		Version: playeradapter.EventViewVersion, Tick: 10, FromTick: 0,
+	}, 1); err != nil {
+		t.Fatal(err)
+	}
+	effect := playeradapter.SemanticEvent{
+		ID: 50, Type: "effect", Tick: 11, Position: playeradapter.HUDPosition{X: 8, Y: 9}, Act: 1, LevelID: 2,
+		Direction: 3, OverlayHeight: 2,
+		Effect: &playeradapter.SemanticEffectCue{
+			Kind: "state_reaction", OverlayID: "frozenarmor_hit", Sound: "impact_cold_1",
+		},
+	}
+	if err := client.reconcileSemanticEvents(app, playeradapter.EventView{
+		Version: playeradapter.EventViewVersion, Tick: 11, FromTick: 0,
+		Events: []playeradapter.SemanticEvent{effect},
+	}, 1); err != nil {
+		t.Fatal(err)
+	}
+	store, _ := akara.GetDynamicStore(engine.World(), "d2legacy.presentation.effect_cue")
+	if store.Len() != 1 {
+		t.Fatalf("connected effect cues = %d, want 1", store.Len())
+	}
+	entity := store.Entities()[0]
+	instance, _ := store.Get(entity)
+	overlay, _ := instance.Get("overlay_id")
+	sound, _ := instance.Get("sound")
+	target, _ := instance.Get("target")
+	if overlay != "frozenarmor_hit" || sound != "impact_cold_1" || target != entity ||
+		currentPosition(engine.World(), entity) != effect.Position {
+		t.Fatalf("connected effect overlay=%v sound=%v target=%v position=%+v", overlay, sound, target, currentPosition(engine.World(), entity))
+	}
+}
+
 func TestConnectedSemanticEventsRejectCorrectionGapAndTruncation(t *testing.T) {
 	engine := gameecs.New()
 	registerRemoteViewSchemas(t, engine)
@@ -513,6 +551,10 @@ func registerRemoteViewSchemas(t *testing.T, engine *gameecs.Engine) {
 		}},
 		{Name: "d2legacy.presentation.state", Fields: []akara.Field{
 			field("target", akara.FieldEntity), field("state_id", akara.FieldString), field("period_ticks", akara.FieldInt64),
+		}},
+		{Name: "d2legacy.presentation.effect_cue", Fields: []akara.Field{
+			field("kind", akara.FieldString), field("tick", akara.FieldInt64), field("target", akara.FieldEntity),
+			field("overlay_id", akara.FieldString), field("sound", akara.FieldString),
 		}},
 		{Name: "d2legacy.player.appearance", Fields: []akara.Field{field("cof", akara.FieldString), field("token", akara.FieldString), field("palette", akara.FieldString), field("weapon_class", akara.FieldString)}},
 		{Name: "d2legacy.player.movement_mode", Fields: []akara.Field{field("running", akara.FieldBool)}},

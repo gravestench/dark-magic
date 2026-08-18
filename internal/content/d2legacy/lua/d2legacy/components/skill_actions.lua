@@ -296,6 +296,21 @@ function M.register()
         },
     })
 
+    -- Short-lived record-derived audiovisual facts cross the same semantic
+    -- event boundary in offline and connected play. They cannot affect combat,
+    -- state duration, targeting, or projectile contact.
+    ecs.component({
+        name = "d2legacy.presentation.effect_cue",
+        version = 1,
+        fields = {
+            { name = "kind", type = "string" },
+            { name = "tick", type = "i64" },
+            { name = "target", type = "entity" },
+            { name = "overlay_id", type = "string" },
+            { name = "sound", type = "string" },
+        },
+    })
+
     -- One cast/target contact lock is its own ECS entity. Radial rays share a
     -- cast ID, so overlap policy composes without a Nova-specific hit path.
     ecs.component({

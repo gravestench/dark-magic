@@ -165,9 +165,18 @@ local function update_instance(instance, request, expires)
         "exclusive_group",
         "replacement_priority",
         "reject_lower_priority",
-        "on_melee_hit_state_id",
-        "on_melee_hit_duration",
-        "on_melee_hit_disables_action",
+        "reaction",
+        "reaction_skill_id",
+        "reaction_state_id",
+        "reaction_chill_state_id",
+        "reaction_stat",
+        "reaction_stat_value",
+        "reaction_chill_stat",
+        "reaction_chill_stat_value",
+        "reaction_duration",
+        "reaction_disables_action",
+        "reaction_minimum_damage_raw",
+        "reaction_maximum_damage_raw",
         "action_disabled",
     }) do
         instance:set(field, request:get(field))
@@ -189,9 +198,18 @@ local function instance_values(request, tick, expires)
         exclusive_group = request:get("exclusive_group"),
         replacement_priority = request:get("replacement_priority"),
         reject_lower_priority = request:get("reject_lower_priority"),
-        on_melee_hit_state_id = request:get("on_melee_hit_state_id"),
-        on_melee_hit_duration = request:get("on_melee_hit_duration"),
-        on_melee_hit_disables_action = request:get("on_melee_hit_disables_action"),
+        reaction = request:get("reaction"),
+        reaction_skill_id = request:get("reaction_skill_id"),
+        reaction_state_id = request:get("reaction_state_id"),
+        reaction_chill_state_id = request:get("reaction_chill_state_id"),
+        reaction_stat = request:get("reaction_stat"),
+        reaction_stat_value = request:get("reaction_stat_value"),
+        reaction_chill_stat = request:get("reaction_chill_stat"),
+        reaction_chill_stat_value = request:get("reaction_chill_stat_value"),
+        reaction_duration = request:get("reaction_duration"),
+        reaction_disables_action = request:get("reaction_disables_action"),
+        reaction_minimum_damage_raw = request:get("reaction_minimum_damage_raw"),
+        reaction_maximum_damage_raw = request:get("reaction_maximum_damage_raw"),
         action_disabled = request:get("action_disabled"),
     }
 end
@@ -200,7 +218,7 @@ function M.register()
     ecs.system({
         id = "d2legacy.state.timed_instances",
         phase = "effects",
-        after = { "d2legacy.state.react_to_melee_hit" },
+        after = { "d2legacy.state.react_to_combat" },
         query = {
             any = {
                 "d2legacy.state.request",
