@@ -210,6 +210,19 @@ function M.register()
         },
     })
 
+    -- Connected clients reconstruct only the semantic state relationship needed
+    -- by the shared overlay renderer. This component deliberately cannot carry
+    -- aura stats, radius, party/filter policy, or source arbitration.
+    ecs.component({
+        name = "d2legacy.presentation.state",
+        version = 1,
+        fields = {
+            { name = "target", type = "entity" },
+            { name = "state_id", type = "string" },
+            { name = "period_ticks", type = "i64" },
+        },
+    })
+
     -- One cast/target contact lock is its own ECS entity. Radial rays share a
     -- cast ID, so overlap policy composes without a Nova-specific hit path.
     ecs.component({

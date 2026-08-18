@@ -77,7 +77,7 @@ assignment-owned and separate from this direct-game trust store.
 Join and reconnect return versioned per-player semantic projections plus a
 canonical tick and checksum. They do not expose raw ECS snapshots or hidden
 server facts. The client treats even a pinned host as an untrusted decoder
-boundary: `ClientView/v4` rejects unknown fields, inconsistent nested ticks,
+boundary: `ClientView/v11` rejects unknown fields, inconsistent nested ticks,
 non-finite numbers, duplicate identities, invalid private interaction shapes,
 and collections or strings beyond their schema limits. Reconnect rotates the
 bearer credential so a successfully used old credential cannot be replayed.
@@ -90,7 +90,7 @@ be group/world accessible. A realm and its allocated worker share this key to
 sign and consume short-lived, session-bound, one-use admission tickets. The
 standalone server does not expose a ticket-minting endpoint.
 
-The current `d2legacy` remote projection is `PlayerHUD/v5`. It derives from the
+The current `d2legacy` remote projection is `PlayerHUD/v6`. It derives from the
 canonical checkpoint rather than rereading the live ECS and selects the entity
 bound to the authenticated player. Its field allowlist includes identity,
 vitals, progression, combat display values, position, location, movement mode,
@@ -101,15 +101,22 @@ server facts. Realm admission must load and lease the durable
 character and submit the trusted player-entry command before join; a client
 credential never materializes authoritative character state.
 
-`ClientView/v4` envelopes `PlayerHUD/v5`, `PrivateView/v1`, and `WorldView/v1`
-at one canonical tick. The world projection includes only explicitly public selectable fields
-within 80 subtiles, excludes the authenticated player's own entity, sorts by
-distance then stable public ID, rejects malformed or duplicate IDs, and caps
-the result at 256 entities. Monster health is exposed only through this reviewed
-projection; AI targets, damage, raw components, far entities, inventories, and
-other hidden facts remain excluded. `WorldDelta/v1` contains deterministic
-upserts and removals. A truncated base or result forces a complete bounded
-reset because removals cannot otherwise be proven.
+`ClientView/v11` envelopes `PlayerHUD/v6`, `PrivateView/v1`, `PartyView/v1`,
+`EventView/v3`, and `WorldView/v5` at one canonical tick. The world projection
+includes explicitly public unit/corpse composite fields within 80 subtiles,
+at most 512 presentation-only live missile/effect records, and at most 512
+persistent presentation-state relationships. Units sort by distance then
+stable public ID; persistent states sort by target distance, public target ID,
+and state ID. Validation rejects malformed or duplicate identities and state
+pairs. A persistent-state record contains only target ID, state ID, and a
+positive record period. Aura emitter identity, skill/level, stats, radius,
+filter/party eligibility, and arbitration remain server-only. Monster health is
+exposed only through this reviewed projection; AI targets, damage policy, raw
+components, far entities, inventories, and other hidden facts remain excluded.
+`WorldDelta/v1` contains deterministic unit upserts and removals. A truncated
+base or result forces a complete bounded reset because removals cannot otherwise
+be proven; persistent-state and missile lifecycle travel in the complete
+reliable view.
 
 Realm join is a transaction across the durable character repository and the
 allocated worker. It acquires an exclusive revisioned lease owned by the
@@ -196,7 +203,7 @@ accepts only a canonical host/port endpoint, validates the advertised runtime
 identity locally, performs normal X.509 verification against an explicit trust
 configuration, and additionally pins the leaf certificate to the realm's
 `sha256:` fingerprint before sending the one-use ticket. It then verifies the
-server admission session/runtime and decodes exactly `ClientView/v4`. Reconnect
+server admission session/runtime and decodes exactly `ClientView/v11`. Reconnect
 rotates the session credential and atomically replaces the correction view. An
 unexpected transport loss suspends the membership for a ten-second lease,
 rejects commands on the disconnected credential, and permits a fresh pinned
@@ -265,7 +272,8 @@ hosting player's ordinary `clientsession.Session`. This makes the host a real
 network member. Transport starts only after character selection. Connected
 presentation uses an entity-empty, schema-compatible client ECS rather than the
 frozen offline authority: authenticated HUD state creates the local entity,
-`WorldView/v1` creates nearby public entities, owner-private projections rebuild
+`WorldView/v5` creates nearby public entities and presentation-only missile/
+persistent-state relationships, owner-private projections rebuild
 the local inventory/interaction graph, and Lua binds to the authenticated
 session player ID. Input is sampled on the 25 Hz simulation clock, scheduled
 against an extrapolated server tick, retained until contiguous acknowledgement,

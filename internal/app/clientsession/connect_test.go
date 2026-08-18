@@ -251,12 +251,14 @@ func TestCorrectionCannotReplaceAuthenticatedOwnerIdentity(t *testing.T) {
 func TestViewReturnsDefensiveWorldEntityState(t *testing.T) {
 	health, maximum := int64(3), int64(5)
 	session := &Session{HUD: playeradapter.HUD{Tick: 7}, World: playeradapter.WorldView{Tick: 7,
-		Entities: []playeradapter.WorldEntity{{ID: "hostile", Health: &health, MaxHealth: &maximum}}}}
+		Entities: []playeradapter.WorldEntity{{ID: "hostile", Health: &health, MaxHealth: &maximum}},
+		States:   []playeradapter.WorldState{{TargetID: "hostile", StateID: "might", PeriodTicks: 50}}}}
 	_, view := session.View()
 	view.Entities[0].ID = "changed"
 	*view.Entities[0].Health = 0
+	view.States[0].StateID = "changed"
 	_, unchanged := session.View()
-	if unchanged.Entities[0].ID != "hostile" || *unchanged.Entities[0].Health != 3 {
+	if unchanged.Entities[0].ID != "hostile" || *unchanged.Entities[0].Health != 3 || unchanged.States[0].StateID != "might" {
 		t.Fatalf("session view was mutated through returned copy: %#v", unchanged)
 	}
 }
@@ -338,8 +340,12 @@ func TestTransformFrameUpdatesKnownEntitiesWithoutInventingLifecycle(t *testing.
 
 func TestPresentationSnapshotsAreImmutableAtomicRevisions(t *testing.T) {
 	session := &Session{
-		HUD:       playeradapter.HUD{Version: playeradapter.HUDVersion, Tick: 10},
-		World:     playeradapter.WorldView{Version: playeradapter.WorldViewVersion, Tick: 10, Entities: []playeradapter.WorldEntity{{ID: "known", Position: playeradapter.HUDPosition{X: 1}}}},
+		HUD: playeradapter.HUD{Version: playeradapter.HUDVersion, Tick: 10},
+		World: playeradapter.WorldView{
+			Version: playeradapter.WorldViewVersion, Tick: 10,
+			Entities: []playeradapter.WorldEntity{{ID: "known", Position: playeradapter.HUDPosition{X: 1}}},
+			States:   []playeradapter.WorldState{{TargetID: "known", StateID: "might", PeriodTicks: 50}},
+		},
 		Events:    playeradapter.EventView{Version: playeradapter.EventViewVersion, Tick: 10, Events: []playeradapter.SemanticEvent{{ID: 1, Type: "cast", Tick: 10, Cast: &playeradapter.SemanticCastCue{Kind: "cast_started", Player: "alice"}}}},
 		Admission: gameserver.JoinResponse{Snapshot: gameserver.Snapshot{Tick: 10, StepNanos: int64(40 * time.Millisecond)}},
 	}

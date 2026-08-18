@@ -289,7 +289,7 @@ end
 function M.state_snapshots()
     local result = {}
     local ok, instances = pcall(ecs.query, {
-        any = { "d2legacy.state.instance", "d2legacy.skill.aura_effect" },
+        any = { "d2legacy.state.instance", "d2legacy.skill.aura_effect", "d2legacy.presentation.state" },
     })
     if not ok then
         return result
@@ -297,7 +297,9 @@ function M.state_snapshots()
     for _, entity in ipairs(instances) do
         local instance = optional_component(entity, "d2legacy.state.instance")
         local aura = optional_component(entity, "d2legacy.skill.aura_effect")
-        local relationship = assert(instance or aura, "state snapshot entity has no state relationship")
+        local projected = optional_component(entity, "d2legacy.presentation.state")
+        local relationship = assert(instance or aura or projected, "state snapshot entity has no state relationship")
+        local aura_relationship = aura or projected
         local target = relationship:get("target")
         if target and target:exists() and not optional_component(target, "d2legacy.world.inactive") then
             local position = optional_component(target, "d2legacy.world.position")
@@ -308,8 +310,10 @@ function M.state_snapshots()
                     entity_id = entity:id(),
                     target_entity_id = target:id(),
                     state_id = relationship:get("state_id"),
-                    aura = aura ~= nil,
-                    aura_period_ticks = aura and aura:get("refresh_delay") or 0,
+                    aura = aura_relationship ~= nil,
+                    aura_period_ticks = aura and aura:get("refresh_delay") or projected and projected:get(
+                        "period_ticks"
+                    ) or 0,
                     x = position:get("x"),
                     y = position:get("y"),
                     act = location:get("act"),

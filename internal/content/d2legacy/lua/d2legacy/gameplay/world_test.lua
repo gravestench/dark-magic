@@ -36,6 +36,14 @@ return test.suite({
                         { name = "refresh_delay", type = "i64" },
                     },
                 })
+                ecs.component({
+                    name = "d2legacy.presentation.state",
+                    fields = {
+                        { name = "target", type = "entity" },
+                        { name = "state_id", type = "string" },
+                        { name = "period_ticks", type = "i64" },
+                    },
+                })
                 local world = require("d2legacy.gameplay.world")
                 local target = ecs.create({
                     ["d2legacy.monster.appearance"] = { overlay_height = 4 },
@@ -64,6 +72,13 @@ return test.suite({
                         refresh_delay = 50,
                     },
                 })
+                local projected = ecs.create({
+                    ["d2legacy.presentation.state"] = {
+                        target = target,
+                        state_id = "prayer",
+                        period_ticks = 50,
+                    },
+                })
                 ecs.create({
                     ["d2legacy.state.event"] = {
                         kind = "state_applied",
@@ -76,7 +91,7 @@ return test.suite({
                     },
                 })
                 local snapshots = world.state_snapshots()
-                test.assert(#snapshots == 2, [=[#snapshots == 2]=])
+                test.assert(#snapshots == 3, [=[#snapshots == 3]=])
                 local by_state = {}
                 for _, snapshot in ipairs(snapshots) do
                     by_state[snapshot.state_id] = snapshot
@@ -101,6 +116,14 @@ return test.suite({
                         and aura_snapshot.x == 12
                         and aura_snapshot.y == 8,
                     [=[active aura snapshot uses the same presentation contract]=]
+                )
+                local projected_snapshot = by_state.prayer
+                test.assert(
+                    projected_snapshot.entity_id == projected:id()
+                        and projected_snapshot.target_entity_id == target:id()
+                        and projected_snapshot.aura
+                        and projected_snapshot.aura_period_ticks == 50,
+                    [=[connected semantic state uses the aura presentation contract]=]
                 )
                 local cues = world.semantic_cues()
                 local cue = cues[#cues]

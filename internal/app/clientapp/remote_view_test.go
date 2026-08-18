@@ -121,6 +121,55 @@ func TestRemoteMirrorStructureAndSampledTransformHaveSeparateLifecycles(t *testi
 	}
 }
 
+func TestConnectedPersistentStatesBindToMirrorsWithoutGameplayFacts(t *testing.T) {
+	engine := gameecs.New()
+	registerRemoteViewSchemas(t, engine)
+	app := &application{clientSimulation: engine}
+	location := playeradapter.HUDLocation{Act: 1, LevelID: 2}
+	peer := playeradapter.WorldEntity{
+		ID: "player:peer", Kind: "player", Label: "Peer", Owner: "peer",
+		Position: playeradapter.HUDPosition{X: 10, Y: 20}, Class: "Paladin", Token: "PA", Mode: "NU",
+	}
+	if err := app.syncRemoteMirrors([]playeradapter.WorldEntity{peer}, location); err != nil {
+		t.Fatal(err)
+	}
+	client := newClientWorld()
+	projected := []playeradapter.WorldState{{TargetID: peer.ID, StateID: "might", PeriodTicks: 50}}
+	if err := client.reconcilePersistentStates(app, projected); err != nil {
+		t.Fatal(err)
+	}
+	states, _ := akara.GetDynamicStore(engine.World(), "d2legacy.presentation.state")
+	if states.Len() != 1 || len(client.stateEntities) != 1 {
+		t.Fatalf("persistent states = %d/%d", states.Len(), len(client.stateEntities))
+	}
+	var entity akara.Entity
+	for _, value := range client.stateEntities {
+		entity = value
+	}
+	state, _ := states.Get(entity)
+	target, _ := state.Get("target")
+	stateID, _ := state.Get("state_id")
+	period, _ := state.Get("period_ticks")
+	if target != app.remoteMirrors[peer.ID] || stateID != "might" || period != int64(50) {
+		t.Fatalf("persistent state target=%v state=%v period=%v", target, stateID, period)
+	}
+	projected[0].PeriodTicks = 25
+	if err := client.reconcilePersistentStates(app, projected); err != nil {
+		t.Fatal(err)
+	}
+	updated, _ := states.Get(entity)
+	updatedPeriod, _ := updated.Get("period_ticks")
+	if updatedPeriod != int64(25) {
+		t.Fatal("persistent state period did not update in place")
+	}
+	if err := client.reconcilePersistentStates(app, nil); err != nil {
+		t.Fatal(err)
+	}
+	if states.Len() != 0 || engine.World().EntityExists(entity) {
+		t.Fatal("removed persistent state retained a disposable client entity")
+	}
+}
+
 func TestConnectedMissilesUsePresentationOnlyECSLifecycle(t *testing.T) {
 	engine := gameecs.New()
 	registerRemoteViewSchemas(t, engine)
@@ -456,6 +505,9 @@ func registerRemoteViewSchemas(t *testing.T, engine *gameecs.Engine) {
 			field("directions", akara.FieldInt64), field("frames_per_second", akara.FieldInt64), field("loop", akara.FieldBool),
 			field("transparency_mode", akara.FieldInt64), field("offset_x", akara.FieldFloat64),
 			field("offset_y", akara.FieldFloat64), field("offset_z", akara.FieldFloat64),
+		}},
+		{Name: "d2legacy.presentation.state", Fields: []akara.Field{
+			field("target", akara.FieldEntity), field("state_id", akara.FieldString), field("period_ticks", akara.FieldInt64),
 		}},
 		{Name: "d2legacy.player.appearance", Fields: []akara.Field{field("cof", akara.FieldString), field("token", akara.FieldString), field("palette", akara.FieldString), field("weapon_class", akara.FieldString)}},
 		{Name: "d2legacy.player.movement_mode", Fields: []akara.Field{field("running", akara.FieldBool)}},
