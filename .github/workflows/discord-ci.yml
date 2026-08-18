@@ -1,7 +1,3 @@
-error: could not lock config file /Users/dylanknuth/.gitconfig: Operation not permitted
-error: could not lock config file /Users/dylanknuth/.gitconfig: Operation not permitted
-error: could not lock config file /Users/dylanknuth/.gitconfig: Operation not permitted
-error: could not lock config file /Users/dylanknuth/.gitconfig: Operation not permitted
 name: Discord CI notifications
 
 on:
