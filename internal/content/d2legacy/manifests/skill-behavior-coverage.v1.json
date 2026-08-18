@@ -94,6 +94,11 @@
       "evidence_status": "owned-target-records-localized-attack-rating-intent-and-official-hard-point-passive-partial"
     },
     {
+      "skill_id": 109,
+      "family": "aura.selected-party-periodic",
+      "evidence_status": "owned-target-records-localized-prayer-link-and-recovered-duration-pulse-ordering-partial"
+    },
+    {
       "skill_id": 110,
       "family": "aura.selected-party-stat",
       "evidence_status": "owned-target-records-localized-lightning-resistance-intent-and-official-hard-point-passive-partial"

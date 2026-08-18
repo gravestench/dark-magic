@@ -118,20 +118,26 @@ follow-up.
 2. `data/periodic_aura_skills.lua` validates the owned aura, state, direct-
    effect, fixed-point cost, radius, and period fields into immutable facts.
 3. `systems/aura_skill.lua` reuses the selected-right emitter and current
-   party/radius relationships, then co-composes one durable `aura_pulse` on the
-   owner. Selection changes remove it through the same source lifecycle.
+   party/radius relationships, then co-composes one durable `aura_pulse`
+   schedule and ordered `aura_pulse_effect` entities. Selection changes remove
+   the whole set through the same source lifecycle.
 4. `systems/aura_pulse.lua` advances the checkpointed schedule, gathers the
    emitter's eligible relationships in stable player order, and requires the
    entire authored mana cost before changing any target.
-5. The direct effect clamps each target to its maximum and spends mana once
-   only when at least one value changes. An underfunded or all-full-health pulse
-   consumes nothing; `policy/resources.lua` keeps that transaction shared with
-   ordinary casts.
+5. Each target receives the effects in authored column order. Direct healing
+   clamps to maximum life; duration transforms reschedule the current remaining
+   lifetime using deterministic integer arithmetic.
+6. A funded schedule spends mana once only when at least one value changes. An
+   underfunded or all-full-health Prayer pulse consumes nothing;
+   `policy/resources.lua` keeps that transaction shared with ordinary casts.
 
-Prayer is the first admitted configuration. Its target breadth currently stops
-at living same-level player party members; hirelings, summons, exact 1.14d
-pulse phase, payment/regen ordering, and selection-switch timing remain explicit
-evidence gaps.
+Prayer supplies one paid healing effect. Cleansing supplies a free ordered pair:
+current-duration scaling for poison, curable curses, and the officially
+documented `shrine_*` family, followed by healing derived from the owner's
+learned Prayer level. Target breadth currently stops at living same-level player
+party members; hirelings, summons, exact 1.14d pulse/shrine event ordering,
+payment/regen ordering, and selection-switch timing remain explicit evidence
+gaps.
 
 ## Timed self-state/stat execution order
 

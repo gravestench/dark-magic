@@ -1,8 +1,9 @@
 -- Apply checkpointed direct effects for selected-aura target relationships.
 --
 -- Aura selection, party/radius eligibility, state arbitration, and visuals stay
--- in the shared selected-aura system. This consumer only executes a due pulse
--- and advances its durable schedule, so a repeated step cannot apply it twice.
+-- in the shared selected-aura system. This consumer executes each due pulse's
+-- authored operations and advances its durable schedule before doing any work,
+-- so a repeated step cannot apply the same pulse twice.
 
 local ecs = require("engine.ecs/v1")
 local progression = require("d2legacy.policy.skill_progression")
@@ -37,33 +38,111 @@ local function pulse_targets(entities, emitter)
     return result
 end
 
-local function heal_life(entities, emitter, pulse)
+local function pulse_effects(entities, emitter, source_id)
+    local result = {}
+    for _, entity in ipairs(entities) do
+        local effect = ecs.get(entity, "d2legacy.skill.aura_pulse_effect")
+        if effect and effect:get("emitter"):id() == emitter:id() and effect:get("source_id") == source_id then
+            result[#result + 1] = effect
+        end
+    end
+    table.sort(result, function(left, right)
+        return left:get("order") < right:get("order")
+    end)
+    return result
+end
+
+local function heal_life(target, value)
+    if value <= 0 then
+        return false
+    end
+    local vitals = ecs.get(target, "d2legacy.player.vitals")
+    local health = vitals:get("health")
+    local healed = math.min(health + value, vitals:get("max_health"))
+    if healed == health then
+        return false
+    end
+    vitals:set("health", healed)
+    return true
+end
+
+local function affected_timed_states(entities, target, state_policy)
+    local result = {}
+    for _, entity in ipairs(entities) do
+        local instance = ecs.get(entity, "d2legacy.state.instance")
+        if instance and instance:get("target"):id() == target:id() then
+            local state_id = instance:get("state_id")
+            if state_id == state_policy.poison_state_id or state_policy.duration_reduced_states[state_id] then
+                result[#result + 1] = entity
+            end
+        end
+    end
+    table.sort(result, function(left, right)
+        local left_state = ecs.get(left, "d2legacy.state.instance")
+        local right_state = ecs.get(right, "d2legacy.state.instance")
+        if left_state:get("state_id") ~= right_state:get("state_id") then
+            return left_state:get("state_id") < right_state:get("state_id")
+        end
+        if left_state:get("source_id") ~= right_state:get("source_id") then
+            return left_state:get("source_id") < right_state:get("source_id")
+        end
+        return left:id() < right:id()
+    end)
+    return result
+end
+
+local function scale_remaining_timed_state(entities, target, tick, percentage, state_policy)
+    local changed = false
+    for _, entity in ipairs(affected_timed_states(entities, target, state_policy)) do
+        local instance = ecs.get(entity, "d2legacy.state.instance")
+        local expires = instance:get("expires_tick")
+        if expires > tick then
+            local remaining = expires - tick
+            local scaled = math.floor(remaining * percentage / 100)
+            if tick + scaled ~= expires then
+                instance:set("expires_tick", tick + scaled)
+                changed = true
+            end
+        end
+    end
+    return changed
+end
+
+local function apply_effect(entities, target, tick, effect, state_policy)
+    local kind = effect:get("kind")
+    if kind == "heal_life" then
+        return heal_life(target, effect:get("value"))
+    end
+    if kind == "scale_remaining_timed_state" then
+        return scale_remaining_timed_state(entities, target, tick, effect:get("value"), state_policy)
+    end
+    error("unsupported aura pulse effect " .. kind)
+end
+
+local function execute_pulse(context, entities, emitter, pulse, state_policy)
     local owner_vitals = ecs.get(emitter, "d2legacy.player.vitals")
     if not owner_vitals then
         return
     end
     local cost = pulse:get("mana_cost_raw")
-    local available = resources.mana_raw(owner_vitals)
-    if available < cost then
+    if resources.mana_raw(owner_vitals) < cost then
         return
     end
-    local targets = pulse_targets(entities, emitter)
+    local effects = pulse_effects(entities, emitter, pulse:get("source_id"))
+    assert(#effects > 0, "aura pulse has no composed effects")
     local changed = false
-    for _, target in ipairs(targets) do
-        local vitals = ecs.get(target, "d2legacy.player.vitals")
-        local health = vitals:get("health")
-        local healed = math.min(health + pulse:get("value"), vitals:get("max_health"))
-        if healed ~= health then
-            vitals:set("health", healed)
-            changed = true
+    for _, target in ipairs(pulse_targets(entities, emitter)) do
+        for _, effect in ipairs(effects) do
+            changed = apply_effect(entities, target, context.tick, effect, state_policy) or changed
         end
     end
-    if changed then
+    if changed and cost > 0 then
         assert(resources.spend_mana(owner_vitals, cost))
     end
 end
 
-function M.register()
+function M.register(state_policy)
+    assert(state_policy and state_policy.poison_state_id, "periodic aura state policy is required")
     ecs.system({
         id = "d2legacy.skill.aura_periodic_effect",
         phase = "pre_simulation",
@@ -71,11 +150,14 @@ function M.register()
         query = {
             any = {
                 "d2legacy.skill.aura_pulse",
+                "d2legacy.skill.aura_pulse_effect",
                 "d2legacy.skill.aura_effect",
                 "d2legacy.player.vitals",
+                "d2legacy.state.instance",
             },
         },
         read = {
+            "d2legacy.skill.aura_pulse_effect",
             "d2legacy.skill.aura_effect",
             "d2legacy.player.identity",
             "d2legacy.player.death",
@@ -84,20 +166,14 @@ function M.register()
         write = {
             "d2legacy.skill.aura_pulse",
             "d2legacy.player.vitals",
+            "d2legacy.state.instance",
         },
         update = function(context, entities)
             for _, emitter in ipairs(entities) do
                 local pulse = ecs.get(emitter, "d2legacy.skill.aura_pulse")
                 if pulse and context.tick >= pulse:get("next_tick") then
-                    pulse:set(
-                        "next_tick",
-                        progression.next_periodic_tick(context.tick, pulse:get("period_ticks"))
-                    )
-                    if pulse:get("kind") == "heal_life" then
-                        heal_life(entities, emitter, pulse)
-                    else
-                        error("unsupported aura pulse kind " .. pulse:get("kind"))
-                    end
+                    pulse:set("next_tick", progression.next_periodic_tick(context.tick, pulse:get("period_ticks")))
+                    execute_pulse(context, entities, emitter, pulse, state_policy)
                 end
             end
         end,

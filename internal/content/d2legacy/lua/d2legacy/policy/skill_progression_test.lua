@@ -76,6 +76,12 @@ return test.suite({
                     test.expect(progression.diminishing(7, 50, level)):equals(value)
                     test.expect(progression.linear(50, 25, level)):equals(25 + level * 25)
                 end
+                local cleansing_reduction =
+                    { 39, 46, 51, 56, 60, 63, 65, 67, 69, 70, 72, 73, 75, 76, 76, 78, 78, 79, 79, 80 }
+                for level, value in ipairs(cleansing_reduction) do
+                    test.expect(progression.diminishing(30, 90, level)):equals(value)
+                    test.expect(100 - progression.diminishing(30, 90, level)):equals(100 - value)
+                end
                 local thorns = {
                     250,
                     290,
