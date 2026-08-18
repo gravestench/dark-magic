@@ -7,6 +7,7 @@ import (
 	"math"
 	"time"
 
+	"github.com/gravestench/akara"
 	"github.com/gravestench/dark-magic/internal/app/clientsession"
 	"github.com/gravestench/dark-magic/internal/app/gameserver"
 	"github.com/gravestench/dark-magic/internal/app/networkclock"
@@ -25,6 +26,11 @@ type clientWorld struct {
 	lastHUD               playeradapter.HUD
 	lastPending           []gameserver.CommandIntent
 	hasHUD                bool
+	lastEventEpoch        uint64
+	lastEventViewTick     uint64
+	eventCursorTick       uint64
+	eventCursorID         uint64
+	semanticEventEntities []akara.Entity
 }
 
 func newClientWorld() *clientWorld {
@@ -99,6 +105,9 @@ func (world *clientWorld) reconcileAt(app *application, session *clientsession.S
 		world.lastCorrection = max(world.lastCorrection, projection.Tick)
 		world.lastViewRevision = revision
 		world.history.Upsert(projection)
+	}
+	if err := world.reconcileSemanticEvents(app, presentation.Events, presentation.EventEpoch); err != nil {
+		return err
 	}
 	timeline := session.NetworkTimeline(now)
 	if sample, found := world.history.Sample(timeline.Interpolation); found {

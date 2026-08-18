@@ -134,6 +134,115 @@ func (app *application) installRemoteProjection(hud playeradapter.HUD, private p
 	return nil
 }
 
+// reconcileSemanticEvents mirrors only newly observed reliable semantic facts
+// into the disposable client ECS. Joining and reconnecting establish a
+// baseline without replaying the authority's durable history.
+func (client *clientWorld) reconcileSemanticEvents(app *application, view playeradapter.EventView, epoch uint64) error {
+	if client == nil || app == nil || app.clientSimulation == nil || view.Version == 0 {
+		return nil
+	}
+	world := app.clientSimulation.World()
+	destroyPrevious := func() {
+		for _, entity := range client.semanticEventEntities {
+			world.DestroyEntity(entity)
+		}
+		client.semanticEventEntities = nil
+	}
+	if epoch != client.lastEventEpoch {
+		destroyPrevious()
+		client.lastEventEpoch = epoch
+		client.lastEventViewTick = view.Tick
+		client.eventCursorTick, client.eventCursorID = latestSemanticCursor(view.Events)
+		return nil
+	}
+	if view.Tick <= client.lastEventViewTick {
+		return nil
+	}
+	if view.FromTick > client.lastEventViewTick+1 {
+		return fmt.Errorf("remote presentation: semantic event window gap after tick %d (starts at %d)", client.lastEventViewTick, view.FromTick)
+	}
+	if view.Truncated {
+		return fmt.Errorf("remote presentation: semantic event window truncated at tick %d", view.Tick)
+	}
+	destroyPrevious()
+	nextCursorTick, nextCursorID := client.eventCursorTick, client.eventCursorID
+	for _, event := range view.Events {
+		if event.Tick < nextCursorTick || event.Tick == nextCursorTick && event.ID <= nextCursorID {
+			continue
+		}
+		entity, err := installSemanticEvent(world, event)
+		if err != nil {
+			destroyPrevious()
+			return err
+		}
+		client.semanticEventEntities = append(client.semanticEventEntities, entity)
+		nextCursorTick, nextCursorID = event.Tick, event.ID
+	}
+	client.eventCursorTick, client.eventCursorID = nextCursorTick, nextCursorID
+	client.lastEventViewTick = view.Tick
+	return nil
+}
+
+func latestSemanticCursor(events []playeradapter.SemanticEvent) (uint64, uint64) {
+	if len(events) == 0 {
+		return 0, 0
+	}
+	last := events[len(events)-1]
+	return last.Tick, last.ID
+}
+
+func installSemanticEvent(world *akara.World, event playeradapter.SemanticEvent) (akara.Entity, error) {
+	entity, err := world.CreateEntity()
+	if err != nil {
+		return 0, fmt.Errorf("remote presentation: create semantic event: %w", err)
+	}
+	fail := func(err error) (akara.Entity, error) {
+		world.DestroyEntity(entity)
+		return 0, err
+	}
+	for name, values := range map[string]map[string]any{
+		"d2legacy.world.position": {"x": event.Position.X, "y": event.Position.Y},
+		"d2legacy.world.location": {"act": event.Act, "level_id": event.LevelID},
+		"d2legacy.world.facing":   {"direction": event.Direction, "directions": int64(16)},
+	} {
+		store, found := akara.GetDynamicStore(world, name)
+		if !found {
+			return fail(fmt.Errorf("remote presentation: semantic component %q is unavailable", name))
+		}
+		if _, err := store.Set(entity, values); err != nil {
+			return fail(fmt.Errorf("remote presentation: set semantic %s: %w", name, err))
+		}
+	}
+	switch event.Type {
+	case "cast":
+		store, found := akara.GetDynamicStore(world, "d2legacy.skill.cast_cue")
+		if !found || event.Cast == nil {
+			return fail(fmt.Errorf("remote presentation: cast cue component is unavailable"))
+		}
+		cue := event.Cast
+		_, err = store.Set(entity, map[string]any{
+			"kind": cue.Kind, "tick": int64(event.Tick), "effect_tick": int64(cue.EffectTick), "caster": entity,
+			"player": cue.Player, "skill_id": cue.SkillID, "target_x": cue.Target.X, "target_y": cue.Target.Y, "target_id": cue.TargetID,
+		})
+	case "state":
+		store, found := akara.GetDynamicStore(world, "d2legacy.state.event")
+		if !found || event.State == nil {
+			return fail(fmt.Errorf("remote presentation: state event component is unavailable"))
+		}
+		cue := event.State
+		_, err = store.Set(entity, map[string]any{
+			"kind": cue.Kind, "tick": int64(event.Tick), "target": entity, "state_id": cue.StateID,
+			"source_id": cue.SourceID, "expires_tick": int64(cue.ExpiresTick), "reason": cue.Reason,
+		})
+	default:
+		return fail(fmt.Errorf("remote presentation: unsupported semantic event %q", event.Type))
+	}
+	if err != nil {
+		return fail(fmt.Errorf("remote presentation: set %s semantic event: %w", event.Type, err))
+	}
+	return entity, nil
+}
+
 func partyViewFields(view playeradapter.PartyView) map[string]any {
 	values := map[string]any{
 		"schema_version": int64(view.Version),

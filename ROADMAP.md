@@ -128,7 +128,9 @@ target-locked mounted-data and localized TBL skill evidence, case-stable pinned
 MPQ tables, AnimData/effective-rate melee and spell actions, current-state melee
 target revalidation, straight-missile, timed-state, reactive-state, shared cast
 cues/overlays/sounds, exact standalone-DCC ground anchoring and missile
-direction/blend presentation, and definition-driven radial-missile slices as of
+direction/blend presentation, reconnect-safe connected semantic cast/state
+projection through a bounded `ClientView/v7` tail and disposable ECS mirrors,
+and definition-driven radial-missile slices as of
 2026-08-17. Nova is now the first
 exact-ID `missile.radial` configuration: one targetless cast creates a shared-
 identity ring of ordinary ECS projectile entities, level-scaled count/mana/
@@ -236,7 +238,7 @@ request per authoritative ECS action, so a multi-frame click cannot queue a
 second cast while a deliberate hold still repeats after completion. SQ
 sequences, faster-cast-rate/equipment timing, overlay height/light/1-of-N and
 multi-direction details, client-only curse missiles, interruption/refund, and
-connected-client cue/state projection remain explicit presentation work. A
+remaining semantic event families remain explicit presentation work. A
 matched frontend profile also
 removed the title-to-main-menu
 localization stall by buffering each small MPQ-backed TBL once before decoding;
@@ -301,13 +303,13 @@ policy**, and **unresolved**.
 | --- | --- | --- |
 | M0-M14 engine/application foundations | complete | Reproducible core, layered content, Lua runtime, ECS, rendering composition, application host, and service-mesh retirement are established. |
 | M15 asset knowledge | partial | Typed/recovered coverage is broad. The owned 1.14d Expansion Skills/Missiles report now inventories 357 skill rows, 172 server behavior signatures, 11 exact-ID implementations, 346 missing skills, and winning-layer provenance. A second exact-ID report joins Skills/SkillDesc formulas to layered locale TBL text, replacement tokens, and cross-skill references. Retail `MonPreset.txt`, `MonStats2.txt`, `MonLvl.txt`, and `SkillDesc.txt` members omitted from incomplete listfiles are explicitly discovered and pinned into the same immutable generation; unresolved records and source-sensitive mappings remain research work. |
-| M16 presentation primitives | partial | MPQ-backed render/audio primitives exist. Missile entities select record-authored travel/impact DCCs, sounds, exact 1/4/8/16/32-way direction order, authored ground origins, and table-specific luminous blend; semantic timed states resolve States/Overlay records into shared active/apply/remove world overlays without skill branches. Admitted Skills rows now drive SC actor action timing, semantic start/effect cues, cast sounds, and cast overlays through the same world renderer. Client assembly consumes a backend-neutral desktop contract; Raylib is the production default and the `ebitengine` tag supplies an experimental retained-composition/input/capture adapter. SQ/FCR/equipment action timing, exact overlay height/light/variant semantics, client-only skill missiles, connected cue/state projection, Ebitengine native audio, console drawing, and GPU palette parity remain. |
+| M16 presentation primitives | partial | MPQ-backed render/audio primitives exist. Missile entities select record-authored travel/impact DCCs, sounds, exact 1/4/8/16/32-way direction order, authored ground origins, and table-specific luminous blend; semantic timed states resolve States/Overlay records into shared active/apply/remove world overlays without skill branches. Admitted Skills rows drive SC actor action timing, semantic start/effect cues, cast sounds, and cast overlays through the same world renderer. Connected clients receive a bounded reliable cast/state event tail and mirror only post-baseline facts into their disposable ECS, so the same Lua presentation path runs offline and online without replaying history after join/reconnect. Client assembly consumes a backend-neutral desktop contract; Raylib is the production default and the `ebitengine` tag supplies an experimental retained-composition/input/capture adapter. SQ/FCR/equipment action timing, exact overlay height/light/variant semantics, client-only skill missiles, remaining semantic event families, Ebitengine native audio, console drawing, and GPU palette parity remain. |
 | M17 front end | foundation complete | The Lua-authored front end and Realm flow exist. MPQ-backed locale tables now cross one sequential buffering boundary instead of issuing decoder-granularity random archive reads. Startup warms only title/main-menu assets, secondary destinations use visible main-menu think time, and character interaction animations remain scoped to character creation. Remaining work is UI fidelity, not the former multi-second transition stall or whole-frontend eager preload. |
 | M18 in-game shell | foundation complete | HUD and major overlay shells exist; the party panel now consumes an owner-scoped semantic projection, while remaining raw/ad hoc reads migrate as their gameplay domains mature. |
 | M19 character/item/save fidelity | partial | Canonical profile and Realm character persistence exist; the complete Dark Magic durable semantic character does not. Vanilla save interoperability is out of scope. |
 | M20 world fidelity | partial | Deterministic Act I generation, collision, transitions, dynamic occupancy, population, and level-scoped persistent-identity room residents exist. Timed-state/stat-source/event references, an owned-unit graph, corpse, straight projectile, imported ground item, stateful interaction object, and separately resident pending-action relationship survive inactivation without scalar graph copies. The inactive ECS tag removes live capabilities, suspends opted-in systems, and filters projections; generic pre-plan attachment plus pickup/re-drop transitions reuse the same contract. Public loot policy, retail object/event families, exact corpse/projectile/event timing, 1.14d streaming behavior, and campaign breadth remain. |
 | M21 Diablo simulation | foundation complete | Lua owns the current player, monster, skill, missile, state, death, loot, quest, item, and owned-unit vertical slices. Melee and missile contact share one ordered direct-damage commit/result boundary, and lethal player results now compose death/action-filter state onto the same character entity with independent consumer markers. Block/avoidance, typed bundle breadth, secondary damage effects, player-death consequences, movement, item activation, object, and content breadth remain below. |
-| M22 networking | complete | One `Session`, authenticated semantic commands, deterministic ordering, filtered views, reconnect, replay/checkpoint, direct/listen/dedicated/Realm modes, and impairment/soak coverage exist. |
+| M22 networking | complete | One `Session`, authenticated semantic commands, deterministic ordering, filtered views, reconnect, replay/checkpoint, direct/listen/dedicated/Realm modes, and impairment/soak coverage exist. `ClientView/v7` adds a strongly typed, proximity-filtered, reliable 64-tick/256-entry semantic cast/state tail with untrusted-input validation, explicit truncation/gap detection, and local reconnect epochs. |
 | M23 Realm/persistence | partial | Accounts, characters, leases, CAS commits, allocation, admission, reconnect, checkpoints, PostgreSQL, mail, and process workers exist. Publication/revocation, complete durable character semantics, and production operations remain. |
 | M24 packaging/release | partial | Build/release foundations exist; the gameplay acceptance loop and final supported-platform release gate are not complete. |
 | M25-M30 performance/UI/architecture | partial | Major residency, profiling, Lua-policy migration, and archetype ECS work landed. The matched title-to-main-menu capture reduced the worst profiled update from 4.134 s to 152 ms and removed the 3.77 s TBL random-read hotspot. Staged frontend bundles then reduced settled main-menu heap from 487 MB to 216 MB, preloader-retained heap from 357 MB to 112 MB, and decoded-cache weight from 339 MB to 59 MB with zero pending preloads. A new compile-time Raylib/Ebitengine experiment keeps simulation and composition identical, compiles both clients in CI, and owns a matched capture/profile/summary command rather than relying on subjective window feel. Measured backend results and Ebitengine feature parity remain open. |
@@ -1016,6 +1018,12 @@ runtime composition and the coverage report.
 - [x] Edge-gate held left-skill input against the authoritative ECS action
   lifecycle so a click spanning multiple render frames submits one cast while
   a deliberate hold repeats only after the prior action completes.
+- [x] Project nearby cast/state semantic facts through a bounded reliable
+  `ClientView/v7` event tail, baseline durable history on join/reconnect, reject
+  gaps/truncation instead of silently losing presentation, and materialize only
+  new facts as short-lived spatial ECS entities in the disposable connected
+  client world so the offline Lua cue/overlay/sound path remains the sole
+  presentation consumer.
 - [x] Replace the provisional name-selected self-state placeholder with a
   definition-driven timed self-state/stat-source family: shared cast/mana,
   level and hard-point-synergy formulas, refresh/expiration, checkpoint, and
@@ -1087,7 +1095,25 @@ coverage fingerprint now explicitly audits Overlay.txt plus the dynamic overlay
 directory, while owned 1.14d coverage proves the Frozen Armor, Enchant,
 Amplify Damage, Weaken, and shared curse-hit rows and DCCs exist. This does not
 yet claim exact Height1-4 attachment, light radius/color, `1ofN`, character
-restriction, multi-direction mapping, or connected-client state projection.
+restriction, or multi-direction mapping.
+
+Connected state/cast presentation now crosses an explicit semantic boundary.
+The stateless authority projector selects only `d2legacy.state.event` and
+`d2legacy.skill.cast_cue`, copies value fields plus the referenced actor's
+current position/location/facing, filters to the authenticated player's nearby
+act/level, and sorts stable tick/entity identities. `EventView/v1` retains a
+64-tick tail capped at 256 entries; its `from_tick` and `truncated` facts make a
+correction gap detectable. `ClientView/v7` validates type unions, identities,
+strings, ticks, coordinates, ordering, and allocation bounds as untrusted
+network input. Join, reconnect, and authority reassignment increment a local
+event epoch and establish a non-presenting high-water baseline, so checkpoint-
+durable historical events never replay. Ordinary reliable corrections create
+only newer cast/state cues in the disposable client ECS, with the cue entity
+also carrying its copied spatial anchor and self-reference. Transform datagrams
+cannot duplicate or prematurely replace cues, and the next reliable correction
+retires the prior short-lived mirrors. Monster/player death, missile, combat,
+and forced-motion semantic events still need equally typed consumers before
+they join this network view; no arbitrary component payload is serialized.
 
 Cast presentation now follows a second generic record join. `cast_actions`
 copies Skills.txt `anim`, `seqtrans`, `seqnum`, `UseAttackRate`, start/effect
@@ -1100,8 +1126,7 @@ skill/actor/target/tick facts; the offline world adapter re-resolves Skills and
 Overlay records to play sounds and one-shot overlays. The owned Sorceress
 `SOSCHTH`, `SOSC1HS`, and `SOSCSTF` records all pin 14-frame actions with release
 at frame 7. SQ sequence semantics, faster cast rate, weapon/equipment changes,
-interrupt/refund rules, client-only curse missile layers, and connected cue
-projection are still open.
+interrupt/refund rules and client-only curse missile layers are still open.
 
 Standalone DCC presentation now retains the stable decoded direction canvas and
 sets the authored zero point as the render-node origin, matching the ground-
@@ -1427,10 +1452,11 @@ percentage rounding/ordering remains partial. Ice Bolt and other visually or
 structurally similar skills remain missing until their own Expansion 1.14d
 launch, motion, impact, state, and ordering semantics are verified.
 
-Next: project semantic cast/state cues through connected client views, then add
-the record-referenced client-only curse missile layers and pin Overlay height,
-light, variant, character restriction, and multi-direction behavior without
-skill-specific renderer branches. Complete SQ sequences, faster-cast-rate and
+Next: add the record-referenced client-only curse missile layers and pin Overlay
+height, light, variant, character restriction, and multi-direction behavior
+without skill-specific renderer branches. Extend the typed connected event view
+only as those remaining semantic-event consumers become presentation-ready;
+never expose arbitrary ECS payloads. Complete SQ sequences, faster-cast-rate and
 equipped-weapon-class timing, plus interruption/refund behavior against owned
 Expansion 1.14d vectors. Then probe and replace Attack's remaining inferred distance, dynamic-door,
 special-unit, and path-to-range edges and confirm its attack-rate breakpoint,

@@ -210,6 +210,65 @@ func TestAnimationTimelineUsesPredictionForOwnerAndInterpolationForPeer(t *testi
 	}
 }
 
+func TestConnectedSemanticEventsBaselineHistoryAndMirrorOnlyNewCues(t *testing.T) {
+	engine := gameecs.New()
+	registerRemoteViewSchemas(t, engine)
+	app := &application{clientSimulation: engine}
+	client := newClientWorld()
+	historical := playeradapter.SemanticEvent{ID: 20, Type: "cast", Tick: 98, Position: playeradapter.HUDPosition{X: 4, Y: 5}, Act: 1, LevelID: 2,
+		Cast: &playeradapter.SemanticCastCue{Kind: "cast_started", EffectTick: 100, Player: "alice", SkillID: 47}}
+	if err := client.reconcileSemanticEvents(app, playeradapter.EventView{Version: playeradapter.EventViewVersion, Tick: 100, FromTick: 37, Events: []playeradapter.SemanticEvent{historical}}, 1); err != nil {
+		t.Fatal(err)
+	}
+	casts, _ := akara.GetDynamicStore(engine.World(), "d2legacy.skill.cast_cue")
+	if casts.Len() != 0 {
+		t.Fatalf("baseline replayed %d historical cues", casts.Len())
+	}
+	current := playeradapter.SemanticEvent{ID: 21, Type: "cast", Tick: 101, Position: playeradapter.HUDPosition{X: 12, Y: 13}, Act: 1, LevelID: 2, Direction: 4,
+		Cast: &playeradapter.SemanticCastCue{Kind: "cast_effect", EffectTick: 101, Player: "alice", SkillID: 47, Target: playeradapter.HUDPosition{X: 20, Y: 21}}}
+	view := playeradapter.EventView{Version: playeradapter.EventViewVersion, Tick: 101, FromTick: 38, Events: []playeradapter.SemanticEvent{historical, current}}
+	if err := client.reconcileSemanticEvents(app, view, 1); err != nil {
+		t.Fatal(err)
+	}
+	if casts.Len() != 1 {
+		t.Fatalf("new connected cues = %d, want 1", casts.Len())
+	}
+	entity := casts.Entities()[0]
+	position := currentPosition(engine.World(), entity)
+	if position != current.Position {
+		t.Fatalf("semantic anchor = %+v, want %+v", position, current.Position)
+	}
+	cast, _ := casts.Get(entity)
+	skillID, _ := cast.Get("skill_id")
+	caster, _ := cast.Get("caster")
+	if skillID != int64(47) || caster != entity {
+		t.Fatalf("cast mirror skill=%v caster=%v entity=%v", skillID, caster, entity)
+	}
+	if err := client.reconcileSemanticEvents(app, view, 1); err != nil {
+		t.Fatal(err)
+	}
+	if casts.Len() != 1 {
+		t.Fatalf("same correction duplicated cue count=%d", casts.Len())
+	}
+}
+
+func TestConnectedSemanticEventsRejectCorrectionGapAndTruncation(t *testing.T) {
+	engine := gameecs.New()
+	registerRemoteViewSchemas(t, engine)
+	app := &application{clientSimulation: engine}
+	client := newClientWorld()
+	baseline := playeradapter.EventView{Version: playeradapter.EventViewVersion, Tick: 100, FromTick: 37, Events: []playeradapter.SemanticEvent{}}
+	if err := client.reconcileSemanticEvents(app, baseline, 1); err != nil {
+		t.Fatal(err)
+	}
+	if err := client.reconcileSemanticEvents(app, playeradapter.EventView{Version: playeradapter.EventViewVersion, Tick: 170, FromTick: 107}, 1); err == nil {
+		t.Fatal("semantic correction gap was silently accepted")
+	}
+	if err := client.reconcileSemanticEvents(app, playeradapter.EventView{Version: playeradapter.EventViewVersion, Tick: 101, FromTick: 38, Truncated: true}, 1); err == nil {
+		t.Fatal("truncated semantic correction was silently accepted")
+	}
+}
+
 func TestPrivateProjectionFingerprintChangesOnlyWithPrivateState(t *testing.T) {
 	learned := []playeradapter.HUDLearnedSkill{{SkillID: 7, Level: 1}}
 	private := playeradapter.PrivateView{Version: playeradapter.PrivateViewVersion, Tick: 10}
@@ -267,6 +326,8 @@ func registerRemoteViewSchemas(t *testing.T, engine *gameecs.Engine) {
 		{Name: "d2legacy.interaction.target", Fields: []akara.Field{field("id", akara.FieldString), field("npc", akara.FieldString), field("vendor", akara.FieldString), field("categories", akara.FieldString), field("services", akara.FieldString), field("x", akara.FieldFloat64), field("y", akara.FieldFloat64), field("radius", akara.FieldFloat64)}},
 		{Name: "d2legacy.interaction.context", Fields: []akara.Field{field("owner", akara.FieldString), field("target", akara.FieldEntity)}},
 		{Name: "d2legacy.interaction.null_target", Fields: []akara.Field{}},
+		{Name: "d2legacy.skill.cast_cue", Fields: []akara.Field{field("kind", akara.FieldString), field("tick", akara.FieldInt64), field("effect_tick", akara.FieldInt64), field("caster", akara.FieldEntity), field("player", akara.FieldString), field("skill_id", akara.FieldInt64), field("target_x", akara.FieldFloat64), field("target_y", akara.FieldFloat64), field("target_id", akara.FieldString)}},
+		{Name: "d2legacy.state.event", Fields: []akara.Field{field("kind", akara.FieldString), field("tick", akara.FieldInt64), field("target", akara.FieldEntity), field("state_id", akara.FieldString), field("source_id", akara.FieldString), field("expires_tick", akara.FieldInt64), field("reason", akara.FieldString)}},
 		{Name: "d2legacy.world.position", Fields: []akara.Field{field("x", akara.FieldFloat64), field("y", akara.FieldFloat64)}},
 		{Name: "d2legacy.world.velocity", Fields: []akara.Field{field("x", akara.FieldFloat64), field("y", akara.FieldFloat64)}},
 		{Name: "d2legacy.world.facing", Fields: []akara.Field{field("direction", akara.FieldInt64), field("directions", akara.FieldInt64)}},

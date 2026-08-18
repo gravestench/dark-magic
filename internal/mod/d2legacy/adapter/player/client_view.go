@@ -11,7 +11,7 @@ import (
 )
 
 const (
-	ClientViewVersion    uint32 = 6
+	ClientViewVersion    uint32 = 7
 	MaxHUDLearnedSkills         = 256
 	MaxHUDBeltSlots             = 16
 	MaxPrivateItems             = 1024
@@ -33,6 +33,7 @@ type ClientView struct {
 	World   WorldView   `json:"world"`
 	Private PrivateView `json:"private"`
 	Party   PartyView   `json:"party"`
+	Events  EventView   `json:"events"`
 }
 
 // ValidateClientView treats every network projection as untrusted input. It
@@ -44,7 +45,8 @@ func ValidateClientView(view ClientView, tick uint64) error {
 		view.HUD.Version != HUDVersion || view.HUD.Tick != tick ||
 		view.World.Version != WorldViewVersion || view.World.Tick != tick ||
 		view.Private.Version != PrivateViewVersion || view.Private.Tick != tick ||
-		view.Party.Version != PartyViewVersion || view.Party.Tick != tick {
+		view.Party.Version != PartyViewVersion || view.Party.Tick != tick ||
+		view.Events.Version != EventViewVersion || view.Events.Tick != tick {
 		return ErrClientView
 	}
 	if err := validateHUDView(view.HUD); err != nil {
@@ -54,6 +56,9 @@ func ValidateClientView(view ClientView, tick uint64) error {
 		return err
 	}
 	if err := validatePrivateView(view.Private); err != nil {
+		return err
+	}
+	if err := validateEventView(view.Events, tick); err != nil {
 		return err
 	}
 	return validatePartyView(view.Party, view.HUD.Player.PlayerID)
@@ -222,6 +227,10 @@ func ProjectClientView(playerID string, checkpoint simulation.Checkpoint) (json.
 	if err != nil {
 		return nil, err
 	}
+	events, err := ProjectEventView(playerID, checkpoint)
+	if err != nil {
+		return nil, err
+	}
 	var hud HUD
 	var world WorldView
 	if err := json.Unmarshal(hudPayload, &hud); err != nil {
@@ -230,5 +239,5 @@ func ProjectClientView(playerID string, checkpoint simulation.Checkpoint) (json.
 	if err := json.Unmarshal(worldPayload, &world); err != nil {
 		return nil, fmt.Errorf("client view: world: %w", err)
 	}
-	return json.Marshal(ClientView{Version: ClientViewVersion, Tick: checkpoint.Tick, HUD: hud, World: world, Private: private, Party: party})
+	return json.Marshal(ClientView{Version: ClientViewVersion, Tick: checkpoint.Tick, HUD: hud, World: world, Private: private, Party: party, Events: events})
 }
