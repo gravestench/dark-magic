@@ -1213,6 +1213,75 @@ return test.suite({
                 test.assert(ecs.get(player_named("alice"), "d2legacy.skill.aura_pulse") == nil)
             end),
         }),
+        test.case("corpse_periodic_aura_removes_its_schedule_for_inactive_or_dead_owners", {
+            test.submit_system({
+                tick = 1,
+                sequence = 1,
+                kind = "system.player.enter",
+                payload = entry("alice", "Paladin", 10),
+            }),
+            test.step(2),
+            test.run(function()
+                local ecs = require("engine.ecs/v1")
+                local alice = player_named("alice")
+                ecs.get(alice, "d2legacy.world.location"):set("level_id", 2)
+                ecs.create({
+                    ["d2legacy.player.learned_skill"] = {
+                        owner = alice,
+                        skill_id = 124,
+                        level = 20,
+                        list_row = 3,
+                        left_allowed = false,
+                        right_allowed = true,
+                    },
+                })
+                corpse("owner-filter-corpse", 12, 2, true, false)
+            end),
+            test.submit({
+                tick = 3,
+                sequence = 1,
+                player = "alice",
+                kind = "player.assign_skills",
+                payload = { right = 124 },
+            }),
+            test.step(3),
+            test.run(function()
+                local ecs = require("engine.ecs/v1")
+                local alice = player_named("alice")
+                test.assert(ecs.get(alice, "d2legacy.skill.aura_pulse") ~= nil)
+                ecs.set(alice, "d2legacy.world.inactive", {})
+            end),
+            test.step(1),
+            test.run(function()
+                local ecs = require("engine.ecs/v1")
+                local alice = player_named("alice")
+                test.assert(ecs.get(alice, "d2legacy.skill.aura_pulse") == nil)
+                ecs.remove(alice, "d2legacy.world.inactive")
+            end),
+            test.step(1),
+            test.run(function()
+                local ecs = require("engine.ecs/v1")
+                local alice = player_named("alice")
+                test.assert(ecs.get(alice, "d2legacy.skill.aura_pulse") ~= nil)
+                ecs.get(alice, "d2legacy.player.vitals"):set("health", 0)
+                ecs.set(alice, "d2legacy.player.death", {
+                    tick = 8,
+                    killer_id = "monster:fixture",
+                    credited_id = "monster:fixture",
+                    hardcore = false,
+                    stage = "dead",
+                    consequences_pending = true,
+                })
+            end),
+            test.step(1),
+            test.run(function()
+                local ecs = require("engine.ecs/v1")
+                local alice = player_named("alice")
+                local corpse_entity = ecs.query({ all = { "d2legacy.monster.death" } })[1]
+                test.assert(ecs.get(alice, "d2legacy.skill.aura_pulse") == nil)
+                test.expect(ecs.get(corpse_entity, "d2legacy.monster.death"):get("corpse_usable")):equals(true)
+            end),
+        }),
         test.case("periodic_aura_heals_only_when_the_full_pulse_cost_is_funded_and_useful", {
             test.submit_system({
                 tick = 1,
