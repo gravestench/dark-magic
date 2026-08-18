@@ -225,9 +225,12 @@ function M.apply(command)
         ["d2legacy.combat.defense"] = {
             base_physical_resist = p.physical_resistance or 0,
             base_fire_resist = p.fire_resistance or 0,
+            base_cold_resist = p.cold_resistance or 0,
             physical_resist = p.physical_resistance or 0,
             fire_resist = p.fire_resistance or 0,
+            cold_resist = p.cold_resistance or 0,
             max_fire_resist = 75,
+            max_cold_resist = 75,
             physical_reduction_raw = 0,
         },
         ["d2legacy.player.vitals"] = {

@@ -114,8 +114,8 @@ only after a target-binary probe pins the roll and damage-result ordering.
 The target-locked `skill_behavior_coverage` tool now reads the winning mounted
 Skills.txt and Missiles.txt rows and groups every skill by its server start/do
 IDs plus referenced missile server-do IDs. Against the owned 1.14d Expansion
-archives on 2026-08-18 it reports 357 skill rows, 172 distinct signatures, 15
-explicitly admitted configurations, and 342 missing configurations. Every
+archives on 2026-08-18 it reports 357 skill rows, 172 distinct signatures, 16
+explicitly admitted configurations, and 341 missing configurations. Every
 consumer carries an implementation family or `missing_family: true` plus an
 evidence status. Exact declarations live in
 `manifests/skill-behavior-coverage.v1.json`, which runtime composition also
@@ -466,7 +466,7 @@ Mid-cast equipment/stat changes, interruption/refund behavior, other classes,
 and non-cast sequences remain separate target-runtime probes.
 
 Still open are complete skill-level formulas, target/range/LOS and delay policy,
-classification and implementation of the 342 missing configurations,
+classification and implementation of the 341 missing configurations,
 additional impact/motion families, richer state/stat-source effects, summons,
 corpse/item/object actions, and the rest of the behavior-family matrix below.
 
@@ -933,6 +933,28 @@ Overlay rows, and DCC members. The connected view remains unchanged because it
 projects only public target/state/period relationships, never modifier facts.
 Hireling/summon filter breadth, item-source ordering, and future hard-versus-soft
 level model integration remain target-version probes.
+
+Resist Cold is the fifth exact selected party-stat aura. Its own target records
+pin `coldresist=dm34`, `maxcoldresist=skill('Resist Cold'.blvl)`, inactive
+`maxcoldresist=skill('Resist Cold'.blvl)/2`, states 4/182, cold-specific
+SkillDesc/TBL text, `paladin_aura_resistcold`, and persistent/cast Overlay/DCC
+members. Blizzard's same [Expansion defensive-aura
+reference](https://classic.battle.net/diablo2exp/skills/paladin-defense.shtml)
+pins the full 52..131 active resistance vector, +1 active maximum resistance
+per hard point, floor-half inactive maximum resistance, 95% cap, and exclusion
+of item-granted soft levels. ID 105 remains an explicit manifest decision; the
+matching Fire row cannot admit it by resemblance.
+
+This slice also supplies the previously missing gameplay consumer. The shared
+defense component now owns base/effective cold resistance and maximum cold
+resistance; player entry preserves the adapter's durable cold-resistance fact,
+and derived stats resolve both named sources. Elemental mitigation selects its
+resistance/maximum fields from a small channel table, then applies the existing
+−100/current-maximum/95% clamps and integer percentage stage. A level-three
+checkpoint test proves 76 active cold resistance, maximum 78, +1 inactive
+maximum resistance, and 1000 raw cold damage reduced to 240. Cold-duration and
+freeze/chill rules, absorb, PvP, item-source ordering, and future hard-versus-
+soft level integration remain independent target-version probes.
 
 The current target set is intentionally narrower than `aurafilter=73731`: only
 living player party members in the same level are admitted. Hirelings, summons,

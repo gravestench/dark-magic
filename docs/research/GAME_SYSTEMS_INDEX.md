@@ -82,9 +82,10 @@ The research program now has a baseline for every indexed workstream. Implementa
   existing ECS player, stops competing motion, and emits a generic relocation
   fact. Viewport/range, policy 2, invalid-target payment/fallback, owned units,
   and action/presentation timing remain probes.
-- G9 selected-aura tranche: active; exact-ID Might, Defiance, Blessed Aim, and
-  Resist Fire use the same right-selected ECS emitter and target relationships
-  with ordinary stat sources. Reviewed record recipes map Might to outgoing
+- G9 selected-aura tranche: active; exact-ID Might, Defiance, Blessed Aim,
+  Resist Fire, and Resist Cold use the same right-selected ECS emitter and
+  target relationships with ordinary stat sources. Reviewed record recipes map
+  Might to outgoing
   damage percent and Defiance to generic defense percent; a checkpoint test
   proves independent distinct-state stacking, while same-state suppression
   remains deterministic.
@@ -105,6 +106,11 @@ The research program now has a baseline for every indexed workstream. Implementa
   point coexist, while the generic rational learned-passive recipe supplies
   half the maximum-resistance bonus rounded down only while inactive. Shared
   mitigation enforces the 95% cap; soft-level and item-source ordering remain
+  probes.
+  Resist Cold independently pins the same formula family, adds cold/max-cold
+  facts to shared defense and derived stats, and extends table-driven elemental
+  mitigation. Level-three acceptance proves 76 resistance, maximum 78, and
+  240/1000 cold damage; cold-duration, absorb, PvP, and item ordering remain
   probes.
 - G8 combat fidelity tranche 1: active; shared direct-damage commit/result and
   typed six-channel ECS stage facts implemented; death attribution now uses an

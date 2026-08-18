@@ -85,6 +85,35 @@ return test.suite({
                         perdelay = "50",
                     },
                     {
+                        Id = "105",
+                        skill = "Fixture Resist Cold",
+                        srvstfunc = "",
+                        srvdofunc = "65",
+                        aura = "1",
+                        immediate = "1",
+                        leftskill = "",
+                        range = "none",
+                        InGame = "1",
+                        aurafilter = "73731",
+                        aurarangecalc = "ln12",
+                        aurastate = "resistcold",
+                        auratargetstate = "resistcold",
+                        aurastat1 = "coldresist",
+                        aurastatcalc1 = "dm34",
+                        aurastat2 = "maxcoldresist",
+                        aurastatcalc2 = "skill('Fixture Resist Cold'.blvl)",
+                        passivestate = "passive_resistcold",
+                        passivestat1 = "maxcoldresist",
+                        passivecalc1 = "skill('Fixture Resist Cold'.blvl)/2",
+                        mana = "0",
+                        lvlmana = "0",
+                        Param1 = "16",
+                        Param2 = "2",
+                        Param3 = "35",
+                        Param4 = "150",
+                        perdelay = "50",
+                    },
+                    {
                         Id = "999",
                         skill = "Fixture Aim",
                         srvstfunc = "",
@@ -123,13 +152,15 @@ return test.suite({
                             { state = "defiance", aura = "1", stat = "skill_armor_percent" },
                             { state = "resistfire", aura = "1", stat = "fireresist" },
                             { state = "passive_resistfire" },
+                            { state = "resistcold", aura = "1", stat = "coldresist" },
+                            { state = "passive_resistcold" },
                             { state = "blessedaim", aura = "1", stat = "item_tohit_percent" },
                             { state = "penetrate" },
                         }
                     end,
                 }, { "load" })
                 test.unload_module("d2legacy.data.aura_skills")
-                local definitions = require("d2legacy.data.aura_skills").load({ 98, 100, 998, 999 })
+                local definitions = require("d2legacy.data.aura_skills").load({ 98, 100, 105, 998, 999 })
                 test.expect(definitions[98].activation):equals("selected_right")
                 test.expect(definitions[98].radius_base):equals(16)
                 test.expect(definitions[98].stat_value_base):equals(40)
@@ -145,6 +176,9 @@ return test.suite({
                 test.expect(definitions[100].stats[2].progression):equals("self_hard_level")
                 test.expect(definitions[100].learned_passive.value_numerator):equals(1)
                 test.expect(definitions[100].learned_passive.value_divisor):equals(2)
+                test.expect(definitions[105].stats[1].stat):equals("cold_resist")
+                test.expect(definitions[105].stats[2].stat):equals("max_cold_resist")
+                test.expect(definitions[105].learned_passive.stat):equals("max_cold_resist")
                 test.expect(definitions[999].stat):equals("item_tohit_percent")
                 test.expect(definitions[999].learned_passive.state_id):equals("penetrate")
                 test.expect(definitions[999].learned_passive.stat):equals("item_tohit_percent")
