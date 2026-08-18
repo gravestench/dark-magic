@@ -217,6 +217,24 @@ Model these as separate semantic cue roles. Do not use one `Skill.Sound` field f
 
 Missile travel sounds that track a moving entity need emitter tracking until the missile is removed. The current mixer can manage a sound handle, but the presentation layer needs to update pan/attenuation or use future backend-native 3D tracking.
 
+For the current owned Expansion 1.14d target, record inspection makes this a
+concrete evidence gate rather than a generic recommendation. Fire Bolt, Fire
+Ball, Ice Blast, and Glacial Spike reference travel sounds whose `Sounds.txt`
+rows have `Loop=1`; their referenced impact sounds have `Loop=0`. Nova instead
+references one non-looping travel row and no hit row. Those data joins identify
+assets and a record-level loop flag, but they do not prove start/stop frames,
+whether a travel loop survives contact or expiration, or whether Nova plays
+once per cast or once per radial projectile.
+
+The strict `missile_audio_probe` therefore records projectile creation,
+contact/removal, audible intervals, and observed sound-instance count across a
+seven-case empty/contact/multi-target matrix. It admits only waveform-identified
+audio from an owned, fingerprinted Expansion 1.14d single-player runtime and
+rejects older, server, community-tool, memory-inspection, and imported-save
+evidence. Until that matrix is complete, the existing unproduced
+`d2legacy.missile.event` consumer is not a behavior contract and must not be
+wired by guessing from field names.
+
 ## Items and UI
 
 Separate UI-only audio from world item audio.
@@ -539,7 +557,9 @@ Add object loops/events, NPC speech, missile travel/impact, skill/aura loops, qu
 15. MonSounds columns, variants and event-role mapping.
 16. Unique monster `UMonSound` override behavior.
 17. Object sound fields and loop/start/operate/destroy rules.
-18. Skill/missile sound source fields and action timing.
+18. Populate the strict owned-runtime missile-audio matrix, then implement
+    record-referenced travel/impact start, stop, multiplicity, and tracking
+    semantics without exposing gameplay authority to the audio layer.
 19. COF sound keyframe mapping and duplicate interaction with skill cues.
 20. Player footsteps, weapon swings, hit/block and surface-material cues.
 21. NPC speech interruption, subtitles and localized file resolution.
