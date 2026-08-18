@@ -15,6 +15,8 @@ return test.suite({
                         max_fire_resist = 95,
                         cold_resist = 120,
                         max_cold_resist = 95,
+                        lightning_resist = 120,
+                        max_lightning_resist = 95,
                     },
                     get = function(self, name)
                         return self.values[name]
@@ -31,6 +33,10 @@ return test.suite({
                 test.assert(
                     mitigation.apply(1000, "cold", defense) == 50,
                     [=[mitigation.apply(1000, "cold", defense) == 50]=]
+                )
+                test.assert(
+                    mitigation.apply(1000, "lightning", defense) == 50,
+                    [=[mitigation.apply(1000, "lightning", defense) == 50]=]
                 )
                 test.assert(
                     mitigation.apply(1000, "fire", nil) == 1000,

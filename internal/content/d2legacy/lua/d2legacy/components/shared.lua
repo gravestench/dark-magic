@@ -289,11 +289,14 @@ function M.register()
         { name = "base_physical_resist", type = "i64" },
         { name = "base_fire_resist", type = "i64" },
         { name = "base_cold_resist", type = "i64" },
+        { name = "base_lightning_resist", type = "i64" },
         { name = "physical_resist", type = "i64" },
         { name = "fire_resist", type = "i64" },
         { name = "cold_resist", type = "i64" },
+        { name = "lightning_resist", type = "i64" },
         { name = "max_fire_resist", type = "i64" },
         { name = "max_cold_resist", type = "i64" },
+        { name = "max_lightning_resist", type = "i64" },
         { name = "physical_reduction_raw", type = "i64" },
     })
     component("d2legacy.stat.source", {

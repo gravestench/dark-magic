@@ -4,6 +4,7 @@ local fixtures = require("d2legacy.tests.support.fixtures")
 local enter = fixtures.player_entry({
     fire_resistance = 20,
     cold_resistance = 20,
+    lightning_resistance = 20,
     health = 10,
     max_health = 10,
 })
@@ -42,6 +43,14 @@ return test.suite({
                 ecs.create({
                     ["d2legacy.stat.source"] = {
                         target = player,
+                        source_id = "shield:lightning",
+                        stat = "lightning_resist",
+                        value = 30,
+                    },
+                })
+                ecs.create({
+                    ["d2legacy.stat.source"] = {
+                        target = player,
                         source_id = "armor:physical",
                         stat = "physical_resist",
                         value = 25,
@@ -66,6 +75,7 @@ return test.suite({
                 local defense = ecs.get(player, "d2legacy.combat.defense")
                 test.assert(defense:get("fire_resist") == 50, [=[defense:get("fire_resist") == 50]=])
                 test.assert(defense:get("cold_resist") == 50, [=[defense:get("cold_resist") == 50]=])
+                test.assert(defense:get("lightning_resist") == 50, [=[defense:get("lightning_resist") == 50]=])
                 test.assert(defense:get("physical_resist") == 25, [=[defense:get("physical_resist") == 25]=])
                 test.assert(
                     mitigation.apply(1000, "fire", defense) == 500,
@@ -74,6 +84,10 @@ return test.suite({
                 test.assert(
                     mitigation.apply(1000, "cold", defense) == 500,
                     [=[mitigation.apply(1000, "cold", defense) == 500]=]
+                )
+                test.assert(
+                    mitigation.apply(1000, "lightning", defense) == 500,
+                    [=[mitigation.apply(1000, "lightning", defense) == 500]=]
                 )
                 test.assert(
                     mitigation.apply(1000, "physical", defense) == 730,
@@ -91,6 +105,8 @@ return test.suite({
                         cold_resist = 0,
                         max_fire_resist = 75,
                         max_cold_resist = 75,
+                        lightning_resist = 0,
+                        max_lightning_resist = 75,
                         physical_reduction_raw = 20,
                     },
                 })
@@ -116,6 +132,8 @@ return test.suite({
                         cold_resist = 0,
                         max_fire_resist = 75,
                         max_cold_resist = 75,
+                        lightning_resist = 0,
+                        max_lightning_resist = 75,
                     },
                 })
                 local poison = damage.resolve(poison_target, { fire = 1000, poison = 1000 }, ecs)
