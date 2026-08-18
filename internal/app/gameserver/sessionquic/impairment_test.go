@@ -164,6 +164,7 @@ func TestReliableSessionRecoversFromDelayJitterAndPacketLoss(t *testing.T) {
 				Private: playeradapter.PrivateView{Version: playeradapter.PrivateViewVersion, Tick: checkpoint.Tick},
 				Party: playeradapter.PartyView{Version: playeradapter.PartyViewVersion, Tick: checkpoint.Tick,
 					Roster: []playeradapter.PartyRosterEntry{{PlayerID: player, Name: player, Class: "Amazon", Level: 1, Relationship: "self"}}},
+				Events: playeradapter.EventView{Version: playeradapter.EventViewVersion, Tick: checkpoint.Tick, Events: []playeradapter.SemanticEvent{}},
 			}
 			return json.Marshal(view)
 		},
@@ -327,6 +328,7 @@ func TestSustainedMultiClientSessionSurvivesImpairmentAndActiveReconnect(t *test
 					Items: playeradapter.ItemView{Items: []playeradapter.ItemEntityView{}}},
 				Party: playeradapter.PartyView{Version: playeradapter.PartyViewVersion, Tick: checkpoint.Tick,
 					Roster: []playeradapter.PartyRosterEntry{{PlayerID: player, Name: player, Class: "Amazon", Level: 1, Relationship: "self"}}},
+				Events: playeradapter.EventView{Version: playeradapter.EventViewVersion, Tick: checkpoint.Tick, Events: []playeradapter.SemanticEvent{}},
 			}
 			return json.Marshal(view)
 		},

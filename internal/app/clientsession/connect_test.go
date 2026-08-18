@@ -59,7 +59,8 @@ func TestConnectVerifiesAssignmentTLSRuntimeAndHUD(t *testing.T) {
 		World:   playeradapter.WorldView{Version: playeradapter.WorldViewVersion, Tick: 0, Entities: []playeradapter.WorldEntity{}},
 		Private: playeradapter.PrivateView{Version: playeradapter.PrivateViewVersion, Tick: 0},
 		Party: playeradapter.PartyView{Version: playeradapter.PartyViewVersion, Tick: 0,
-			Roster: []playeradapter.PartyRosterEntry{{PlayerID: "player", Name: "Hero", Class: "Amazon", Level: 1, Relationship: "self"}}}}
+			Roster: []playeradapter.PartyRosterEntry{{PlayerID: "player", Name: "Hero", Class: "Amazon", Level: 1, Relationship: "self"}}},
+		Events: playeradapter.EventView{Version: playeradapter.EventViewVersion, Tick: 0, Events: []playeradapter.SemanticEvent{}}}
 	endpoint, err := gameserver.NewEndpoint(&gameserver.Host{Engine: engine, Session: session, Allocation: allocation}, authority,
 		func(string, simulation.Checkpoint) (json.RawMessage, error) { return json.Marshal(view) })
 	if err != nil {
@@ -97,6 +98,9 @@ func TestConnectVerifiesAssignmentTLSRuntimeAndHUD(t *testing.T) {
 	if connected.HUD.Player.Name != "Hero" || connected.Admission.Admission.IdentityHash != allocation.IdentityHash {
 		t.Fatalf("session = %#v", connected)
 	}
+	if connected.PresentationSnapshot().EventEpoch != 1 {
+		t.Fatalf("initial semantic event epoch = %d, want 1", connected.PresentationSnapshot().EventEpoch)
+	}
 	delta, err := connected.Refresh(ctx)
 	if err != nil {
 		t.Fatal(err)
@@ -127,6 +131,9 @@ func TestConnectVerifiesAssignmentTLSRuntimeAndHUD(t *testing.T) {
 	if connected.credential == firstCredential {
 		t.Fatal("reconnect did not rotate credential")
 	}
+	if connected.PresentationSnapshot().EventEpoch != 2 {
+		t.Fatalf("reconnect semantic event epoch = %d, want 2", connected.PresentationSnapshot().EventEpoch)
+	}
 	firstCredential = connected.credential
 	if err := connected.transport.Close(); err != nil {
 		t.Fatal(err)
@@ -136,6 +143,9 @@ func TestConnectVerifiesAssignmentTLSRuntimeAndHUD(t *testing.T) {
 	}
 	if connected.credential == firstCredential {
 		t.Fatal("redial reconnect did not rotate credential")
+	}
+	if connected.PresentationSnapshot().EventEpoch != 3 {
+		t.Fatalf("redial semantic event epoch = %d, want 3", connected.PresentationSnapshot().EventEpoch)
 	}
 	replacementTicket, err := authority.Issue(gameserver.Principal{ID: "account", CharacterID: "character",
 		PlayerID: "player", CharacterRevision: 2, RuntimeIdentityHash: allocation.IdentityHash}, time.Minute)
@@ -150,6 +160,9 @@ func TestConnectVerifiesAssignmentTLSRuntimeAndHUD(t *testing.T) {
 	if connected.credential == beforeReassignment || connected.HUD.Player.PlayerID != "player" ||
 		connected.Admission.Admission.CharacterID != "character" {
 		t.Fatalf("reassigned session = %#v", connected)
+	}
+	if connected.PresentationSnapshot().EventEpoch != 4 {
+		t.Fatalf("reassignment semantic event epoch = %d, want 4", connected.PresentationSnapshot().EventEpoch)
 	}
 	if err := connected.Close(ctx); err != nil {
 		t.Fatal(err)
@@ -319,11 +332,16 @@ func TestPresentationSnapshotsAreImmutableAtomicRevisions(t *testing.T) {
 	session := &Session{
 		HUD:       playeradapter.HUD{Version: playeradapter.HUDVersion, Tick: 10},
 		World:     playeradapter.WorldView{Version: playeradapter.WorldViewVersion, Tick: 10, Entities: []playeradapter.WorldEntity{{ID: "known", Position: playeradapter.HUDPosition{X: 1}}}},
+		Events:    playeradapter.EventView{Version: playeradapter.EventViewVersion, Tick: 10, Events: []playeradapter.SemanticEvent{{ID: 1, Type: "cast", Tick: 10, Cast: &playeradapter.SemanticCastCue{Kind: "cast_started", Player: "alice"}}}},
 		Admission: gameserver.JoinResponse{Snapshot: gameserver.Snapshot{Tick: 10, StepNanos: int64(40 * time.Millisecond)}},
 	}
 	before := session.PresentationSnapshot()
 	if again := session.PresentationSnapshot(); again != before {
 		t.Fatal("unchanged presentation allocated a new snapshot")
+	}
+	session.Events.Events[0].Cast.Kind = "mutated"
+	if before.Events.Events[0].Cast.Kind != "cast_started" {
+		t.Fatal("published semantic event aliases mutable session state")
 	}
 	if _, err := session.applyTransform(sessionquic.TransformFrame{Tick: 11, Entities: []sessionquic.TransformEntity{{IDHash: sessionquic.PublicIDHash("known"), X: 2}}}); err != nil {
 		t.Fatal(err)

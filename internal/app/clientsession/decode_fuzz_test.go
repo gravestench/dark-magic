@@ -77,5 +77,6 @@ func validNetworkView(tick uint64) playeradapter.ClientView {
 				PlayerID: "player", Name: "Hero", Class: "Amazon", Level: 1, Relationship: "self",
 			}},
 		},
+		Events: playeradapter.EventView{Version: playeradapter.EventViewVersion, Tick: tick, Events: []playeradapter.SemanticEvent{}},
 	}
 }

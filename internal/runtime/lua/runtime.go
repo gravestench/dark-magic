@@ -143,7 +143,7 @@ func (r *Runtime) requireActiveScope() (*Scope, error) {
 }
 
 // New constructs a stopped runtime.
-func New() *Runtime { return &Runtime{executionBudget: time.Second} }
+func New() *Runtime { return &Runtime{executionBudget: defaultExecutionBudget} }
 
 // SetExecutionBudget bounds each Lua VM invocation. A zero duration disables
 // the runtime deadline but caller cancellation still interrupts Lua execution.

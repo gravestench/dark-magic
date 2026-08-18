@@ -46,9 +46,11 @@ type Session struct {
 	World          playeradapter.WorldView
 	Private        playeradapter.PrivateView
 	Party          playeradapter.PartyView
+	Events         playeradapter.EventView
 	reliableHUD    playeradapter.HUD
 	reliableWorld  playeradapter.WorldView
 	viewRevision   uint64
+	eventEpoch     uint64
 	presentation   atomic.Pointer[PresentationSnapshot]
 	pending        map[uint64]gameserver.CommandIntent
 	clock          *networkclock.Clock
@@ -62,11 +64,13 @@ type Session struct {
 // builds and atomically swaps it; the render thread may retain and read it
 // without copying the world projection every frame.
 type PresentationSnapshot struct {
-	HUD      playeradapter.HUD
-	World    playeradapter.WorldView
-	Private  playeradapter.PrivateView
-	Party    playeradapter.PartyView
-	Revision uint64
+	HUD        playeradapter.HUD
+	World      playeradapter.WorldView
+	Private    playeradapter.PrivateView
+	Party      playeradapter.PartyView
+	Events     playeradapter.EventView
+	Revision   uint64
+	EventEpoch uint64
 }
 
 type SelfHostedAssignment struct {
@@ -110,12 +114,29 @@ func (session *Session) PresentationSnapshot() *PresentationSnapshot {
 
 func (session *Session) publishPresentationLocked() {
 	session.presentation.Store(&PresentationSnapshot{
-		HUD: session.HUD, World: session.World, Private: session.Private, Party: clonePartyView(session.Party), Revision: session.viewRevision,
+		HUD: session.HUD, World: session.World, Private: session.Private,
+		Party: clonePartyView(session.Party), Events: cloneEventView(session.Events),
+		Revision: session.viewRevision, EventEpoch: session.eventEpoch,
 	})
 }
 
 func clonePartyView(view playeradapter.PartyView) playeradapter.PartyView {
 	view.Roster = append([]playeradapter.PartyRosterEntry(nil), view.Roster...)
+	return view
+}
+
+func cloneEventView(view playeradapter.EventView) playeradapter.EventView {
+	view.Events = append([]playeradapter.SemanticEvent(nil), view.Events...)
+	for index := range view.Events {
+		if view.Events[index].Cast != nil {
+			value := *view.Events[index].Cast
+			view.Events[index].Cast = &value
+		}
+		if view.Events[index].State != nil {
+			value := *view.Events[index].State
+			view.Events[index].State = &value
+		}
+	}
 	return view
 }
 
@@ -289,8 +310,8 @@ func joinVerified(ctx context.Context, transport *sessionquic.Client, gameID str
 		return nil, ErrAssignment
 	}
 	now := time.Now()
-	session := &Session{transport: transport, credential: joined.Credential, identity: identity, Admission: joined, HUD: view.HUD, World: view.World, Private: view.Private, Party: view.Party,
-		reliableHUD: view.HUD, reliableWorld: view.World, viewRevision: 1, pending: make(map[uint64]gameserver.CommandIntent)}
+	session := &Session{transport: transport, credential: joined.Credential, identity: identity, Admission: joined, HUD: view.HUD, World: view.World, Private: view.Private, Party: view.Party, Events: view.Events,
+		reliableHUD: view.HUD, reliableWorld: view.World, viewRevision: 1, eventEpoch: 1, pending: make(map[uint64]gameserver.CommandIntent)}
 	session.observeSnapshotLocked(joined.Snapshot, now)
 	session.publishPresentationLocked()
 	return session, nil
@@ -468,9 +489,10 @@ func (session *Session) Reconnect(ctx context.Context) error {
 		return ErrStaleCorrection
 	}
 	oldTransport := session.transport
-	session.credential, session.Admission, session.HUD, session.World, session.Private, session.Party = joined.Credential, joined, view.HUD, view.World, view.Private, view.Party
+	session.credential, session.Admission, session.HUD, session.World, session.Private, session.Party, session.Events = joined.Credential, joined, view.HUD, view.World, view.Private, view.Party, view.Events
 	session.reliableHUD, session.reliableWorld = view.HUD, view.World
 	session.viewRevision++
+	session.eventEpoch++
 	session.transport = transport
 	session.reconnectNonce = ""
 	session.observeSnapshotLocked(joined.Snapshot, time.Now())
@@ -538,10 +560,11 @@ func (session *Session) Reassign(ctx context.Context, assignment realm.JoinAssig
 	oldTransport := session.transport
 	session.transport, session.credential = newTransport, replacement.credential
 	session.identity, session.endpoint, session.tlsConfig = expectedIdentity, assignment.Endpoint, tlsConfig.Clone()
-	session.Admission, session.HUD, session.World, session.Private, session.Party = replacement.Admission, replacement.HUD, replacement.World, replacement.Private, replacement.Party
+	session.Admission, session.HUD, session.World, session.Private, session.Party, session.Events = replacement.Admission, replacement.HUD, replacement.World, replacement.Private, replacement.Party, replacement.Events
 	session.reliableHUD, session.reliableWorld = replacement.reliableHUD, replacement.reliableWorld
 	session.clock, session.reconnectNonce = replacement.clock, ""
 	session.viewRevision++
+	session.eventEpoch++
 	session.discardAcknowledgedLocked(replacement.Admission.Snapshot.AcknowledgedInput)
 	pending := make([]gameserver.CommandIntent, 0, len(session.pending))
 	for _, intent := range session.pending {
@@ -696,7 +719,7 @@ func (session *Session) applyDecodedCorrection(snapshot gameserver.Snapshot, vie
 		previousReliable = session.World
 	}
 	delta := playeradapter.DiffWorldView(previousReliable, view.World)
-	session.Admission.Snapshot, session.Private, session.Party = snapshot, view.Private, view.Party
+	session.Admission.Snapshot, session.Private, session.Party, session.Events = snapshot, view.Private, view.Party, view.Events
 	session.reliableHUD, session.reliableWorld = view.HUD, view.World
 	session.HUD, session.World = mergeReliablePresentation(view.HUD, view.World, session.HUD, session.World)
 	session.viewRevision++

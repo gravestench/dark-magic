@@ -24,6 +24,7 @@ func TestTransformFrameRoundTripsWithinConservativeDatagramBudget(t *testing.T) 
 			Animation: playeradapter.HUDAnimation{Mode: "WL", Direction: 7, StartTick: 40}},
 		World:   playeradapter.WorldView{Version: playeradapter.WorldViewVersion, Tick: 42, Entities: entities},
 		Private: playeradapter.PrivateView{Version: playeradapter.PrivateViewVersion, Tick: 42},
+		Events:  playeradapter.EventView{Version: playeradapter.EventViewVersion, Tick: 42, Events: []playeradapter.SemanticEvent{}},
 	}
 	payload, err := json.Marshal(view)
 	if err != nil {
@@ -62,6 +63,7 @@ func TestTransformFrameRejectsWrongCredentialAndMalformedLength(t *testing.T) {
 		HUD:     playeradapter.HUD{Version: playeradapter.HUDVersion, Tick: 1},
 		World:   playeradapter.WorldView{Version: playeradapter.WorldViewVersion, Tick: 1},
 		Private: playeradapter.PrivateView{Version: playeradapter.PrivateViewVersion, Tick: 1},
+		Events:  playeradapter.EventView{Version: playeradapter.EventViewVersion, Tick: 1, Events: []playeradapter.SemanticEvent{}},
 	}
 	payload, _ := json.Marshal(view)
 	encoded, err := encodeTransformFrame("one", gameserver.Snapshot{Tick: 1, Payload: payload})
@@ -94,6 +96,7 @@ func FuzzDecodeTransformFrame(f *testing.F) {
 			Position: playeradapter.HUDPosition{X: 1, Y: 2}},
 		World:   playeradapter.WorldView{Version: playeradapter.WorldViewVersion, Tick: 4, Entities: []playeradapter.WorldEntity{}},
 		Private: playeradapter.PrivateView{Version: playeradapter.PrivateViewVersion, Tick: 4},
+		Events:  playeradapter.EventView{Version: playeradapter.EventViewVersion, Tick: 4, Events: []playeradapter.SemanticEvent{}},
 	}
 	payload, _ := json.Marshal(view)
 	valid, err := encodeTransformFrame(credential, gameserver.Snapshot{Tick: 4, Payload: payload})
@@ -163,6 +166,7 @@ func transformBenchmarkInput(test fataler) (gameserver.SessionCredential, gamese
 		HUD:     playeradapter.HUD{Version: playeradapter.HUDVersion, Tick: 100},
 		World:   playeradapter.WorldView{Version: playeradapter.WorldViewVersion, Tick: 100, Entities: entities},
 		Private: playeradapter.PrivateView{Version: playeradapter.PrivateViewVersion, Tick: 100},
+		Events:  playeradapter.EventView{Version: playeradapter.EventViewVersion, Tick: 100, Events: []playeradapter.SemanticEvent{}},
 	}
 	payload, err := json.Marshal(view)
 	if err != nil {

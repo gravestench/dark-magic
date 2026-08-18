@@ -73,5 +73,6 @@ func validClientView(tick uint64) ClientView {
 				PlayerID: "player", Name: "Hero", Class: "Amazon", Level: 1, Relationship: "self",
 			}},
 		},
+		Events: EventView{Version: EventViewVersion, Tick: tick, Events: []SemanticEvent{}},
 	}
 }
