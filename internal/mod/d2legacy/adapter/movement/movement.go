@@ -144,6 +144,14 @@ type movementPathFinder interface {
 func (source *MovementSource) SetNavigation(world *gameworld.Map) {
 	source.mu.Lock()
 	defer source.mu.Unlock()
+	// Reliable connected corrections reinstall presentation for the current
+	// level. Rebinding the identical map is not a world transition and must not
+	// consume an in-progress click route; otherwise every correction turns into
+	// an implicit stop command. A new map pointer still invalidates coordinates
+	// and route state, including a regenerated instance of the same level ID.
+	if current, ok := source.navigation.(*gameworld.Map); ok && current == world {
+		return
+	}
 	source.navigation = world
 	source.path = nil
 	source.pathTarget = nil

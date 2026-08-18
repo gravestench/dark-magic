@@ -178,7 +178,7 @@ func TestConnectSelfHostedEntersLiveGeneratedGameworld(t *testing.T) {
 		}
 		time.Sleep(550 * time.Millisecond)
 	}
-	movePayload, err := json.Marshal(movement.MovePayload{X: 1})
+	secondMovePayload, err := json.Marshal(movement.MovePayload{Target: &movement.MoveTarget{X: 24, Y: 10}})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -195,10 +195,10 @@ func TestConnectSelfHostedEntersLiveGeneratedGameworld(t *testing.T) {
 	secondInitialTick, secondInitialX := secondWorld.Tick, secondWorld.Origin.X
 	secondCommandTick := second.NextInputTick(time.Now())
 	if err := second.Submit(ctx, gameserver.CommandIntent{TargetTick: secondCommandTick, Sequence: 2,
-		Kind: movement.MoveCommand, Payload: movePayload}); err != nil {
+		Kind: movement.MoveCommand, Payload: secondMovePayload}); err != nil {
 		t.Fatal(err)
 	}
-	for secondWorld.Tick <= secondInitialTick || secondWorld.Origin.X <= secondInitialX {
+	for secondWorld.Tick <= secondInitialTick || secondWorld.Origin.X < secondInitialX+3 {
 		select {
 		case _, open := <-secondDeltas:
 			if !open {
@@ -219,6 +219,10 @@ func TestConnectSelfHostedEntersLiveGeneratedGameworld(t *testing.T) {
 	if _, err := connected.Refresh(ctx); err != nil {
 		t.Fatal(err)
 	}
+	firstMovePayload, err := json.Marshal(movement.MovePayload{Target: &movement.MoveTarget{X: 16, Y: 10}})
+	if err != nil {
+		t.Fatal(err)
+	}
 	commandTick := connected.NextInputTick(time.Now())
 	watchContext, stopWatch := context.WithCancel(ctx)
 	deltas, watchErrors, err := connected.Watch(watchContext)
@@ -227,12 +231,12 @@ func TestConnectSelfHostedEntersLiveGeneratedGameworld(t *testing.T) {
 	}
 	defer stopWatch()
 	if err := connected.Submit(ctx, gameserver.CommandIntent{ObservedServerTick: commandTick - 2, TargetTick: commandTick, Sequence: 2,
-		Kind: movement.MoveCommand, Payload: movePayload}); err != nil {
+		Kind: movement.MoveCommand, Payload: firstMovePayload}); err != nil {
 		t.Fatal(err)
 	}
 	_, currentWorld := connected.View()
 	initialTick, initialX := currentWorld.Tick, currentWorld.Origin.X
-	for currentWorld.Tick <= initialTick || currentWorld.Origin.X <= initialX {
+	for currentWorld.Tick <= initialTick || currentWorld.Origin.X < initialX+3 {
 		select {
 		case _, open := <-deltas:
 			if !open {

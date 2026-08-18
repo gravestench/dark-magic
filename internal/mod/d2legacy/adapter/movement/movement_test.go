@@ -251,3 +251,37 @@ func TestMovementSourceInvalidatesWorldRelativeRouteWhenNavigationChanges(t *tes
 			controller.HasMoveTarget(), source.path, source.pathTarget)
 	}
 }
+
+func TestMovementSourceKeepsRouteWhenSameNavigationIsReinstalled(t *testing.T) {
+	engine := gameecs.New()
+	controls, err := akara.RegisterSchema(engine.World(), akara.Schema{Name: "d2legacy.world.player_control", Fields: []akara.Field{{Name: "player", Kind: akara.FieldString}}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	entity := engine.World().MustCreateEntity()
+	if _, err := controls.Set(entity, map[string]any{"player": "alpha"}); err != nil {
+		t.Fatal(err)
+	}
+	controller := &MovementController{}
+	source, err := NewMovementSource(engine, &inputstate.Store{}, "alpha", "game_world", controller)
+	if err != nil {
+		t.Fatal(err)
+	}
+	navigation := &gameworld.Map{}
+	source.SetNavigation(navigation)
+	if err := controller.SetMoveTarget(20, 10); err != nil {
+		t.Fatal(err)
+	}
+	source.path = []gameworld.Point{{X: 10, Y: 10}, {X: 11, Y: 10}, {X: 20, Y: 10}}
+	source.pathTarget = &MoveTarget{X: 20, Y: 10}
+
+	// Connected correction projection calls activateWorld for the authoritative
+	// level even when that level did not change. The same map binding must be a
+	// no-op so the next input sample continues the accepted route.
+	source.SetNavigation(navigation)
+
+	if !controller.HasMoveTarget() || len(source.path) != 3 || source.pathTarget == nil {
+		t.Fatalf("same-map correction discarded route: target=%t path=%v route_target=%#v",
+			controller.HasMoveTarget(), source.path, source.pathTarget)
+	}
+}

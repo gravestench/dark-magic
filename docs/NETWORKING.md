@@ -258,11 +258,13 @@ populates a deterministic Blood Moor hostile from synthetic TXT records,
 offers a selected local-profile character over real QUIC, and observes both the
 owner-private HUD and nearby public hostile from canonical checkpoints. The
 fixture deliberately supplies redistributable synthetic record rows so normal
-CI does not depend on a developer's owned Diablo II installation. It also sends
-a real `player.move` intent and waits on the production correction stream for
-the authoritative position change. The headless Lua authority owns position
-integration; interactive world composition adds collision data and camera
-behavior but is not required for movement to execute.
+CI does not depend on a developer's owned Diablo II installation. It also admits
+two clients, sends independent point-target `player.move` intents, and requires
+each authoritative position to sustain at least three subtiles of travel
+through the production correction streams. That distance distinguishes durable
+click locomotion from a single accepted tick. The headless Lua authority owns
+position integration; interactive world composition adds collision data and
+camera behavior but is not required for movement to execute.
 
 The interactive client's TCP/IP Host button uses the same topology rather than
 starting a privileged Lua listener. `engine.network/v1` carries only host/join
@@ -282,6 +284,11 @@ rules and collision integrator serve authoritative Lua and prediction, so policy
 does not drift into a second client implementation. Canonical corrections reset
 the prediction baseline. A separate render transform decays only reconciliation
 error, keeping new local input immediate instead of filtering all owner motion.
+Correction projection reasserts the authenticated player's current level, but
+rebinding the identical navigation map is idempotent. Only a different map
+instance invalidates world-relative click targets and cached waypoints. This
+distinction prevents the 10 Hz correction lifecycle from masquerading as a
+level transition and issuing an idle command that stops an active route.
 
 The client maintains two server-derived timelines. The prediction timeline
 estimates current authority using the latest tick and half the smoothed RTT. The
