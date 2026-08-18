@@ -53,6 +53,7 @@ function M.components(source, definition, values)
             remaining_ticks = definition.lifetime_ticks,
             collision_radius = definition.collision_radius,
             destroy_on_contact = definition.destroy_on_contact,
+            impact_on_expiry = definition.impact_on_expiry or false,
             next_hit_delay = definition.next_hit_delay,
             impact_radius = progression.linear(
                 definition.impact_radius or 0,

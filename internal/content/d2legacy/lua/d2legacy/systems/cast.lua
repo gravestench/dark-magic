@@ -35,6 +35,13 @@ local function learned_levels(entities)
 end
 
 local function elemental_damage_percent(definition, levels)
+    if definition.damage_synergy_terms then
+        local result = 0
+        for _, term in ipairs(definition.damage_synergy_terms) do
+            result = result + (levels[term.skill_id] or 0) * term.percent
+        end
+        return result
+    end
     local total_levels = 0
     for _, skill_id in ipairs(definition.damage_synergy_skill_ids or {}) do
         total_levels = total_levels + (levels[skill_id] or 0)
@@ -62,7 +69,12 @@ local function cast_timing(player, definition, action)
     then
         return definition.effect_delay, definition.complete_delay, ""
     end
-    assert(action.animation_mode ~= "SQ", "sequence cast timing is not implemented")
+    -- Sequence-authored actions retain their semantic SQ mode. Their repeat
+    -- cadence is a behavior-family fact rather than an ordinary AnimData cast
+    -- event, so the family definition owns the first effect/completion pair.
+    if action.animation_mode == "SQ" then
+        return definition.effect_delay, definition.complete_delay, action.animation_mode
+    end
     local appearance = assert(ecs.get(player, "d2legacy.player.appearance"), "cast actor has no appearance")
     local key = string.upper(appearance:get("token") .. action.animation_mode .. appearance:get("weapon_class"))
     local timing, err = animdata.record(key)
@@ -149,7 +161,11 @@ local function begin_cast(context, player, request, definitions, actions, levels
         and definition ~= nil
         and known_level > 0
         and target_is_valid(player, request, definition, entities)
-        and available >= skill_progression.mana_cost(definition, known_level)
+        and available
+            >= math.max(
+                skill_progression.mana_cost(definition, known_level),
+                definition.minimum_start_mana_raw or 0
+            )
 
     if valid then
         local effect_delay, complete_delay, animation_mode =

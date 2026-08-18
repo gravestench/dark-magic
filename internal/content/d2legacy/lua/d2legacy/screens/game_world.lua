@@ -594,17 +594,23 @@ local function queue_record_overlay_effect(self, cue)
     overlay.remaining_seconds = recipe.duration_seconds
 end
 
-local function update_held_skill_gate(self, primary_pressed, primary_down)
+local function update_held_skill_gate(self, side, pressed, down)
     local active = self.gameplay and self.gameplay.hero and self.gameplay_world.skill_action_active(self.gameplay.hero)
         or false
+    local key = side .. "_held_skill_gate"
     local ready
-    ready, self.held_skill_gate = held_skill_input.update(self.held_skill_gate, primary_pressed, primary_down, active)
+    ready, self[key] = held_skill_input.update(self[key], pressed, down, active)
     return ready
 end
 
 local function request_left_skill(self, x, y, target_id)
     self.player.request_skill("left", x, y, target_id)
-    held_skill_input.submitted(self.held_skill_gate)
+    held_skill_input.submitted(self.left_held_skill_gate)
+end
+
+local function request_right_skill(self, x, y, target_id)
+    self.player.request_skill("right", x, y, target_id)
+    held_skill_input.submitted(self.right_held_skill_gate)
 end
 
 local function update_state_overlays(self, elapsed)
@@ -1106,7 +1112,7 @@ return {
         end
         local primary_pressed = input.pressed("pointer_primary")
         local primary_down = input.down("pointer_primary")
-        local held_skill_ready = update_held_skill_gate(self, primary_pressed, primary_down)
+        local held_skill_ready = update_held_skill_gate(self, "left", primary_pressed, primary_down)
         local stand_still = input.down("shift") or input.pressed("shift")
         if input.released("pointer_primary") or not primary_down then
             self.held_hostile = nil
@@ -1190,17 +1196,14 @@ return {
                 self.pending_interaction = nil
             end
         end
-        if
-            self.player
-            and self.world
-            and in_world
-            and not self.__darkmagic_item_held
-            and input.pressed("pointer_secondary")
-        then
+        local secondary_pressed = input.pressed("pointer_secondary")
+        local secondary_down = input.down("pointer_secondary")
+        local secondary_skill_ready = update_held_skill_gate(self, "right", secondary_pressed, secondary_down)
+        if self.player and self.world and in_world and not self.__darkmagic_item_held and secondary_skill_ready then
             local skill_x, skill_y =
                 self.world:screen_to_subtile(pointer_x, pointer_y, camera_x, camera_y, target_x, target_y)
             local selected = selectable_at(self, skill_x, skill_y)
-            self.player.request_skill("right", skill_x, skill_y, selected and selected.id or "")
+            request_right_skill(self, skill_x, skill_y, selected and selected.id or "")
         end
 
         -- Hero screen position is target anchor plus hero-to-camera relative offset.

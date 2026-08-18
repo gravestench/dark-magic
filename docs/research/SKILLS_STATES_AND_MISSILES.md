@@ -1266,6 +1266,40 @@ field for visual handoff or a separate client state scheduler.
 
 Skill behavior should not create an unowned generic monster. Summoning must enter the owned-unit system described in [HIRELINGS_AND_OWNED_UNITS.md](HIRELINGS_AND_OWNED_UNITS.md): owner, pet type, limit/replacement policy, inherited/snapshotted stats, AI, and lifecycle are authoritative.
 
+## Assassin trap family
+
+The exact player IDs 251, 256, 257, 261, 262, 266, 271, 272, 276, and 277 now
+enter one `trap.assassin-family` decoder. Skills, Missiles, PetType, MonStats,
+MonStats2, and SkillDesc records select six reusable transactions: lobbed area
+payload, persistent field, returning weapon patrol, stationary sentry, repeated
+weapon missile, and periodic weapon state. Runtime policy never branches on a
+trap name or ID after this admission boundary.
+
+Deployed sentries are stationary owned units and share the authored
+`assassintrap` five-unit replacement group. Their checkpointed schedules select
+same-level hostile targets deterministically, emit joined helper projectiles,
+and preserve owner attribution. Death Sentry first selects the nearest usable
+corpse with entity-ID tie breaking, atomically consumes it, then resolves its
+physical/fire life-percentage damage around the corpse. Blade Sentinel carries
+an explicit outbound/return state and follows the owner's current position on
+its return leg. Fire Trauma's lobbed payload now resolves at ground arrival as
+well as unit contact; its presentation aftermath remains non-damaging.
+
+Owned 1.14d records preserve Inferno Sentry's heterogeneous elemental formula:
+Fire Trauma and Death Sentry hard levels use `Param7`, while Wake of Fire Sentry
+uses `Param8`. Blade Fury preserves its SQ action, three-mana start threshold,
+one-mana per accepted blade, and held-input re-admission after each completed
+authoritative action. Blade Shield uses an ordinary timed state plus a
+checkpointed periodic weapon transaction. Synthetic family tests cover all ten
+IDs and the six shapes; focused system tests cover arrival impact, corpse
+ordering, return patrol, replacement facts, and checkpoint parity.
+
+This remains partial 1.14d fidelity. Exact sentry initial think phase, wave and
+charged-bolt angular layout, footprint/range units, Blade Sentinel patrol
+contact cadence, Blade Fury release timing, weapon modifier snapshot order,
+corpse explosion rounding, PvP conversion, and proc interaction remain tracked
+by [issue #408](https://github.com/gravestench/dark-magic/issues/408).
+
 ## Movement skills
 
 Charge, Leap, Leap Attack, Whirlwind, Dragon Flight, teleport and similar skills should not bypass the world system by directly setting presentation coordinates.
