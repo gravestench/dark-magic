@@ -31,7 +31,8 @@ func TestOwnedTargetArchivesJoinLocalizedSkillEvidence(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	report, err := Build([]int{0, 36, 40, 52, 54, 55, 66, 72, 99, 109, 120, 69, 70, 89, 80, 95}, skills, descriptions, localization.New(assets, "English"))
+	report, err := Build([]int{0, 36, 40, 52, 54, 55, 66, 72, 99, 109, 120, 69, 70, 89, 80, 95,
+		75, 85, 90, 94}, skills, descriptions, localization.New(assets, "English"))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -197,6 +198,32 @@ func TestOwnedTargetArchivesJoinLocalizedSkillEvidence(t *testing.T) {
 		if localized["str name"].Text != check.name ||
 			!strings.Contains(strings.ToLower(localized["str long"].Text), check.longNeedle) ||
 			localized["dsc3texta2"].Text != "Skeleton Mastery" ||
+			localized["dsc3texta3"].Text != "Summon Resist" ||
+			len(localized["dsc3texta1"].ReplacementTokens) != 1 ||
+			localized["dsc3texta1"].ReplacementTokens[0] != "%s" {
+			t.Fatalf("%s localization = %#v", check.name, skill.Localization)
+		}
+	}
+	for _, check := range []struct {
+		index, modifierLen int
+		name, longNeedle   string
+	}{
+		{16, 18, "Clay Golem", "earth"},
+		{17, 18, "Blood Golem", "shares with you the life"},
+		{18, 18, "Iron Golem", "metallic item"},
+		{19, 20, "Fire Golem", "fire into life"},
+	} {
+		skill := report.Skills[check.index]
+		if len(skill.CrossSkillModifiers) != check.modifierLen {
+			t.Fatalf("%s modifiers = %#v", check.name, skill.CrossSkillModifiers)
+		}
+		localized := map[string]LocalizationReference{}
+		for _, evidence := range skill.Localization {
+			localized[evidence.Column] = evidence
+		}
+		if localized["str name"].Text != check.name ||
+			!strings.Contains(strings.ToLower(localized["str long"].Text), check.longNeedle) ||
+			localized["dsc3texta2"].Text != "Golem Mastery" ||
 			localized["dsc3texta3"].Text != "Summon Resist" ||
 			len(localized["dsc3texta1"].ReplacementTokens) != 1 ||
 			localized["dsc3texta1"].ReplacementTokens[0] != "%s" {

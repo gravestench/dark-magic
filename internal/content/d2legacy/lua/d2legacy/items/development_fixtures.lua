@@ -59,6 +59,10 @@ local function common(id, row)
     return {
         id = id,
         code = row.code,
+        type = row.type or "",
+        type2 = row.type2 or "",
+        material_flags = integer(row.bitfield1),
+        identified = true,
         width = integer(row.invwidth),
         height = integer(row.invheight),
         base_cost = integer(row.cost),

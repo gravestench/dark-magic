@@ -5,10 +5,50 @@
 -- and systems consult ECS only; initial_data is never a mutable side channel.
 
 local ecs = require("engine.ecs/v1")
+local records = require("engine.records/v1")
 local development_fixtures = require("d2legacy.items.development_fixtures")
 local world = require("d2legacy.items.world")
 local M = {}
 local interaction_data = {}
+local item_types_by_code
+
+local function item_type_index()
+    if item_types_by_code then
+        return item_types_by_code
+    end
+    item_types_by_code = {}
+    local available, rows = pcall(records.load, "data/global/excel/ItemTypes.txt")
+    rows = available and rows or {}
+    for _, row in ipairs(rows) do
+        local code = row.Code or row.code
+        if code and code ~= "" then
+            item_types_by_code[code] = row
+        end
+    end
+    return item_types_by_code
+end
+
+local function item_type_closure(item)
+    local index, found, visiting = item_type_index(), {}, {}
+    local function visit(code)
+        if not code or code == "" or found[code] then return end
+        assert(not visiting[code], "cyclic ItemTypes inheritance at " .. code)
+        visiting[code] = true
+        found[code] = true
+        local row = index[code]
+        if row then
+            visit(row.Equiv1 or row.equiv1)
+            visit(row.Equiv2 or row.equiv2)
+        end
+        visiting[code] = nil
+    end
+    visit(item.type)
+    visit(item.type2)
+    local result = {}
+    for code in pairs(found) do result[#result + 1] = code end
+    table.sort(result)
+    return table.concat(result, ",")
+end
 
 local function layout_exists(owner)
     for _, entity in
@@ -49,6 +89,9 @@ local function create_item(layout, item)
             owner = layout,
             id = item.id,
             code = item.code,
+            item_types = item_type_closure(item),
+            material_flags = item.material_flags or 0,
+            identified = item.identified ~= false,
             width = item.width,
             height = item.height,
             body_slots = item.body_slots or "",
@@ -284,6 +327,7 @@ function M.ensure_player(owner)
 end
 
 function M.load()
+    item_types_by_code = nil
     local available, initial = pcall(require, "engine.initial_data/v1")
     if not available then
         return

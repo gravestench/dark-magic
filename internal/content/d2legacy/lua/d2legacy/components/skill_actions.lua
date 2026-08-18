@@ -61,6 +61,7 @@ function M.register()
             { name = "player", type = "string" },
             { name = "skill_id", type = "i64" },
             { name = "skill_level", type = "i64" },
+            { name = "target_id", type = "string" },
             { name = "corpse_id", type = "string" },
             { name = "summon_id", type = "string" },
             { name = "category", type = "string" },

@@ -51,6 +51,10 @@ local function index_by(rows, key)
     return result
 end
 
+local function lookup(index, key)
+    return index[key] or type(key) == "string" and index[string.lower(key)]
+end
+
 local function monster_catalog()
     if catalog then
         return catalog
@@ -218,6 +222,8 @@ local function runtime_definition(stats, graphics, values, difficulty)
         knockback_size = knockback_size(graphics),
         corpse_selectable = truth(graphics, "corpseSel"),
         revivable = truth(graphics, "revive"),
+        boss = truth(stats, "boss"),
+        prime_evil = truth(stats, "primeevil"),
         min_group = math.max(integer(stats, "MinGrp", 1), 1),
         max_group = math.max(integer(stats, "MaxGrp", 1), 1),
         rarity = math.max(integer(stats, "Rarity", 1), 1),
@@ -250,7 +256,7 @@ function M.summon(id, pet_level, ...)
     pet_level = math.floor(pet_level)
     local difficulty = game_rules.difficulty()
     local indexed = monster_catalog()
-    local stats = assert(indexed.stats[id], "missing summoned MonStats row")
+    local stats = assert(lookup(indexed.stats, id), "missing summoned MonStats row")
     assert(truth(stats, "enabled") and not truth(stats, "npc"), "summoned monster is unavailable")
     local graphics = assert(indexed.graphics[graphics_id(stats)], "missing summoned MonStats2 row")
     local values = raw_stats(stats, difficulty)
@@ -276,7 +282,7 @@ function M.revive(id, monster_level, ...)
     monster_level = math.floor(monster_level)
     local difficulty = game_rules.difficulty()
     local indexed = monster_catalog()
-    local stats = assert(indexed.stats[id], "missing revived MonStats row")
+    local stats = assert(lookup(indexed.stats, id), "missing revived MonStats row")
     assert(truth(stats, "enabled") and not truth(stats, "npc"), "revived monster is unavailable")
     local graphics = assert(indexed.graphics[graphics_id(stats)], "missing revived MonStats2 row")
     assert(truth(graphics, "revive"), "monster type is not revivable")

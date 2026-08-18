@@ -53,6 +53,9 @@ local periodic_aura_skill_data = require("d2legacy.data.periodic_aura_skills")
 local corpse_aura_skill_data = require("d2legacy.data.corpse_aura_skills")
 local corpse_summon_skill_data = require("d2legacy.data.corpse_summon_skills")
 local corpse_summon_skill_system = require("d2legacy.systems.corpse_summon_skill")
+local golem_summon_skill_data = require("d2legacy.data.golem_summon_skills")
+local golem_summon_skill_system = require("d2legacy.systems.golem_summon_skill")
+local summon_effects = require("d2legacy.systems.summon_effects")
 local aura_skill_system = require("d2legacy.systems.aura_skill")
 local aura_pulse_system = require("d2legacy.systems.aura_pulse")
 local learned_passive_skill_system = require("d2legacy.systems.learned_passive_skill")
@@ -136,6 +139,8 @@ function M.start()
     end
     M.corpse_summon_skills =
         corpse_summon_skill_data.load(M.skill_behavior_coverage.by_family["summon.targeted-corpse"] or {})
+    M.golem_summon_skills =
+        golem_summon_skill_data.load(M.skill_behavior_coverage.by_family["summon.golem"] or {})
     M.cast_skills = {}
     for skill_id, definition in pairs(M.missile_skills) do
         M.cast_skills[skill_id] = definition
@@ -184,6 +189,10 @@ function M.start()
         assert(not M.cast_skills[skill_id], "skill has multiple behavior-family declarations")
         M.cast_skills[skill_id] = definition
     end
+    for skill_id, definition in pairs(M.golem_summon_skills) do
+        assert(not M.cast_skills[skill_id], "skill has multiple behavior-family declarations")
+        M.cast_skills[skill_id] = definition
+    end
     M.cast_actions = cast_action_data.load(M.cast_skills)
     cast_command.register(M.cast_skills)
     cast_system.register(M.cast_skills, M.cast_actions)
@@ -196,6 +205,8 @@ function M.start()
     aura_skill_system.register(M.aura_skills)
     aura_pulse_system.register(M.periodic_aura_state_policy)
     corpse_summon_skill_system.register(M.corpse_summon_skills)
+    golem_summon_skill_system.register(M.golem_summon_skills)
+    summon_effects.register()
     learned_passive_skill_system.register(M.aura_skills)
     projectile_system.register()
     melee_system.register()
@@ -250,6 +261,7 @@ function M.stop()
     M.periodic_aura_skills = nil
     M.periodic_aura_state_policy = nil
     M.corpse_summon_skills = nil
+    M.golem_summon_skills = nil
     M.cast_skills = nil
     M.cast_actions = nil
     M.skill_behavior_coverage = nil

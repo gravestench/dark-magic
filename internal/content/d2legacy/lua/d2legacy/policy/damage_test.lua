@@ -144,6 +144,27 @@ return test.suite({
                         and poison.remaining_health_raw == 4500,
                     [=[poison stays typed but cannot become immediate damage before duration policy exists]=]
                 )
+                local absorbing_target = ecs.create({
+                    ["d2legacy.monster.stats"] = {
+                        level = 1,
+                        health = 1000,
+                        max_health = 2000,
+                    },
+                    ["d2legacy.combat.defense"] = {
+                        fire_resist = 50,
+                        max_fire_resist = 75,
+                        max_cold_resist = 75,
+                        max_lightning_resist = 75,
+                        fire_absorb_percent = 50,
+                    },
+                })
+                local absorbed = damage.resolve(absorbing_target, bundle.single("fire", 1000), ecs)
+                test.assert(
+                    absorbed.mitigated.fire == 250
+                        and absorbed.damage_raw == 250
+                        and absorbed.remaining_health_raw == 1000,
+                    [=[percent fire absorb heals after resistance and before remaining damage commits]=]
+                )
                 local result = damage.resolve(player, bundle.single("fire", 255), ecs)
                 test.assert(
                     result.rolled_damage_raw == 255

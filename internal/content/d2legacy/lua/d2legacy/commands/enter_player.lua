@@ -331,6 +331,7 @@ function M.apply(command)
                 left_allowed = skill.left_allowed,
                 right_allowed = skill.right_allowed,
             },
+            ["d2legacy.player.skill_hard_level"] = { level = skill.hard_level or skill.level },
         })
     end
 end

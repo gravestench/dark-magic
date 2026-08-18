@@ -131,6 +131,12 @@ function M.components(command, game_player_count)
     if definition.revivable == true then
         result["d2legacy.monster.revivable"] = {}
     end
+    if definition.boss == true then
+        result["d2legacy.monster.boss"] = {}
+    end
+    if definition.prime_evil == true then
+        result["d2legacy.monster.prime_evil"] = {}
+    end
     return result
 end
 

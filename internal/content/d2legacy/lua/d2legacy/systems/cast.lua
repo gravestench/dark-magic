@@ -13,6 +13,7 @@ local player_motion = require("d2legacy.gameplay.player_motion")
 local skill_progression = require("d2legacy.policy.skill_progression")
 local resources = require("d2legacy.policy.resources")
 local corpse_target = require("d2legacy.gameplay.corpse_target")
+local golem_target = require("d2legacy.gameplay.golem_target")
 
 local M = {}
 
@@ -22,8 +23,12 @@ local function learned_levels(entities)
         local learned = ecs.get(entity, "d2legacy.player.learned_skill")
         if learned then
             local owner = learned:get("owner"):id()
-            levels[owner] = levels[owner] or {}
-            levels[owner][learned:get("skill_id")] = learned:get("level")
+            levels[owner] = levels[owner] or { effective = {}, hard = {} }
+            local skill_id, effective = learned:get("skill_id"), learned:get("level")
+            local hard_component = ecs.get(entity, "d2legacy.player.skill_hard_level")
+            local hard = hard_component and hard_component:get("level") or effective
+            levels[owner].effective[skill_id] = effective
+            levels[owner].hard[skill_id] = hard
         end
     end
     return levels
@@ -120,6 +125,16 @@ local function target_is_valid(player, request, definition, entities)
     if definition.requires_corpse_target then
         return corpse_target.named(player, request:get("target_id"), entities, definition) ~= nil
     end
+    if definition.behavior == "summon.golem" then
+        return golem_target.resolve(
+            player,
+            request:get("target_x"),
+            request:get("target_y"),
+            request:get("target_id"),
+            definition,
+            entities
+        ) ~= nil
+    end
     return true
 end
 
@@ -127,8 +142,8 @@ local function begin_cast(context, player, request, definitions, actions, levels
     local vitals = ecs.get(player, "d2legacy.player.vitals")
     local available = resources.mana_raw(vitals)
 
-    local player_levels = levels[player:id()] or {}
-    local known_level = player_levels[request:get("skill_id")] or 0
+    local player_levels = levels[player:id()] or { effective = {}, hard = {} }
+    local known_level = player_levels.effective[request:get("skill_id")] or 0
     local definition = definitions[request:get("skill_id")]
     local valid = request:get("request_tick") <= context.tick
         and definition ~= nil
@@ -148,8 +163,8 @@ local function begin_cast(context, player, request, definitions, actions, levels
             target_id = request:get("target_id"),
             effect_tick = context.tick + effect_delay,
             complete_tick = context.tick + complete_delay,
-            elemental_damage_percent = elemental_damage_percent(definition, player_levels),
-            effect_duration_ticks = effect_duration(definition, known_level, player_levels),
+            elemental_damage_percent = elemental_damage_percent(definition, player_levels.hard),
+            effect_duration_ticks = effect_duration(definition, known_level, player_levels.hard),
             effect_emitted = false,
             effect_cue_emitted = false,
         })
@@ -181,8 +196,11 @@ function M.register(definitions, actions)
                 "d2legacy.skill.cast_request",
                 "d2legacy.skill.cast",
                 "d2legacy.player.learned_skill",
+                "d2legacy.player.skill_hard_level",
                 "d2legacy.world.selectable",
                 "d2legacy.monster.death",
+                "d2legacy.item.identity",
+                "d2legacy.item.stat_modifier",
             },
             none = { "d2legacy.player.death" },
         },
@@ -190,6 +208,7 @@ function M.register(definitions, actions)
             "d2legacy.skill.cast_request",
             "d2legacy.skill.cast",
             "d2legacy.player.learned_skill",
+            "d2legacy.player.skill_hard_level",
             "d2legacy.player.vitals",
             "d2legacy.player.death",
             "d2legacy.player.appearance",
@@ -206,6 +225,11 @@ function M.register(definitions, actions)
             "d2legacy.world.inactive",
             "d2legacy.monster.death",
             "d2legacy.monster.revivable",
+            "d2legacy.item.identity",
+            "d2legacy.item.placement",
+            "d2legacy.item.melee",
+            "d2legacy.item.armor",
+            "d2legacy.item.stat_modifier",
         },
         write = {
             "d2legacy.skill.cast_request",

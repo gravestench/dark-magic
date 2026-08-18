@@ -34,6 +34,13 @@ local function register_item_identity()
         { name = "owner", type = "entity" },
         { name = "id", type = "string" },
         { name = "code", type = "string" },
+        -- Full ItemTypes inheritance closure, encoded in stable comma order,
+        -- supports Skills.txt inclusion/exclusion rules at cast time.
+        { name = "item_types", type = "string" },
+        -- Weapons/Armor bitfield1 is the authoritative material classifier;
+        -- bit 2 marks metal and drives Iron Golem eligibility.
+        { name = "material_flags", type = "i64" },
+        { name = "identified", type = "bool" },
         { name = "width", type = "i64" },
         { name = "height", type = "i64" },
         { name = "body_slots", type = "string" },

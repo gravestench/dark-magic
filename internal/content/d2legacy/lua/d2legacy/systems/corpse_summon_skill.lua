@@ -153,6 +153,7 @@ local function emit(structural, context, caster, cast, definition, outcome, reas
             player = identity:get("player"),
             skill_id = cast:get("skill_id"),
             skill_level = cast:get("skill_level"),
+            target_id = corpse_id,
             corpse_id = corpse_id,
             summon_id = summon_id,
             category = definition.category,

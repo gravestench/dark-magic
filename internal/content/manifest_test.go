@@ -427,7 +427,11 @@ func TestD2LegacyPresentationAssetCoverageBaseline(t *testing.T) {
 	// Targeted corpse summons add PetType.txt to the code-owned authoritative
 	// tables. It is formula/category policy, not a presentation dependency, and
 	// remains covered by the existing dynamic Excel prefix.
-	const auditedFingerprint = "be588611b8617d07efe4f7e47c571edd658e245a0a4227e0a250250c4e144dc0"
+	// The complete golem family adds code-owned record decoding, target policy,
+	// and authoritative effect tests. Its runtime assets remain selected through
+	// existing MonStats, Skills, PetType, missile, and overlay prefixes, so the
+	// inventory grows only by source/test paths rather than shipping assets.
+	const auditedFingerprint = "4fb4572bd9f37ab9ac81f623b8a2e39feb6b8d2c576adf4743e30c4b331f9573"
 	if coverage.Fingerprint != auditedFingerprint {
 		t.Fatalf("presentation asset coverage changed: got %s, want audited %s; run `make presentation-coverage` and classify every changed path", coverage.Fingerprint, auditedFingerprint)
 	}

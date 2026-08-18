@@ -31,8 +31,9 @@ local function combat_values(entity, entities)
     local monster = ecs.get(entity, "d2legacy.monster.stats")
     if monster then
         return monster:get("level"),
-            stat_sources.resolve(entities, entity, "item_tohit_percent", monster:get("attack_rating")),
-            monster:get("defense")
+            stat_sources.resolve(entities, entity, "item_tohit_percent",
+                stat_sources.resolve(entities, entity, "attack_rating", monster:get("attack_rating"))),
+            stat_sources.resolve(entities, entity, "defense", monster:get("defense"))
     end
     local progress = assert(ecs.get(entity, "d2legacy.player.progress"), "player has no progress")
     local stats = assert(ecs.get(entity, "d2legacy.player.combat_stats"), "player has no combat stats")

@@ -55,6 +55,8 @@ function M.for_owner(owner)
             local value = {
                 id = item:get("id"),
                 code = item:get("code"),
+                material_flags = item:get("material_flags"),
+                identified = item:get("identified"),
                 width = item:get("width"),
                 height = item:get("height"),
                 body_slots = item:get("body_slots"),

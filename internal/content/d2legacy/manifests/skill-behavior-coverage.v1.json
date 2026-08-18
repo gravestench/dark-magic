@@ -59,9 +59,29 @@
       "evidence_status": "owned-target-records-localized-modifier-text-official-vectors-and-recovered-summon-ordering-partial"
     },
     {
+      "skill_id": 75,
+      "family": "summon.golem",
+      "evidence_status": "owned-target-records-localized-synergy-text-and-recovered-golem-ordering-partial"
+    },
+    {
       "skill_id": 80,
       "family": "summon.targeted-corpse",
       "evidence_status": "owned-target-records-localized-modifier-text-and-recovered-summon-ordering-partial"
+    },
+    {
+      "skill_id": 85,
+      "family": "summon.golem",
+      "evidence_status": "owned-target-records-localized-synergy-text-and-recovered-blood-sharing-partial"
+    },
+    {
+      "skill_id": 90,
+      "family": "summon.golem",
+      "evidence_status": "owned-target-records-localized-metal-item-intent-and-recovered-item-provenance-partial"
+    },
+    {
+      "skill_id": 94,
+      "family": "summon.golem",
+      "evidence_status": "owned-target-records-localized-synergy-text-and-recovered-fire-effects-partial"
     },
     {
       "skill_id": 95,

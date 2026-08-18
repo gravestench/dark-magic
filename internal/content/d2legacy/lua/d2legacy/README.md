@@ -46,10 +46,36 @@ state lifetime, units, and ordering rather than restating Lua syntax.
 7. `systems/projectile.lua` moves it, finds first contact, and expires it.
 8. `policy/damage.lua` resolves its configured damage channel and consequences.
 
-Fire Bolt is currently the first supported definition and integration fixture.
-It is not an authority boundary: new verified straight-missile configurations
-join the same modules, while missiles with different impact/motion behavior
-receive another reusable family rather than a per-skill system.
+Fire Bolt remains a production acceptance fixture, not a standalone
+implementation. Straight, radial, area-impact, and on-hit-state missile records
+compose the same cast, projectile, contact, damage, and timed-state mechanisms;
+only genuinely different motion or impact shapes receive another family.
+
+## Golem-family summon execution order
+
+1. The target-locked manifest admits Clay, Blood, Iron, and Fire Golem together
+   to `summon.golem`; a matching server function never admits another record.
+2. `data/golem_summon_skills.lua` joins all four `Skills.txt` rows with Golem
+   Mastery, Summon Resist, PetType, SkillDesc synergy keys, and Fire Golem's
+   granted Holy Fire row. It validates the family as one modifier graph.
+3. `systems/cast.lua` applies shared learned-skill, target, and fixed-point mana
+   policy. Hard-point levels remain separate from effective cast levels so
+   equipment bonuses do not become synergy points.
+4. Point targets and Iron Golem's ground item pass the same resolver before
+   mana payment and at the effect tick. An invalidated item cast keeps its paid
+   mana but neither consumes the item nor replaces the existing golem.
+5. `systems/golem_summon_skill.lua` materializes an ordinary friendly monster,
+   applies record-derived life, offense, defense, resistance, absorb, movement,
+   ownership, and PetType replacement facts, then commits replacement and item
+   consumption as one success path.
+6. Durable ECS reaction, intrinsic-stat, periodic-damage, and item-provenance
+   components let generic consumers execute Clay slow, Blood healing exchange,
+   Iron item properties, thorns, Fire absorb, and Holy Fire without branching
+   on a skill name or numeric ID.
+
+The family acceptance test casts all four members through Spell Lab's production
+assignment and command path. Decoder tests validate the four definitions
+together so a change to one cross-skill modifier cannot pass in isolation.
 
 Run `MPQ_DIRECTORY=/path/to/mpqs make skill-behavior-coverage` to print the
 target-locked server-function/missile linkage inventory. The report never
