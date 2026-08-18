@@ -82,10 +82,11 @@ The research program now has a baseline for every indexed workstream. Implementa
   existing ECS player, stops competing motion, and emits a generic relocation
   fact. Viewport/range, policy 2, invalid-target payment/fallback, owned units,
   and action/presentation timing remain probes.
-- G9 selected-aura tranche: active; exact-ID Might and Defiance use the same
-  right-selected ECS emitter and target relationships co-composed with ordinary
-  stat sources. Reviewed record recipes map Might to outgoing damage percent and
-  Defiance to generic defense percent; a checkpoint test proves independent
+- G9 selected-aura tranche: active; exact-ID Might, Defiance, and Blessed Aim
+  use the same right-selected ECS emitter and target relationships co-composed
+  with ordinary stat sources. Reviewed record recipes map Might to outgoing
+  damage percent and Defiance to generic defense percent; a checkpoint test
+  proves independent
   distinct-state stacking, while same-state suppression remains deterministic.
   `ClientView/v11`/`WorldView/v5` projects only bounded target/
   state/record-period relationships and reconstructs disposable presentation
@@ -94,6 +95,11 @@ The research program now has a baseline for every indexed workstream. Implementa
   arbitration policy. Owned-unit filter breadth, exact refresh/leave ordering,
   equal-source ownership, cross-family cadence, and sound lifetime remain
   probes.
+  Blessed Aim additionally decodes its self-hard-level passive into a separate
+  generic ECS reconciler: the learned-skill entity owns a 5%-per-hard-point
+  attack-rating source while the aura is not selected, and selecting the aura
+  yields to the active party source. Soft-level and external-aura overlap
+  ordering remain target-version probes.
 - G8 combat fidelity tranche 1: active; shared direct-damage commit/result and
   typed six-channel ECS stage facts implemented; death attribution now uses an
   independent ECS consumer marker, and basic melee exposes generic hit/miss/

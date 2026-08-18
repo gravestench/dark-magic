@@ -152,3 +152,83 @@ func TestOwnedTargetDefianceAuraRecordsAndLocalizedIntent(t *testing.T) {
 		}
 	}
 }
+
+func TestOwnedTargetBlessedAimAuraAndLearnedPassiveRecords(t *testing.T) {
+	directory := os.Getenv("DARK_MAGIC_TEST_MPQ_DIRECTORY")
+	if directory == "" {
+		t.Skip("set DARK_MAGIC_TEST_MPQ_DIRECTORY to the expansion 1.14d MPQ directory")
+	}
+	t.Setenv("MPQ_DIRECTORY", directory)
+	assets, err := content.FromEnvironment(content.Layer{Name: "d2legacy", FS: content.D2Legacy()})
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer assets.Close()
+	store := recordstore.New(assets)
+	store.SetLogger(nil)
+	skills, err := store.Load("data/global/excel/skills.txt")
+	if err != nil {
+		t.Fatal(err)
+	}
+	blessedAim := rowBy(skills, "Id", "108")
+	if blessedAim == nil {
+		t.Fatal("owned expansion 1.14d Blessed Aim row is missing")
+	}
+	for field, want := range map[string]string{
+		"skill": "Blessed Aim", "srvstfunc": "", "srvdofunc": "65", "aura": "1", "immediate": "1",
+		"leftskill": "", "range": "none", "InGame": "1", "aurafilter": "73731",
+		"aurarangecalc": "ln12", "aurastate": "blessedaim", "auratargetstate": "blessedaim",
+		"aurastat1": "item_tohit_percent", "aurastatcalc1": "ln34", "mana": "0", "lvlmana": "0",
+		"Param1": "16", "Param2": "2", "Param3": "75", "Param4": "15", "perdelay": "50",
+		"passivestate": "penetrate", "passivestat1": "item_tohit_percent",
+		"passivecalc1": "skill('Blessed Aim'.blvl) * par8", "Param8": "5",
+	} {
+		if blessedAim[field] != want {
+			t.Fatalf("owned expansion 1.14d Blessed Aim %s = %q, want %q", field, blessedAim[field], want)
+		}
+	}
+	states, err := store.Load("data/global/excel/states.txt")
+	if err != nil {
+		t.Fatal(err)
+	}
+	for name, fields := range map[string]map[string]string{
+		"blessedaim": {
+			"id": "40", "aura": "1", "stat": "item_tohit_percent", "onsound": "paladin_aura_blessedaim",
+			"overlay1": "blessedaimfront", "overlay2": "blessedaimback",
+		},
+		"penetrate": {"id": "67"},
+	} {
+		state := rowBy(states, "state", name)
+		if state == nil {
+			t.Fatalf("owned expansion 1.14d Blessed Aim state %q is missing", name)
+		}
+		for field, want := range fields {
+			if state[field] != want {
+				t.Fatalf("owned expansion 1.14d state %s %s = %q, want %q", name, field, state[field], want)
+			}
+		}
+	}
+	descriptions, err := store.Load("data/global/excel/SkillDesc.txt")
+	if err != nil {
+		t.Fatal(err)
+	}
+	description := rowBy(descriptions, "skilldesc", "blessed aim")
+	if description == nil || description["desccalca1"] != "ln34" || description["desccalca2"] != "ln12" ||
+		description["desctexta1"] != "StrSkill22" || description["desctexta2"] != "StrSkill18" {
+		t.Fatalf("owned expansion 1.14d Blessed Aim SkillDesc row = %#v", description)
+	}
+	locale := localization.New(assets, "English")
+	for key, want := range map[string]string{
+		"skillname108": "Blessed Aim",
+		"skillsd108":   "aura - increases your attack rating",
+		"skillld108":   "for you and your party\nwhen active, aura increases the attack rating",
+		"StrSkill22":   "Attack: ",
+		"StrSkill23":   " percent",
+		"StrSkill18":   "Radius: ",
+	} {
+		text, _, resolveErr := locale.Resolve(key)
+		if resolveErr != nil || text != want {
+			t.Fatalf("owned English TBL %s = %q, %v; want %q", key, text, resolveErr, want)
+		}
+	}
+}

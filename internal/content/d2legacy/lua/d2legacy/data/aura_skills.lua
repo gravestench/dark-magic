@@ -5,6 +5,7 @@ local M = {}
 
 local stat_recipes = {
     damagepercent = { stat = "damagepercent", operation = "percent" },
+    item_tohit_percent = { stat = "item_tohit_percent", operation = "percent" },
     skill_armor_percent = { stat = "defense", operation = "percent" },
 }
 
@@ -23,6 +24,31 @@ local function required_integer(row, column, label)
     local value = tonumber(row[column])
     assert(value and value >= 0 and value == math.floor(value), label .. " has invalid " .. column)
     return value
+end
+
+local function decode_learned_passive(row, states_by_name, label)
+    local state_name = row.passivestate or ""
+    if state_name == "" then
+        assert(
+            (row.passivestat1 or "") == "" and (row.passivecalc1 or "") == "",
+            label .. " has a passive stat without a passive state"
+        )
+        return nil
+    end
+
+    local recipe = assert(stat_recipes[row.passivestat1], label .. " has an unsupported learned passive stat")
+    local skill_name = assert(
+        string.match(row.passivecalc1 or "", "^skill%('([^']+)'%.blvl%) %* par8$"),
+        label .. " has an unsupported learned passive formula"
+    )
+    assert(string.lower(skill_name) == string.lower(row.skill), label .. " passive does not use its own hard level")
+    local state = assert(states_by_name[state_name], label .. " has an unknown learned passive state")
+    return {
+        state_id = state.state,
+        stat = recipe.stat,
+        operation = recipe.operation,
+        value_per_hard_level = required_integer(row, "Param8", label),
+    }
 end
 
 local function decode(row, states_by_name)
@@ -62,6 +88,7 @@ local function decode(row, states_by_name)
         stat_value_base = required_integer(row, "Param3", label),
         stat_value_per_level = required_integer(row, "Param4", label),
         record_refresh_delay = required_integer(row, "perdelay", label),
+        learned_passive = decode_learned_passive(row, states_by_name, label),
     }
 end
 

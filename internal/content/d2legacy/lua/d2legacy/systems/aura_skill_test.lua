@@ -10,6 +10,7 @@ local function entry(player, class, x)
         x = x,
         y = 12,
         defense = 100,
+        base_attack_rating = 100,
         vitality = class == "Paladin" and 25 or 20,
     })
 end
@@ -108,15 +109,48 @@ return test.suite({
                 Param4 = "10",
                 perdelay = "50",
             },
+            {
+                Id = "108",
+                skill = "Fixture Blessed Aim",
+                skilldesc = "blessed aim",
+                charclass = "pal",
+                srvstfunc = "",
+                srvdofunc = "65",
+                aura = "1",
+                immediate = "1",
+                leftskill = "",
+                range = "none",
+                InGame = "1",
+                aurafilter = "73731",
+                aurarangecalc = "ln12",
+                aurastate = "blessedaim",
+                auratargetstate = "blessedaim",
+                aurastat1 = "item_tohit_percent",
+                aurastatcalc1 = "ln34",
+                passivestate = "penetrate",
+                passivestat1 = "item_tohit_percent",
+                passivecalc1 = "skill('Fixture Blessed Aim'.blvl) * par8",
+                mana = "0",
+                lvlmana = "0",
+                Param1 = "16",
+                Param2 = "2",
+                Param3 = "75",
+                Param4 = "15",
+                Param8 = "5",
+                perdelay = "50",
+            },
         },
         ["data/global/excel/skilldesc.txt"] = {
             { skilldesc = "might", ListRow = "1", IconCel = "4" },
             { skilldesc = "idle", ListRow = "2", IconCel = "0" },
             { skilldesc = "defiance", ListRow = "3", IconCel = "16" },
+            { skilldesc = "blessed aim", ListRow = "4", IconCel = "24" },
         },
         ["data/global/excel/states.txt"] = {
             { state = "might", id = "33", aura = "1", stat = "damagepercent" },
             { state = "defiance", id = "37", aura = "1", stat = "skill_armor_percent" },
+            { state = "blessedaim", id = "40", aura = "1", stat = "item_tohit_percent" },
+            { state = "penetrate", id = "67" },
         },
     },
     cases = {
@@ -393,6 +427,105 @@ return test.suite({
                 for _, player in ipairs(ecs.query({ all = { "d2legacy.player.combat_stats" } })) do
                     test.expect(ecs.get(player, "d2legacy.player.combat_stats"):get("defense")):equals(178)
                 end
+            end),
+        }),
+        test.case("learned_hard_point_passive_yields_to_the_selected_active_aura", {
+            test.submit_system({
+                tick = 1,
+                sequence = 1,
+                kind = "system.player.enter",
+                payload = entry("alice", "Paladin", 10),
+            }),
+            test.step(2),
+            test.run(function()
+                local ecs = require("engine.ecs/v1")
+                local alice
+                for _, player in ipairs(ecs.query({ all = { "d2legacy.player.identity" } })) do
+                    if ecs.get(player, "d2legacy.player.identity"):get("player") == "alice" then
+                        alice = player
+                    end
+                end
+                ecs.create({
+                    ["d2legacy.player.learned_skill"] = {
+                        owner = alice,
+                        skill_id = 108,
+                        level = 2,
+                        list_row = 4,
+                        left_allowed = false,
+                        right_allowed = true,
+                    },
+                })
+            end),
+            test.step(2),
+            test.restore_checkpoint(),
+            test.run(function()
+                local ecs = require("engine.ecs/v1")
+                local passive
+                for _, entity in
+                    ipairs(ecs.query({ all = { "d2legacy.player.learned_skill", "d2legacy.stat.source" } }))
+                do
+                    local learned = ecs.get(entity, "d2legacy.player.learned_skill")
+                    if learned:get("skill_id") == 108 then
+                        passive = ecs.get(entity, "d2legacy.stat.source")
+                    end
+                end
+                test.assert(passive ~= nil, [=[Blessed Aim hard points own a composed passive source]=])
+                test.expect(passive:get("stat")):equals("item_tohit_percent")
+                test.expect(passive:get("value")):equals(10)
+                for _, player in ipairs(ecs.query({ all = { "d2legacy.player.combat_stats" } })) do
+                    test.expect(ecs.get(player, "d2legacy.player.combat_stats"):get("attack_rating")):equals(181)
+                end
+            end),
+            test.submit({
+                tick = 6,
+                sequence = 1,
+                player = "alice",
+                kind = "player.assign_skills",
+                payload = { right = 108 },
+            }),
+            test.step(3),
+            test.restore_checkpoint(),
+            test.run(function()
+                local ecs = require("engine.ecs/v1")
+                local passive_count = 0
+                for _, entity in
+                    ipairs(ecs.query({ all = { "d2legacy.player.learned_skill", "d2legacy.stat.source" } }))
+                do
+                    if ecs.get(entity, "d2legacy.player.learned_skill"):get("skill_id") == 108 then
+                        passive_count = passive_count + 1
+                    end
+                end
+                test.expect(passive_count):equals(0)
+                local effects = aura_effects()
+                test.expect(#effects):equals(1)
+                local source = ecs.get(effects[1], "d2legacy.stat.source")
+                test.expect(source:get("source_id")):equals("aura:alice:108")
+                test.expect(source:get("value")):equals(90)
+                for _, player in ipairs(ecs.query({ all = { "d2legacy.player.combat_stats" } })) do
+                    test.expect(ecs.get(player, "d2legacy.player.combat_stats"):get("attack_rating")):equals(313)
+                end
+            end),
+            test.submit({
+                tick = 8,
+                sequence = 1,
+                player = "alice",
+                kind = "player.assign_skills",
+                payload = { right = 98 },
+            }),
+            test.step(3),
+            test.restore_checkpoint(),
+            test.run(function()
+                local ecs = require("engine.ecs/v1")
+                local passive_count = 0
+                for _, entity in
+                    ipairs(ecs.query({ all = { "d2legacy.player.learned_skill", "d2legacy.stat.source" } }))
+                do
+                    if ecs.get(entity, "d2legacy.player.learned_skill"):get("skill_id") == 108 then
+                        passive_count = passive_count + 1
+                        test.expect(ecs.get(entity, "d2legacy.stat.source"):get("value")):equals(10)
+                    end
+                end
+                test.expect(passive_count):equals(1)
             end),
         }),
     },

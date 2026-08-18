@@ -55,6 +55,34 @@ return test.suite({
                         Param4 = "5",
                         perdelay = "25",
                     },
+                    {
+                        Id = "999",
+                        skill = "Fixture Aim",
+                        srvstfunc = "",
+                        srvdofunc = "65",
+                        aura = "1",
+                        immediate = "1",
+                        leftskill = "",
+                        range = "none",
+                        InGame = "1",
+                        aurafilter = "73731",
+                        aurarangecalc = "ln12",
+                        aurastate = "blessedaim",
+                        auratargetstate = "blessedaim",
+                        aurastat1 = "item_tohit_percent",
+                        aurastatcalc1 = "ln34",
+                        passivestate = "penetrate",
+                        passivestat1 = "item_tohit_percent",
+                        passivecalc1 = "skill('Fixture Aim'.blvl) * par8",
+                        mana = "0",
+                        lvlmana = "0",
+                        Param1 = "16",
+                        Param2 = "2",
+                        Param3 = "75",
+                        Param4 = "15",
+                        Param8 = "5",
+                        perdelay = "50",
+                    },
                 }
                 test.mock_module("engine.records/v1", {
                     load = function(path)
@@ -64,11 +92,13 @@ return test.suite({
                         return {
                             { state = "might", aura = "1", stat = "damagepercent" },
                             { state = "defiance", aura = "1", stat = "skill_armor_percent" },
+                            { state = "blessedaim", aura = "1", stat = "item_tohit_percent" },
+                            { state = "penetrate" },
                         }
                     end,
                 }, { "load" })
                 test.unload_module("d2legacy.data.aura_skills")
-                local definitions = require("d2legacy.data.aura_skills").load({ 98, 998 })
+                local definitions = require("d2legacy.data.aura_skills").load({ 98, 998, 999 })
                 test.expect(definitions[98].activation):equals("selected_right")
                 test.expect(definitions[98].radius_base):equals(16)
                 test.expect(definitions[98].stat_value_base):equals(40)
@@ -77,6 +107,11 @@ return test.suite({
                 test.expect(definitions[998].stat_value_per_level):equals(5)
                 test.expect(definitions[998].stat):equals("defense")
                 test.expect(definitions[998].stat_operation):equals("percent")
+                test.expect(definitions[999].stat):equals("item_tohit_percent")
+                test.expect(definitions[999].learned_passive.state_id):equals("penetrate")
+                test.expect(definitions[999].learned_passive.stat):equals("item_tohit_percent")
+                test.expect(definitions[999].learned_passive.operation):equals("percent")
+                test.expect(definitions[999].learned_passive.value_per_hard_level):equals(5)
             end)
         end),
     },
