@@ -50,6 +50,24 @@ function M.register()
         fields = {},
     })
 
+    ecs.component({
+        name = "d2legacy.skill.summon_event",
+        version = 1,
+        fields = {
+            { name = "kind", type = "string" },
+            { name = "outcome", type = "string" },
+            { name = "reason", type = "string" },
+            { name = "tick", type = "i64" },
+            { name = "player", type = "string" },
+            { name = "skill_id", type = "i64" },
+            { name = "skill_level", type = "i64" },
+            { name = "corpse_id", type = "string" },
+            { name = "summon_id", type = "string" },
+            { name = "category", type = "string" },
+            { name = "limit", type = "i64" },
+        },
+    })
+
     -- A selected aura is durable capability on its owner, not a cast. The
     -- right-skill assignment drives this component while a separate relation
     -- entity owns each affected target and its keyed ordinary stat sources.

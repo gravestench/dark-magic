@@ -566,11 +566,13 @@ var retainedCorpseComponents = []string{
 	"d2legacy.combat.melee_profile",
 	"d2legacy.monster.appearance",
 	"d2legacy.monster.death",
+	"d2legacy.monster.revivable",
 	"d2legacy.world.position",
 	"d2legacy.world.velocity",
 	"d2legacy.world.facing",
 	"d2legacy.world.location",
 	"d2legacy.world.occupancy",
+	"d2legacy.world.selectable",
 }
 
 type populationPlanFixture struct {
@@ -879,13 +881,16 @@ func assertCorpseActivation(t *testing.T, engine *gameecs.Engine, corpse akara.E
 	for _, name := range []string{
 		"d2legacy.monster.ai",
 		"d2legacy.world.collider",
-		"d2legacy.world.selectable",
 		"engine.world.velocity_mover",
 	} {
 		store, _ := akara.GetDynamicStore(engine.World(), name)
 		if _, present := store.Get(corpse); present {
 			t.Fatalf("corpse %d retained %s", corpse, name)
 		}
+	}
+	selectable := componentSnapshot(t, engine, corpse, "d2legacy.world.selectable")
+	if selectable["kind"] != "corpse" {
+		t.Fatalf("corpse %d selectable = %#v, want corpse kind", corpse, selectable)
 	}
 	death := componentSnapshot(t, engine, corpse, "d2legacy.monster.death")
 	appearance := componentSnapshot(t, engine, corpse, "d2legacy.monster.appearance")
@@ -1072,12 +1077,20 @@ func assertCompletedHostileLifecycle(t *testing.T, engine *gameecs.Engine) {
 	if _, present := movers.Get(monster); present {
 		t.Fatal("dead monster retained velocity-mover opt-in")
 	}
+	foundCorpseTarget := false
 	for _, entity := range selectables.Entities() {
 		value, _ := selectables.Get(entity)
 		id, _ := value.Get("id")
 		if id == "monster:level:2:room:blood-moor-a:monster:1" {
-			t.Fatal("dead monster remained targetable")
+			kind, _ := value.Get("kind")
+			if kind != "corpse" {
+				t.Fatalf("dead monster selectable kind = %v, want corpse", kind)
+			}
+			foundCorpseTarget = true
 		}
+	}
+	if !foundCorpseTarget {
+		t.Fatal("consumable corpse lost its corpse-skill target")
 	}
 	if progress.Len() != 1 {
 		t.Fatalf("player progress records = %d, want 1", progress.Len())
@@ -1102,7 +1115,7 @@ func generatedHostileRecords() fixtureRecords {
 		"Rarity": "1", "TreasureClass1": "fallen-drop",
 	}}
 	records["data/global/excel/monstats2.txt"] = []map[string]string{{
-		"Id": "fallen", "BaseW": "HTH", "SizeX": "1", "SizeY": "1", "MeleeRng": "1", "corpseSel": "1",
+		"Id": "fallen", "BaseW": "HTH", "SizeX": "1", "SizeY": "1", "MeleeRng": "1", "corpseSel": "1", "revive": "1",
 	}}
 	records["data/global/excel/monlvl.txt"] = []map[string]string{{"Level": "1"}}
 	records["data/global/excel/treasureclassex.txt"] = []map[string]string{{

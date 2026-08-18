@@ -72,6 +72,20 @@ content before the mechanism beneath it is coherent, and do not create parallel
 stat, combat, skill, monster, item, quest, transition, session, party,
 targeting, networking, or persistence authorities.
 
+Keep planning state in its GitHub owner:
+
+- the issue owns scope, acceptance criteria, evidence, follow-ups, and the
+  completion decision;
+- the milestone groups issues into an outcome-level gate;
+- the Roadmap project owns priority, scheduling, and workflow state; and
+- the pull request links the issue it advances and explains the delivered
+  boundary, validation, and explicit deferrals.
+
+Update those records as the work changes. Do not add issue checklists, delivery
+counts, target dates, or a next-work cursor to `ROADMAP.md`; change that file
+only when its stable product boundary, technical direction, or high-level
+program overview has changed.
+
 A strong contribution normally has one understandable through-line:
 
 1. establish the missing behavior or mechanism;

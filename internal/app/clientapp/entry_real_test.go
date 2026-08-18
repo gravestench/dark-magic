@@ -374,8 +374,8 @@ func TestSpellLabCastsProductionFireBolt(t *testing.T) {
 	if !ok {
 		t.Fatal("Spell Lab has no authoritative learned skills")
 	}
-	if learned.Len() != 24 {
-		t.Fatalf("Spell Lab learned skills = %d, want 24 exact-ID behaviors", learned.Len())
+	if learned.Len() != 27 {
+		t.Fatalf("Spell Lab learned skills = %d, want 27 exact-ID behaviors", learned.Len())
 	}
 	learnedIDs := map[int64]bool{}
 	for _, entity := range learned.Entities() {
@@ -387,7 +387,7 @@ func TestSpellLabCastsProductionFireBolt(t *testing.T) {
 			learnedIDs[id.(int64)] = level == int64(20)
 		}
 	}
-	for _, id := range []int64{0, 36, 40, 45, 47, 48, 52, 54, 55, 66, 72, 98, 99, 100, 103, 104, 105, 108, 109, 110, 115, 120, 124, 125} {
+	for _, id := range []int64{0, 36, 40, 45, 47, 48, 52, 54, 55, 66, 70, 72, 80, 95, 98, 99, 100, 103, 104, 105, 108, 109, 110, 115, 120, 124, 125} {
 		if !learnedIDs[id] {
 			t.Fatalf("Spell Lab skill %d is missing or not level 20: %#v", id, learnedIDs)
 		}
@@ -442,10 +442,18 @@ func TestSpellLabCastsProductionFireBolt(t *testing.T) {
 	}); err != nil {
 		t.Fatal(err)
 	}
-	for range 2 {
-		if _, err := app.offlineSession.AdvanceWithSource(time.Second/25, app.commandSource); err != nil {
-			t.Fatal(err)
-		}
+	if _, err := app.offlineSession.AdvanceWithSource(time.Second/25, app.commandSource); err != nil {
+		t.Fatal(err)
+	}
+	vitals, _ := akara.GetDynamicStore(app.entitySimulation.World(), "d2legacy.player.vitals")
+	playerVitals, _ := vitals.Get(player)
+	immediateManaRaw, _ := playerVitals.Get("mana_raw")
+	maximumManaRaw, _ := playerVitals.Get("max_mana_raw")
+	if immediateManaRaw.(int64) >= maximumManaRaw.(int64) {
+		t.Fatalf("Spell Lab Fire Bolt did not spend mana at cast start: raw=%v max=%v", immediateManaRaw, maximumManaRaw)
+	}
+	if _, err := app.offlineSession.AdvanceWithSource(time.Second/25, app.commandSource); err != nil {
+		t.Fatal(err)
 	}
 	animations, _ := akara.GetDynamicStore(app.entitySimulation.World(), "d2legacy.player.animation")
 	animation, _ := animations.Get(player)
@@ -471,11 +479,11 @@ func TestSpellLabCastsProductionFireBolt(t *testing.T) {
 	if mode != "NU" {
 		t.Fatalf("Spell Lab Fire Bolt animation after completion = %v, want NU", mode)
 	}
-	vitals, _ := akara.GetDynamicStore(app.entitySimulation.World(), "d2legacy.player.vitals")
-	playerVitals, _ := vitals.Get(player)
+	playerVitals, _ = vitals.Get(player)
 	mana, _ := playerVitals.Get("mana")
-	if mana != int64(4093) {
-		t.Fatalf("Spell Lab Fire Bolt mana = %v, want 4093 after one level-20 cast", mana)
+	manaRaw, _ := playerVitals.Get("mana_raw")
+	if mana != int64(4096) || manaRaw != maximumManaRaw {
+		t.Fatalf("Spell Lab Fire Bolt mana recovery = %v raw=%v, want full %v after cast completion", mana, manaRaw, maximumManaRaw)
 	}
 	if after, alive := stats.Get(target); alive {
 		afterHealth, _ := after.Get("health")

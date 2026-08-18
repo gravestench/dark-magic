@@ -617,20 +617,16 @@ func installWorldMirror(world *akara.World, entity akara.Entity, value playerada
 		"d2legacy.world.facing":   {"direction": value.Direction, "directions": int64(16)},
 		"d2legacy.world.location": {"act": worldLocation(value.Act, location.Act), "level_id": worldLocation(value.LevelID, location.LevelID)},
 	}
+	values["d2legacy.world.selectable"] = map[string]any{
+		"id": value.ID, "kind": value.Kind, "label": value.Label, "owner": value.Owner,
+		"radius": value.Radius, "priority": value.Priority,
+	}
 	if value.Kind != "corpse" {
 		values["d2legacy.world.collider"] = map[string]any{"radius": value.Radius}
-		values["d2legacy.world.selectable"] = map[string]any{
-			"id": value.ID, "kind": value.Kind, "label": value.Label, "owner": value.Owner,
-			"radius": value.Radius, "priority": value.Priority,
-		}
 	} else {
-		// A corpse keeps the living monster's presentation entity. Removing the
-		// selectable and collider components changes the ECS queries it can enter,
-		// so the mirror remains renderable without becoming a stale interaction or
-		// locomotion obstacle in the disposable client simulation.
-		if selectable, found := akara.GetDynamicStore(world, "d2legacy.world.selectable"); found {
-			selectable.Remove(entity)
-		}
+		// A corpse keeps the living monster's presentation identity and remains
+		// pointer-selectable for corpse-target skills. It loses only collision;
+		// the authority re-resolves usability when the cast starts and lands.
 		if colliders, found := akara.GetDynamicStore(world, "d2legacy.world.collider"); found {
 			colliders.Remove(entity)
 		}

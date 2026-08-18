@@ -31,7 +31,7 @@ func TestOwnedTargetArchivesJoinLocalizedSkillEvidence(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	report, err := Build([]int{0, 36, 40, 52, 54, 55, 66, 72, 99, 109, 120}, skills, descriptions, localization.New(assets, "English"))
+	report, err := Build([]int{0, 36, 40, 52, 54, 55, 66, 72, 99, 109, 120, 69, 70, 89, 80, 95}, skills, descriptions, localization.New(assets, "English"))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -134,6 +134,73 @@ func TestOwnedTargetArchivesJoinLocalizedSkillEvidence(t *testing.T) {
 			modifiers[1].ReferencedID != 99 || modifiers[1].Selector != "edmn" ||
 			modifiers[2].ReferencedID != 99 || modifiers[2].Selector != "edmn" {
 			t.Fatalf("%s Prayer references = %#v", skill.Name, modifiers)
+		}
+	}
+	raise := report.Skills[12]
+	if modifiers := raise.CrossSkillModifiers; len(modifiers) != 10 {
+		t.Fatalf("Raise Skeleton modifiers = %#v", modifiers)
+	} else {
+		for _, modifier := range modifiers {
+			if modifier.ReferencedID != 69 || modifier.Referenced != "Skeleton Mastery" {
+				t.Fatalf("Raise Skeleton modifier = %#v", modifier)
+			}
+		}
+	}
+	raiseLocalized := map[string]LocalizationReference{}
+	for _, evidence := range raise.Localization {
+		raiseLocalized[evidence.Column] = evidence
+	}
+	if raiseLocalized["str name"].Text != "Raise Skeleton" ||
+		!strings.Contains(strings.ToLower(raiseLocalized["str long"].Text), "corpse") ||
+		!strings.Contains(strings.ToLower(raiseLocalized["str long"].Text), "skeleton warrior") ||
+		!strings.Contains(raiseLocalized["desctexta2"].Text, "skeleton total") ||
+		raiseLocalized["desctexta4"].Text != "Defense: " ||
+		raiseLocalized["desctexta5"].Text != "Attack: " ||
+		raiseLocalized["desctexta6"].Text != "Damage: " ||
+		raiseLocalized["str mana"].Text != "Mana Cost: " ||
+		raiseLocalized["dsc3texta1"].ReplacementTokens[0] != "%s" {
+		t.Fatalf("Raise Skeleton localization = %#v", raise.Localization)
+	}
+	modifierNames := map[int]string{}
+	for _, index := range []int{11, 13} {
+		for _, evidence := range report.Skills[index].Localization {
+			if evidence.Column == "str name" {
+				modifierNames[index] = evidence.Text
+			}
+		}
+	}
+	if modifierNames[11] != "Skeleton Mastery" || modifierNames[13] != "Summon Resist" {
+		t.Fatalf("summon modifier localization = mastery %#v resist %#v", report.Skills[11], report.Skills[13])
+	}
+	for _, check := range []struct {
+		index       int
+		name        string
+		longNeedle  string
+		modifierLen int
+	}{
+		{index: 14, name: "Raise Skeletal Mage", longNeedle: "corpse", modifierLen: 7},
+		{index: 15, name: "Revive", longNeedle: "fight by your side", modifierLen: 8},
+	} {
+		skill := report.Skills[check.index]
+		if len(skill.CrossSkillModifiers) != check.modifierLen {
+			t.Fatalf("%s modifiers = %#v", check.name, skill.CrossSkillModifiers)
+		}
+		for _, modifier := range skill.CrossSkillModifiers {
+			if modifier.ReferencedID != 69 || modifier.Referenced != "Skeleton Mastery" {
+				t.Fatalf("%s modifier = %#v", check.name, modifier)
+			}
+		}
+		localized := map[string]LocalizationReference{}
+		for _, evidence := range skill.Localization {
+			localized[evidence.Column] = evidence
+		}
+		if localized["str name"].Text != check.name ||
+			!strings.Contains(strings.ToLower(localized["str long"].Text), check.longNeedle) ||
+			localized["dsc3texta2"].Text != "Skeleton Mastery" ||
+			localized["dsc3texta3"].Text != "Summon Resist" ||
+			len(localized["dsc3texta1"].ReplacementTokens) != 1 ||
+			localized["dsc3texta1"].ReplacementTokens[0] != "%s" {
+			t.Fatalf("%s localization = %#v", check.name, skill.Localization)
 		}
 	}
 }

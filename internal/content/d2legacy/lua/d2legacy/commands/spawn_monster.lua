@@ -118,7 +118,7 @@ function M.components(command, game_player_count)
         ["engine.world.velocity_mover"] = {},
         ["d2legacy.world.selectable"] = {
             id = "monster:" .. spawn.spawn_id,
-            kind = "hostile",
+            kind = definition.evil == false and "friendly" or "hostile",
             label = definition.name_key,
             owner = "",
             radius = definition.select_radius,
@@ -127,6 +127,9 @@ function M.components(command, game_player_count)
     }
     if definition.corpse_selectable == true then
         result["d2legacy.monster.corpse_selectable"] = {}
+    end
+    if definition.revivable == true then
+        result["d2legacy.monster.revivable"] = {}
     end
     return result
 end

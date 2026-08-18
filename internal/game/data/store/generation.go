@@ -29,6 +29,7 @@ var requiredUnlistedPaths = []string{
 	"data/global/excel/MonLvl.txt",
 	"data/global/excel/MonPreset.txt",
 	"data/global/excel/MonStats2.txt",
+	"data/global/excel/PetType.txt",
 	"data/global/excel/SkillDesc.txt",
 }
 

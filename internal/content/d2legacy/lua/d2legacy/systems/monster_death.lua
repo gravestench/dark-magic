@@ -145,7 +145,14 @@ local function stop_monster(monster, structural)
     end
     structural:remove(monster, "d2legacy.monster.ai")
     structural:remove(monster, "d2legacy.world.collider")
-    structural:remove(monster, "d2legacy.world.selectable")
+    local selectable = ecs.get(monster, "d2legacy.world.selectable")
+    if selectable and ecs.get(monster, "d2legacy.monster.corpse_selectable") then
+        selectable:set("kind", "corpse")
+        selectable:set("owner", "")
+        selectable:set("priority", 5)
+    else
+        structural:remove(monster, "d2legacy.world.selectable")
+    end
     structural:remove(monster, "engine.world.velocity_mover")
 end
 

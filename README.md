@@ -19,11 +19,11 @@ passes. The maintainer sets the target, curates evidence, decides architecture,
 and remains accountable for every merged change.
 
 This is not a bulk-generated “ship whatever the model wrote” codebase. Work is
-scoped to explicit roadmap and acceptance boundaries, checked against existing
-ownership rules, exercised by tests and real-asset tooling where appropriate,
-and revised or discarded when it does not hold up. Review focuses on the
-resulting evidence and maintainability, not whether every line was typed by
-hand.
+scoped to linked GitHub issues and milestone acceptance boundaries, checked
+against existing ownership rules, exercised by tests and real-asset tooling
+where appropriate, and revised or discarded when it does not hold up. Review
+focuses on the resulting evidence and maintainability, not whether every line
+was typed by hand.
 
 Performance is handled deliberately. Egregious problems—unbounded work,
 repeated asset I/O, accidental quadratic paths, runaway allocation, or long

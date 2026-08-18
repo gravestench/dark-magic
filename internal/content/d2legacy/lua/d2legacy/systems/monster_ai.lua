@@ -8,11 +8,18 @@ local ecs = require("engine.ecs/v1")
 local combat_target = require("d2legacy.gameplay.combat_target")
 local M = {}
 
-local function player_targets(entities)
+local function combat_targets(entities)
     local result = {}
     for _, entity in ipairs(entities) do
         local selectable = ecs.get(entity, "d2legacy.world.selectable")
-        if selectable and selectable:get("kind") == "player" then
+        if
+            selectable
+            and (
+                selectable:get("kind") == "player"
+                or selectable:get("kind") == "friendly"
+                or selectable:get("kind") == "hostile"
+            )
+        then
             table.insert(result, entity)
         end
     end
@@ -77,7 +84,7 @@ function M.register()
         },
         write = { "d2legacy.monster.ai", "d2legacy.world.velocity", "d2legacy.combat.basic_attack_request" },
         update = function(context, entities, structural)
-            local targets = player_targets(entities)
+            local targets = combat_targets(entities)
             local disabled = action_disabled(entities)
             for _, monster in ipairs(entities) do
                 local brain = ecs.get(monster, "d2legacy.monster.ai")
