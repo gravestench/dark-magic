@@ -143,6 +143,34 @@ return test.suite({
                         perdelay = "50",
                     },
                     {
+                        Id = "125",
+                        skill = "Fixture Salvation",
+                        srvstfunc = "",
+                        srvdofunc = "65",
+                        aura = "1",
+                        immediate = "1",
+                        leftskill = "",
+                        range = "none",
+                        InGame = "1",
+                        aurafilter = "73731",
+                        aurarangecalc = "ln12",
+                        aurastate = "resistall",
+                        auratargetstate = "resistall",
+                        aurastat1 = "fireresist",
+                        aurastatcalc1 = "dm34",
+                        aurastat2 = "coldresist",
+                        aurastatcalc2 = "dm34",
+                        aurastat3 = "lightresist",
+                        aurastatcalc3 = "dm34",
+                        mana = "0",
+                        lvlmana = "0",
+                        Param1 = "16",
+                        Param2 = "2",
+                        Param3 = "50",
+                        Param4 = "120",
+                        perdelay = "50",
+                    },
+                    {
                         Id = "999",
                         skill = "Fixture Aim",
                         srvstfunc = "",
@@ -185,13 +213,14 @@ return test.suite({
                             { state = "passive_resistcold" },
                             { state = "resistlight", aura = "1", stat = "lightresist" },
                             { state = "passive_resistltng" },
+                            { state = "resistall", aura = "1", stat = "lightresist" },
                             { state = "blessedaim", aura = "1", stat = "item_tohit_percent" },
                             { state = "penetrate" },
                         }
                     end,
                 }, { "load" })
                 test.unload_module("d2legacy.data.aura_skills")
-                local definitions = require("d2legacy.data.aura_skills").load({ 98, 100, 105, 110, 998, 999 })
+                local definitions = require("d2legacy.data.aura_skills").load({ 98, 100, 105, 110, 125, 998, 999 })
                 test.expect(definitions[98].activation):equals("selected_right")
                 test.expect(definitions[98].radius_base):equals(16)
                 test.expect(definitions[98].stat_value_base):equals(40)
@@ -213,6 +242,13 @@ return test.suite({
                 test.expect(definitions[110].stats[1].stat):equals("lightning_resist")
                 test.expect(definitions[110].stats[2].stat):equals("max_lightning_resist")
                 test.expect(definitions[110].learned_passive.stat):equals("max_lightning_resist")
+                test.expect(#definitions[125].stats):equals(3)
+                test.expect(definitions[125].stats[1].stat):equals("fire_resist")
+                test.expect(definitions[125].stats[2].stat):equals("cold_resist")
+                test.expect(definitions[125].stats[3].stat):equals("lightning_resist")
+                test.expect(definitions[125].stats[1].value_minimum):equals(50)
+                test.expect(definitions[125].stats[1].value_maximum):equals(120)
+                test.expect(definitions[125].learned_passive == nil):is_true()
                 test.expect(definitions[999].stat):equals("item_tohit_percent")
                 test.expect(definitions[999].learned_passive.state_id):equals("penetrate")
                 test.expect(definitions[999].learned_passive.stat):equals("item_tohit_percent")

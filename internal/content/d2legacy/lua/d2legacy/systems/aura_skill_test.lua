@@ -219,6 +219,36 @@ return test.suite({
                 perdelay = "50",
             },
             {
+                Id = "125",
+                skill = "Fixture Salvation",
+                skilldesc = "salvation",
+                charclass = "pal",
+                srvstfunc = "",
+                srvdofunc = "65",
+                aura = "1",
+                immediate = "1",
+                leftskill = "",
+                range = "none",
+                InGame = "1",
+                aurafilter = "73731",
+                aurarangecalc = "ln12",
+                aurastate = "resistall",
+                auratargetstate = "resistall",
+                aurastat1 = "fireresist",
+                aurastatcalc1 = "dm34",
+                aurastat2 = "coldresist",
+                aurastatcalc2 = "dm34",
+                aurastat3 = "lightresist",
+                aurastatcalc3 = "dm34",
+                mana = "0",
+                lvlmana = "0",
+                Param1 = "16",
+                Param2 = "2",
+                Param3 = "50",
+                Param4 = "120",
+                perdelay = "50",
+            },
+            {
                 Id = "108",
                 skill = "Fixture Blessed Aim",
                 skilldesc = "blessed aim",
@@ -257,6 +287,7 @@ return test.suite({
             { skilldesc = "resist fire", ListRow = "5", IconCel = "8" },
             { skilldesc = "resist cold", ListRow = "6", IconCel = "18" },
             { skilldesc = "resist lightning", ListRow = "7", IconCel = "28" },
+            { skilldesc = "salvation", ListRow = "8", IconCel = "58" },
         },
         ["data/global/excel/states.txt"] = {
             { state = "might", id = "33", aura = "1", stat = "damagepercent" },
@@ -269,6 +300,7 @@ return test.suite({
             { state = "passive_resistcold", id = "182" },
             { state = "resistlight", id = "5", aura = "1", stat = "lightresist" },
             { state = "passive_resistltng", id = "183" },
+            { state = "resistall", id = "8", aura = "1", stat = "lightresist" },
         },
     },
     cases = {
@@ -890,6 +922,82 @@ return test.suite({
                     test.expect(defense:get("lightning_resist")):equals(76)
                     test.expect(defense:get("max_lightning_resist")):equals(78)
                     test.expect(mitigation.apply(1000, "lightning", defense)):equals(240)
+                end
+            end),
+        }),
+        test.case("salvation_owns_three_elemental_sources_without_a_passive", {
+            test.submit_system({
+                tick = 1,
+                sequence = 1,
+                kind = "system.player.enter",
+                payload = entry("alice", "Paladin", 10),
+            }),
+            test.step(2),
+            test.run(function()
+                local ecs = require("engine.ecs/v1")
+                for _, player in ipairs(ecs.query({ all = { "d2legacy.player.identity" } })) do
+                    if ecs.get(player, "d2legacy.player.identity"):get("player") == "alice" then
+                        ecs.create({
+                            ["d2legacy.player.learned_skill"] = {
+                                owner = player,
+                                skill_id = 125,
+                                level = 3,
+                                list_row = 8,
+                                left_allowed = false,
+                                right_allowed = true,
+                            },
+                        })
+                    end
+                end
+            end),
+            test.submit({
+                tick = 4,
+                sequence = 1,
+                player = "alice",
+                kind = "player.assign_skills",
+                payload = { right = 125 },
+            }),
+            test.step(3),
+            test.restore_checkpoint(),
+            test.run(function()
+                local ecs = require("engine.ecs/v1")
+                local effects = aura_effects()
+                test.expect(#effects):equals(1)
+                test.expect(aura_source(effects[1], "fire_resist"):get("value")):equals(75)
+                test.expect(aura_source(effects[1], "cold_resist"):get("value")):equals(75)
+                test.expect(aura_source(effects[1], "lightning_resist"):get("value")):equals(75)
+                test.expect(#ecs.query({ all = { "d2legacy.stat.source" } })):equals(3)
+                local mitigation = require("d2legacy.policy.mitigation")
+                for _, player in ipairs(ecs.query({ all = { "d2legacy.combat.defense" } })) do
+                    local defense = ecs.get(player, "d2legacy.combat.defense")
+                    test.expect(defense:get("fire_resist")):equals(75)
+                    test.expect(defense:get("cold_resist")):equals(75)
+                    test.expect(defense:get("lightning_resist")):equals(75)
+                    test.expect(defense:get("max_fire_resist")):equals(75)
+                    test.expect(defense:get("max_cold_resist")):equals(75)
+                    test.expect(defense:get("max_lightning_resist")):equals(75)
+                    test.expect(mitigation.apply(1000, "fire", defense)):equals(250)
+                    test.expect(mitigation.apply(1000, "cold", defense)):equals(250)
+                    test.expect(mitigation.apply(1000, "lightning", defense)):equals(250)
+                end
+            end),
+            test.submit({
+                tick = 7,
+                sequence = 1,
+                player = "alice",
+                kind = "player.assign_skills",
+                payload = { right = 98 },
+            }),
+            test.step(3),
+            test.restore_checkpoint(),
+            test.run(function()
+                local ecs = require("engine.ecs/v1")
+                test.expect(#ecs.query({ all = { "d2legacy.stat.source" } })):equals(1)
+                for _, player in ipairs(ecs.query({ all = { "d2legacy.combat.defense" } })) do
+                    local defense = ecs.get(player, "d2legacy.combat.defense")
+                    test.expect(defense:get("fire_resist")):equals(0)
+                    test.expect(defense:get("cold_resist")):equals(0)
+                    test.expect(defense:get("lightning_resist")):equals(0)
                 end
             end),
         }),

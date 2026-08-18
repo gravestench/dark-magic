@@ -24,6 +24,7 @@ return test.suite({
                 test.expect(coverage.by_family["aura.selected-party-stat"][4]):equals(105)
                 test.expect(coverage.by_family["aura.selected-party-stat"][5]):equals(108)
                 test.expect(coverage.by_family["aura.selected-party-stat"][6]):equals(110)
+                test.expect(coverage.by_family["aura.selected-party-stat"][7]):equals(125)
                 test.expect(coverage.by_id[36].evidence_status)
                     :equals("owned-target-records-and-localized-synergy-partial")
                 test.expect(coverage.by_id[39] == nil):is_true()

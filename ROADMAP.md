@@ -277,10 +277,19 @@ lightning resistance now flow from player entry through ordinary stat sources
 into the shared channel-indexed elemental mitigation boundary. Level-3
 checkpoint coverage pins 76 active lightning resistance, +3 active maximum,
 +1 inactive maximum, and 1000 raw lightning damage reduced to 240.
+Salvation is the seventh exact selected aura and the first admitted row whose
+single relationship owns three same-progression stats. Its independently pinned
+ID 125 record, `resistall` state, localized text, sound, Overlay, and DCC facts
+declare fire, cold, and lightning resistance—never poison—with no passive or
+maximum-resistance effect. The generic decoder now accepts a state whose
+representative stat matches any authored aura stat rather than incorrectly
+requiring the first column. Level-3 checkpoint coverage pins 75 in every
+elemental channel, three keyed ECS sources, 250 damage remaining from each 1000-
+point fire/cold/lightning hit, and atomic removal when selection changes.
 
 Spell Lab now wraps the production Blood Moor scene instead of maintaining a
 parallel spell simulator. Its ephemeral level-30 Sorceress fixture
-learns all 17 exact-ID configurations at level 20 through the owned
+learns all 18 exact-ID configurations at level 20 through the owned
 Skills/SkillDesc records, begins with Fire Bolt and Amplify Damage assigned, and
 uses the ordinary HUD, command admission, mana, cast, projectile, state, damage,
 monster, and renderer paths. A real-MPQ acceptance casts Fire Bolt and proves
@@ -401,7 +410,7 @@ policy**, and **unresolved**.
 | Area | Status | Repository evidence and remaining boundary |
 | --- | --- | --- |
 | M0-M14 engine/application foundations | complete | Reproducible core, layered content, Lua runtime, ECS, rendering composition, application host, and service-mesh retirement are established. |
-| M15 asset knowledge | partial | Typed/recovered coverage is broad. The owned 1.14d Expansion Skills/Missiles report now inventories 357 skill rows, 172 server behavior signatures, 17 exact-ID implementations, 340 missing skills, and winning-layer provenance. A second exact-ID report joins Skills/SkillDesc formulas to layered locale TBL text, replacement tokens, and cross-skill references. Might, Defiance, Blessed Aim, Resist Fire, Resist Cold, and Resist Lightning Skills, States, SkillDesc, locale TBL, sound keys, Overlay rows, and DCC members are pinned alongside the existing missile/cast evidence. Blessed Aim and all three single-element resistance auras additionally pin their self-hard-point passive formulas/states; the resistance trio pins its second active max-resistance stat and full target `dm34` level vector. Retail `MonPreset.txt`, `MonStats2.txt`, `MonLvl.txt`, and `SkillDesc.txt` members omitted from incomplete listfiles remain explicitly discovered in the immutable generation. Runtime aura filter/timing/sound semantics remain evidence work rather than record inference. |
+| M15 asset knowledge | partial | Typed/recovered coverage is broad. The owned 1.14d Expansion Skills/Missiles report now inventories 357 skill rows, 172 server behavior signatures, 18 exact-ID implementations, 339 missing skills, and winning-layer provenance. A second exact-ID report joins Skills/SkillDesc formulas to layered locale TBL text, replacement tokens, and cross-skill references. Might, Defiance, Blessed Aim, Resist Fire, Resist Cold, Resist Lightning, and Salvation Skills, States, SkillDesc, locale TBL, sound keys, Overlay rows, and DCC members are pinned alongside the existing missile/cast evidence. Blessed Aim and all three single-element resistance auras additionally pin their self-hard-point passive formulas/states; the resistance trio pins its second active max-resistance stat and full target `dm34` level vector, while Salvation pins an independent three-element 60..108 `dm34` vector and absence of a passive record. Retail `MonPreset.txt`, `MonStats2.txt`, `MonLvl.txt`, and `SkillDesc.txt` members omitted from incomplete listfiles remain explicitly discovered in the immutable generation. Runtime aura filter/timing/sound semantics remain evidence work rather than record inference. |
 | M16 presentation primitives | partial | MPQ-backed render/audio primitives exist. Missile entities select record-authored travel/impact DCCs, sounds, exact 1/4/8/16/32-way direction order, authored ground origins, and table-specific luminous blend; semantic timed states and aura relationships resolve States/Overlay records into shared world overlays without skill branches. Distinct aura modifiers stay active while presentation rotates one aura graphic per affected unit using the record period. Connected authority projects only bounded target/state/period relationships and the disposable client ECS binds them to existing unit mirrors, so the identical Lua cycle/overlay path works without exposing source identity, skill level, stats, radius, filter/party policy, or arbitration. MonStats2 `OverlayHeight` selects Overlay.txt `Height1..4` attachment offsets for live monsters, players use Height2, and connected cues retain that category through an ECS presentation anchor. Admitted Skills rows drive SC actor action timing, semantic start/effect cues, cast sounds, and cast overlays through the same world renderer. Connected clients reconstruct bounded living-monster composites, retain the same mirror as a nonselectable/noncolliding DT corpse, and consume a typed death-sound cue. Authority also collapses private AI/velocity facts into the same offline `DT > A1 > WL > authored` presentation precedence; the existing 25 Hz transform channel carries only the resulting mode and facing. The network projection omits AI state/targets, loot, XP, kill attribution, player-count policy, corpse usability, aura gameplay facts, and every other authority field. The same reliable view carries bounded projectile/effect visuals. These presentation-only ECS components keep offline and connected play on the same Lua renderer. Strict owned-runtime probes gate aura sound and cross-family cadence, client-function-30 curse attachment/motion, SC/SQ/FCR/weapon-class timing, and missile travel/impact audio lifecycle/multiplicity on complete target matrices; none promotes inferred behavior. Client assembly consumes a backend-neutral desktop contract; Raylib is the production default and the `ebitengine` tag supplies an experimental retained-composition/input/capture adapter. Populated probe vectors, exact monster animation phase/start timing, overlay light/variant/character/multi-direction semantics, record-referenced client-only curse layers, missile semantic audio production/projection, player-death and remaining semantic event families, Ebitengine native audio, console drawing, and GPU palette parity remain. |
 | M17 front end | foundation complete | The Lua-authored front end and Realm flow exist. MPQ-backed locale tables now cross one sequential buffering boundary instead of issuing decoder-granularity random archive reads. Startup warms only title/main-menu assets, secondary destinations use visible main-menu think time, and character interaction animations remain scoped to character creation. Remaining work is UI fidelity, not the former multi-second transition stall or whole-frontend eager preload. |
 | M18 in-game shell | foundation complete | HUD and major overlay shells exist; the party panel now consumes an owner-scoped semantic projection, while remaining raw/ad hoc reads migrate as their gameplay domains mature. |
@@ -1151,6 +1160,14 @@ runtime composition and the coverage report.
   pinning ID 110, states 5/183, localized TBL intent, sound, Overlay, and DCC
   evidence. Level-3 checkpoint coverage proves 76/+3/+1 and 240/1000 lightning
   mitigation without deriving admission from either neighboring aura row.
+- [x] Admit exact Expansion 1.14d Salvation as a three-stat configuration of the
+  same selected-aura family. Generalize state validation so a state may name any
+  one of its row's authored stats, then decode three `dm34` recipes into keyed
+  fire/cold/lightning resistance sources without a multi-element system branch.
+  Pin the independent 60..108 official vector, no-passive boundary, ID 125,
+  state 8, localized all-elemental intent, sound, Overlay/DCC assets, checkpoint
+  parity, atomic selection removal, and 250/1000 mitigation in all three
+  channels.
 - [x] Add a production-backed Spell Lab scene that grants only the exact-ID
   manifest through owned Skills/SkillDesc records, delegates world/HUD/input/
   authority/presentation to `game_world`, and proves a real-MPQ Fire Bolt cast
@@ -1240,8 +1257,8 @@ runtime composition and the coverage report.
 1.14d Skills.txt and Missiles.txt tables, groups every skill by server start/do
 and referenced missile server-do function IDs, and reports every consumer with
 its explicit family, missing-family flag, and evidence status. The current
-owned-data baseline is 357 skill rows, 172 signatures, 17 explicitly admitted
-configurations, and 340 missing configurations. The report fails if a declared
+owned-data baseline is 357 skill rows, 172 signatures, 18 explicitly admitted
+configurations, and 339 missing configurations. The report fails if a declared
 skill or referenced server missile is absent, and its synthetic test proves a
 row with the same function signature is not admitted by resemblance. Generated
 reports remain local; copyrighted tables are never copied into Git.
@@ -1253,7 +1270,7 @@ exact-ID count, current left/right assignments, and mana. Immutable initial
 data enables a development-only learned-skill fixture whose IDs are derived
 from the target-locked implementation manifest, resolved through the normal
 owned Skills/SkillDesc records, and rejected if unknown, passive, or
-unassignable. It currently grants the 17 manifest-backed Expansion
+unassignable. It currently grants the 18 manifest-backed Expansion
 1.14d configurations at level 20, assigns Fire Bolt left and Amplify Damage
 right, places three production hostiles in Blood Moor, and supplies a deep mana
 pool for repeated inspection. Ordinary HUD selection and world clicks still
@@ -1767,6 +1784,27 @@ source. Lightning absorb, PvP conversion, item-source ordering, soft-level
 integration, and exact maximum-resistance stacking order remain explicit
 Expansion 1.14d evidence work.
 
+Salvation is the seventh exact `aura.selected-party-stat` configuration. Its
+owned ID 125 row independently declares `fireresist=dm34`, `coldresist=dm34`,
+and `lightresist=dm34` with Params 3/4 of 50/120, no passive state/stat/formula,
+and the shared right-only, zero-mana selected-aura lifecycle. State 8 names
+`lightresist` even though fire is the row's first stat, so generic state
+validation now requires the representative state stat to match any authored
+stat. It does not weaken validation by accepting an empty or unrelated state.
+
+The staged progression produces Blizzard's Expansion level-1..20 vector
+60,68,75,80,85,88,91,93,96,97,99,101,102,103,104,106,106,107,108,108. Owned
+SkillDesc and locale TBL text say “Resist All” and explicitly enumerate fire,
+cold, and lightning, excluding poison by both record and player-visible intent.
+At level three, one `resistall` relationship owns three keyed ordinary stat
+sources worth 75 each. Existing derived stats and table-driven mitigation reduce
+1000 damage to 250 in every supported elemental channel; changing selection
+removes all three sources in the same reconciliation pass. The connected view
+still projects only target/state/period presentation facts. Owned state, sound,
+three Overlay rows, and DCC members pin the purple front/back/cast presentation.
+Broader owned-unit filters, exact runtime cadence/sound lifetime, resistance
+source ordering, absorb, and PvP remain probe-gated.
+
 `manifests/skill-behavior-coverage.v1.json` is locked to
 `diablo-ii-lod-1.14d-expansion`. Runtime composition consumes the same exact-ID
 declarations as the report. The targeted-state decoder independently validates
@@ -1897,14 +1935,14 @@ capture; normalizes anchor-relative timing/motion; and reports missing empty,
 single, and multi-target cases for both Amplify Damage and Weaken. It promotes
 no role until the six-case owned Expansion 1.14d matrix is populated.
 
-Next: investigate exact Expansion 1.14d Salvation as the first selected aura
-whose owned row may compose all three ordinary elemental-resistance sources.
-Before admission, pin ID 125's own Skills/States/SkillDesc/TBL/Overlay/DCC
-evidence, formula vector, target intent, and absence or presence of any passive
-record rather than extrapolating from the three single-element auras. Prove
-simultaneous fire/cold/lightning source ownership, switching/removal,
-distinct-aura stacking, checkpoint parity, and damage mitigation in every
-affected channel without adding a Salvation or multi-element system branch.
+Next: investigate exact Expansion 1.14d Vigor as a consumer-led extension of
+the selected-aura family. Pin ID 115's own Skills/States/SkillDesc/TBL/Overlay/
+DCC evidence and official movement/stamina vectors before admission. Decode
+its two linear stamina recipes and distinct `dm56` movement-speed recipe into
+ordinary sources, then prove real movement rate, stamina recovery, maximum-
+stamina rescaling, selection removal, cross-entity distinct-aura stacking, and
+checkpoint parity. Do not add Vigor-specific motion logic or claim complete
+behavior until all three existing shared consumers observe the authored values.
 In parallel, capture owned Expansion 1.14d player/hireling/summon entry/leave
 observations for `aurafilter=73731`, 50-tick application/removal ordering,
 equal-strength same-aura ownership, and `onsound` lifetime. Promote those

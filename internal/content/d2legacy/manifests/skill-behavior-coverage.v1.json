@@ -87,6 +87,11 @@
       "skill_id": 110,
       "family": "aura.selected-party-stat",
       "evidence_status": "owned-target-records-localized-lightning-resistance-intent-and-official-hard-point-passive-partial"
+    },
+    {
+      "skill_id": 125,
+      "family": "aura.selected-party-stat",
+      "evidence_status": "owned-target-records-localized-all-elemental-resistance-intent-and-official-level-vector-partial"
     }
   ]
 }
