@@ -33,7 +33,7 @@ return test.suite({
                     },
                     {
                         Id = "998",
-                        skill = "Fixture Valor",
+                        skill = "Fixture Defiance",
                         srvstfunc = "",
                         srvdofunc = "65",
                         aura = "1",
@@ -43,9 +43,9 @@ return test.suite({
                         InGame = "1",
                         aurafilter = "73731",
                         aurarangecalc = "ln12",
-                        aurastate = "valor",
-                        auratargetstate = "valor",
-                        aurastat1 = "damagepercent",
+                        aurastate = "defiance",
+                        auratargetstate = "defiance",
+                        aurastat1 = "skill_armor_percent",
                         aurastatcalc1 = "ln34",
                         mana = "0",
                         lvlmana = "0",
@@ -63,7 +63,7 @@ return test.suite({
                         end
                         return {
                             { state = "might", aura = "1", stat = "damagepercent" },
-                            { state = "valor", aura = "1", stat = "damagepercent" },
+                            { state = "defiance", aura = "1", stat = "skill_armor_percent" },
                         }
                     end,
                 }, { "load" })
@@ -75,6 +75,8 @@ return test.suite({
                 test.expect(definitions[98].record_refresh_delay):equals(50)
                 test.expect(definitions[998].radius_per_level):equals(1)
                 test.expect(definitions[998].stat_value_per_level):equals(5)
+                test.expect(definitions[998].stat):equals("defense")
+                test.expect(definitions[998].stat_operation):equals("percent")
             end)
         end),
     },

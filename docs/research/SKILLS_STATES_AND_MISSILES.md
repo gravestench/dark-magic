@@ -114,8 +114,8 @@ only after a target-binary probe pins the roll and damage-result ordering.
 The target-locked `skill_behavior_coverage` tool now reads the winning mounted
 Skills.txt and Missiles.txt rows and groups every skill by its server start/do
 IDs plus referenced missile server-do IDs. Against the owned 1.14d Expansion
-archives on 2026-08-18 it reports 357 skill rows, 172 distinct signatures, 12
-explicitly admitted configurations, and 345 missing configurations. Every
+archives on 2026-08-18 it reports 357 skill rows, 172 distinct signatures, 13
+explicitly admitted configurations, and 344 missing configurations. Every
 consumer carries an implementation family or `missing_family: true` plus an
 evidence status. Exact declarations live in
 `manifests/skill-behavior-coverage.v1.json`, which runtime composition also
@@ -466,7 +466,7 @@ Mid-cast equipment/stat changes, interruption/refund behavior, other classes,
 and non-cast sequences remain separate target-runtime probes.
 
 Still open are complete skill-level formulas, target/range/LOS and delay policy,
-classification and implementation of the 345 missing configurations,
+classification and implementation of the 344 missing configurations,
 additional impact/motion families, richer state/stat-source effects, summons,
 corpse/item/object actions, and the rest of the behavior-family matrix below.
 
@@ -857,6 +857,28 @@ AuraOwner state
 ```
 
 This design also works for monster auras and some environmental effects.
+
+Defiance is the second exact member of the selected party-stat family. Its
+Expansion 1.14d rows share Might's server-do 65, selected-right/immediate,
+zero-mana, filter 73731, `ln12` radius, and 50-tick period contract. The
+distinct recipe is `skill_armor_percent=ln34`, with Param3/4 producing 70% at
+level one plus 10 percentage points per additional level. Its state row is an
+aura with the same authored stat, the `paladin_aura_defiance` sound key, and
+front/back Defiance overlay references. SkillDesc joins `ln34` and `ln12` to
+the `StrSkill31` Defense Bonus and `StrSkill18` Radius TBL labels; the long and
+short localized text explicitly describe increased defense for the owner and
+party while active.
+
+The decoder resolves reviewed authored stat names to the engine vocabulary:
+`damagepercent` remains outgoing damage percent, while
+`skill_armor_percent` becomes the existing generic `defense` percent source.
+The aura reconciler therefore needs no Defiance branch. A two-owner checkpoint
+test selects Might and Defiance simultaneously and preserves both target/state
+relationships on both party members; the ordinary derived-stat system consumes
+Defiance. Real-MPQ tests also pin the Defiance overlay rows and DCC members.
+This evidence does not resolve filter membership beyond current living player
+party targets, exact leave/refresh ordering, general visual cadence, or sound
+lifetime.
 
 The current target set is intentionally narrower than `aurafilter=73731`: only
 living player party members in the same level are admitted. Hirelings, summons,
