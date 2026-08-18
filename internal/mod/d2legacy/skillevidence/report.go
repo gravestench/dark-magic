@@ -11,13 +11,13 @@ import (
 )
 
 const (
-	Schema = "d2legacy.skill-evidence.report/v1"
+	Schema = "d2legacy.skill-evidence.report/v2"
 	Target = "diablo-ii-lod-1.14d-expansion"
 )
 
 var (
 	replacementToken = regexp.MustCompile(`%[-+0-9.]*[A-Za-z]`)
-	skillReference   = regexp.MustCompile(`skill\('([^']+)'\.(blvl|lvl)\)`)
+	skillReference   = regexp.MustCompile(`skill\('([^']+)'\.([A-Za-z][A-Za-z0-9_]*)\)`)
 )
 
 type Localizer interface {
@@ -48,12 +48,12 @@ type LocalizationReference struct {
 }
 
 type CrossSkillModifier struct {
-	Table         string `json:"table"`
-	Column        string `json:"column"`
-	Formula       string `json:"formula"`
-	ReferencedID  int    `json:"referenced_skill_id"`
-	Referenced    string `json:"referenced_skill"`
-	LevelSelector string `json:"level_selector"`
+	Table        string `json:"table"`
+	Column       string `json:"column"`
+	Formula      string `json:"formula"`
+	ReferencedID int    `json:"referenced_skill_id"`
+	Referenced   string `json:"referenced_skill"`
+	Selector     string `json:"selector"`
 }
 
 func Build(skillIDs []int, skills, descriptions []map[string]string, locale Localizer) (Report, error) {
@@ -105,7 +105,7 @@ func Build(skillIDs []int, skills, descriptions []map[string]string, locale Loca
 					referencedID, _ := strconv.Atoi(referenced["Id"])
 					evidence.CrossSkillModifiers = append(evidence.CrossSkillModifiers, CrossSkillModifier{
 						Table: candidate.table, Column: column, Formula: formula,
-						ReferencedID: referencedID, Referenced: referenced["skill"], LevelSelector: match[2],
+						ReferencedID: referencedID, Referenced: referenced["skill"], Selector: match[2],
 					})
 				}
 			}

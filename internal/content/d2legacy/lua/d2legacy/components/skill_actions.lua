@@ -71,6 +71,22 @@ function M.register()
         },
     })
 
+    -- Optional behavior facts co-composed with an aura emitter. The selected-
+    -- aura system owns activation and target relationships; a periodic-effect
+    -- consumer owns only the checkpointed pulse and resource transaction.
+    ecs.component({
+        name = "d2legacy.skill.aura_pulse",
+        version = 1,
+        fields = {
+            { name = "source_id", type = "string" },
+            { name = "kind", type = "string" },
+            { name = "value", type = "i64" },
+            { name = "mana_cost_raw", type = "i64" },
+            { name = "period_ticks", type = "i64" },
+            { name = "next_tick", type = "i64" },
+        },
+    })
+
     -- The relationship source key owns every stat-source entity it produces.
     -- Leaving range, party, level, life, or the selected aura removes the
     -- relationship and all keyed modifiers in one reconciliation pass.

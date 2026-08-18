@@ -14,7 +14,7 @@ local M = {}
 
 local function evaluated_stats(definition, level)
     local result = {}
-    for _, stat in ipairs(definition.stats) do
+    for _, stat in ipairs(definition.stats or {}) do
         local value
         if stat.progression == "ln34" then
             value = progression.linear(stat.value_base, stat.value_per_level, level)
@@ -32,6 +32,18 @@ local function evaluated_stats(definition, level)
         }
     end
     return result
+end
+
+local function evaluated_pulse(definition, level)
+    if not definition.pulse then
+        return nil
+    end
+    return {
+        kind = definition.pulse.kind,
+        value = progression.banded(definition.pulse.value_base, definition.pulse.value_per_level, level),
+        mana_cost_raw = progression.mana_cost(definition, level),
+        period_ticks = definition.pulse.period_ticks,
+    }
 end
 
 local function player_maps(entities)
@@ -55,6 +67,8 @@ local function emitter_values(context, player, definition, level, player_id, cur
     local activated = current and current:get("skill_id") == definition.skill_id and current:get("activated_tick")
         or context.tick
     local stats = evaluated_stats(definition, level)
+    local pulse = evaluated_pulse(definition, level)
+    local primary = stats[1]
     return {
         source_id = "aura:" .. player_id .. ":" .. definition.skill_id,
         skill_id = definition.skill_id,
@@ -62,15 +76,42 @@ local function emitter_values(context, player, definition, level, player_id, cur
         state_id = definition.state_id,
         target_state_id = definition.target_state_id,
         radius = progression.linear(definition.radius_base, definition.radius_per_level, level),
-        stat = stats[1].stat,
-        operation = stats[1].operation,
-        value = stats[1].value,
+        stat = primary and primary.stat or "",
+        operation = primary and primary.operation or "",
+        value = primary and primary.value or pulse.value,
         stats = stats,
+        pulse = pulse,
         refresh_delay = definition.record_refresh_delay,
         activated_tick = activated,
         entity = player,
         player_id = player_id,
     }
+end
+
+local function reconcile_pulse(context, player, values, structural)
+    local current = ecs.get(player, "d2legacy.skill.aura_pulse")
+    if not values or not values.pulse then
+        if current then
+            structural:remove(player, "d2legacy.skill.aura_pulse")
+        end
+        return
+    end
+    local pulse = values.pulse
+    if current and current:get("source_id") == values.source_id then
+        current:set("kind", pulse.kind)
+        current:set("value", pulse.value)
+        current:set("mana_cost_raw", pulse.mana_cost_raw)
+        current:set("period_ticks", pulse.period_ticks)
+        return
+    end
+    structural:set(player, "d2legacy.skill.aura_pulse", {
+        source_id = values.source_id,
+        kind = pulse.kind,
+        value = pulse.value,
+        mana_cost_raw = pulse.mana_cost_raw,
+        period_ticks = pulse.period_ticks,
+        next_tick = progression.next_periodic_tick(context.tick, pulse.period_ticks),
+    })
 end
 
 local function emitter_changed(current, values)
@@ -107,6 +148,7 @@ local function desired_emitters(context, entities, definitions, levels, structur
             if active then
                 local values = emitter_values(context, player, definition, level, identity:get("player"), current)
                 result[#result + 1] = values
+                reconcile_pulse(context, player, values, structural)
                 if emitter_changed(current, values) then
                     structural:set(player, "d2legacy.skill.aura_emitter", {
                         source_id = values.source_id,
@@ -122,8 +164,11 @@ local function desired_emitters(context, entities, definitions, levels, structur
                         activated_tick = values.activated_tick,
                     })
                 end
-            elseif current then
-                structural:remove(player, "d2legacy.skill.aura_emitter")
+            else
+                reconcile_pulse(context, player, nil, structural)
+                if current then
+                    structural:remove(player, "d2legacy.skill.aura_emitter")
+                end
             end
         end
     end
@@ -307,6 +352,7 @@ function M.register(definitions)
                 "d2legacy.player.learned_skill",
                 "d2legacy.skill.aura_emitter",
                 "d2legacy.skill.aura_effect",
+                "d2legacy.skill.aura_pulse",
                 "d2legacy.stat.source",
             },
         },
@@ -321,11 +367,13 @@ function M.register(definitions)
             "d2legacy.world.inactive",
             "d2legacy.skill.aura_emitter",
             "d2legacy.skill.aura_effect",
+            "d2legacy.skill.aura_pulse",
             "d2legacy.stat.source",
         },
         write = {
             "d2legacy.skill.aura_emitter",
             "d2legacy.skill.aura_effect",
+            "d2legacy.skill.aura_pulse",
             "d2legacy.stat.source",
             "d2legacy.state.event",
         },

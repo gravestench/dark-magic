@@ -237,6 +237,40 @@ return test.suite({
                 perdelay = "50",
             },
             {
+                Id = "99",
+                skill = "Fixture Prayer",
+                skilldesc = "prayer",
+                charclass = "pal",
+                srvstfunc = "",
+                srvdofunc = "65",
+                aura = "1",
+                immediate = "",
+                leftskill = "",
+                range = "none",
+                InGame = "1",
+                InTown = "1",
+                aurafilter = "73731",
+                aurarangecalc = "ln12",
+                aurastate = "prayer",
+                auratargetstate = "prayer",
+                aurastat1 = "hitpoints",
+                aurastatcalc1 = "edns",
+                mana = "16",
+                lvlmana = "3",
+                minmana = "1",
+                manashift = "4",
+                Param1 = "16",
+                Param2 = "2",
+                perdelay = "50",
+                HitShift = "8",
+                EMin = "2",
+                EMinLev1 = "1",
+                EMinLev2 = "1",
+                EMinLev3 = "2",
+                EMinLev4 = "2",
+                EMinLev5 = "3",
+            },
+            {
                 Id = "997",
                 skill = "Fixture Idle",
                 skilldesc = "idle",
@@ -484,6 +518,7 @@ return test.suite({
         },
         ["data/global/excel/skilldesc.txt"] = {
             { skilldesc = "might", ListRow = "1", IconCel = "4" },
+            { skilldesc = "prayer", ListRow = "3", IconCel = "6" },
             { skilldesc = "thorns", ListRow = "10", IconCel = "14" },
             { skilldesc = "idle", ListRow = "2", IconCel = "0" },
             { skilldesc = "defiance", ListRow = "3", IconCel = "16" },
@@ -496,6 +531,7 @@ return test.suite({
         },
         ["data/global/excel/states.txt"] = {
             { state = "might", id = "33", aura = "1", stat = "damagepercent" },
+            { state = "prayer", id = "34", aura = "1", stat = "" },
             { state = "thorns", id = "36", aura = "1", stat = "" },
             { state = "defiance", id = "37", aura = "1", stat = "skill_armor_percent" },
             { state = "blessedaim", id = "40", aura = "1", stat = "item_tohit_percent" },
@@ -511,6 +547,134 @@ return test.suite({
         },
     },
     cases = {
+        test.case("periodic_aura_heals_only_when_the_full_pulse_cost_is_funded_and_useful", {
+            test.submit_system({
+                tick = 1,
+                sequence = 1,
+                kind = "system.player.enter",
+                payload = entry("alice", "Paladin", 10),
+            }),
+            test.submit_system({
+                tick = 1,
+                sequence = 2,
+                kind = "system.player.enter",
+                payload = entry("bob", "Amazon", 12),
+            }),
+            test.step(2),
+            test.run(function()
+                local ecs = require("engine.ecs/v1")
+                local alice = player_named("alice")
+                local bob = player_named("bob")
+                ecs.create({
+                    ["d2legacy.player.learned_skill"] = {
+                        owner = alice,
+                        skill_id = 99,
+                        level = 3,
+                        list_row = 3,
+                        left_allowed = false,
+                        right_allowed = true,
+                    },
+                })
+                local alice_vitals = ecs.get(alice, "d2legacy.player.vitals")
+                alice_vitals:set("max_health", 50)
+                alice_vitals:set("health", 48)
+                alice_vitals:set("mana_raw", 351)
+                alice_vitals:set("mana", 1)
+                local bob_vitals = ecs.get(bob, "d2legacy.player.vitals")
+                bob_vitals:set("max_health", 50)
+                bob_vitals:set("health", 45)
+            end),
+            test.submit({
+                tick = 3,
+                sequence = 1,
+                player = "alice",
+                kind = "party.invite",
+                payload = { target = "bob" },
+            }),
+            test.step(1),
+            test.submit({
+                tick = 4,
+                sequence = 1,
+                player = "bob",
+                kind = "party.accept",
+                payload = { inviter = "alice" },
+            }),
+            test.submit({
+                tick = 4,
+                sequence = 2,
+                player = "alice",
+                kind = "player.assign_skills",
+                payload = { right = 99 },
+            }),
+            test.step(3),
+            test.restore_checkpoint(),
+            test.run(function()
+                local ecs = require("engine.ecs/v1")
+                local pulse = ecs.get(player_named("alice"), "d2legacy.skill.aura_pulse")
+                test.assert(pulse ~= nil, "Prayer did not compose its periodic effect facts")
+                test.expect(pulse:get("kind")):equals("heal_life")
+                test.expect(pulse:get("value")):equals(4)
+                test.expect(pulse:get("mana_cost_raw")):equals(352)
+                test.expect(pulse:get("period_ticks")):equals(50)
+                test.expect(pulse:get("next_tick")):equals(51)
+                test.expect(#aura_effects()):equals(2)
+                test.expect(#ecs.query({ all = { "d2legacy.stat.source" } })):equals(0)
+            end),
+            test.step(45),
+            test.run(function()
+                local ecs = require("engine.ecs/v1")
+                local alice_vitals = ecs.get(player_named("alice"), "d2legacy.player.vitals")
+                local bob_vitals = ecs.get(player_named("bob"), "d2legacy.player.vitals")
+                test.expect(alice_vitals:get("health")):equals(48)
+                test.expect(bob_vitals:get("health")):equals(45)
+                test.expect(alice_vitals:get("mana_raw")):equals(351)
+                test.expect(ecs.get(player_named("alice"), "d2legacy.skill.aura_pulse"):get("next_tick")):equals(101)
+                alice_vitals:set("mana_raw", 352)
+                alice_vitals:set("mana", 1)
+            end),
+            test.step(50),
+            test.run(function()
+                local ecs = require("engine.ecs/v1")
+                local alice_vitals = ecs.get(player_named("alice"), "d2legacy.player.vitals")
+                local bob_vitals = ecs.get(player_named("bob"), "d2legacy.player.vitals")
+                test.expect(alice_vitals:get("health")):equals(50)
+                test.expect(bob_vitals:get("health")):equals(49)
+                test.expect(alice_vitals:get("mana_raw")):equals(0)
+                test.expect(alice_vitals:get("mana")):equals(0)
+            end),
+            test.step(1),
+            test.run(function()
+                local ecs = require("engine.ecs/v1")
+                local alice_vitals = ecs.get(player_named("alice"), "d2legacy.player.vitals")
+                local bob_vitals = ecs.get(player_named("bob"), "d2legacy.player.vitals")
+                test.expect(alice_vitals:get("health")):equals(50)
+                test.expect(bob_vitals:get("health")):equals(49)
+                alice_vitals:set("mana_raw", 352)
+                alice_vitals:set("mana", 1)
+                bob_vitals:set("health", 50)
+            end),
+            test.step(49),
+            test.restore_checkpoint(),
+            test.step(1),
+            test.run(function()
+                local ecs = require("engine.ecs/v1")
+                local alice = player_named("alice")
+                test.expect(ecs.get(alice, "d2legacy.player.vitals"):get("mana_raw")):equals(352)
+                test.expect(ecs.get(alice, "d2legacy.skill.aura_pulse"):get("next_tick")):equals(201)
+            end),
+            test.submit({
+                tick = 153,
+                sequence = 1,
+                player = "alice",
+                kind = "player.assign_skills",
+                payload = { right = 98 },
+            }),
+            test.step(2),
+            test.run(function()
+                local ecs = require("engine.ecs/v1")
+                test.assert(ecs.get(player_named("alice"), "d2legacy.skill.aura_pulse") == nil)
+            end),
+        }),
         test.case("thorns_reflects_committed_melee_physical_damage_through_attacker_mitigation", {
             test.submit_system({
                 tick = 1,
