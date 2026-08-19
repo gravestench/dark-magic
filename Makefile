@@ -46,7 +46,7 @@ fmt:
 GOLANGCI_LINT ?= golangci-lint
 
 lint:
-	$(GOLANGCI_LINT) run ./cmd/...
+	$(GOLANGCI_LINT) run ./cmd/... ./internal/app/envconfig ./internal/app/headlessshell
 
 vet:
 	go vet ./...

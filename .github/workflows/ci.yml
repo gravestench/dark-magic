@@ -37,7 +37,7 @@ jobs:
         uses: golangci/golangci-lint-action@v9
         with:
           version: v2.12.2
-          args: ./cmd/...
+          args: ./cmd/... ./internal/app/envconfig ./internal/app/headlessshell
 
   test:
     name: Go test and race
