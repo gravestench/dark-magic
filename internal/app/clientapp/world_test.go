@@ -10,6 +10,7 @@ import (
 	gametransition "github.com/gravestench/dark-magic/internal/mod/d2legacy/adapter/transition"
 )
 
+// TestEntryWorldSpawnsKeepGameplayAndSeamCaptureDistinct verifies both spawn policies.
 func TestEntryWorldSpawnsKeepGameplayAndSeamCaptureDistinct(t *testing.T) {
 	seam := gametransition.Seam{
 		Town:       gametransition.SeamEndpoint{ArrivalX: 11, ArrivalY: 12},
@@ -37,20 +38,27 @@ func TestEntryWorldSpawnsKeepGameplayAndSeamCaptureDistinct(t *testing.T) {
 	}
 }
 
+// TestActivateCurrentConnectedWorldKeepsClickRoute guards same-level navigation state.
 func TestActivateCurrentConnectedWorldKeepsClickRoute(t *testing.T) {
 	engine := gameecs.New()
-	t.Cleanup(func() { _ = engine.Close() })
+
+	t.Cleanup(func() {
+		_ = engine.Close()
+	})
+
 	controller := &d2movement.MovementController{}
 	source, err := d2movement.NewMovementSource(engine, &inputstate.Store{}, "realm-player", "game_world", controller)
 	if err != nil {
 		t.Fatal(err)
 	}
+
 	world := &gameworld.Map{}
 	app := &application{
 		gameWorlds:       map[int]*gameworld.Map{2: world},
 		movementSource:   source,
 		activeWorldLevel: 2,
 	}
+
 	app.activateWorld(2)
 	if err := controller.SetMoveTarget(30, 20); err != nil {
 		t.Fatal(err)
