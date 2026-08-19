@@ -9,7 +9,9 @@ import (
 	modruntime "github.com/gravestench/dark-magic/internal/runtime/lua"
 )
 
-// buildEntryWorld generates and atomically publishes both sides of the first playable seam.
+// buildEntryWorld prepares town and wilderness as one unit, validates the requested fixture level,
+// and publishes only a complete result. A failed generation cannot replace the currently usable
+// world with partial maps.
 func (app *application) buildEntryWorld() error {
 	prepared, err := app.prepareEntryWorld()
 	if err != nil {
@@ -38,7 +40,8 @@ func (app *application) buildEntryWorld() error {
 	return nil
 }
 
-// prepareEntryWorld generates the town, wilderness, seam, zones, and admission anchors together.
+// prepareEntryWorld delegates coupled map, seam, zone, and spawn generation to one adapter call so
+// every returned structure describes the same deterministic world generation.
 func (app *application) prepareEntryWorld() (*entryworld.Prepared, error) {
 	d2legacySource, err := app.modSource("d2legacy")
 	if err != nil {
@@ -61,7 +64,8 @@ func (app *application) prepareEntryWorld() (*entryworld.Prepared, error) {
 	return prepared, nil
 }
 
-// resolveEntryWorldSpawns applies the optional capture spawn policy to generated anchors.
+// resolveEntryWorldSpawns derives development-fixture spawns from generated anchors. Production
+// admission and seam screenshot positioning remain separate policies.
 func (app *application) resolveEntryWorldSpawns(
 	prepared *entryworld.Prepared,
 ) (map[int][2]float64, error) {
@@ -75,7 +79,8 @@ func (app *application) resolveEntryWorldSpawns(
 	)
 }
 
-// fixtureActiveLevel returns the configured direct-start level or the town default.
+// fixtureActiveLevel confines direct world selection to development fixtures and defaults ordinary
+// startup to Rogue Encampment.
 func (app *application) fixtureActiveLevel() int {
 	if app.options.FixtureWorldLevel != 0 {
 		return app.options.FixtureWorldLevel
@@ -84,7 +89,8 @@ func (app *application) fixtureActiveLevel() int {
 	return 1
 }
 
-// newFixturePointerAcceptance creates the optional direct-start pointer movement probe.
+// newFixturePointerAcceptance enables the renderer acceptance probe only when requested. Keeping it
+// nil otherwise avoids production movement and capture state gaining test-only behavior.
 func (app *application) newFixturePointerAcceptance(
 	worldMap *gameworld.Map,
 	spawn [2]float64,
@@ -102,7 +108,8 @@ func (app *application) newFixturePointerAcceptance(
 	)
 }
 
-// publishEntryWorld installs a complete generated world set under one write lock.
+// publishEntryWorld swaps seam, zones, maps, spawns, active level, and optional probe in one critical
+// section. Readers can never pair geometry from one generation with metadata from another.
 func (app *application) publishEntryWorld(
 	prepared *entryworld.Prepared,
 	spawns map[int][2]float64,
@@ -119,7 +126,8 @@ func (app *application) publishEntryWorld(
 	app.worldMu.Unlock()
 }
 
-// entryWorldSpawns keeps gameplay admission distinct from the seam-capture fixture.
+// entryWorldSpawns preserves the normal town entry anchor unless the explicit seam fixture is
+// selected. Wilderness admission always uses its generated arrival side of the transition.
 func entryWorldSpawns(
 	fixtureSpawn string,
 	seam gametransition.Seam,
@@ -142,7 +150,8 @@ func entryWorldSpawns(
 	}
 }
 
-// currentWorld returns the active map and its first materialized zone stamp for Lua.
+// currentWorld snapshots a complete active map and its source stamp for Lua. Missing preparation
+// returns an empty value instead of exposing a partially initialized map.
 func (app *application) currentWorld() modruntime.CurrentWorld {
 	app.worldMu.RLock()
 	defer app.worldMu.RUnlock()
@@ -164,7 +173,8 @@ func (app *application) currentWorld() modruntime.CurrentWorld {
 	}
 }
 
-// activateWorld selects an available presentation map and updates click navigation.
+// activateWorld changes active level only when the map exists, then updates navigation outside the
+// world lock. Same-level activation still refreshes navigation after connected recomposition.
 func (app *application) activateWorld(levelID int) {
 	app.worldMu.Lock()
 

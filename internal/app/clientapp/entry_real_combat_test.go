@@ -7,7 +7,8 @@ import (
 	"github.com/gravestench/akara"
 )
 
-// combatLabScenario collects the authoritative stores and entities used by the combat assertion.
+// combatLabScenario retains only authoritative stores and selected entities, ensuring combat checks
+// cannot accidentally pass against presentation mirrors.
 type combatLabScenario struct {
 	fixture   *realD2LegacyFixture
 	positions *akara.DynamicStore
@@ -17,7 +18,8 @@ type combatLabScenario struct {
 	playerY   float64
 }
 
-// TestCombatLabFixtureEntersBloodMoor exercises production admission and basic combat.
+// TestCombatLabFixtureEntersBloodMoor proves the production fixture admits a player into wilderness
+// and routes a basic attack through real assignment, execution, and damage policy.
 func TestCombatLabFixtureEntersBloodMoor(t *testing.T) {
 	fixture := newRealD2LegacyFixture(t, realD2LegacyFixtureConfig{
 		startScene:        "combat_lab",
@@ -30,7 +32,8 @@ func TestCombatLabFixtureEntersBloodMoor(t *testing.T) {
 	scenario.attackNearbyMonster(t)
 }
 
-// newCombatLabScenario verifies admission and selects one visible hostile.
+// newCombatLabScenario establishes authoritative player and hostile identities before combat, so a
+// later failure is attributable to attack behavior rather than fixture admission.
 func newCombatLabScenario(t *testing.T, fixture *realD2LegacyFixture) *combatLabScenario {
 	t.Helper()
 
@@ -70,7 +73,8 @@ func newCombatLabScenario(t *testing.T, fixture *realD2LegacyFixture) *combatLab
 	}
 }
 
-// assertCombatLabPlayerLocation verifies that the fixture player entered Blood Moor.
+// assertCombatLabPlayerLocation requires the controlled fixture player to occupy Blood Moor in
+// authority state; presentation-only level changes cannot satisfy the scenario.
 func assertCombatLabPlayerLocation(
 	t *testing.T,
 	fixture *realD2LegacyFixture,
@@ -96,7 +100,8 @@ func assertCombatLabPlayerLocation(
 	}
 }
 
-// requireCombatLabMonsters returns the non-empty production hostile directory.
+// requireCombatLabMonsters requires the real population system to create hostiles, preventing the
+// test from manufacturing a target that bypasses spawn policy.
 func requireCombatLabMonsters(
 	t *testing.T,
 	fixture *realD2LegacyFixture,
@@ -116,7 +121,8 @@ func requireCombatLabMonsters(
 	return monsters
 }
 
-// nearbyMonster finds the first hostile within the visible encounter radius.
+// nearbyMonster selects a naturally generated hostile close enough for a deterministic basic attack,
+// preserving production population while avoiding route-length sensitivity.
 func nearbyMonster(
 	monsters *akara.DynamicStore,
 	positions *akara.DynamicStore,
@@ -134,14 +140,16 @@ func nearbyMonster(
 	return 0, false
 }
 
-// dynamicPosition returns one entity's required world coordinates.
+// dynamicPosition treats missing coordinates as a fixture programming error because authoritative
+// combatants must always have world positions.
 func dynamicPosition(positions *akara.DynamicStore, entity akara.Entity) (float64, float64) {
 	x, y, _ := dynamicPositionIfPresent(positions, entity)
 
 	return x, y
 }
 
-// dynamicPositionIfPresent reads one entity's world coordinates when available.
+// dynamicPositionIfPresent joins both coordinate fields atomically for callers that need to filter
+// optional population entities.
 func dynamicPositionIfPresent(
 	positions *akara.DynamicStore,
 	entity akara.Entity,
@@ -157,7 +165,8 @@ func dynamicPositionIfPresent(
 	return x.(float64), y.(float64), true
 }
 
-// attackNearbyMonster exercises assignment, skill execution, and authoritative damage.
+// attackNearbyMonster submits through the shared command path and advances fixed ticks until the
+// production attack resolves, rather than invoking a damage helper directly.
 func (scenario *combatLabScenario) attackNearbyMonster(t *testing.T) {
 	t.Helper()
 
@@ -206,7 +215,8 @@ func (scenario *combatLabScenario) attackNearbyMonster(t *testing.T) {
 	scenario.assertMonsterDamaged(t, stats, beforeHealth.(int64))
 }
 
-// assertMonsterDamaged accepts a killed target or requires reduced remaining health.
+// assertMonsterDamaged accepts entity removal as a valid kill outcome and otherwise requires lower
+// authoritative health, covering both lethal and non-lethal production rolls.
 func (scenario *combatLabScenario) assertMonsterDamaged(
 	t *testing.T,
 	stats *akara.DynamicStore,

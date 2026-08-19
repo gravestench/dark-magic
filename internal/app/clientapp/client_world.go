@@ -10,7 +10,8 @@ import (
 	playeradapter "github.com/gravestench/dark-magic/internal/mod/d2legacy/adapter/player"
 )
 
-// clientWorld owns the presentation-only state of a connected game session.
+// clientWorld owns caches used to present a connected game, never gameplay authority. Its entity
+// IDs and histories are valid only for the currently installed presentation replica.
 type clientWorld struct {
 	lastCorrection        uint64
 	lastViewRevision      uint64
@@ -30,18 +31,21 @@ type clientWorld struct {
 	stateEntities         map[presentationStateKey]akara.Entity
 }
 
-// presentationStateKey identifies one persistent state attached to one target.
+// presentationStateKey includes both target and state identity because different actors may carry
+// the same state and one actor may carry several states simultaneously.
 type presentationStateKey struct {
 	targetID string
 	stateID  string
 }
 
-// newClientWorld creates an empty connected-world presentation cache.
+// newClientWorld creates fresh interpolation history for one presentation replica. Reusing history
+// across replicas would apply corrections to unrelated entity IDs.
 func newClientWorld() *clientWorld {
 	return &clientWorld{history: newPresentationBuffer()}
 }
 
-// prepareConnectedWorld creates an entity-empty replica with the offline world's schema.
+// prepareConnectedWorld requires the offline ECS only as a schema source, then installs an
+// entity-empty replica. Copying offline entities would leak local authority into connected play.
 func (app *application) prepareConnectedWorld(ctx context.Context) error {
 	if app.entitySimulation == nil || app.ecsCapability == nil {
 		return errors.New("connected client world: offline schema source is unavailable")
@@ -55,7 +59,8 @@ func (app *application) prepareConnectedWorld(ctx context.Context) error {
 	return app.installConnectedReplica(ctx, replica)
 }
 
-// newConnectedReplica clones component definitions without copying authoritative entities.
+// newConnectedReplica preserves registered component schemas while removing ticks, entities, and
+// instances. Lua can therefore address the same component types without inheriting offline state.
 func (app *application) newConnectedReplica() (*gameecs.Engine, error) {
 	snapshot, err := app.entitySimulation.Snapshot()
 	if err != nil {
@@ -71,7 +76,9 @@ func (app *application) newConnectedReplica() (*gameecs.Engine, error) {
 	return gameecs.RestoreSnapshot(snapshot)
 }
 
-// installConnectedReplica switches Lua and presentation adapters to a prepared replica.
+// installConnectedReplica moves the shared ECS capability before publishing the application field,
+// making Lua and Go observe one engine boundary. The previous replica closes only after all
+// adapters point at the replacement.
 func (app *application) installConnectedReplica(ctx context.Context, replica *gameecs.Engine) error {
 	previous := app.clientSimulation
 	if err := app.ecsCapability.SetEngine(ctx, replica); err != nil {
@@ -93,7 +100,8 @@ func (app *application) installConnectedReplica(ctx context.Context, replica *ga
 	return nil
 }
 
-// resetConnectedPresentation clears caches whose entities belonged to the previous replica.
+// resetConnectedPresentation invalidates every cache containing entity IDs or revision cursors from
+// the previous replica; retaining even one would cross-wire corrections into the new world.
 func (app *application) resetConnectedPresentation() {
 	app.clientWorld = newClientWorld()
 	app.remoteMirrors = nil
@@ -102,7 +110,8 @@ func (app *application) resetConnectedPresentation() {
 	app.privateProjectionKey = ""
 }
 
-// presentationSimulation returns the connected replica or the local authority when offline.
+// presentationSimulation selects the replica during connected play and the authoritative local ECS
+// offline. Callers can render either mode without gaining authority over a remote simulation.
 func (app *application) presentationSimulation() *gameecs.Engine {
 	if app.clientSimulation != nil {
 		return app.clientSimulation

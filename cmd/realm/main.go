@@ -12,12 +12,14 @@ import (
 	"github.com/gravestench/dark-magic/internal/app/envconfig"
 )
 
-// main owns process exit semantics while runMain owns resource cleanup.
+// main converts composition failure into process status; runMain remains free to
+// return normally so deferred repository and listener cleanup can execute.
 func main() {
 	os.Exit(runMain())
 }
 
-// runMain loads process policy and runs the Realm until shutdown.
+// runMain resolves environment and flags before installing signal cancellation.
+// This keeps configuration errors distinct from runtime shutdown and avoids partial startup.
 func runMain() int {
 	environment, err := envconfig.Bootstrap("realm", os.Args[1:])
 	if err != nil {

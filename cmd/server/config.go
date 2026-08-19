@@ -11,7 +11,8 @@ import (
 	"github.com/gravestench/dark-magic/internal/logging"
 )
 
-// serverConfig is the immutable process policy used to assemble a game server.
+// serverConfig freezes session identity, admission, transport, and game rules
+// before authority starts. A running session must not observe mutable flag state.
 type serverConfig struct {
 	logLevel            slog.Level
 	logLevelName        string
@@ -42,7 +43,8 @@ type serverConfig struct {
 	gameMaximumPlayers  int
 }
 
-// parseServerConfig defines the command interface and validates cross-flag policy.
+// parseServerConfig rejects incomplete worker/admission combinations before
+// content is mounted or an authoritative session is created.
 func parseServerConfig(defaultEnvironmentPath string) (serverConfig, error) {
 	config := serverConfig{
 		logLevelName:       environmentDefault("DARK_MAGIC_SERVER_LOG_LEVEL", "info"),
@@ -73,7 +75,8 @@ func parseServerConfig(defaultEnvironmentPath string) (serverConfig, error) {
 	return config, nil
 }
 
-// registerServerFlags groups the public interface by operational concern.
+// registerServerFlags separates session, profile, worker, and game-rule policy
+// so each trust boundary can be reviewed without scanning unrelated flags.
 func registerServerFlags(
 	config *serverConfig,
 	gameDifficulty *string,
@@ -87,7 +90,8 @@ func registerServerFlags(
 	registerGameRuleFlags(config, gameDifficulty)
 }
 
-// registerSessionFlags defines identity, transport, content, and logging policy.
+// registerSessionFlags defines process-wide resources whose values determine
+// runtime identity and network compatibility for the entire session.
 func registerSessionFlags(config *serverConfig) {
 	flag.StringVar(&config.logLevelName, "log-level", config.logLevelName, "log verbosity")
 	flag.StringVar(&config.sessionID, "session-id", config.sessionID, "game-session ID")
@@ -99,7 +103,8 @@ func registerSessionFlags(config *serverConfig) {
 	flag.StringVar(&config.mods, "mods", config.mods, "temporary comma-separated mod IDs")
 }
 
-// registerProfileFlags defines explicitly self-hosted player admission.
+// registerProfileFlags defines the opt-in self-host identity and spawn location;
+// leaving these blank keeps a standalone authority from inventing a player.
 func registerProfileFlags(config *serverConfig) {
 	flag.StringVar(&config.playerProfile, "player-profile", "", "self-hosted player profile")
 	flag.StringVar(&config.profilePlayer, "profile-player", "", "selected profile player ID")
@@ -112,7 +117,8 @@ func registerProfileFlags(config *serverConfig) {
 	flag.StringVar(&config.remoteProfileKey, "remote-profile-key", "", "remote profile key")
 }
 
-// registerWorkerFlags defines Realm supervision, recovery, and readiness policy.
+// registerWorkerFlags defines the private contract between a Realm and its child
+// server. The settings are validated as a complete set because partial supervision is unsafe.
 func registerWorkerFlags(config *serverConfig) {
 	flag.BoolVar(&config.realmWorker, "realm-worker", false, "run as a Realm worker")
 	flag.StringVar(&config.workerControlListen, "worker-control-listen", "", "worker control address")
@@ -121,7 +127,8 @@ func registerWorkerFlags(config *serverConfig) {
 	flag.StringVar(&config.restoreCheckpoint, "restore-checkpoint", "", "Realm recovery checkpoint")
 }
 
-// registerGameRuleFlags defines immutable game-mode policy.
+// registerGameRuleFlags defines rules embedded in runtime identity and therefore
+// immutable after clients begin comparing and joining the session.
 func registerGameRuleFlags(config *serverConfig, difficulty *string) {
 	flag.StringVar(difficulty, "game-difficulty", *difficulty, "normal, nightmare, or hell")
 	flag.BoolVar(&config.gameHardcore, "game-hardcore", false, "use Hardcore rules")
@@ -129,7 +136,8 @@ func registerGameRuleFlags(config *serverConfig, difficulty *string) {
 	flag.IntVar(&config.gameMaximumPlayers, "game-maximum-players", 8, "game capacity from 1 through 8")
 }
 
-// parseDifficulty converts the public rule name into the legacy numeric value.
+// parseDifficulty contains legacy numeric encoding at the command boundary so
+// the rest of startup can reason about a validated integer rule.
 func parseDifficulty(value string) (int, error) {
 	difficulties := map[string]int{"normal": 0, "nightmare": 1, "hell": 2}
 
@@ -141,7 +149,8 @@ func parseDifficulty(value string) (int, error) {
 	return difficulty, nil
 }
 
-// validate checks relationships that cannot be expressed by individual flags.
+// validate enforces cross-flag invariants that determine which admission and
+// supervision model the process is allowed to enter.
 func (config serverConfig) validate() error {
 	if config.gameMaximumPlayers < 1 || config.gameMaximumPlayers > 8 {
 		return errors.New("game-maximum-players must be from 1 through 8")
@@ -162,13 +171,15 @@ func (config serverConfig) validate() error {
 	return nil
 }
 
-// workerConfigured reports whether any Realm-worker-only setting was selected.
+// workerConfigured detects intent to run under Realm supervision. Even one
+// worker-only value switches validation to the stricter all-fields-required contract.
 func (config serverConfig) workerConfigured() bool {
 	return config.realmWorker || config.workerControlListen != "" ||
 		config.workerControlToken != "" || config.workerReadyFile != ""
 }
 
-// completeWorkerConfig reports whether every required worker setting is present.
+// completeWorkerConfig protects the readiness/ticket/recovery handshake from
+// starting with missing secrets or rendezvous paths.
 func (config serverConfig) completeWorkerConfig() bool {
 	return config.realmWorker && config.allocationID != "" &&
 		config.workerControlListen != "" && config.workerControlToken != "" &&
@@ -176,7 +187,8 @@ func (config serverConfig) completeWorkerConfig() bool {
 		config.tlsCertificate != "" && config.tlsKey != "" && config.admissionKey != ""
 }
 
-// environmentDefault returns a non-empty environment value or the supplied fallback.
+// environmentDefault treats whitespace-only exports as absent so an accidental
+// empty assignment cannot erase a safe command default.
 func environmentDefault(name, fallback string) string {
 	if value := strings.TrimSpace(os.Getenv(name)); value != "" {
 		return value

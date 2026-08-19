@@ -11,7 +11,8 @@ import (
 	modruntime "github.com/gravestench/dark-magic/internal/runtime/lua"
 )
 
-// stopPreviousExtensionComponents leaves only built-in components active.
+// stopPreviousExtensionComponents removes extension behavior before its Lua
+// modules and VFS layers change, preventing old code from executing against new content.
 func (app *application) stopPreviousExtensionComponents(
 	ctx context.Context,
 	resolved modcache.ResolvedSet,
@@ -30,7 +31,8 @@ func (app *application) stopPreviousExtensionComponents(
 	return app.components.ApplyDesired(ctx, desired)
 }
 
-// replacePackageModules updates the namespace registry and invalidates changed Lua modules.
+// replacePackageModules swaps the require allowlist first, then invalidates only
+// changed namespaces so unchanged modules preserve state and startup cost.
 func (app *application) replacePackageModules(
 	ctx context.Context,
 	plan *networkPackagePlan,
@@ -45,7 +47,8 @@ func (app *application) replacePackageModules(
 	return modruntime.InvalidatePackageModules(ctx, app.scripts, plan.changed...)
 }
 
-// resolvedPackageIDs returns base and extension namespaces in activation order.
+// resolvedPackageIDs preserves resolved order because module visibility and
+// component activation must agree with the authenticated lock recipe.
 func resolvedPackageIDs(resolved modcache.ResolvedSet) []string {
 	packages := resolved.Packages()
 	ids := make([]string, 0, len(packages))
@@ -57,7 +60,8 @@ func resolvedPackageIDs(resolved modcache.ResolvedSet) []string {
 	return ids
 }
 
-// installNetworkPackageContent replaces extension layers and transfers mount ownership.
+// installNetworkPackageContent is the ownership handoff: after it succeeds,
+// application—not the preparation plan—must unmount and close extension archives.
 func (app *application) installNetworkPackageContent(plan *networkPackagePlan) error {
 	app.unmountPreviousExtensionContent()
 
@@ -86,7 +90,8 @@ func (app *application) installNetworkPackageContent(plan *networkPackagePlan) e
 	return nil
 }
 
-// unmountPreviousExtensionContent releases old network layers before replacement.
+// unmountPreviousExtensionContent removes stale extension roots before installing
+// replacements so identical paths cannot resolve nondeterministically across generations.
 func (app *application) unmountPreviousExtensionContent() {
 	for _, pkg := range app.options.Mods.Extensions.Packages {
 		app.options.Content.Unmount("mod:" + pkg.Manifest.ID)
@@ -98,7 +103,8 @@ func (app *application) unmountPreviousExtensionContent() {
 	}
 }
 
-// reconcileNetworkPackageDefinitions refreshes changed definitions and activates clients.
+// reconcileNetworkPackageDefinitions replaces definitions after the new VFS is
+// live, then starts only client-domain components permitted in a connected process.
 func (app *application) reconcileNetworkPackageDefinitions(
 	ctx context.Context,
 	resolved modcache.ResolvedSet,
@@ -124,7 +130,8 @@ func (app *application) reconcileNetworkPackageDefinitions(
 	return app.activateNetworkClientComponents(ctx)
 }
 
-// refreshPackageDerivedContent reloads data products affected by VFS changes.
+// refreshPackageDerivedContent rebuilds records, maps, and bootstrap data from one
+// newly installed VFS generation before presentation resumes.
 func (app *application) refreshPackageDerivedContent() error {
 	if _, err := app.options.Content.Invalidate("."); err != nil {
 		return err
@@ -153,7 +160,8 @@ func (app *application) refreshPackageDerivedContent() error {
 	return nil
 }
 
-// refreshPackageRecords repins authoritative tables after content changes.
+// refreshPackageRecords closes the previous record generation only after the
+// replacement opens, avoiding a window where consumers have no catalog.
 func (app *application) refreshPackageRecords() error {
 	pinned, _, err := recordstore.Pin(app.options.Content)
 	if err != nil && !errors.Is(err, recordstore.ErrNoAuthoritativeTables) {
@@ -172,7 +180,8 @@ func (app *application) refreshPackageRecords() error {
 	return nil
 }
 
-// changedPackageIDs returns every namespace whose content digest changed.
+// changedPackageIDs includes additions, removals, and digest replacements because
+// all three can leave stale require results under the same namespace.
 func changedPackageIDs(previous map[string]string, next modcache.ResolvedSet) []string {
 	now := packageDigestMap(next)
 
@@ -193,7 +202,7 @@ func changedPackageIDs(previous map[string]string, next modcache.ResolvedSet) []
 	return uniqueStrings(changed)
 }
 
-// packageDigestMap indexes resolved content digests by package namespace.
+// packageDigestMap captures the minimal comparison state needed for future module invalidation.
 func packageDigestMap(set modcache.ResolvedSet) map[string]string {
 	result := make(map[string]string, 1+len(set.Extensions.Packages))
 
@@ -204,7 +213,8 @@ func packageDigestMap(set modcache.ResolvedSet) map[string]string {
 	return result
 }
 
-// uniqueStrings removes duplicates while preserving their first-seen order.
+// uniqueStrings preserves first-seen lock order while preventing repeated stop,
+// invalidation, or activation work for a namespace listed through multiple paths.
 func uniqueStrings(values []string) []string {
 	seen := make(map[string]bool, len(values))
 	result := make([]string, 0, len(values))

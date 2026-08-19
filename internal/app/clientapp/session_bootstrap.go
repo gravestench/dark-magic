@@ -11,7 +11,8 @@ import (
 	entryworld "github.com/gravestench/dark-magic/internal/mod/d2legacy/adapter/entryworld"
 )
 
-// sessionInitialData returns deterministic bootstrap data consumed by d2legacy.
+// sessionInitialData serializes native policy and generated geometry into the
+// deterministic input hashed/consumed by the d2legacy authoritative runtime.
 func (app *application) sessionInitialData() map[string]any {
 	return map[string]any{
 		"engine.game_data_generation_id": app.gameDataGenerationID(),
@@ -34,7 +35,8 @@ func (app *application) sessionInitialData() map[string]any {
 	}
 }
 
-// queueEntryPopulation submits initial world population after handlers start.
+// queueEntryPopulation runs only after authoritative component handlers start;
+// submitting earlier would acknowledge a bootstrap command no system can consume.
 func (app *application) queueEntryPopulation() error {
 	command, err := app.populationBootstrapCommand()
 	if err != nil {
@@ -44,13 +46,15 @@ func (app *application) queueEntryPopulation() error {
 	return wrap("queue d2legacy entry population", app.offlineSession.Submit(command))
 }
 
-// populationBootstrapCommand creates the authoritative entry-world command.
+// populationBootstrapCommand delegates entity construction to the entry-world
+// adapter while applying only the development scene's explicit hostile policy.
 func (app *application) populationBootstrapCommand() (simulation.Command, error) {
 	nearby := developmentScenes[app.options.StartScene].nearbyHostiles
 	return app.preparedEntryWorld().PopulationCommand(nearby)
 }
 
-// interactionBootstrapData selects the optional direct-start NPC interaction.
+// interactionBootstrapData keeps synthetic vendor startup isolated to the vendor
+// fixture; normal sessions begin without an implicitly opened interaction.
 func (app *application) interactionBootstrapData() map[string]any {
 	initial := ""
 	if app.options.StartScene == "vendor" {
@@ -60,7 +64,8 @@ func (app *application) interactionBootstrapData() map[string]any {
 	return entryworld.InteractionData(app.gameWorlds, app.gameWorldZones, "local-player", initial)
 }
 
-// preparedEntryWorld gathers the maps and admission positions for bootstrapping.
+// preparedEntryWorld presents already published maps as one coherent value to
+// bootstrap helpers, avoiding a second generation or divergent spawn calculation.
 func (app *application) preparedEntryWorld() *entryworld.Prepared {
 	return &entryworld.Prepared{
 		Worlds: app.gameWorlds,
@@ -70,7 +75,8 @@ func (app *application) preparedEntryWorld() *entryworld.Prepared {
 	}
 }
 
-// buildLoadingCoordinator declares the prerequisites for entering game scenes.
+// buildLoadingCoordinator makes scene admission depend on character, assets, and
+// world readiness through named tasks that the loading UI can report independently.
 func (app *application) buildLoadingCoordinator() error {
 	app.loading = loadcore.New(map[string]loadcore.Task{
 		"selected_character": app.requireSelectedCharacter,
@@ -81,7 +87,8 @@ func (app *application) buildLoadingCoordinator() error {
 	return nil
 }
 
-// requireSelectedCharacter accepts either local or authenticated realm selection.
+// requireSelectedCharacter recognizes the two trusted identity paths: a native
+// selected save or a Realm-authenticated admission. Presentation state is insufficient.
 func (app *application) requireSelectedCharacter(context.Context) error {
 	if _, ok := app.saves.Selected(); ok {
 		return nil
@@ -94,7 +101,8 @@ func (app *application) requireSelectedCharacter(context.Context) error {
 	return errors.New("no character is selected")
 }
 
-// requireLoadingAssets verifies every presentation bootstrap dependency.
+// requireLoadingAssets fails before scene entry if the selected presentation
+// profile references content absent from the pinned filesystem.
 func (app *application) requireLoadingAssets(context.Context) error {
 	for _, name := range app.presentation.LoadingAssets {
 		if _, err := fs.Stat(app.options.Content, name); err != nil {
@@ -105,12 +113,14 @@ func (app *application) requireLoadingAssets(context.Context) error {
 	return nil
 }
 
-// loadingWorldReady marks world preparation as synchronous at composition time.
+// loadingWorldReady documents that world generation completed during assembly;
+// the named no-op still exposes that prerequisite to loading orchestration.
 func loadingWorldReady(context.Context) error {
 	return nil
 }
 
-// fixtureNeedsSelection reports whether direct scene entry requires a player.
+// fixtureNeedsSelection is the allowlist for bypassing frontend navigation while
+// still requiring a deterministic selected character for player-dependent scenes.
 func fixtureNeedsSelection(scene string) bool {
 	switch scene {
 	case "game_world",

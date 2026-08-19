@@ -8,7 +8,9 @@ import (
 	"github.com/gravestench/dark-magic/internal/distribution"
 )
 
-// prepareContent resolves the selected mods and validates the resulting client asset view.
+// prepareContent establishes one pinned content view for the whole client run.
+// Validation happens before the renderer or Lua runtime starts so a partial mod
+// selection cannot fail later after expensive process resources are active.
 func prepareContent(selection string) (*distribution.ModSet, *content.FS, error) {
 	mods, err := distribution.PrepareMods(selection)
 	if err != nil {
@@ -28,7 +30,8 @@ func prepareContent(selection string) (*distribution.ModSet, *content.FS, error)
 	return mods, contentFS, nil
 }
 
-// closeContent releases the mounted mod packages and reports cleanup failures.
+// closeContent releases package mounts owned by the command. Cleanup failures
+// cannot change an already-returned exit code, so they are surfaced through logs.
 func closeContent(mods *distribution.ModSet) {
 	if err := mods.Close(); err != nil {
 		slog.Error("closing mod packages", "error", err)

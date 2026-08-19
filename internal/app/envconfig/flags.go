@@ -5,7 +5,8 @@ import (
 	"strings"
 )
 
-// ExplicitPath extracts --env-file without consuming the command's other flags.
+// ExplicitPath performs a narrow pre-parse of --env-file before flag.Package runs.
+// It deliberately leaves every unrelated argument untouched for the owning command.
 func ExplicitPath(arguments []string) (string, error) {
 	var selectedPath string
 
@@ -38,7 +39,8 @@ func ExplicitPath(arguments []string) (string, error) {
 	return selectedPath, nil
 }
 
-// environmentFlagValue recognizes one supported --env-file spelling.
+// environmentFlagValue recognizes split and equals spellings while rejecting a
+// missing value early enough to avoid loading an unintended default file.
 func environmentFlagValue(arguments []string, index int) (string, bool, error) {
 	argument := arguments[index]
 

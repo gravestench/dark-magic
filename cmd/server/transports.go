@@ -14,7 +14,8 @@ import (
 	darkpaths "github.com/gravestench/dark-magic/internal/paths"
 )
 
-// startQUICTransport creates the optional authenticated game transport.
+// startQUICTransport constructs but does not serve the player transport. This
+// lets worker control and admission finish before the process exposes gameplay ingress.
 func startQUICTransport(
 	host *gameserver.Host,
 	prepared *serverContent,
@@ -43,7 +44,8 @@ func startQUICTransport(
 	return server, nil
 }
 
-// startWorkerControl creates the private Realm supervision endpoint.
+// startWorkerControl binds the private Realm channel used for readiness, drain,
+// checkpoint, and membership operations; it is not a player-facing API.
 func startWorkerControl(
 	host *gameserver.Host,
 	quicServer *sessionquic.Server,
@@ -74,7 +76,8 @@ func startWorkerControl(
 	return control, drain, nil
 }
 
-// drainWorker fences public traffic after notifying the worker coordinator.
+// drainWorker closes the admission fence before transport shutdown so no new
+// player can race with a Realm-requested drain after the worker acknowledges it.
 func drainWorker(drain chan<- struct{}, quicServer *sessionquic.Server) func() {
 	return func() {
 		select {
@@ -86,7 +89,8 @@ func drainWorker(drain chan<- struct{}, quicServer *sessionquic.Server) func() {
 	}
 }
 
-// publishWorkerReadiness writes the owner-only rendezvous consumed by the Realm.
+// publishWorkerReadiness atomically advertises a fully initialized worker through
+// an owner-only file containing the private control and public game endpoints.
 func publishWorkerReadiness(
 	control *serverapp.WorkerControlServer,
 	quicServer *sessionquic.Server,
@@ -121,7 +125,8 @@ func publishWorkerReadiness(
 	return path, nil
 }
 
-// closeWorkerControl bounds the private control server shutdown.
+// closeWorkerControl gives supervision a short graceful-close window, preventing
+// a stuck private request from indefinitely delaying child-process exit.
 func closeWorkerControl(control *serverapp.WorkerControlServer) {
 	if control != nil {
 		_ = control.Close(context.Background())

@@ -6,7 +6,8 @@ import (
 	entryworld "github.com/gravestench/dark-magic/internal/mod/d2legacy/adapter/entryworld"
 )
 
-// syncActiveWorldFromPlayer follows an authoritative level change in presentation state.
+// syncActiveWorldFromPlayer observes the controlled player's committed location and updates map
+// presentation only afterward. It never initiates or authorizes a transition itself.
 func (app *application) syncActiveWorldFromPlayer() {
 	engine := app.presentationSimulation()
 	if engine == nil {
@@ -23,7 +24,8 @@ func (app *application) syncActiveWorldFromPlayer() {
 	app.activateWorld(levelID)
 }
 
-// presentationPlayerID returns the connected player identity or the local fallback.
+// presentationPlayerID uses the authority-issued connected player ID when available and the stable
+// offline ID otherwise, allowing one lookup path across both ownership models.
 func (app *application) presentationPlayerID() string {
 	if app.network == nil {
 		return "local-player"
@@ -37,7 +39,8 @@ func (app *application) presentationPlayerID() string {
 	return playerID
 }
 
-// controlledPlayerLevel finds one controlled player's authoritative level.
+// controlledPlayerLevel joins control ownership to location on the same entity. Matching by player
+// label or the first location would let a peer or stale entity drive the active world.
 func controlledPlayerLevel(world *akara.World, playerID string) (int, bool) {
 	controls, found := akara.GetDynamicStore(world, "d2legacy.world.player_control")
 	if !found {
@@ -70,7 +73,8 @@ func controlledPlayerLevel(world *akara.World, playerID string) (int, bool) {
 	return 0, false
 }
 
-// transitionBootstrapData exports collision-derived seam geometry without interpreting it.
+// transitionBootstrapData copies the generated seam into Lua's bootstrap shape. Go does not
+// reinterpret coordinates, preserving the generator as the single geometry authority.
 func (app *application) transitionBootstrapData() map[string]any {
 	app.worldMu.RLock()
 	seam := app.transitionSeam
@@ -79,7 +83,8 @@ func (app *application) transitionBootstrapData() map[string]any {
 	return entryworld.TransitionData(seam)
 }
 
-// warpBootstrapData supplies a synthetic paired portal only to Warp Lab.
+// warpBootstrapData creates paired portals solely for the named acceptance scene. Production scenes
+// receive the same empty schema shape and cannot accidentally enable fixture traversal.
 func (app *application) warpBootstrapData() map[string]any {
 	if app.options.StartScene != "warp_lab" {
 		return emptyWarpBootstrap()
@@ -129,12 +134,14 @@ func (app *application) warpBootstrapData() map[string]any {
 	}
 }
 
-// emptyWarpBootstrap returns the stable no-endpoints shape consumed by Lua.
+// emptyWarpBootstrap preserves the Lua schema even when the fixture is disabled, eliminating nil and
+// missing-field branches from gameplay bootstrap code.
 func emptyWarpBootstrap() map[string]any {
 	return map[string]any{"endpoints": []any{}}
 }
 
-// openWarpPoint selects a collision-safe offset or falls back to the supplied anchor.
+// openWarpPoint prefers a nearby collision-safe fixture position but falls back to the already valid
+// generated anchor when no requested offset can fit.
 func openWarpPoint(
 	worldMap *gameworld.Map,
 	anchor [2]float64,
@@ -153,7 +160,8 @@ func openWarpPoint(
 	return [2]float64{x, y}
 }
 
-// warpEndpointData converts one portal and destination into Lua bootstrap data.
+// warpEndpointData includes destination bounds from trusted maps and adds room residency only when
+// the generated zone can resolve it. Lua receives no guessed room identity.
 func (app *application) warpEndpointData(
 	id string,
 	pairID string,

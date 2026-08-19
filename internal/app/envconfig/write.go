@@ -5,7 +5,8 @@ import (
 	"path/filepath"
 )
 
-// writePrivate atomically replaces a file with owner-only permissions.
+// writePrivate writes through a sibling temporary file and rename so readers see
+// either the old or new complete document, never a truncated secret-bearing file.
 func writePrivate(path string, data []byte) error {
 	temporary, err := os.CreateTemp(filepath.Dir(path), ".env-*")
 	if err != nil {

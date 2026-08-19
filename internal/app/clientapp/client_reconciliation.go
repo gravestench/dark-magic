@@ -11,7 +11,8 @@ import (
 	playeradapter "github.com/gravestench/dark-magic/internal/mod/d2legacy/adapter/player"
 )
 
-// reconcile presents the newest connected-session state at the current wall-clock time.
+// reconcile samples the network timeline against wall-clock time. Keeping clock acquisition at this
+// edge makes reconcileAt deterministic for tests and replayable scenarios.
 func (world *clientWorld) reconcile(
 	app *application,
 	session *clientsession.Session,
@@ -20,7 +21,9 @@ func (world *clientWorld) reconcile(
 	return world.reconcileAt(app, session, elapsed, time.Now())
 }
 
-// reconcileAt combines authoritative corrections, delayed peers, and local prediction.
+// reconcileAt installs each authenticated revision, presents peers on the delayed interpolation
+// timeline, and predicts only the local player. Those timelines intentionally differ to trade peer
+// latency for smoothness without adding local input latency.
 func (world *clientWorld) reconcileAt(
 	app *application,
 	session *clientsession.Session,
@@ -53,7 +56,9 @@ func (world *clientWorld) reconcileAt(
 	return world.presentLocalPrediction(app, session, presentation.HUD, timeline, elapsed, corrected)
 }
 
-// installCanonicalPresentation applies each correction revision exactly once.
+// installCanonicalPresentation applies discrete projection changes once per view revision while
+// retaining every newer world tick in interpolation history. Separating those revisions prevents
+// repeated entity churn when only transform sampling advances.
 func (world *clientWorld) installCanonicalPresentation(
 	app *application,
 	presentation *clientsession.PresentationSnapshot,
@@ -90,7 +95,8 @@ func (world *clientWorld) installCanonicalPresentation(
 	return corrected, nil
 }
 
-// presentRemoteHistory samples peers from the delayed interpolation timeline.
+// presentRemoteHistory updates the remote roster only when discrete membership changes, but applies
+// sampled transforms every frame. This avoids rebuilding mirrors merely to interpolate movement.
 func (world *clientWorld) presentRemoteHistory(
 	app *application,
 	hud playeradapter.HUD,
@@ -114,7 +120,9 @@ func (world *clientWorld) presentRemoteHistory(
 	return app.applySampledWorldPositions(sample.entities)
 }
 
-// presentLocalPrediction replays pending input and projects correction error smoothly.
+// presentLocalPrediction replays unacknowledged input from the canonical HUD, then decays any newly
+// observed correction error through presentation. Persistent states and animation still follow the
+// authenticated timeline rather than speculative input.
 func (world *clientWorld) presentLocalPrediction(
 	app *application,
 	session *clientsession.Session,
@@ -163,7 +171,9 @@ func (world *clientWorld) presentLocalPrediction(
 	return nil
 }
 
-// predictionCorrection measures the visible error introduced by a new correction.
+// predictionCorrection compares the old and new replay results only for the same player in the same
+// location. Crossing owner or world boundaries resets smoothing so stale error cannot drag a newly
+// loaded character or level.
 func (world *clientWorld) predictionCorrection(
 	app *application,
 	hud playeradapter.HUD,

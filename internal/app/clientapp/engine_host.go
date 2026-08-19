@@ -9,7 +9,8 @@ import (
 	"github.com/gravestench/dark-magic/internal/app/runtimeapi"
 )
 
-// startEngineHost registers and starts renderer, input, Lua, and debug services.
+// startEngineHost delegates lifecycle ordering to host after every definition is
+// known. No engine service may start before dependencies can be validated as a graph.
 func (app *application) startEngineHost() error {
 	app.components = host.NewManager()
 	app.engineHost = host.New()
@@ -23,7 +24,8 @@ func (app *application) startEngineHost() error {
 	return app.engineHost.Start(context.Background())
 }
 
-// engineHostDefinitions declares startup dependencies between engine services.
+// engineHostDefinitions is the executable dependency graph for native services.
+// The edges also determine safe reverse shutdown order, so changes have lifecycle implications.
 func (app *application) engineHostDefinitions() []host.Definition {
 	definitions := []host.Definition{
 		{ID: "engine.renderer", Component: app.renderer},

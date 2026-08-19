@@ -6,7 +6,8 @@ import (
 	"github.com/gravestench/akara"
 )
 
-// assertIronGolem verifies invalidation, item consumption, provenance, and local damage.
+// assertIronGolem proves effect-time target revalidation, successful item consumption, provenance,
+// and transferred local damage through the production item-targeted summon path.
 func (scenario *spellLabScenario) assertIronGolem(t *testing.T) {
 	t.Helper()
 
@@ -19,7 +20,8 @@ func (scenario *spellLabScenario) assertIronGolem(t *testing.T) {
 	scenario.assertIronGolemProvenance(t, iron, item)
 }
 
-// prepareIronGolemItem moves and validates the fixture weapon, then adds local damage.
+// prepareIronGolemItem moves a real identified metal weapon to ground through inventory commands and
+// adds a local damage modifier whose transfer can be observed after conversion.
 func (scenario *spellLabScenario) prepareIronGolemItem(t *testing.T) ironGolemItem {
 	t.Helper()
 
@@ -49,7 +51,8 @@ func (scenario *spellLabScenario) prepareIronGolemItem(t *testing.T) ironGolemIt
 	return item
 }
 
-// findIronGolemItem validates the identified metal weapon and records its base damage.
+// findIronGolemItem selects the fixture weapon by production material and identification facts, then
+// captures its base damage before any test mutation.
 func (scenario *spellLabScenario) findIronGolemItem(t *testing.T) ironGolemItem {
 	t.Helper()
 
@@ -84,7 +87,8 @@ func (scenario *spellLabScenario) findIronGolemItem(t *testing.T) ironGolemItem 
 	return ironGolemItem{}
 }
 
-// assertIronItemAvailable verifies material, identification, placement, and room activity.
+// assertIronItemAvailable checks every authority precondition for conversion, including active-room
+// residency; satisfying only visual ground placement would not make the item a valid target.
 func (scenario *spellLabScenario) assertIronItemAvailable(
 	t *testing.T,
 	entity akara.Entity,
@@ -115,7 +119,8 @@ func (scenario *spellLabScenario) assertIronItemAvailable(
 	}
 }
 
-// assertInvalidatedIronGolem proves effect-time revalidation preserves item and current summon.
+// assertInvalidatedIronGolem invalidates the item between cast start and effect, then requires both
+// item preservation and previous-summon retention. Failed casts must be transactionally harmless.
 func (scenario *spellLabScenario) assertInvalidatedIronGolem(
 	t *testing.T,
 	item ironGolemItem,
@@ -163,7 +168,8 @@ func (scenario *spellLabScenario) assertInvalidatedIronGolem(
 	}
 }
 
-// hasInvalidatedIronEvent finds the expected item-not-on-ground summon result.
+// hasInvalidatedIronEvent confirms authority reported the specific effect-time rejection instead of
+// inferring failure only from the absence of a new summon.
 func (scenario *spellLabScenario) hasInvalidatedIronEvent() bool {
 	events, _ := akara.GetDynamicStore(
 		scenario.fixture.app.entitySimulation.World(),
@@ -182,7 +188,8 @@ func (scenario *spellLabScenario) hasInvalidatedIronEvent() bool {
 	return false
 }
 
-// moveIronItem moves the fixture weapon through the production inventory command.
+// moveIronItem uses the production inventory command and fixed-tick advance so item placement,
+// ownership, and room indexes update through their real mechanisms.
 func (scenario *spellLabScenario) moveIronItem(
 	t *testing.T,
 	container string,
@@ -204,7 +211,8 @@ func (scenario *spellLabScenario) moveIronItem(
 	}
 }
 
-// assertIronGolemProvenance verifies item consumption and locally enhanced damage transfer.
+// assertIronGolemProvenance requires the source item to be consumed and its identity plus enhanced
+// local damage to appear on the summon, proving conversion used the selected item.
 func (scenario *spellLabScenario) assertIronGolemProvenance(
 	t *testing.T,
 	iron akara.Entity,

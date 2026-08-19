@@ -6,7 +6,8 @@ import (
 	"github.com/gravestench/dark-magic/internal/dev/profiling"
 )
 
-// startProfiler creates an optional profiling session from the command configuration.
+// startProfiler keeps profiling opt-in and process-owned. A nil session means
+// callers can run the normal client path without installing profiling hooks.
 func startProfiler(directory, scenes string) (*profiling.Session, error) {
 	if directory == "" {
 		return nil, nil
@@ -22,7 +23,8 @@ func startProfiler(directory, scenes string) (*profiling.Session, error) {
 	return profile, nil
 }
 
-// stopProfiler reports cleanup failures that occur after the client has stopped.
+// stopProfiler flushes final reports after client shutdown. At that point an
+// error cannot be returned through run, so logging is the remaining observable path.
 func stopProfiler(profile *profiling.Session) {
 	if err := profile.Stop(); err != nil {
 		slog.Error("finishing profiler", "error", err)

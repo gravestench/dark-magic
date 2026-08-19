@@ -7,8 +7,9 @@ import (
 	"strings"
 )
 
-// clientFlags holds pointers populated by the standard flag package.
-// It stays private because only this command translates flags into clientConfig.
+// clientFlags is the temporary mutable representation required by flag.Package.
+// It never crosses startup boundaries: config snapshots these pointers into a
+// value so the running client cannot depend on global parser state.
 type clientFlags struct {
 	logLevel            *string
 	profileDirectory    *string
@@ -30,7 +31,8 @@ type clientFlags struct {
 	mods                *string
 }
 
-// parseClientConfig registers the public command-line interface and snapshots its values.
+// parseClientConfig performs the command's only global flag parse, then freezes
+// the result into clientConfig before any owned runtime resources are created.
 func parseClientConfig(defaultEnvironmentPath string) (clientConfig, error) {
 	flags := registerClientFlags(defaultEnvironmentPath)
 
@@ -39,7 +41,9 @@ func parseClientConfig(defaultEnvironmentPath string) (clientConfig, error) {
 	return flags.config()
 }
 
-// registerClientFlags groups related flag families so the complete interface is easy to scan.
+// registerClientFlags assembles the public CLI by operational concern. Keeping
+// registration separate from conversion makes defaults auditable without mixing
+// them with cross-field validation or client startup.
 func registerClientFlags(defaultEnvironmentPath string) clientFlags {
 	_ = flag.String(
 		"env-file",
@@ -55,7 +59,8 @@ func registerClientFlags(defaultEnvironmentPath string) clientFlags {
 	return flags
 }
 
-// registerRuntimeFlags defines process-wide logging, profiling, and mod selection.
+// registerRuntimeFlags defines choices that affect the entire process rather
+// than an individual scene. These must be known before content and logging start.
 func registerRuntimeFlags(flags *clientFlags) {
 	flags.logLevel = flag.String(
 		"log-level",
@@ -79,7 +84,8 @@ func registerRuntimeFlags(flags *clientFlags) {
 	)
 }
 
-// registerCaptureFlags defines screenshot capture and scene-selection controls.
+// registerCaptureFlags defines automation-only scene and screenshot controls.
+// They remain command policy so ordinary clientapp composition is capture-agnostic.
 func registerCaptureFlags(flags *clientFlags) {
 	flags.captureDirectory = flag.String(
 		"capture-dir",
@@ -108,7 +114,8 @@ func registerCaptureFlags(flags *clientFlags) {
 	)
 }
 
-// registerFixtureFlags defines deterministic development-world controls.
+// registerFixtureFlags defines deterministic test/capture inputs. Naming them as
+// fixtures discourages gameplay code from treating these shortcuts as player policy.
 func registerFixtureFlags(flags *clientFlags) {
 	flags.fixtureCharacters = flag.Int(
 		"fixture-characters",
@@ -132,7 +139,8 @@ func registerFixtureFlags(flags *clientFlags) {
 	)
 }
 
-// registerDisplayFlags defines presentation, window, and audio controls.
+// registerDisplayFlags defines host presentation policy that must be selected
+// before the renderer and audio adapters are constructed.
 func registerDisplayFlags(flags *clientFlags) {
 	flags.outputPalette = flag.String(
 		"output-palette",
@@ -154,7 +162,8 @@ func registerDisplayFlags(flags *clientFlags) {
 	)
 }
 
-// config converts parsed flag pointers into an immutable command configuration.
+// config dereferences every parser-owned pointer exactly once and validates
+// values such as log level before startup can acquire content or OS resources.
 func (flags clientFlags) config() (clientConfig, error) {
 	logLevel, err := parseLogLevel(*flags.logLevel)
 	if err != nil {
@@ -183,7 +192,8 @@ func (flags clientFlags) config() (clientConfig, error) {
 	}, nil
 }
 
-// environmentDefault returns a non-empty environment value or the supplied fallback.
+// environmentDefault treats blank exported values as unset. This keeps a stray
+// empty shell assignment from disabling a documented command default.
 func environmentDefault(name, fallback string) string {
 	if value := strings.TrimSpace(os.Getenv(name)); value != "" {
 		return value

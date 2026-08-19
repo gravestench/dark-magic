@@ -16,7 +16,8 @@ import (
 	"github.com/gravestench/dark-magic/internal/video"
 )
 
-// registerLuaRuntime exposes host services, video, and presentation to scripts.
+// registerLuaRuntime installs capabilities in dependency order before scripts
+// start. A failed registration aborts composition so Lua never sees a partial host API.
 func (app *application) registerLuaRuntime() error {
 	if err := app.registerHostOverrideModules(); err != nil {
 		return err
@@ -33,7 +34,8 @@ func (app *application) registerLuaRuntime() error {
 	return app.registerPresentationModules()
 }
 
-// registerHostOverrideModules installs client-owned data and catalog adapters.
+// registerHostOverrideModules replaces distribution defaults with adapters tied
+// to this application's pinned records and state; duplicates are therefore intentional.
 func (app *application) registerHostOverrideModules() error {
 	for _, module := range app.hostOverrideLuaModules() {
 		if err := app.scripts.RegisterModuleOverride(module); err != nil {
@@ -44,7 +46,8 @@ func (app *application) registerHostOverrideModules() error {
 	return nil
 }
 
-// registerBaseLuaModules installs the engine services shared by client scripts.
+// registerBaseLuaModules exposes narrow engine capabilities rather than the
+// application object, limiting script authority to explicitly reviewed doors.
 func (app *application) registerBaseLuaModules() error {
 	for _, module := range app.baseLuaModules() {
 		if err := app.scripts.RegisterModule(module); err != nil {
@@ -55,7 +58,8 @@ func (app *application) registerBaseLuaModules() error {
 	return nil
 }
 
-// hostOverrideLuaModules returns adapters that replace distribution defaults.
+// hostOverrideLuaModules lists modules whose behavior must follow live client
+// composition instead of package-provided defaults, such as current world and saves.
 func (app *application) hostOverrideLuaModules() []modruntime.Module {
 	return []modruntime.Module{
 		modruntime.DataModule(
@@ -67,7 +71,8 @@ func (app *application) hostOverrideLuaModules() []modruntime.Module {
 	}
 }
 
-// baseLuaModules returns narrow doors into engine-owned services.
+// baseLuaModules declares the stable script-facing capability surface. Ordering
+// here is registration order, not an invitation for modules to depend implicitly.
 func (app *application) baseLuaModules() []modruntime.Module {
 	return []modruntime.Module{
 		// Process and content services.
@@ -100,7 +105,8 @@ func (app *application) baseLuaModules() []modruntime.Module {
 	}
 }
 
-// registerVideoModule installs embedded playback and viewport resize handling.
+// registerVideoModule selects one native decoder and attaches resize handling only
+// after Lua registration succeeds, avoiding callbacks into an unavailable module.
 func (app *application) registerVideoModule() error {
 	backend := newClientVideoBackend(app.composer, app.mixer, app.renderWindow)
 	if resizable, ok := backend.(interface{ Resize(image.Point) error }); ok {
@@ -112,7 +118,8 @@ func (app *application) registerVideoModule() error {
 	return app.scripts.RegisterModule(module)
 }
 
-// subscribeVideoViewport keeps cinematic output aligned with window size.
+// subscribeVideoViewport stores the unsubscribe callback on application so resize
+// delivery is detached before the video backend closes during shutdown.
 func (app *application) subscribeVideoViewport(resizable interface{ Resize(image.Point) error }) {
 	// The renderer owns this callback for the same lifetime as the video backend.
 	app.renderer.SubscribeViewport(func(width, height int) {
@@ -122,7 +129,8 @@ func (app *application) subscribeVideoViewport(resizable interface{ Resize(image
 	})
 }
 
-// newClientVideoBackend constructs the embedded video implementation.
+// newClientVideoBackend contains the concrete decoder choice at composition time,
+// keeping modruntime dependent only on its video capability contract.
 func newClientVideoBackend(
 	composer *render.Composer,
 	mixer *audio.Mixer,
@@ -131,7 +139,8 @@ func newClientVideoBackend(
 	return video.NewEmbeddedBackend(composer, mixer, window)
 }
 
-// registerPresentationModules exposes composition and scene navigation to Lua.
+// registerPresentationModules gives Lua presentation control but not simulation
+// authority; navigation and composition operate on views produced by native state.
 func (app *application) registerPresentationModules() error {
 	renderCapability := modruntime.NewRenderCapability(
 		app.scripts,
@@ -152,7 +161,8 @@ func (app *application) registerPresentationModules() error {
 	return nil
 }
 
-// installProfileDiagnostics supplies optional profiling with live backend state.
+// installProfileDiagnostics adds renderer diagnostics only when profiling exists,
+// keeping production startup free of diagnostic probes and their retention costs.
 func (app *application) installProfileDiagnostics(capability *modruntime.RenderCapability) {
 	if app.options.Profile == nil {
 		return
@@ -171,7 +181,8 @@ func (app *application) installProfileDiagnostics(capability *modruntime.RenderC
 	})
 }
 
-// BuildVersion turns Go build metadata into a friendly script-facing string.
+// BuildVersion reports module version plus source revision when available, giving
+// scripts and diagnostics a reproducible identity without shelling out to Git.
 func BuildVersion() string {
 	info, ok := debug.ReadBuildInfo()
 	if !ok || info.Main.Version == "" || info.Main.Version == "(devel)" {

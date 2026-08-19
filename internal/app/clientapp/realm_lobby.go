@@ -10,14 +10,16 @@ import (
 
 const defaultRealmChannel = "Diablo II"
 
-// realmRefreshCursor snapshots the state needed to incrementally refresh the lobby.
+// realmRefreshCursor freezes membership, selection, and event progress before network I/O. Refresh
+// results can then be applied consistently even though the controller lock is not held during I/O.
 type realmRefreshCursor struct {
 	channelName   string
 	selectedGame  string
 	afterSequence uint64
 }
 
-// JoinChannel joins a lobby channel and loads its initial events and game directory.
+// JoinChannel publishes channel, history, and directory together after all three requests succeed.
+// The frontend never observes a joined channel paired with stale lobby data.
 func (controller *realmController) JoinChannel(channel string) error {
 	return controller.start("joining_channel", func(ctx context.Context, client realmAPI) error {
 		view, events, games, err := loadRealmLobby(ctx, client, channel)
@@ -36,7 +38,8 @@ func (controller *realmController) JoinChannel(channel string) error {
 	})
 }
 
-// loadRealmLobby loads a newly joined channel in the order expected by the UI.
+// loadRealmLobby establishes membership before requesting member-scoped history and directory data.
+// Failure returns no partial view for the controller to publish.
 func loadRealmLobby(
 	ctx context.Context,
 	client realmAPI,
@@ -60,7 +63,8 @@ func loadRealmLobby(
 	return view, events, games, nil
 }
 
-// SendMessage publishes a chat event and then refreshes the lobby view.
+// SendMessage relies on the subsequent incremental refresh to install the canonical event. Locally
+// appending the response could duplicate it when the event stream catches up.
 func (controller *realmController) SendMessage(message string) error {
 	return controller.start("sending_message", func(ctx context.Context, client realmAPI) error {
 		if _, err := client.SendMessage(ctx, message); err != nil {
@@ -71,12 +75,14 @@ func (controller *realmController) SendMessage(message string) error {
 	})
 }
 
-// Refresh asynchronously reloads the active lobby's mutable state.
+// Refresh uses the shared serialized operation runner so periodic UI refresh cannot overlap account,
+// channel, or game transitions.
 func (controller *realmController) Refresh() error {
 	return controller.start("refreshing", controller.refresh)
 }
 
-// SelectGame loads a game detail view or clears the current selection.
+// SelectGame clears locally for an empty reference, otherwise stores only server-resolved detail.
+// This keeps player rosters and join metadata tied to a current directory entry.
 func (controller *realmController) SelectGame(reference string) error {
 	reference = strings.TrimSpace(reference)
 	if reference == "" {
@@ -102,7 +108,8 @@ func (controller *realmController) SelectGame(reference string) error {
 	})
 }
 
-// refresh reloads channel presence, new chat events, games, and selected-game detail.
+// refresh renews membership if necessary, obtains directory and incremental events, publishes them
+// atomically, then synchronizes the optional detail panel against the refreshed directory.
 func (controller *realmController) refresh(ctx context.Context, client realmAPI) error {
 	cursor := controller.refreshCursor()
 
@@ -126,7 +133,8 @@ func (controller *realmController) refresh(ctx context.Context, client realmAPI)
 	return controller.refreshSelectedGame(ctx, client, cursor.selectedGame)
 }
 
-// refreshCursor captures the incremental event cursor before issuing network requests.
+// refreshCursor uses the last installed event sequence, not wall-clock time, so refresh neither
+// duplicates nor skips events under clock skew.
 func (controller *realmController) refreshCursor() realmRefreshCursor {
 	controller.mu.RLock()
 	defer controller.mu.RUnlock()
@@ -142,7 +150,8 @@ func (controller *realmController) refreshCursor() realmRefreshCursor {
 	return cursor
 }
 
-// refreshRealmChannel renews presence when server-side pruning removed the member.
+// refreshRealmChannel treats missing membership as recoverable and resets the event cursor after
+// rejoin. A cursor from the old membership cannot safely index the new channel view.
 func refreshRealmChannel(
 	ctx context.Context,
 	client realmAPI,
@@ -168,7 +177,8 @@ func refreshRealmChannel(
 	return view, 0, true, nil
 }
 
-// applyLobbyRefresh atomically publishes a complete channel refresh.
+// applyLobbyRefresh replaces history after rejoin but appends it for normal incremental refresh.
+// Both cases publish channel, games, events, and phase inside one state mutation.
 func (controller *realmController) applyLobbyRefresh(
 	view realm.ChannelView,
 	games []realm.GameDirectoryEntry,
@@ -190,7 +200,8 @@ func (controller *realmController) applyLobbyRefresh(
 	})
 }
 
-// refreshSelectedGame keeps the open detail view synchronized with the directory.
+// refreshSelectedGame refreshes an open detail panel and clears it when the game disappears. Other
+// failures remain visible because silently clearing on transport errors would misrepresent state.
 func (controller *realmController) refreshSelectedGame(
 	ctx context.Context,
 	client realmAPI,

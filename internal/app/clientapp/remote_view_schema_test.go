@@ -9,7 +9,8 @@ import (
 	playeradapter "github.com/gravestench/dark-magic/internal/mod/d2legacy/adapter/player"
 )
 
-// registerRemoteViewSchemas installs the minimal disposable ECS used by tests.
+// registerRemoteViewSchemas installs the same allowlisted component shapes needed by connected
+// projection while omitting unrelated production systems.
 func registerRemoteViewSchemas(t *testing.T, engine *gameecs.Engine) {
 	t.Helper()
 
@@ -20,7 +21,8 @@ func registerRemoteViewSchemas(t *testing.T, engine *gameecs.Engine) {
 	}
 }
 
-// remoteViewTestSchemas groups the allowlisted fields by their ECS component.
+// remoteViewTestSchemas declares projection schemas explicitly so tests fail when production writes a
+// field that was not intentionally exposed.
 func remoteViewTestSchemas() []akara.Schema {
 	return []akara.Schema{
 		remoteTestSchema("d2legacy.player.identity",
@@ -127,7 +129,8 @@ func remoteViewTestSchemas() []akara.Schema {
 	}
 }
 
-// remoteMissileTestFields describes presentation-only projectile data.
+// remoteMissileTestFields excludes collision and damage by construction, making authority leakage a
+// schema failure.
 func remoteMissileTestFields() []akara.Field {
 	return remoteTestFieldGroups(
 		remoteTestFields(akara.FieldString, "missile_id", "dcc", "palette"),
@@ -143,7 +146,7 @@ func remoteMissileTestFields() []akara.Field {
 	)
 }
 
-// remotePartyTestFields builds the fixed owner-scoped party view schema.
+// remotePartyTestFields builds every fixed roster slot so shortening a party can be tested for stale data.
 func remotePartyTestFields() []akara.Field {
 	fields := remoteTestFieldGroups(
 		remoteTestFields(akara.FieldInt64, "schema_version", "revision", "roster_count"),
@@ -164,7 +167,7 @@ func remotePartyTestFields() []akara.Field {
 	return fields
 }
 
-// remoteItemLayoutTestFields describes owner inventory dimensions and gold.
+// remoteItemLayoutTestFields covers the private graph root without adding item behavior fields.
 func remoteItemLayoutTestFields() []akara.Field {
 	return remoteTestFieldGroups(
 		remoteTestFields(akara.FieldString, "owner"),
@@ -177,7 +180,7 @@ func remoteItemLayoutTestFields() []akara.Field {
 	)
 }
 
-// remoteItemIdentityTestFields describes immutable private item facts.
+// remoteItemIdentityTestFields allowlists stable owner-visible item identity used by inventory UI.
 func remoteItemIdentityTestFields() []akara.Field {
 	return remoteTestFieldGroups(
 		remoteTestFields(akara.FieldEntity, "owner"),
@@ -187,7 +190,7 @@ func remoteItemIdentityTestFields() []akara.Field {
 	)
 }
 
-// remoteItemPlacementTestFields describes inventory and equipment placement.
+// remoteItemPlacementTestFields covers each mutually applicable container and equipment coordinate.
 func remoteItemPlacementTestFields() []akara.Field {
 	return remoteTestFieldGroups(
 		remoteTestFields(akara.FieldString, "container", "slot"),
@@ -195,7 +198,7 @@ func remoteItemPlacementTestFields() []akara.Field {
 	)
 }
 
-// remoteItemPresentationTestFields describes private item render assets.
+// remoteItemPresentationTestFields restricts private item projection to render asset identifiers.
 func remoteItemPresentationTestFields() []akara.Field {
 	return remoteTestFieldGroups(
 		remoteTestFields(
@@ -206,7 +209,7 @@ func remoteItemPresentationTestFields() []akara.Field {
 	)
 }
 
-// remoteInteractionTargetTestFields describes the selected interaction target.
+// remoteInteractionTargetTestFields includes only owner-visible target and service metadata.
 func remoteInteractionTargetTestFields() []akara.Field {
 	return remoteTestFieldGroups(
 		remoteTestFields(akara.FieldString, "id", "npc", "vendor", "categories", "services"),
@@ -214,7 +217,7 @@ func remoteInteractionTargetTestFields() []akara.Field {
 	)
 }
 
-// remoteCastCueTestFields describes the allowlisted cast event shape.
+// remoteCastCueTestFields contains presentation timing and targeting without skill execution authority.
 func remoteCastCueTestFields() []akara.Field {
 	return remoteTestFieldGroups(
 		remoteTestFields(akara.FieldString, "kind", "player", "target_id"),
@@ -224,7 +227,7 @@ func remoteCastCueTestFields() []akara.Field {
 	)
 }
 
-// remoteStateEventTestFields describes the allowlisted state event shape.
+// remoteStateEventTestFields captures lifecycle cues while omitting state magnitude and effect policy.
 func remoteStateEventTestFields() []akara.Field {
 	return remoteTestFieldGroups(
 		remoteTestFields(akara.FieldString, "kind", "state_id", "source_id", "reason"),
@@ -233,7 +236,7 @@ func remoteStateEventTestFields() []akara.Field {
 	)
 }
 
-// remoteSelectableTestFields describes pointer-selectable public entities.
+// remoteSelectableTestFields defines the public pointer-selection facts shared by units and corpses.
 func remoteSelectableTestFields() []akara.Field {
 	return remoteTestFieldGroups(
 		remoteTestFields(akara.FieldString, "id", "kind", "label", "owner"),
@@ -242,12 +245,12 @@ func remoteSelectableTestFields() []akara.Field {
 	)
 }
 
-// remoteTestSchema combines same-kind field groups into one schema.
+// remoteTestSchema assembles readable field groups into the exact dynamic schema expected by projection.
 func remoteTestSchema(name string, groups ...[]akara.Field) akara.Schema {
 	return akara.Schema{Name: name, Fields: remoteTestFieldGroups(groups...)}
 }
 
-// remoteTestFieldGroups flattens readable same-kind groups in declaration order.
+// remoteTestFieldGroups preserves declaration order while allowing schemas to be documented by domain.
 func remoteTestFieldGroups(groups ...[]akara.Field) []akara.Field {
 	var fields []akara.Field
 
@@ -258,7 +261,7 @@ func remoteTestFieldGroups(groups ...[]akara.Field) []akara.Field {
 	return fields
 }
 
-// remoteTestFields creates several fields sharing one storage kind.
+// remoteTestFields removes repetitive declarations without hiding each field's storage kind.
 func remoteTestFields(kind akara.FieldKind, names ...string) []akara.Field {
 	fields := make([]akara.Field, 0, len(names))
 
@@ -269,7 +272,7 @@ func remoteTestFields(kind akara.FieldKind, names ...string) []akara.Field {
 	return fields
 }
 
-// remoteTestField creates one dynamic schema field.
+// remoteTestField centralizes the dynamic-field descriptor used by the projection test registry.
 func remoteTestField(name string, kind akara.FieldKind) akara.Field {
 	return akara.Field{Name: name, Kind: kind}
 }

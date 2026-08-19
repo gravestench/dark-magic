@@ -9,7 +9,8 @@ import (
 	"github.com/gravestench/dark-magic/internal/content"
 )
 
-// preparePortalAssets builds the optional game-art cache used by the Realm portal.
+// preparePortalAssets isolates optional copyrighted game-art preparation from
+// the control plane. The portal can still serve account flows when no asset source exists.
 func preparePortalAssets(directory string) (*portalassets.Cache, func(), error) {
 	if os.Getenv("MPQ_DIRECTORY") == "" {
 		return nil, func() {}, nil

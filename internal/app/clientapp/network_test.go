@@ -18,8 +18,8 @@ import (
 	d2save "github.com/gravestench/dark-magic/internal/mod/d2legacy/adapter/save"
 )
 
-// TestNetworkControllerDefersHostUntilCharacterSelection verifies that host
-// construction cannot begin before the user chooses an offline character.
+// TestNetworkControllerDefersHostUntilCharacterSelection keeps character selection as the identity
+// boundary: requesting host alone cannot create authority or a connected client.
 func TestNetworkControllerDefersHostUntilCharacterSelection(t *testing.T) {
 	app := &application{ctx: context.Background(), saves: d2save.New()}
 	controller := newNetworkController(app)
@@ -36,8 +36,8 @@ func TestNetworkControllerDefersHostUntilCharacterSelection(t *testing.T) {
 	}
 }
 
-// TestNetworkControllerSamplesFixedInputClockIndependentlyOfCorrections checks
-// that renderer time, rather than correction arrival, drives input sampling.
+// TestNetworkControllerSamplesFixedInputClockIndependentlyOfCorrections proves input cadence follows
+// elapsed render time, so correction jitter cannot speed up or stall player commands.
 func TestNetworkControllerSamplesFixedInputClockIndependentlyOfCorrections(t *testing.T) {
 	controller := newNetworkController(&application{})
 
@@ -51,8 +51,8 @@ func TestNetworkControllerSamplesFixedInputClockIndependentlyOfCorrections(t *te
 	}
 }
 
-// TestEmptyGeneralIntentMailboxDoesNotConsumeJoiningClientsMovementTick checks
-// that an empty generic mailbox cannot advance fixed-step movement sequencing.
+// TestEmptyGeneralIntentMailboxDoesNotConsumeJoiningClientsMovementTick ensures an empty unrelated
+// command drain cannot suppress the next fixed-step movement sample.
 func TestEmptyGeneralIntentMailboxDoesNotConsumeJoiningClientsMovementTick(t *testing.T) {
 	now := time.Unix(700, 0)
 	app := &application{commandIntents: &gamesession.IntentController{}}
@@ -71,8 +71,8 @@ func TestEmptyGeneralIntentMailboxDoesNotConsumeJoiningClientsMovementTick(t *te
 	}
 }
 
-// TestPendingMovementPredictionReplaysFromCanonicalPosition verifies that
-// prediction replays unacknowledged input from the latest authority position.
+// TestPendingMovementPredictionReplaysFromCanonicalPosition requires pending input replay to restart
+// at the newest canonical position, preventing accumulated correction drift.
 func TestPendingMovementPredictionReplaysFromCanonicalPosition(t *testing.T) {
 	catalog, err := movement.LoadCatalog(predictionMovementRecords{})
 	if err != nil {
@@ -104,10 +104,11 @@ func TestPendingMovementPredictionReplaysFromCanonicalPosition(t *testing.T) {
 	}
 }
 
-// predictionMovementRecords supplies the minimal movement catalog used here.
+// predictionMovementRecords supplies deterministic class rates while leaving production movement
+// resolution unchanged.
 type predictionMovementRecords struct{}
 
-// Load returns one deterministic Amazon movement record.
+// Load returns the minimal Amazon row needed to resolve walking and running rates reproducibly.
 func (predictionMovementRecords) Load(string) ([]map[string]string, error) {
 	return []map[string]string{{
 		"class": "Amazon", "WalkVelocity": "6", "RunVelocity": "9",
@@ -115,8 +116,8 @@ func (predictionMovementRecords) Load(string) ([]map[string]string, error) {
 	}}, nil
 }
 
-// TestNetworkControllerActivatesLocalSessionOnlyAfterSelection verifies that
-// the frontend becomes local gameplay only after a selected save is accepted.
+// TestNetworkControllerActivatesLocalSessionOnlyAfterSelection ensures entering the frontend does not
+// implicitly grant local authority before a durable save is selected.
 func TestNetworkControllerActivatesLocalSessionOnlyAfterSelection(t *testing.T) {
 	character := d2save.Character{ID: "hero", Name: "Hero", Class: "Amazon"}
 	saves := d2save.New(character)
@@ -135,8 +136,8 @@ func TestNetworkControllerActivatesLocalSessionOnlyAfterSelection(t *testing.T) 
 	}
 }
 
-// TestNetworkControllerAcceptsAuthenticatedRealmCharacterForLoading verifies
-// that Realm admission, not offline saves, satisfies the loading dependency.
+// TestNetworkControllerAcceptsAuthenticatedRealmCharacterForLoading proves a signed Realm admission
+// can satisfy loading without an unrelated offline save selection.
 func TestNetworkControllerAcceptsAuthenticatedRealmCharacterForLoading(t *testing.T) {
 	controller := newNetworkController(&application{})
 	controller.phase = "connected"
@@ -153,8 +154,8 @@ func TestNetworkControllerAcceptsAuthenticatedRealmCharacterForLoading(t *testin
 	}
 }
 
-// TestNetworkControllerRealmLoadingDoesNotDependOnTransientHUDProjection checks
-// that loading survives an admitted character's temporarily empty HUD view.
+// TestNetworkControllerRealmLoadingDoesNotDependOnTransientHUDProjection keeps durable admission
+// identity separate from a temporarily empty presentation snapshot during startup or recovery.
 func TestNetworkControllerRealmLoadingDoesNotDependOnTransientHUDProjection(t *testing.T) {
 	app := &application{saves: d2save.New()}
 	controller := newNetworkController(app)
@@ -183,8 +184,8 @@ func TestNetworkControllerRealmLoadingDoesNotDependOnTransientHUDProjection(t *t
 	}
 }
 
-// TestNetworkControllerKeepsStartFailuresAndNormalizesDirectJoin verifies both
-// frontend error visibility and default direct-server port selection.
+// TestNetworkControllerKeepsStartFailuresAndNormalizesDirectJoin proves validation errors remain
+// visible to the frontend and every later join stage receives a canonical endpoint.
 func TestNetworkControllerKeepsStartFailuresAndNormalizesDirectJoin(t *testing.T) {
 	app := &application{ctx: context.Background(), saves: d2save.New()}
 	controller := newNetworkController(app)
@@ -215,8 +216,8 @@ func TestNetworkControllerKeepsStartFailuresAndNormalizesDirectJoin(t *testing.T
 	}
 }
 
-// TestNetworkControllerSamplesMovementOncePerAuthoritativeTick verifies that
-// repeated render frames cannot resample the same authority tick.
+// TestNetworkControllerSamplesMovementOncePerAuthoritativeTick prevents fast renderers or concurrent
+// callers from duplicating input on one simulation tick.
 func TestNetworkControllerSamplesMovementOncePerAuthoritativeTick(t *testing.T) {
 	controller := newNetworkController(&application{})
 	if !controller.sampleMovement(12) {
@@ -232,8 +233,8 @@ func TestNetworkControllerSamplesMovementOncePerAuthoritativeTick(t *testing.T) 
 	}
 }
 
-// TestNetworkControllerSendsOneStopAfterActiveMovement verifies that movement
-// emits one transition to idle without flooding repeated stop commands.
+// TestNetworkControllerSendsOneStopAfterActiveMovement preserves the required active-to-idle command
+// while proving later idle samples do not flood the bounded queue.
 func TestNetworkControllerSendsOneStopAfterActiveMovement(t *testing.T) {
 	controller := newNetworkController(&application{})
 	if controller.movementRequired(false) {
@@ -255,8 +256,8 @@ func TestNetworkControllerSendsOneStopAfterActiveMovement(t *testing.T) {
 	}
 }
 
-// TestMovementCommandActivityDistinguishesValidMovement verifies that malformed
-// or unrelated commands remain on the generic submission path.
+// TestMovementCommandActivityDistinguishesValidMovement ensures stop suppression changes only for
+// valid movement payloads and does not consume unrelated or malformed commands.
 func TestMovementCommandActivityDistinguishesValidMovement(t *testing.T) {
 	payload, err := json.Marshal(movement.MovePayload{X: 1})
 	if err != nil {
@@ -280,8 +281,8 @@ func TestMovementCommandActivityDistinguishesValidMovement(t *testing.T) {
 	}
 }
 
-// TestNetworkRecipeRejectsDifferentLocalAssetSet verifies that package identity
-// cannot hide incompatible external game assets.
+// TestNetworkRecipeRejectsDifferentLocalAssetSet proves identical package files are insufficient when
+// external assets differ, because those assets also affect deterministic runtime behavior.
 func TestNetworkRecipeRejectsDifferentLocalAssetSet(t *testing.T) {
 	recipe := simulation.RuntimeRecipe{AssetSetID: simulation.EmptyAssetSetID}
 	if err := validateLocalAssetSet(recipe, simulation.EmptyAssetSetID); err != nil {
@@ -294,7 +295,8 @@ func TestNetworkRecipeRejectsDifferentLocalAssetSet(t *testing.T) {
 	}
 }
 
-// networkTestClient returns a client with a deterministic authority clock.
+// networkTestClient provides a deterministic authority clock without opening transport, isolating
+// input timeline behavior in controller tests.
 func networkTestClient(tick uint64) *clientsession.Session {
 	return &clientsession.Session{
 		Admission: gameserver.JoinResponse{

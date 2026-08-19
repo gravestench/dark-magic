@@ -14,7 +14,8 @@ import (
 	"github.com/gravestench/dark-magic/internal/mod/d2legacy/data/recovered"
 )
 
-// serverContent owns the mounted content and prepared authoritative entry world.
+// serverContent keeps mounted packages beside the records and maps derived from
+// them. This ownership ensures derived authority cannot outlive its pinned content view.
 type serverContent struct {
 	mods           *distribution.ModSet
 	contentFS      *content.FS
@@ -24,7 +25,8 @@ type serverContent struct {
 	entryWorld     *entryworld.Prepared
 }
 
-// prepareServerContent mounts mods, loads records, and builds the initial world.
+// prepareServerContent establishes one immutable content generation before the
+// host exists. Any failure closes mounts immediately, avoiding half-owned assets.
 func prepareServerContent(ctx context.Context, config serverConfig) (*serverContent, error) {
 	mods, err := distribution.PrepareMods(config.mods)
 	if err != nil {
@@ -40,7 +42,8 @@ func prepareServerContent(ctx context.Context, config serverConfig) (*serverCont
 	return prepared, nil
 }
 
-// buildServerContent completes preparation after mod ownership has been established.
+// buildServerContent derives records, runtime identity inputs, and entry maps
+// from the same resolved package set so clients can verify a coherent generation.
 func buildServerContent(
 	ctx context.Context,
 	mods *distribution.ModSet,
@@ -80,7 +83,8 @@ func buildServerContent(
 	}, nil
 }
 
-// prepareEntryWorld resolves recovered data and materializes the authoritative maps.
+// prepareEntryWorld builds collision and admission geometry before session start;
+// players must never join an authority whose destination maps are still partial.
 func prepareEntryWorld(
 	ctx context.Context,
 	contentFS *content.FS,
@@ -114,7 +118,8 @@ func prepareEntryWorld(
 	return world, nil
 }
 
-// close releases the mounted mod packages.
+// close releases the package mounts that back every prepared record and map.
+// Callers must close the host first so no runtime reads from an invalidated view.
 func (prepared *serverContent) close() error {
 	return prepared.mods.Close()
 }

@@ -11,7 +11,9 @@ import (
 	"github.com/gravestench/dark-magic/internal/logging"
 )
 
-// realmConfig is the immutable process policy used to assemble a Realm.
+// realmConfig freezes public process policy before repositories, listeners, or
+// worker supervision start. This prevents long-lived services from consulting
+// mutable flag globals while handling requests.
 type realmConfig struct {
 	logLevel                slog.Level
 	logLevelName            string
@@ -37,7 +39,8 @@ type realmConfig struct {
 	adminShell              bool
 }
 
-// parseRealmConfig defines the command interface and returns validated flag values.
+// parseRealmConfig establishes the complete operator-facing CLI before resource
+// acquisition, allowing invalid cross-flag policy to fail without opening stores or ports.
 func parseRealmConfig(defaultEnvironmentPath string) (realmConfig, error) {
 	checkpointInterval, err := envconfig.Duration("DARK_MAGIC_REALM_CHECKPOINT_INTERVAL", 15*time.Second)
 	if err != nil {
@@ -68,7 +71,8 @@ func parseRealmConfig(defaultEnvironmentPath string) (realmConfig, error) {
 	return config, err
 }
 
-// registerRealmFlags groups related flag families behind descriptive helpers.
+// registerRealmFlags groups settings by operational responsibility so reviewers
+// can reason about public service, mail, worker, and private-operator exposure separately.
 func registerRealmFlags(config *realmConfig, defaultEnvironmentPath string) {
 	_ = flag.String("env-file", defaultEnvironmentPath, "environment file")
 
@@ -78,7 +82,8 @@ func registerRealmFlags(config *realmConfig, defaultEnvironmentPath string) {
 	registerOperatorFlags(config)
 }
 
-// registerCoreFlags defines network, storage, and control-plane timing policy.
+// registerCoreFlags defines identity and durability policy shared by every Realm
+// subsystem; these values must remain stable for the lifetime of issued sessions.
 func registerCoreFlags(config *realmConfig) {
 	flag.StringVar(
 		&config.logLevelName,
@@ -108,7 +113,8 @@ func registerCoreFlags(config *realmConfig) {
 	flag.DurationVar(&config.presenceTimeout, "presence-timeout", config.presenceTimeout, "unresponsive presence timeout")
 }
 
-// registerMailFlags defines account-link delivery policy.
+// registerMailFlags defines how security-sensitive account links leave the
+// process. Keeping delivery policy together makes unsafe mode changes conspicuous.
 func registerMailFlags(config *realmConfig) {
 	flag.StringVar(&config.accountBaseURL, "account-base-url", config.accountBaseURL, "public account-mail origin")
 	flag.StringVar(
@@ -123,7 +129,8 @@ func registerMailFlags(config *realmConfig) {
 	flag.BoolVar(&config.smtpRequireTLS, "smtp-require-tls", false, "require SMTP STARTTLS")
 }
 
-// registerWorkerFlags defines supervised game-worker policy.
+// registerWorkerFlags defines the allocator and health policy that turn Realm
+// game records into supervised child processes rather than unmanaged servers.
 func registerWorkerFlags(config *realmConfig) {
 	flag.StringVar(
 		&config.workerExecutable,
@@ -152,7 +159,8 @@ func registerWorkerFlags(config *realmConfig) {
 	)
 }
 
-// registerOperatorFlags defines private operator and local-shell policy.
+// registerOperatorFlags defines mutation-capable administration surfaces.
+// These are intentionally separate from the public API because their exposure model differs.
 func registerOperatorFlags(config *realmConfig) {
 	flag.StringVar(
 		&config.operatorTokenFile,
@@ -169,7 +177,8 @@ func registerOperatorFlags(config *realmConfig) {
 	flag.BoolVar(&config.adminShell, "admin-shell", true, "enable the administration shell")
 }
 
-// defaultMailMode derives a safe delivery mode from the available SMTP configuration.
+// defaultMailMode prefers explicit policy and otherwise infers SMTP only when a
+// server is configured. The final fallback keeps links local instead of discarding them.
 func defaultMailMode() string {
 	if configured := strings.TrimSpace(os.Getenv("DARK_MAGIC_REALM_ACCOUNT_MAIL_MODE")); configured != "" {
 		return configured
@@ -182,7 +191,8 @@ func defaultMailMode() string {
 	return "disabled"
 }
 
-// environmentDefault returns a non-empty environment value or the supplied fallback.
+// environmentDefault treats whitespace-only exports as absent so accidental
+// empty shell values cannot erase a documented operational default.
 func environmentDefault(name, fallback string) string {
 	if value := strings.TrimSpace(os.Getenv(name)); value != "" {
 		return value

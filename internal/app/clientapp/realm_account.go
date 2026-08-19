@@ -36,7 +36,8 @@ func (controller *realmController) Login(name, password string) error {
 	})
 }
 
-// Signup creates an account and leaves explicit login as a separate player action.
+// Signup creates an account but never converts successful registration into an authenticated
+// session. Verification and explicit login remain distinct security and user-consent steps.
 func (controller *realmController) Signup(name, email, password string) error {
 	return controller.start("creating_account", func(ctx context.Context, client realmAPI) error {
 		account, err := client.Signup(ctx, name, email, password)
@@ -53,7 +54,8 @@ func (controller *realmController) Signup(name, email, password string) error {
 	})
 }
 
-// RecoverPassword requests account recovery without changing the active session.
+// RecoverPassword initiates server-side recovery without placing email, tokens, or password
+// material in presentation state; the frontend receives only a completion phase.
 func (controller *realmController) RecoverPassword(email string) error {
 	return controller.start("requesting_password_recovery", func(ctx context.Context, client realmAPI) error {
 		if err := client.BeginPasswordRecovery(ctx, email); err != nil {
@@ -68,7 +70,8 @@ func (controller *realmController) RecoverPassword(email string) error {
 	})
 }
 
-// Logout removes channel presence and invalidates the current bearer session.
+// Logout asks Realm to remove presence and invalidate the bearer session before clearing local
+// account data. The configured endpoint and gateway survive so the login screen can reconnect.
 func (controller *realmController) Logout() error {
 	return controller.start("logging_out", func(ctx context.Context, client realmAPI) error {
 		if err := client.Logout(ctx); err != nil {
@@ -89,7 +92,8 @@ func (controller *realmController) Logout() error {
 	})
 }
 
-// CreateCharacter creates a character, reloads the directory, and selects the new record.
+// CreateCharacter reloads the authoritative directory after creation instead of appending the
+// response locally. This preserves server ordering and any normalized fields added during creation.
 func (controller *realmController) CreateCharacter(name, class string, expansion, hardcore bool) error {
 	request := realm.CreateCharacterRequest{
 		Name:      name,
@@ -119,7 +123,8 @@ func (controller *realmController) CreateCharacter(name, class string, expansion
 	})
 }
 
-// DeleteCharacter deletes a character and reloads the remaining directory.
+// DeleteCharacter clears selection and replaces the directory from authority, preventing a deleted
+// character from remaining eligible for game admission in stale UI state.
 func (controller *realmController) DeleteCharacter(id string) error {
 	return controller.start("deleting_character", func(ctx context.Context, client realmAPI) error {
 		if err := client.DeleteCharacter(ctx, id); err != nil {
@@ -141,7 +146,8 @@ func (controller *realmController) DeleteCharacter(id string) error {
 	})
 }
 
-// SelectCharacter marks a Realm character as the active lobby character.
+// SelectCharacter stores the server-returned summary rather than trusting the requested ID. Later
+// game admission therefore uses canonical character identity and revision data.
 func (controller *realmController) SelectCharacter(id string) error {
 	return controller.start("selecting_character", func(ctx context.Context, client realmAPI) error {
 		record, err := client.SelectCharacter(ctx, id)

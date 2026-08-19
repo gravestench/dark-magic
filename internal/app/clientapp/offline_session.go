@@ -12,7 +12,8 @@ import (
 	modruntime "github.com/gravestench/dark-magic/internal/runtime/lua"
 )
 
-// buildOfflineSession creates player state and the canonical local authority.
+// buildOfflineSession composes durable player state, authoritative simulation,
+// command sources, and loading prerequisites before any gameplay scene can open.
 func (app *application) buildOfflineSession() error {
 	if err := app.loadOfflinePlayer(); err != nil {
 		return err
@@ -29,7 +30,8 @@ func (app *application) buildOfflineSession() error {
 	return app.buildLoadingCoordinator()
 }
 
-// loadOfflinePlayer loads saves, development fixtures, and connection controllers.
+// loadOfflinePlayer establishes the single save store shared by offline play and
+// connection controllers, then applies direct-start fixtures only when explicitly requested.
 func (app *application) loadOfflinePlayer() error {
 	app.configuredMods = cloneRuntimePackages(app.options.Packages)
 	fixtures := developmentCharactersForScene(app.options.StartScene, app.options.FixtureCharacters)
@@ -51,7 +53,8 @@ func (app *application) loadOfflinePlayer() error {
 	return app.selectDevelopmentFixture(fixtures)
 }
 
-// selectDevelopmentFixture selects direct-start fixtures for gameplay scenes.
+// selectDevelopmentFixture bypasses frontend selection only for known gameplay
+// fixtures; ordinary startup must leave roster choice to the player.
 func (app *application) selectDevelopmentFixture(fixtures []d2save.Character) error {
 	if len(fixtures) == 0 || !fixtureNeedsSelection(app.options.StartScene) {
 		return nil
@@ -60,7 +63,8 @@ func (app *application) selectDevelopmentFixture(fixtures []d2save.Character) er
 	return wrap("select development fixture", app.saves.Select(fixtures[0].ID))
 }
 
-// createOfflineAuthority builds the ECS session and configures d2legacy runtime state.
+// createOfflineAuthority creates the canonical ECS/session before registering
+// deterministic state and random streams that participate in runtime identity.
 func (app *application) createOfflineAuthority() error {
 	app.entitySimulation = gameecs.New()
 	if err := app.buildEntryWorld(); err != nil {
@@ -86,7 +90,8 @@ func (app *application) createOfflineAuthority() error {
 	return app.configureOfflineRuntime(session)
 }
 
-// configureOfflineRuntime identifies packages and registers canonical authority.
+// configureOfflineRuntime computes identity from packages, assets, records, and
+// bootstrap data before exposing authority to Lua, preventing incompatible recomposition.
 func (app *application) configureOfflineRuntime(session *gamesession.Session) error {
 	initialData := app.sessionInitialData()
 
@@ -127,7 +132,8 @@ func (app *application) configureOfflineRuntime(session *gamesession.Session) er
 	return app.configureD2LegacyRuntime(d2legacySource, initialData)
 }
 
-// createCommandIntents creates the local player's non-movement command source.
+// createCommandIntents keeps generic actions separate from fixed-rate movement;
+// merging their sequencing would let empty action batches consume movement ticks.
 func (app *application) createCommandIntents() error {
 	app.commandIntents = &gamesession.IntentController{}
 	source, err := gamesession.NewIntentSource(app.commandIntents, "local-player")
@@ -136,7 +142,8 @@ func (app *application) createCommandIntents() error {
 	return wrap("create local command intent source", err)
 }
 
-// configurePackageRegistry exposes locked package namespaces to Lua.
+// configurePackageRegistry permits require only for resolved package namespaces
+// and records digests used to invalidate precisely the modules changed by recomposition.
 func (app *application) configurePackageRegistry() error {
 	if app.options.Mods == nil {
 		return nil
@@ -165,7 +172,8 @@ func (app *application) configurePackageRegistry() error {
 	return nil
 }
 
-// configureD2LegacyRuntime connects canonical game services to Lua.
+// configureD2LegacyRuntime is the final authority handoff to d2legacy Lua. Every
+// service passed here is already identity-pinned and owned by application.
 func (app *application) configureD2LegacyRuntime(source fs.FS, initialData map[string]any) error {
 	err := d2legacymod.ConfigureRuntime(
 		app.scripts,

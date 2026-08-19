@@ -5,7 +5,8 @@ import (
 	"testing"
 )
 
-// preserveEnvironment restores variables changed indirectly by loading a file.
+// preserveEnvironment prevents process-global environment mutations from leaking
+// across tests and making later precedence assertions order-dependent.
 func preserveEnvironment(t *testing.T, keys ...string) {
 	t.Helper()
 

@@ -7,7 +7,8 @@ import (
 	"github.com/gravestench/dark-magic/internal/shell"
 )
 
-// configureLogging routes structured records to stderr and the in-game console.
+// configureLogging installs one shared handler for terminal diagnostics and the
+// in-game console. Using a single handler preserves record ordering across both views.
 func configureLogging(level slog.Level) *shell.LogBuffer {
 	logs := shell.NewLogBuffer(1000)
 	handler := logging.NewHandlerWithObserver(
@@ -26,7 +27,8 @@ func configureLogging(level slog.Level) *shell.LogBuffer {
 	return logs
 }
 
-// parseLogLevel translates the public command value into the logger's level type.
+// parseLogLevel validates the human-facing vocabulary at the command boundary
+// so internal packages receive a typed level and never interpret user strings.
 func parseLogLevel(value string) (slog.Level, error) {
 	return logging.ParseLevel(value)
 }

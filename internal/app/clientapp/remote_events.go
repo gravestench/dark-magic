@@ -7,7 +7,9 @@ import (
 	playeradapter "github.com/gravestench/dark-magic/internal/mod/d2legacy/adapter/player"
 )
 
-// reconcileSemanticEvents mirrors only reliable events newer than the cursor.
+// reconcileSemanticEvents mirrors only reliable events newer than the retained cursor. Epoch changes
+// establish a baseline instead of replaying history, so joining players do not see old transient
+// cues as if they just happened.
 func (client *clientWorld) reconcileSemanticEvents(
 	app *application,
 	view playeradapter.EventView,
@@ -45,7 +47,8 @@ func (client *clientWorld) reconcileSemanticEvents(
 	return nil
 }
 
-// baselineSemanticEvents advances the cursor without replaying durable history.
+// baselineSemanticEvents clears disposable cues and advances directly to the new epoch's latest
+// event. Event history is durable for recovery, but presentation effects are not.
 func (client *clientWorld) baselineSemanticEvents(
 	world *akara.World,
 	view playeradapter.EventView,
@@ -57,7 +60,8 @@ func (client *clientWorld) baselineSemanticEvents(
 	client.eventCursorTick, client.eventCursorID = latestSemanticCursor(view.Events)
 }
 
-// validateSemanticEventWindow rejects gaps and server-truncated corrections.
+// validateSemanticEventWindow fails closed on gaps or truncation. Silently advancing the cursor
+// would permanently lose reliable cues and leave client presentation inconsistent with authority.
 func (client *clientWorld) validateSemanticEventWindow(view playeradapter.EventView) error {
 	if view.FromTick > client.lastEventViewTick+1 {
 		return fmt.Errorf(
@@ -77,7 +81,8 @@ func (client *clientWorld) validateSemanticEventWindow(view playeradapter.EventV
 	return nil
 }
 
-// destroySemanticEvents removes transient cues from the previous correction.
+// destroySemanticEvents retires the previous correction's disposable ECS entities before installing
+// new cues; semantic events describe occurrences, not persistent gameplay components.
 func (client *clientWorld) destroySemanticEvents(world *akara.World) {
 	for _, entity := range client.semanticEventEntities {
 		world.DestroyEntity(entity)
@@ -86,7 +91,8 @@ func (client *clientWorld) destroySemanticEvents(world *akara.World) {
 	client.semanticEventEntities = nil
 }
 
-// appendSemanticEvents installs events strictly after the existing cursor.
+// appendSemanticEvents advances the cursor only after each event is installed successfully. A
+// failed projection therefore cannot acknowledge events the client never presented.
 func (client *clientWorld) appendSemanticEvents(
 	world *akara.World,
 	events []playeradapter.SemanticEvent,
@@ -115,7 +121,8 @@ func (client *clientWorld) appendSemanticEvents(
 	return nil
 }
 
-// semanticEventSeen reports whether an event is at or before the cursor.
+// semanticEventSeen compares the ordered tick/ID pair, allowing several events on one simulation
+// tick without duplicates during overlapping reliable windows.
 func semanticEventSeen(
 	event playeradapter.SemanticEvent,
 	cursorTick uint64,
@@ -124,7 +131,8 @@ func semanticEventSeen(
 	return event.Tick < cursorTick || event.Tick == cursorTick && event.ID <= cursorID
 }
 
-// latestSemanticCursor returns the final ordered event's cursor.
+// latestSemanticCursor relies on the authority's ordered event window and returns zero for an empty
+// baseline, preserving the first real event.
 func latestSemanticCursor(events []playeradapter.SemanticEvent) (uint64, uint64) {
 	if len(events) == 0 {
 		return 0, 0
@@ -135,7 +143,8 @@ func latestSemanticCursor(events []playeradapter.SemanticEvent) (uint64, uint64)
 	return last.Tick, last.ID
 }
 
-// installSemanticEvent creates one presentation-only event entity.
+// installSemanticEvent builds anchor and allowlisted payload as one disposable entity. Any partial
+// failure destroys the entity so systems never observe an incomplete cue.
 func installSemanticEvent(
 	world *akara.World,
 	event playeradapter.SemanticEvent,
@@ -160,7 +169,8 @@ func installSemanticEvent(
 	return entity, nil
 }
 
-// setSemanticAnchor installs the common position, location, facing, and height.
+// setSemanticAnchor gives every cue the shared spatial facts needed by overlays, sounds, and
+// animation systems. Missing schemas are fatal because a non-spatial cue could render misleadingly.
 func setSemanticAnchor(
 	world *akara.World,
 	entity akara.Entity,
@@ -198,7 +208,8 @@ func setSemanticAnchor(
 	return nil
 }
 
-// setSemanticPayload dispatches one allowlisted semantic event type.
+// setSemanticPayload accepts only explicitly supported presentation event types. Unknown server
+// data fails rather than being copied generically into the client ECS.
 func setSemanticPayload(
 	world *akara.World,
 	entity akara.Entity,
@@ -226,7 +237,8 @@ func setSemanticPayload(
 	return nil
 }
 
-// setSemanticCast installs a presentation-safe skill cast cue.
+// setSemanticCast projects timing and visual targeting while referring to the disposable cue as the
+// caster entity. It carries no authority to execute or resolve the skill locally.
 func setSemanticCast(
 	world *akara.World,
 	entity akara.Entity,
@@ -253,7 +265,8 @@ func setSemanticCast(
 	return err
 }
 
-// setSemanticState installs a presentation-only state lifecycle cue.
+// setSemanticState exposes lifecycle identifiers and timing for visual systems, not state magnitude
+// or gameplay effects; authority remains responsible for applying the state.
 func setSemanticState(
 	world *akara.World,
 	entity akara.Entity,
@@ -278,7 +291,8 @@ func setSemanticState(
 	return err
 }
 
-// setSemanticEffect installs an overlay and sound cue.
+// setSemanticEffect projects only the overlay and sound identifiers required to render an effect.
+// It deliberately omits the gameplay cause and outcome.
 func setSemanticEffect(
 	world *akara.World,
 	entity akara.Entity,
@@ -301,7 +315,8 @@ func setSemanticEffect(
 	return err
 }
 
-// setSemanticMonsterDeath installs identity without private loot or XP facts.
+// setSemanticMonsterDeath preserves the public death cue while zeroing private reward and loot
+// fields required by the registered schema. Presentation cannot infer unrevealed outcomes.
 func setSemanticMonsterDeath(
 	world *akara.World,
 	entity akara.Entity,
@@ -333,7 +348,8 @@ func setSemanticMonsterDeath(
 	return err
 }
 
-// reconcileMissiles mirrors the reliable visual subset of live projectiles.
+// reconcileMissiles treats each correction as the complete reliable projectile set. Duplicate IDs
+// are rejected because accepting them would make update order determine the rendered projectile.
 func (client *clientWorld) reconcileMissiles(
 	app *application,
 	projected []playeradapter.WorldMissile,
@@ -366,7 +382,8 @@ func (client *clientWorld) reconcileMissiles(
 	return nil
 }
 
-// upsertMissile creates or updates one disposable projectile entity.
+// upsertMissile retains entity identity across corrections for smooth rendering but replaces its
+// allowlisted presentation components from authority on every update.
 func (client *clientWorld) upsertMissile(
 	world *akara.World,
 	missile playeradapter.WorldMissile,
@@ -397,7 +414,8 @@ func (client *clientWorld) upsertMissile(
 	return nil
 }
 
-// missileComponents maps projectile presentation without damage or collision.
+// missileComponents maps visual transform and animation data only. Damage, collision, ownership,
+// and hit resolution remain absent so client systems cannot turn the mirror into authority.
 func missileComponents(missile playeradapter.WorldMissile) map[string]map[string]any {
 	return map[string]map[string]any{
 		"d2legacy.world.position": {
@@ -426,7 +444,8 @@ func missileComponents(missile playeradapter.WorldMissile) map[string]map[string
 	}
 }
 
-// removeStaleMissiles destroys projectiles absent from the reliable view.
+// removeStaleMissiles removes any retained entity absent from the complete correction. Waiting for a
+// client-side lifetime would disagree with authority after hits, despawns, or recovery.
 func (client *clientWorld) removeStaleMissiles(
 	world *akara.World,
 	seen map[string]struct{},
@@ -441,7 +460,8 @@ func (client *clientWorld) removeStaleMissiles(
 	}
 }
 
-// reconcilePersistentStates binds visual aura state to retained unit mirrors.
+// reconcilePersistentStates binds public visual states to currently retained target mirrors. States
+// whose targets are hidden or absent are not materialized, avoiding dangling ECS references.
 func (client *clientWorld) reconcilePersistentStates(
 	app *application,
 	projected []playeradapter.WorldState,
@@ -493,7 +513,8 @@ func (client *clientWorld) reconcilePersistentStates(
 	return nil
 }
 
-// persistentStateStores indexes selectable and player targets for visual states.
+// persistentStateStores creates one target namespace from public selectable IDs and authenticated
+// player IDs. The player prefix prevents accidental collisions between the two identity domains.
 func persistentStateStores(
 	world *akara.World,
 ) (map[string]akara.Entity, *akara.DynamicStore, error) {
@@ -517,7 +538,8 @@ func persistentStateStores(
 	return targets, states, nil
 }
 
-// indexSelectableTargets maps public selectable IDs to mirror entities.
+// indexSelectableTargets indexes only non-empty public IDs, because an empty identifier is not a
+// stable attachment point for a persistent visual state.
 func indexSelectableTargets(
 	selectables *akara.DynamicStore,
 	targets map[string]akara.Entity,
@@ -535,7 +557,8 @@ func indexSelectableTargets(
 	}
 }
 
-// indexPlayerTargets maps player IDs to authenticated or peer hero entities.
+// indexPlayerTargets prefixes player IDs to preserve their domain when combined with selectable
+// targets in one lookup table.
 func indexPlayerTargets(
 	identities *akara.DynamicStore,
 	targets map[string]akara.Entity,
@@ -553,7 +576,8 @@ func indexPlayerTargets(
 	}
 }
 
-// upsertPersistentState creates or updates one target-state binding.
+// upsertPersistentState retains one entity per target/state pair and writes only when its binding or
+// visual period changes. Stable entities avoid restarting aura presentation every correction.
 func (client *clientWorld) upsertPersistentState(
 	world *akara.World,
 	states *akara.DynamicStore,
@@ -599,7 +623,8 @@ func (client *clientWorld) upsertPersistentState(
 	return nil
 }
 
-// persistentStateChanged compares the retained state component with projection.
+// persistentStateChanged compares all projected fields, including the resolved target entity; a
+// mirror replacement must rebind even when public target and state IDs stayed the same.
 func persistentStateChanged(
 	states *akara.DynamicStore,
 	entity akara.Entity,
@@ -620,7 +645,8 @@ func persistentStateChanged(
 		currentPeriod != projected.PeriodTicks
 }
 
-// removeStalePersistentStates removes absent states or missing targets.
+// removeStalePersistentStates requires both state projection and target mirror to remain present.
+// Destroying either side prevents presentation systems from retaining invalid entity references.
 func (client *clientWorld) removeStalePersistentStates(
 	world *akara.World,
 	targets map[string]akara.Entity,

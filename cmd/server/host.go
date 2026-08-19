@@ -11,7 +11,8 @@ import (
 	darkpaths "github.com/gravestench/dark-magic/internal/paths"
 )
 
-// startGameHost creates the authoritative runtime and installs prepared collision maps.
+// startGameHost creates the sole authoritative simulation from pinned content,
+// then installs every collision map before commands can advance the session.
 func startGameHost(
 	ctx context.Context,
 	prepared *serverContent,
@@ -52,7 +53,8 @@ func startGameHost(
 	return host, nil
 }
 
-// gameRules projects immutable command policy into legacy runtime data.
+// gameRules serializes process policy into deterministic runtime input. These
+// values participate in behavior and must match the identity clients accept.
 func gameRules(config serverConfig) map[string]any {
 	return map[string]any{
 		"target":          "lod-1.14d",
@@ -64,7 +66,8 @@ func gameRules(config serverConfig) map[string]any {
 	}
 }
 
-// restoreOrPopulateWorld restores a Realm checkpoint or queues initial population.
+// restoreOrPopulateWorld chooses exactly one authority origin. A checkpoint must
+// replace bootstrap population; applying both would duplicate players and world entities.
 func restoreOrPopulateWorld(
 	host *gameserver.Host,
 	prepared *serverContent,
@@ -86,7 +89,8 @@ func restoreOrPopulateWorld(
 	return restoreCheckpoint(host, config.restoreCheckpoint)
 }
 
-// restoreCheckpoint validates and applies one Realm recovery checkpoint.
+// restoreCheckpoint resolves the host path and delegates compatibility checks to
+// the host before returning restored player IDs for membership reconstruction.
 func restoreCheckpoint(host *gameserver.Host, configuredPath string) ([]string, error) {
 	path, err := darkpaths.ExpandHost(configuredPath)
 	if err != nil {

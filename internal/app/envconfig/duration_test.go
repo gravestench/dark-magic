@@ -5,8 +5,8 @@ import (
 	"time"
 )
 
-// TestDurationUsesFallbackAndRejectsInvalidValues covers fallback, configured,
-// and invalid environment duration behavior.
+// TestDurationUsesFallbackAndRejectsInvalidValues protects loops and deadlines
+// from blank defaults, malformed input, and non-positive scheduling intervals.
 func TestDurationUsesFallbackAndRejectsInvalidValues(t *testing.T) {
 	const name = "DARK_MAGIC_TEST_DURATION"
 	t.Setenv(name, "")
@@ -24,14 +24,15 @@ func TestDurationUsesFallbackAndRejectsInvalidValues(t *testing.T) {
 	}
 }
 
-// TestDurationRejectsBlankNames verifies that whitespace is not a variable name.
+// TestDurationRejectsBlankNames prevents programming mistakes from silently
+// consulting an empty environment key and returning a misleading fallback.
 func TestDurationRejectsBlankNames(t *testing.T) {
 	if _, err := Duration("  ", time.Second); err == nil {
 		t.Fatal("blank environment variable name was accepted")
 	}
 }
 
-// assertDuration verifies one successful Duration lookup.
+// assertDuration keeps the success cases compact while preserving the value and error contract.
 func assertDuration(t *testing.T, name string, fallback, expected time.Duration) {
 	t.Helper()
 

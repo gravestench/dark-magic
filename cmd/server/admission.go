@@ -11,7 +11,9 @@ import (
 	darkpaths "github.com/gravestench/dark-magic/internal/paths"
 )
 
-// admissionState collects local, remote, and Realm-worker admission policy.
+// admissionState groups mutually exclusive trust mechanisms prepared before
+// transport starts. Keeping them together prevents a listener from accepting
+// traffic while only part of its identity policy is initialized.
 type admissionState struct {
 	localProfile      serverapp.ProfileAdmission
 	remoteProfile     *serverapp.RemoteProfileConfig
@@ -19,7 +21,8 @@ type admissionState struct {
 	workerMemberships *realm.WorkerMemberships
 }
 
-// prepareAdmissions configures every admission mode before transports start.
+// prepareAdmissions resolves profile and Realm credentials before any public
+// transport can receive a join, ensuring admission never observes partial startup state.
 func prepareAdmissions(
 	host *gameserver.Host,
 	restoredPlayerIDs []string,
@@ -48,7 +51,8 @@ func prepareAdmissions(
 	}, nil
 }
 
-// prepareLocalProfile admits the explicitly selected self-hosted profile.
+// prepareLocalProfile loads the operator-selected durable character directly
+// into a self-hosted authority. An empty path deliberately disables this mode.
 func prepareLocalProfile(
 	host *gameserver.Host,
 	config serverConfig,
@@ -79,7 +83,8 @@ func prepareLocalProfile(
 	return admission, path, nil
 }
 
-// prepareRemoteProfile builds optional credential-backed self-host admission.
+// prepareRemoteProfile turns a local server into a single remote-user host.
+// It is mutually exclusive with direct profile loading so two paths cannot claim one player.
 func prepareRemoteProfile(
 	localProfilePath string,
 	config serverConfig,
@@ -111,7 +116,8 @@ func prepareRemoteProfile(
 	}, nil
 }
 
-// profileDestination validates the shared local and remote spawn configuration.
+// profileDestination validates spawn geometry once for both self-host admission
+// modes, preventing local and remote players from interpreting the same flags differently.
 func profileDestination(config serverConfig) (playeradapter.Destination, error) {
 	destination, err := playeradapter.NewDestination(
 		config.profileX,
@@ -128,7 +134,8 @@ func profileDestination(config serverConfig) (playeradapter.Destination, error) 
 	return destination, nil
 }
 
-// prepareWorkerAdmissions restores Realm ticket and membership authority.
+// prepareWorkerAdmissions recreates the two worker trust layers: signed join
+// tickets for new arrivals and memberships for players restored from a checkpoint.
 func prepareWorkerAdmissions(
 	restoredPlayerIDs []string,
 	config serverConfig,

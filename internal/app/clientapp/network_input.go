@@ -14,7 +14,9 @@ import (
 
 const networkInputStep = 40 * time.Millisecond
 
-// Advance reconciles corrections, samples movement, and submits queued intents.
+// Advance first applies authenticated corrections, then samples the resulting presentation input.
+// This ordering prevents pointer projection from starting at a position the authority has already
+// corrected.
 func (controller *networkController) Advance(
 	ctx context.Context,
 	elapsed time.Duration,
@@ -40,7 +42,8 @@ func (controller *networkController) Advance(
 	return controller.submitPendingIntents(client, now)
 }
 
-// submitMovementSamples emits fixed-step movement commands for elapsed time.
+// submitMovementSamples converts renderer time into the authority's 25 Hz input cadence. Sampling
+// independently of frame rate keeps command density stable across fast and slow renderers.
 func (controller *networkController) submitMovementSamples(
 	client *clientsession.Session,
 	elapsed time.Duration,
@@ -59,7 +62,8 @@ func (controller *networkController) submitMovementSamples(
 	return nil
 }
 
-// submitMovementCommands filters redundant stops while preserving other commands.
+// submitMovementCommands suppresses repeated idle movement while preserving one active-to-idle
+// transition. The authority needs that final stop, but sending one every tick wastes queue space.
 func (controller *networkController) submitMovementCommands(targetTick uint64) error {
 	commands := controller.app.movementSource.Commands(targetTick)
 
@@ -87,7 +91,8 @@ func (controller *networkController) submitMovementCommands(targetTick uint64) e
 	return nil
 }
 
-// movementCommandActivity decodes whether one valid move command is active.
+// movementCommandActivity recognizes only well-formed movement payloads. Other commands remain
+// opaque and malformed movement cannot accidentally change stop-suppression state.
 func movementCommandActivity(command simulation.Command) (bool, bool) {
 	if command.Kind != movement.MoveCommand {
 		return false, false
@@ -103,7 +108,8 @@ func movementCommandActivity(command simulation.Command) (bool, bool) {
 	return active, true
 }
 
-// submitPendingIntents drains non-movement commands onto the next input tick.
+// submitPendingIntents assigns all commands drained in one frame to the next admissible authority
+// tick. An empty drain does not advance sequencing or consume a tick.
 func (controller *networkController) submitPendingIntents(
 	client *clientsession.Session,
 	now time.Time,
@@ -129,7 +135,9 @@ func (controller *networkController) submitPendingIntents(
 	return nil
 }
 
-// inputTicks converts renderer time into bounded fixed-step authority samples.
+// inputTicks converts renderer time into fixed-step samples while capping catch-up at five ticks.
+// Dropping excess lag after a hitch is preferable to flooding the bounded transport queue with
+// stale movement.
 func (controller *networkController) inputTicks(
 	client *clientsession.Session,
 	elapsed time.Duration,
@@ -159,7 +167,8 @@ func (controller *networkController) inputTicks(
 	return result
 }
 
-// sampleMovement claims one authority tick for movement sampling.
+// sampleMovement atomically claims an authority tick so concurrent or repeated callers cannot
+// submit duplicate movement samples for the same point on the simulation timeline.
 func (controller *networkController) sampleMovement(targetTick uint64) bool {
 	controller.mu.Lock()
 	defer controller.mu.Unlock()
@@ -173,7 +182,8 @@ func (controller *networkController) sampleMovement(targetTick uint64) bool {
 	return true
 }
 
-// movementRequired keeps one stop command after active movement ends.
+// movementRequired keeps active input and exactly one stop after movement ends; subsequent idle
+// samples can be omitted without leaving the authority moving indefinitely.
 func (controller *networkController) movementRequired(active bool) bool {
 	controller.mu.Lock()
 	defer controller.mu.Unlock()
@@ -181,14 +191,17 @@ func (controller *networkController) movementRequired(active bool) bool {
 	return active || controller.lastMovementActive
 }
 
-// markMovement records whether the last submitted move remained active.
+// markMovement updates stop-suppression state only after submission succeeds. A full queue must not
+// make the controller believe an unsent stop reached authority.
 func (controller *networkController) markMovement(active bool) {
 	controller.mu.Lock()
 	controller.lastMovementActive = active
 	controller.mu.Unlock()
 }
 
-// submit stages an intent and transfers it to the bounded send queue.
+// submit stages input in the session before publishing it to the bounded send queue. If publication
+// fails, it discards the staged sequence so prediction never replays a command that transport will
+// not send.
 func (controller *networkController) submit(
 	targetTick uint64,
 	kind string,

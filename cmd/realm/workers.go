@@ -10,7 +10,9 @@ import (
 	"github.com/gravestench/dark-magic/internal/content"
 )
 
-// prepareWorkerAllocator creates the optional supervised game-worker allocator.
+// prepareWorkerAllocator enables child-process allocation only when configured.
+// Returning both interface and concrete owner lets the control plane allocate
+// through an abstraction while runtime shutdown still closes supervised processes.
 func prepareWorkerAllocator(
 	directory string,
 	config realmConfig,

@@ -10,8 +10,8 @@ import (
 	"github.com/gravestench/dark-magic/internal/modcache"
 )
 
-// TestCloneRuntimePackagesCopiesExtensions verifies that saved startup state
-// cannot be mutated through a later recipe's extension slice.
+// TestCloneRuntimePackagesCopiesExtensions protects configured fallback state
+// from aliasing authenticated recipes that are reused or mutated by transport code.
 func TestCloneRuntimePackagesCopiesExtensions(t *testing.T) {
 	original := simulation.RuntimePackageSet{
 		Base:       runtimePackage("base", "base-digest"),
@@ -26,8 +26,8 @@ func TestCloneRuntimePackagesCopiesExtensions(t *testing.T) {
 	}
 }
 
-// TestResolvedMatchesPackagesRequiresExactOrderedMetadata verifies that cache
-// resolution cannot substitute a package with merely the same namespace.
+// TestResolvedMatchesPackagesRequiresExactOrderedMetadata protects the trust
+// handoff from accepting cache content that matches names but not authenticated identity/order.
 func TestResolvedMatchesPackagesRequiresExactOrderedMetadata(t *testing.T) {
 	base := lockedPackage("base", "base-digest")
 	extension := lockedPackage("extension", "extension-digest")
@@ -52,8 +52,8 @@ func TestResolvedMatchesPackagesRequiresExactOrderedMetadata(t *testing.T) {
 	}
 }
 
-// TestChangedPackageIDsIncludesAddedRemovedAndReplaced verifies that module
-// invalidation covers every form of package-set transition without duplicates.
+// TestChangedPackageIDsIncludesAddedRemovedAndReplaced ensures stale Lua modules
+// cannot survive any namespace transition and repeated IDs do not cause duplicate work.
 func TestChangedPackageIDsIncludesAddedRemovedAndReplaced(t *testing.T) {
 	previous := map[string]string{
 		"base":    "old-base",
@@ -76,8 +76,8 @@ func TestChangedPackageIDsIncludesAddedRemovedAndReplaced(t *testing.T) {
 	}
 }
 
-// TestNetworkPackagePlanAbortReleasesUntransferredMount verifies that failures
-// before the ownership handoff close archives and preserve the original error.
+// TestNetworkPackagePlanAbortReleasesUntransferredMount protects the precise
+// ownership boundary between preparation and live application installation.
 func TestNetworkPackagePlanAbortReleasesUntransferredMount(t *testing.T) {
 	mounted := &modcache.MountedSet{
 		Packages: []modcache.MountedPackage{{ID: "extension"}},
@@ -94,7 +94,7 @@ func TestNetworkPackagePlanAbortReleasesUntransferredMount(t *testing.T) {
 	}
 }
 
-// runtimePackage creates transport-neutral metadata for package tests.
+// runtimePackage builds the authenticated wire-side half of package identity tests.
 func runtimePackage(id, digest string) simulation.RuntimePackage {
 	return simulation.RuntimePackage{
 		ID:              id,
@@ -105,7 +105,7 @@ func runtimePackage(id, digest string) simulation.RuntimePackage {
 	}
 }
 
-// lockedPackage creates cache metadata equivalent to runtimePackage.
+// lockedPackage builds the local cache-side half, allowing tests to vary one identity field.
 func lockedPackage(id, digest string) modcache.LockedPackage {
 	return modcache.LockedPackage{
 		Descriptor: modcache.Descriptor{

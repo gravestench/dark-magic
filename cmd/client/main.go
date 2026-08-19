@@ -14,7 +14,8 @@ import (
 	darkpaths "github.com/gravestench/dark-magic/internal/paths"
 )
 
-// main owns process exit semantics while runMain owns client startup and cleanup.
+// main owns the two policies that only the executable can apply: pinning the
+// renderer to the initial OS thread and converting runMain's result into exit status.
 func main() {
 	// macOS requires the window to live on the first operating-system thread.
 	// Locking here keeps that rule out of the rest of the application.
@@ -22,7 +23,8 @@ func main() {
 	os.Exit(runMain())
 }
 
-// runMain assembles process-owned resources and returns the operating-system exit code.
+// runMain acquires process resources in dependency order and defers their cleanup
+// immediately. Returning an integer keeps os.Exit out of deferred-cleanup code.
 func runMain() int {
 	environment, err := envconfig.Bootstrap("client", os.Args[1:])
 	if err != nil {

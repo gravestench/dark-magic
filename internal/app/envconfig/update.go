@@ -8,7 +8,8 @@ import (
 	"strings"
 )
 
-// Update replaces known template keys while preserving comments and formatting.
+// Update edits only keys declared by the role template and preserves surrounding
+// documentation. This makes generated files safe for both tooling and human ownership.
 func Update(role string, updates map[string]string) (string, error) {
 	path, _, err := Install(role)
 	if err != nil {
@@ -34,7 +35,8 @@ func Update(role string, updates map[string]string) (string, error) {
 	return path, writePrivate(path, updated)
 }
 
-// templateValues parses the role template to determine its supported keys.
+// templateValues makes the embedded template the schema for writable settings,
+// preventing callers from smuggling arbitrary process variables into the file.
 func templateValues(role string) (map[string]string, error) {
 	data, err := templates.ReadFile("templates/" + role + ".env")
 	if err != nil {
@@ -44,7 +46,8 @@ func templateValues(role string) (map[string]string, error) {
 	return Parse(strings.NewReader(string(data)))
 }
 
-// validateUpdates rejects keys that the selected role does not understand.
+// validateUpdates fails the entire request on unknown keys so typos cannot appear
+// to persist successfully while the target process silently ignores them.
 func validateUpdates(role string, updates, allowed map[string]string) error {
 	for key := range updates {
 		if _, found := allowed[key]; !found {
@@ -55,7 +58,8 @@ func validateUpdates(role string, updates, allowed map[string]string) error {
 	return nil
 }
 
-// updateDocument applies replacements and appends missing keys deterministically.
+// updateDocument preserves existing line order and comments, then appends absent
+// supported keys in sorted order to keep repeated updates reviewable and stable.
 func updateDocument(data []byte, updates map[string]string) []byte {
 	remaining := copyValues(updates)
 
@@ -79,7 +83,8 @@ func updateDocument(data []byte, updates map[string]string) []byte {
 	return []byte(strings.Join(lines, "\n") + "\n")
 }
 
-// assignmentKey extracts a normalized key from one environment-file line.
+// assignmentKey recognizes only syntactically valid assignments; comments and
+// malformed human text are preserved rather than accidentally rewritten.
 func assignmentKey(line string) string {
 	trimmed := strings.TrimSpace(line)
 
@@ -91,7 +96,8 @@ func assignmentKey(line string) string {
 	return strings.TrimSpace(trimmed[:separator])
 }
 
-// copyValues prevents Update from mutating its caller's map.
+// copyValues gives Update private ownership of its working set, allowing keys to
+// be consumed during rewriting without surprising the caller.
 func copyValues(values map[string]string) map[string]string {
 	result := make(map[string]string, len(values))
 	for key, value := range values {
@@ -101,7 +107,7 @@ func copyValues(values map[string]string) map[string]string {
 	return result
 }
 
-// sortedKeys returns deterministic map keys for files and environment updates.
+// sortedKeys removes Go map iteration order from generated configuration diffs.
 func sortedKeys(values map[string]string) []string {
 	keys := make([]string, 0, len(values))
 	for key := range values {

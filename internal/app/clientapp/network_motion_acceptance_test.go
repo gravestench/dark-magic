@@ -8,22 +8,24 @@ import (
 	"github.com/gravestench/dark-magic/internal/app/networkclock"
 )
 
-// scheduledTransform describes one simulated network snapshot arrival.
+// scheduledTransform separates authority sample time from simulated arrival time so the harness can
+// model jitter and reordering without changing the production interpolation buffer.
 type scheduledTransform struct {
 	arrival time.Time
 	tick    uint64
 	x       float64
 }
 
-// remoteMotionResult summarizes visible behavior from the renderer-free harness.
+// remoteMotionResult captures progress, reversal, smoothness, and bounded-error evidence without
+// coupling the acceptance policy to a renderer implementation.
 type remoteMotionResult struct {
 	sampledFrames    int
 	stationaryFrames int
 	maximumFrameStep float64
 }
 
-// TestRemoteMotionAcceptanceUnderLatencyJitterLossAndReordering exercises the
-// production network clock and snapshot buffer under deterministic WAN noise.
+// TestRemoteMotionAcceptanceUnderLatencyJitterLossAndReordering requires production clock and buffer
+// policy to remain smooth, forward-moving, and bounded under deterministic WAN noise.
 func TestRemoteMotionAcceptanceUnderLatencyJitterLossAndReordering(t *testing.T) {
 	result := runRemoteMotionHarness(t)
 
@@ -43,7 +45,8 @@ func TestRemoteMotionAcceptanceUnderLatencyJitterLossAndReordering(t *testing.T)
 	}
 }
 
-// runRemoteMotionHarness samples seven seconds of deterministic peer movement.
+// runRemoteMotionHarness drives seven seconds of authority and render timelines separately, making
+// the acceptance result reproducible rather than dependent on wall-clock scheduling.
 func runRemoteMotionHarness(t *testing.T) remoteMotionResult {
 	t.Helper()
 
@@ -70,7 +73,8 @@ func runRemoteMotionHarness(t *testing.T) remoteMotionResult {
 	return result
 }
 
-// scheduleRemoteTransforms applies deterministic latency, jitter, loss, and reordering.
+// scheduleRemoteTransforms constructs deterministic arrival disorder while preserving original
+// authority ticks, allowing interpolation behavior to be tested independently from transport code.
 func scheduleRemoteTransforms(
 	start time.Time,
 	step time.Duration,
@@ -106,7 +110,8 @@ func scheduleRemoteTransforms(
 	return deliveries
 }
 
-// remoteMotionClock returns the live interpolation policy used by the harness.
+// remoteMotionClock uses production interpolation and extrapolation limits so acceptance thresholds
+// guard shipped policy rather than a test-specific clock.
 func remoteMotionClock(step time.Duration) *networkclock.Clock {
 	return networkclock.New(networkclock.Config{
 		UpdateInterval:   step,
@@ -117,7 +122,8 @@ func remoteMotionClock(step time.Duration) *networkclock.Clock {
 	})
 }
 
-// deliverReadyTransforms feeds every snapshot that has arrived by this frame.
+// deliverReadyTransforms feeds all arrivals due by one render frame in arrival order, including
+// deliberately late snapshots that exercise stale/reordered handling.
 func deliverReadyTransforms(
 	deliveries []scheduledTransform,
 	next int,
@@ -146,7 +152,8 @@ func deliverReadyTransforms(
 	return next
 }
 
-// sampleRemoteFrame records visible progress for one ready interpolation frame.
+// sampleRemoteFrame samples only ready production clock moments and compares them with authority,
+// avoiding false failures during initial buffering.
 func sampleRemoteFrame(
 	t *testing.T,
 	clock *networkclock.Clock,
@@ -177,7 +184,8 @@ func sampleRemoteFrame(
 	result.sampledFrames++
 }
 
-// recordRemoteFrameDelta validates direction and accumulates smoothness metrics.
+// recordRemoteFrameDelta counts backward presentation and large visible steps separately so a test
+// cannot hide jitter behind acceptable final progress.
 func recordRemoteFrameDelta(
 	t *testing.T,
 	delta float64,
@@ -198,8 +206,8 @@ func recordRemoteFrameDelta(
 	}
 }
 
-// TestRemoteMotionFreezesAfterBoundedOutageInsteadOfRunningAway verifies that
-// extrapolation stops after its configured window during a prolonged outage.
+// TestRemoteMotionFreezesAfterBoundedOutageInsteadOfRunningAway requires extrapolation to stop after
+// its configured window, preventing a disconnected peer from drifting indefinitely through geometry.
 func TestRemoteMotionFreezesAfterBoundedOutageInsteadOfRunningAway(t *testing.T) {
 	const step = 40 * time.Millisecond
 

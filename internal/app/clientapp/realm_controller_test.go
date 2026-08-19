@@ -12,7 +12,8 @@ import (
 	"github.com/gravestench/dark-magic/internal/preferences"
 )
 
-// TestNormalizeRealmEndpointUsesTLSAndLegacyPort verifies the strict gateway format.
+// TestNormalizeRealmEndpointUsesTLSAndLegacyPort proves convenient bare hosts still become strict
+// HTTPS origins with an explicit control-plane port, while paths and insecure schemes fail.
 func TestNormalizeRealmEndpointUsesTLSAndLegacyPort(t *testing.T) {
 	endpoint, address, err := normalizeRealmEndpoint("127.0.0.1")
 	if err != nil || endpoint != "https://127.0.0.1:6112" || address != "127.0.0.1:6112" {
@@ -24,7 +25,8 @@ func TestNormalizeRealmEndpointUsesTLSAndLegacyPort(t *testing.T) {
 	}
 }
 
-// TestRealmControllerRequiresExplicitLoginAfterCompatibilityCheck guards against implicit login.
+// TestRealmControllerRequiresExplicitLoginAfterCompatibilityCheck keeps protocol compatibility and
+// account authorization as separate user-visible phases.
 func TestRealmControllerRequiresExplicitLoginAfterCompatibilityCheck(t *testing.T) {
 	control, server := newRealmTestServer(t)
 	controller := newRealmTLSController(t)
@@ -59,7 +61,8 @@ func TestRealmControllerRequiresExplicitLoginAfterCompatibilityCheck(t *testing.
 	}
 }
 
-// newRealmTestServer creates a real TLS control plane for compatibility and login tests.
+// newRealmTestServer uses the real control plane behind test TLS so endpoint, version, session, and
+// logout behavior are exercised without mocking the HTTP contract.
 func newRealmTestServer(t *testing.T) (*realm.ControlPlane, *httptest.Server) {
 	t.Helper()
 
@@ -79,7 +82,8 @@ func newRealmTestServer(t *testing.T) (*realm.ControlPlane, *httptest.Server) {
 	return control, server
 }
 
-// newRealmTLSController creates a controller that trusts test-server certificates.
+// newRealmTLSController installs an explicit test trust policy rather than disabling TLS verification,
+// preserving the same trust boundary used in production.
 func newRealmTLSController(t *testing.T) *realmController {
 	t.Helper()
 
@@ -95,7 +99,8 @@ func newRealmTLSController(t *testing.T) *realmController {
 	})
 }
 
-// TestRealmControllerSignupAndRecoveryDoNotImplicitlyLogin keeps authorization explicit.
+// TestRealmControllerSignupAndRecoveryDoNotImplicitlyLogin proves account creation and recovery
+// cannot populate an authenticated session without a separate login action.
 func TestRealmControllerSignupAndRecoveryDoNotImplicitlyLogin(t *testing.T) {
 	controller := newRealmController(&application{ctx: context.Background()})
 	controller.client = &fakeRealmAPI{}
@@ -114,7 +119,8 @@ func TestRealmControllerSignupAndRecoveryDoNotImplicitlyLogin(t *testing.T) {
 	waitRealmPhase(t, controller, "recovery_sent")
 }
 
-// TestRealmControllerPersistsSelectedGateway verifies the preferred endpoint survives reload.
+// TestRealmControllerPersistsSelectedGateway requires a validated preference to update both current
+// state and durable settings, so restart does not silently select another Realm.
 func TestRealmControllerPersistsSelectedGateway(t *testing.T) {
 	path := filepath.Join(t.TempDir(), "preferences.json")
 
@@ -141,7 +147,8 @@ func TestRealmControllerPersistsSelectedGateway(t *testing.T) {
 	}
 }
 
-// TestRealmControllerLogoutAndCloseClearLivePresence verifies both session exit paths.
+// TestRealmControllerLogoutAndCloseClearLivePresence covers interactive and process-shutdown exits,
+// ensuring neither leaves server-side channel presence or bearer state active.
 func TestRealmControllerLogoutAndCloseClearLivePresence(t *testing.T) {
 	api := &fakeRealmAPI{}
 	controller := newRealmController(&application{ctx: context.Background()})
@@ -168,7 +175,8 @@ func TestRealmControllerLogoutAndCloseClearLivePresence(t *testing.T) {
 	}
 }
 
-// authenticatedRealmState returns the shared starting state for logout tests.
+// authenticatedRealmState supplies one fully authenticated public state so logout tests differ only
+// in the exit path being exercised.
 func authenticatedRealmState() realmClientState {
 	return realmClientState{
 		Phase:    "lobby",
@@ -178,7 +186,8 @@ func authenticatedRealmState() realmClientState {
 	}
 }
 
-// waitRealmPhase waits for an asynchronous Realm operation to publish its final phase.
+// waitRealmPhase polls public state with a deadline, preserving production asynchronous execution
+// while making failures report the last published phase.
 func waitRealmPhase(t *testing.T, controller *realmController, phase string) {
 	t.Helper()
 

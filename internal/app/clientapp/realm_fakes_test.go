@@ -7,7 +7,8 @@ import (
 	d2save "github.com/gravestench/dark-magic/internal/mod/d2legacy/adapter/save"
 )
 
-// fakeRealmAPI records control-plane calls and supplies deterministic Realm data.
+// fakeRealmAPI is a deterministic control-plane recorder that keeps public data and private handoffs
+// independently configurable for trust-boundary tests.
 type fakeRealmAPI struct {
 	character     realm.CharacterSummary
 	handoff       realm.GameHandoff
@@ -18,34 +19,35 @@ type fakeRealmAPI struct {
 	createRequest realm.CreateGameRequest
 }
 
-// ServiceInfo reports a compatible control-plane version.
+// ServiceInfo reports compatibility so tests can focus on the operation following connection.
 func (*fakeRealmAPI) ServiceInfo(context.Context) (realm.ServiceInfo, error) {
 	return realm.ServiceInfo{Version: realm.RealmControlPlaneVersion}, nil
 }
 
-// Signup returns a deterministic account without creating a session.
+// Signup returns public account data without authentication, preserving the real API's explicit-login
+// contract.
 func (*fakeRealmAPI) Signup(context.Context, string, string, string) (realm.Account, error) {
 	return realm.Account{ID: "account", Name: "Alice"}, nil
 }
 
-// Authenticate returns a deterministic authenticated session.
+// Authenticate returns the stable session identity used across character and lobby state tests.
 func (*fakeRealmAPI) Authenticate(context.Context, string, string) (realm.RealmSession, error) {
 	return realm.RealmSession{Account: realm.Account{ID: "account", Name: "Alice"}}, nil
 }
 
-// Logout records that the client explicitly cleared its Realm presence.
+// Logout records the explicit server-side cleanup obligation rather than merely clearing local state.
 func (api *fakeRealmAPI) Logout(context.Context) error {
 	api.logouts++
 
 	return nil
 }
 
-// BeginPasswordRecovery accepts every recovery request.
+// BeginPasswordRecovery succeeds without session mutation so phase behavior can be asserted in isolation.
 func (*fakeRealmAPI) BeginPasswordRecovery(context.Context, string) error {
 	return nil
 }
 
-// ListCharacters returns the fake's current character when one exists.
+// ListCharacters returns a fresh directory view from fake authority, matching reload-after-mutation flows.
 func (api *fakeRealmAPI) ListCharacters(context.Context) ([]realm.CharacterSummary, error) {
 	if api.character.Character.ID == "" {
 		return []realm.CharacterSummary{}, nil
@@ -54,7 +56,8 @@ func (api *fakeRealmAPI) ListCharacters(context.Context) ([]realm.CharacterSumma
 	return []realm.CharacterSummary{api.character}, nil
 }
 
-// CreateCharacter stores a character derived from the supplied request.
+// CreateCharacter stores normalized server-style identity so tests do not accidentally trust the
+// frontend request as the canonical record.
 func (api *fakeRealmAPI) CreateCharacter(
 	_ context.Context,
 	request realm.CreateCharacterRequest,
@@ -70,26 +73,27 @@ func (api *fakeRealmAPI) CreateCharacter(
 	return api.character, nil
 }
 
-// DeleteCharacter removes the fake's current character.
+// DeleteCharacter clears fake authority, allowing the controller's directory and selection cleanup to
+// be observed.
 func (api *fakeRealmAPI) DeleteCharacter(context.Context, string) error {
 	api.character = realm.CharacterSummary{}
 
 	return nil
 }
 
-// SelectCharacter returns the fake's current character.
+// SelectCharacter returns canonical fake state rather than echoing the requested identifier.
 func (api *fakeRealmAPI) SelectCharacter(context.Context, string) (realm.CharacterSummary, error) {
 	return api.character, nil
 }
 
-// JoinChannel records the renewed membership and returns the default channel.
+// JoinChannel records renewal count so tests can distinguish initial membership from prune recovery.
 func (api *fakeRealmAPI) JoinChannel(context.Context, string) (realm.ChannelView, error) {
 	api.joins++
 
 	return realm.ChannelView{Name: defaultRealmChannel}, nil
 }
 
-// Channel returns either the configured one-shot error or the default channel.
+// Channel consumes a configured one-shot failure to model server-side membership pruning deterministically.
 func (api *fakeRealmAPI) Channel(context.Context) (realm.ChannelView, error) {
 	if api.channelErr != nil {
 		err := api.channelErr
@@ -101,22 +105,23 @@ func (api *fakeRealmAPI) Channel(context.Context) (realm.ChannelView, error) {
 	return realm.ChannelView{Name: defaultRealmChannel}, nil
 }
 
-// ChannelEvents returns an empty event page.
+// ChannelEvents returns no changes by default, keeping lobby tests focused on cursor and membership flow.
 func (*fakeRealmAPI) ChannelEvents(context.Context, uint64, int) ([]realm.ChatEvent, error) {
 	return []realm.ChatEvent{}, nil
 }
 
-// SendMessage accepts every chat message.
+// SendMessage succeeds while leaving canonical installation to the subsequent refresh, as production does.
 func (*fakeRealmAPI) SendMessage(context.Context, string) (realm.ChatEvent, error) {
 	return realm.ChatEvent{}, nil
 }
 
-// ListGames returns one deterministic directory entry.
+// ListGames returns a stable directory entry shared by selection and handoff scenarios.
 func (*fakeRealmAPI) ListGames(context.Context) ([]realm.GameDirectoryEntry, error) {
 	return []realm.GameDirectoryEntry{{GameID: "game", Name: "Fresh"}}, nil
 }
 
-// GameDetail records the requested reference and returns one player.
+// GameDetail records resolution input and returns richer player detail than the directory, proving the
+// controller performs the second request.
 func (api *fakeRealmAPI) GameDetail(_ context.Context, reference string) (realm.GameDetail, error) {
 	api.detailRef = reference
 
@@ -128,7 +133,7 @@ func (api *fakeRealmAPI) GameDetail(_ context.Context, reference string) (realm.
 	}, nil
 }
 
-// CreateGame records the request and returns a private worker handoff.
+// CreateGame records typed option conversion and returns the same private handoff shape as join.
 func (api *fakeRealmAPI) CreateGame(
 	_ context.Context,
 	request realm.CreateGameRequest,
@@ -138,29 +143,30 @@ func (api *fakeRealmAPI) CreateGame(
 	return api.gameHandoff(), nil
 }
 
-// ResolveGame resolves every reference to the deterministic game ID.
+// ResolveGame models Realm-owned reference resolution instead of letting tests treat UI labels as IDs.
 func (*fakeRealmAPI) ResolveGame(context.Context, string, string) (string, error) {
 	return "game", nil
 }
 
-// JoinGame returns a private worker handoff.
+// JoinGame returns ticket-bearing data whose handling is asserted at the native connector boundary.
 func (api *fakeRealmAPI) JoinGame(context.Context, string, string) (realm.GameHandoff, error) {
 	return api.gameHandoff(), nil
 }
 
-// ReconnectGame returns a renewed private worker handoff.
+// ReconnectGame returns a fresh handoff for the same durable game identity used by recovery tests.
 func (api *fakeRealmAPI) ReconnectGame(context.Context, string) (realm.GameHandoff, error) {
 	return api.gameHandoff(), nil
 }
 
-// LeaveGame increments the committed character revision.
+// LeaveGame increments authority revision so stale cached character copies are detectable after exit.
 func (api *fakeRealmAPI) LeaveGame(context.Context, string) (realm.CharacterSummary, error) {
 	api.character.Revision++
 
 	return api.character, nil
 }
 
-// gameHandoff returns an override or the default private worker assignment.
+// gameHandoff permits targeted malformed or replacement assignments while centralizing the normal secret
+// values used to detect presentation leakage.
 func (api *fakeRealmAPI) gameHandoff() realm.GameHandoff {
 	if api.handoff.Assignment.GameID != "" {
 		return api.handoff
@@ -181,13 +187,14 @@ func (api *fakeRealmAPI) gameHandoff() realm.GameHandoff {
 	}
 }
 
-// fakeRealmGameConnector records the private assignment passed to native networking.
+// fakeRealmGameConnector records assignments outside realmClientState, mirroring the production
+// native-only trust path.
 type fakeRealmGameConnector struct {
 	assignment realm.JoinAssignment
 	err        error
 }
 
-// ConnectRealm records an initial worker assignment.
+// ConnectRealm captures the initial private handoff without introducing transport behavior into controller tests.
 func (connector *fakeRealmGameConnector) ConnectRealm(
 	_ context.Context,
 	assignment realm.JoinAssignment,
@@ -197,7 +204,7 @@ func (connector *fakeRealmGameConnector) ConnectRealm(
 	return connector.err
 }
 
-// ReconnectRealm records a renewed worker assignment.
+// ReconnectRealm captures replacement credentials separately from the initial handoff.
 func (connector *fakeRealmGameConnector) ReconnectRealm(
 	_ context.Context,
 	assignment realm.JoinAssignment,

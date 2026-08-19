@@ -10,7 +10,8 @@ import (
 	"unicode"
 )
 
-// Parse reads the supported human-readable dotenv syntax from a stream.
+// Parse accepts the intentionally small dotenv subset emitted by the templates.
+// Rejecting ambiguous syntax keeps hand-edited configuration predictable across shells.
 func Parse(reader io.Reader) (map[string]string, error) {
 	values := make(map[string]string)
 	scanner := bufio.NewScanner(reader)
@@ -34,7 +35,8 @@ func Parse(reader io.Reader) (map[string]string, error) {
 	return values, nil
 }
 
-// parseLine parses one assignment and identifies comments or blank lines.
+// parseLine separates ignorable human documentation from assignments while
+// retaining line-numbered errors in Parse for actionable configuration feedback.
 func parseLine(line string) (string, string, bool, error) {
 	line = strings.TrimSpace(line)
 	if line == "" || strings.HasPrefix(line, "#") {
@@ -61,7 +63,8 @@ func parseLine(line string) (string, string, bool, error) {
 	return key, value, true, nil
 }
 
-// validKey reports whether a name follows shell-compatible environment syntax.
+// validKey restricts names to the portable shell identifier subset so values
+// loaded here behave like variables exported by an operator's shell.
 func validKey(value string) bool {
 	for index, character := range value {
 		validCharacter := character == '_' || unicode.IsLetter(character)
@@ -77,7 +80,8 @@ func validKey(value string) bool {
 	return value != ""
 }
 
-// parseValue decodes quoting and strips supported trailing comments.
+// parseValue preserves literal single quotes, decodes explicit double-quote
+// escapes, and recognizes comments only where the supported syntax is unambiguous.
 func parseValue(value string) (string, error) {
 	if value == "" {
 		return "", nil
@@ -93,7 +97,8 @@ func parseValue(value string) (string, error) {
 	}
 }
 
-// parseSingleQuotedValue removes literal single-quote delimiters.
+// parseSingleQuotedValue treats all interior bytes literally; supporting escapes
+// here would make the file's behavior differ from familiar dotenv conventions.
 func parseSingleQuotedValue(value string) (string, error) {
 	if len(value) < 2 || value[len(value)-1] != '\'' {
 		return "", errors.New("unterminated single-quoted value")
@@ -102,7 +107,8 @@ func parseSingleQuotedValue(value string) (string, error) {
 	return value[1 : len(value)-1], nil
 }
 
-// parseDoubleQuotedValue delegates escape decoding to Go's string parser.
+// parseDoubleQuotedValue reuses Go's well-defined escape grammar instead of
+// maintaining a second, subtly different backslash decoder.
 func parseDoubleQuotedValue(value string) (string, error) {
 	if len(value) < 2 || value[len(value)-1] != '"' {
 		return "", errors.New("unterminated double-quoted value")
@@ -116,7 +122,8 @@ func parseDoubleQuotedValue(value string) (string, error) {
 	return decoded, nil
 }
 
-// unquotedValue removes a trailing comment introduced by whitespace and '#'.
+// unquotedValue requires whitespace before a trailing '#', preserving hashes in
+// credentials and URLs while still supporting readable inline comments.
 func unquotedValue(value string) string {
 	if index := strings.Index(value, " #"); index >= 0 {
 		return strings.TrimSpace(value[:index])

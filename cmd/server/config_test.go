@@ -2,7 +2,8 @@ package main
 
 import "testing"
 
-// TestParseDifficultyDocumentsSupportedNames verifies case and whitespace normalization.
+// TestParseDifficultyDocumentsSupportedNames protects the CLI/legacy encoding
+// boundary so human-friendly names remain stable while runtime values stay numeric.
 func TestParseDifficultyDocumentsSupportedNames(t *testing.T) {
 	t.Parallel()
 
@@ -21,7 +22,8 @@ func TestParseDifficultyDocumentsSupportedNames(t *testing.T) {
 	}
 }
 
-// TestServerConfigRequiresCompleteWorkerPolicy protects the all-or-nothing worker contract.
+// TestServerConfigRequiresCompleteWorkerPolicy ensures a process cannot enter
+// Realm-worker mode without every secret, identity, control, and recovery path.
 func TestServerConfigRequiresCompleteWorkerPolicy(t *testing.T) {
 	t.Parallel()
 
@@ -44,7 +46,8 @@ func TestServerConfigRequiresCompleteWorkerPolicy(t *testing.T) {
 	}
 }
 
-// TestServerConfigRejectsInvalidCapacity verifies immutable player-count bounds.
+// TestServerConfigRejectsInvalidCapacity prevents invalid session capacity from
+// entering runtime identity or being advertised to joining clients.
 func TestServerConfigRejectsInvalidCapacity(t *testing.T) {
 	t.Parallel()
 

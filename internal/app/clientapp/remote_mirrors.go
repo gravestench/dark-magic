@@ -13,7 +13,8 @@ import (
 	playeradapter "github.com/gravestench/dark-magic/internal/mod/d2legacy/adapter/player"
 )
 
-// remoteRosterEntry captures stable presentation identity for debug logging.
+// remoteRosterEntry captures enough stable identity for useful diagnostics while keeping the
+// authority projection and ECS components private to the presentation layer.
 type remoteRosterEntry struct {
 	Entity uint64
 	Owner  string
@@ -23,7 +24,8 @@ type remoteRosterEntry struct {
 	Y      float64
 }
 
-// syncRemoteMirrors reconciles the public entity roster without moving retained mirrors.
+// syncRemoteMirrors reconciles structural membership without moving retained entities. Snapshot
+// arrival may change identity immediately, but transforms remain owned by frame interpolation.
 func (app *application) syncRemoteMirrors(
 	projected []playeradapter.WorldEntity,
 	location playeradapter.HUDLocation,
@@ -49,7 +51,8 @@ func (app *application) syncRemoteMirrors(
 	return nil
 }
 
-// ensureRemoteMirrorMaps initializes structural entity and fingerprint indexes.
+// ensureRemoteMirrorMaps initializes entity ownership and structural fingerprints together. The two
+// maps form one cache: one preserves ECS identity and the other suppresses needless rebuilds.
 func (app *application) ensureRemoteMirrorMaps() {
 	if app.remoteMirrors == nil {
 		app.remoteMirrors = make(map[string]akara.Entity)
@@ -60,7 +63,8 @@ func (app *application) ensureRemoteMirrorMaps() {
 	}
 }
 
-// upsertRemoteMirror creates or structurally refreshes one public entity.
+// upsertRemoteMirror retains ECS identity for a public ID and rebuilds components only when its
+// position-free fingerprint changes. Transform updates therefore cannot restart animation graphs.
 func (app *application) upsertRemoteMirror(
 	world *akara.World,
 	remote playeradapter.WorldEntity,
@@ -96,7 +100,8 @@ func (app *application) upsertRemoteMirror(
 	return nil
 }
 
-// removeStaleRemoteMirrors destroys entities absent from the current projection.
+// removeStaleRemoteMirrors treats the projected roster as complete and removes both entity and
+// fingerprint ownership, preventing stale units from surviving after despawn or level changes.
 func (app *application) removeStaleRemoteMirrors(
 	world *akara.World,
 	seen map[string]bool,
@@ -112,7 +117,8 @@ func (app *application) removeStaleRemoteMirrors(
 	}
 }
 
-// applySampledWorldPositions is the sole writer of public mirror transforms.
+// applySampledWorldPositions is the sole writer of peer transforms after creation. This separation
+// ensures packet arrival cannot bypass interpolation and produce visible correction jumps.
 func (app *application) applySampledWorldPositions(
 	projected []playeradapter.WorldEntity,
 ) error {
@@ -136,7 +142,8 @@ func (app *application) applySampledWorldPositions(
 	return nil
 }
 
-// applyLocalPredictedPosition moves only the authenticated local-owner mirror.
+// applyLocalPredictedPosition selects the entity through authenticated player_control ownership, not
+// roster order or character label. Local prediction can therefore never move a peer mirror.
 func (app *application) applyLocalPredictedPosition(
 	playerID string,
 	predicted playeradapter.HUDPosition,
@@ -174,7 +181,8 @@ func (app *application) applyLocalPredictedPosition(
 	return fmt.Errorf("remote presentation: authenticated player %q is unavailable", playerID)
 }
 
-// moveRemoteCameras attaches every frozen camera-follow entity to a position.
+// moveRemoteCameras advances frozen camera-follow entities with the predicted owner because the
+// offline camera systems are not authoritative and do not run in the connected replica.
 func moveRemoteCameras(world *akara.World, position playeradapter.HUDPosition) error {
 	follows, found := akara.GetDynamicStore(world, "d2legacy.world.camera_follow")
 	if !found {
@@ -190,7 +198,8 @@ func moveRemoteCameras(world *akara.World, position playeradapter.HUDPosition) e
 	return nil
 }
 
-// applyAnimationTimeline selects prediction for local and interpolation for peers.
+// applyAnimationTimeline advances the owner's animation on the low-latency prediction clock and
+// peers on the delayed interpolation clock. Using one clock would make either input or peers jitter.
 func (app *application) applyAnimationTimeline(
 	localPlayer string,
 	timeline networkclock.Timeline,
@@ -226,7 +235,8 @@ func (app *application) applyAnimationTimeline(
 	return nil
 }
 
-// setRemoteAnimationClock computes elapsed animation time for one entity.
+// setRemoteAnimationClock derives elapsed seconds from the entity's authority-provided start tick
+// and the timeline appropriate to its owner. Negative elapsed time is clamped during reordering.
 func setRemoteAnimationClock(
 	entity akara.Entity,
 	localPlayer string,
@@ -259,7 +269,8 @@ func setRemoteAnimationClock(
 	return err
 }
 
-// remotePresentationFingerprint excludes position from structural identity.
+// remotePresentationFingerprint removes position before hashing so movement cannot trigger
+// structural ECS writes. Location remains included because crossing worlds changes presentation.
 func remotePresentationFingerprint(
 	entity playeradapter.WorldEntity,
 	location playeradapter.HUDLocation,
@@ -281,7 +292,8 @@ func remotePresentationFingerprint(
 	return string(payload), nil
 }
 
-// installWorldMirror applies one player, monster, or corpse structure.
+// installWorldMirror dispatches the allowlisted public structure by kind. Corpses retain selection
+// identity for applicable skills but explicitly lose living collision.
 func installWorldMirror(
 	world *akara.World,
 	entity akara.Entity,
@@ -310,7 +322,8 @@ func installWorldMirror(
 	return setRemoteComponents(world, entity, values)
 }
 
-// remoteMonsterComponents maps public monster and corpse presentation fields.
+// remoteMonsterComponents fills schema-required gameplay fields with neutral values while mapping
+// only public appearance, health, location, and selection data from authority.
 func remoteMonsterComponents(
 	value playeradapter.WorldEntity,
 	location playeradapter.HUDLocation,
@@ -366,7 +379,8 @@ func remoteMonsterComponents(
 	}
 }
 
-// installPlayerMirror applies public peer-player presentation fields.
+// installPlayerMirror installs only public peer identity, appearance, animation, movement modifiers,
+// and location. Private owner HUD and inventory data use a separate projection path.
 func installPlayerMirror(
 	world *akara.World,
 	entity akara.Entity,
@@ -416,7 +430,7 @@ func installPlayerMirror(
 	return setRemoteComponents(world, entity, values)
 }
 
-// pointed returns zero for an absent projected integer.
+// pointed converts an omitted optional public value to the registered schema's neutral integer.
 func pointed(value *int64) int64 {
 	if value == nil {
 		return 0
@@ -425,7 +439,8 @@ func pointed(value *int64) int64 {
 	return *value
 }
 
-// worldLocation selects an entity-specific location or the HUD fallback.
+// worldLocation uses the entity's explicit location when available and otherwise inherits the
+// snapshot HUD location, supporting older projections without fabricating a different world.
 func worldLocation(value, fallback int64) int64 {
 	if value == 0 {
 		return fallback
@@ -434,7 +449,8 @@ func worldLocation(value, fallback int64) int64 {
 	return value
 }
 
-// monsterWeaponClass supplies the unarmed presentation fallback.
+// monsterWeaponClass supplies the composite-animation system's unarmed token when authority omits a
+// weapon class.
 func monsterWeaponClass(value string) string {
 	if value == "" {
 		return "HTH"
@@ -443,7 +459,8 @@ func monsterWeaponClass(value string) string {
 	return value
 }
 
-// logNetworkRoster emits debug output only when stable roster identity changes.
+// logNetworkRoster keys logs on stable presentation identity instead of position, preventing normal
+// movement from flooding diagnostics while still surfacing roster and appearance changes.
 func (app *application) logNetworkRoster(hud playeradapter.HUD) {
 	entries, found := app.networkRoster()
 	if !found {
@@ -469,7 +486,8 @@ func (app *application) logNetworkRoster(hud playeradapter.HUD) {
 	)
 }
 
-// networkRoster collects stable identity and diagnostic position for players.
+// networkRoster joins identity, appearance, and position only for complete player mirrors, then
+// sorts by entity ID so debug output and change keys remain deterministic.
 func (app *application) networkRoster() ([]remoteRosterEntry, bool) {
 	world := app.clientSimulation.World()
 	identities, identityOK := akara.GetDynamicStore(world, "d2legacy.player.identity")
@@ -514,7 +532,8 @@ func (app *application) networkRoster() ([]remoteRosterEntry, bool) {
 	return entries, true
 }
 
-// correctionAlpha prevents packet arrival from moving an existing mirror.
+// correctionAlpha permits snapping only for initial construction. Retained mirrors receive zero
+// alpha because frame interpolation exclusively owns their transforms.
 func correctionAlpha(snap bool) float64 {
 	if snap {
 		return 1
@@ -524,7 +543,8 @@ func correctionAlpha(snap bool) float64 {
 	return 0
 }
 
-// currentPosition reads one mirror position or returns the zero position.
+// currentPosition returns the schema's neutral position when a mirror has not yet been initialized,
+// allowing moveMirrorToward to own creation behavior.
 func currentPosition(world *akara.World, entity akara.Entity) playeradapter.HUDPosition {
 	positions, found := akara.GetDynamicStore(world, "d2legacy.world.position")
 	if !found {
@@ -542,7 +562,8 @@ func currentPosition(world *akara.World, entity akara.Entity) playeradapter.HUDP
 	return playeradapter.HUDPosition{X: x.(float64), Y: y.(float64)}
 }
 
-// moveMirrorToward initializes, snaps, or interpolates one position component.
+// moveMirrorToward creates missing transforms, ignores zero-alpha correction writes, and snaps errors
+// over four subtiles rather than visibly easing across invalid geometry.
 func moveMirrorToward(
 	world *akara.World,
 	entity akara.Entity,

@@ -5,7 +5,8 @@ import (
 	"testing"
 )
 
-// TestParseReadableDotEnvSyntax verifies the supported comments and quoting.
+// TestParseReadableDotEnvSyntax documents the deliberate human-editable subset
+// and guards credentials containing hashes, spaces, and quoted escape sequences.
 func TestParseReadableDotEnvSyntax(t *testing.T) {
 	document := strings.Join([]string{
 		"# comment",

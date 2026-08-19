@@ -12,12 +12,14 @@ import (
 	"github.com/gravestench/dark-magic/internal/app/envconfig"
 )
 
-// main owns process exit semantics while runMain owns resource cleanup.
+// main converts composition failure into process status while runMain returns
+// normally, allowing deferred content, transport, and authority cleanup to execute.
 func main() {
 	os.Exit(runMain())
 }
 
-// runMain loads process policy and runs the configured game server.
+// runMain resolves environment and flags before signal-scoped startup so invalid
+// policy cannot create an authority or listener that immediately needs rollback.
 func runMain() int {
 	environment, err := envconfig.Bootstrap("server", os.Args[1:])
 	if err != nil {

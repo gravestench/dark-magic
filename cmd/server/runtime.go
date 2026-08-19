@@ -14,7 +14,8 @@ import (
 	"github.com/gravestench/dark-magic/internal/shell"
 )
 
-// runServer assembles content, authority, admissions, and transports.
+// runServer acquires dependencies in trust order: pinned content, authority,
+// admission, then network exposure. Each successful acquisition is paired with cleanup.
 func runServer(ctx context.Context, config serverConfig) error {
 	prepared, err := prepareServerContent(ctx, config)
 	if err != nil {
@@ -60,7 +61,8 @@ func runServer(ctx context.Context, config serverConfig) error {
 	return runStandaloneServer(ctx, host, quicServer, admissions.localProfile, config)
 }
 
-// runRealmWorker starts private control, publishes readiness, and awaits a drain.
+// runRealmWorker exposes supervision before publishing the readiness rendezvous.
+// The Realm must never discover a worker until its drain and admission controls are live.
 func runRealmWorker(
 	ctx context.Context,
 	host *gameserver.Host,
@@ -98,7 +100,8 @@ func runRealmWorker(
 	return serverapp.RunRealmWorker(ctx, host, quicServer, control, drain)
 }
 
-// runStandaloneServer coordinates the local session, transport, shell, and persistence.
+// runStandaloneServer treats the synchronous admin shell as the operator-owned
+// lifetime. When it exits, the session and transport stop before profile persistence.
 func runStandaloneServer(
 	ctx context.Context,
 	host *gameserver.Host,
@@ -130,7 +133,8 @@ func runStandaloneServer(
 	return errors.Join(shellErr, sessionErr, transportErr, profileErr)
 }
 
-// startTransportServing starts QUIC alongside a standalone session when configured.
+// startTransportServing preserves a nil channel when networking is disabled so
+// shutdown never blocks waiting for a goroutine that was not started.
 func startTransportServing(
 	ctx context.Context,
 	quicServer *sessionquic.Server,
@@ -147,7 +151,8 @@ func startTransportServing(
 	return errors
 }
 
-// runAdminShell runs the mutable local administration shell synchronously.
+// runAdminShell gives the standalone operator a mutable session module and uses
+// shell exit as the explicit request to stop the local authority.
 func runAdminShell(
 	ctx context.Context,
 	host *gameserver.Host,
@@ -166,7 +171,8 @@ func runAdminShell(
 	)
 }
 
-// normalizeCancellation treats coordinated session shutdown as success.
+// normalizeCancellation removes the expected context error produced when one
+// component intentionally stops its peers during coordinated shutdown.
 func normalizeCancellation(err error) error {
 	if errors.Is(err, context.Canceled) {
 		return nil

@@ -13,7 +13,8 @@ import (
 	darkpaths "github.com/gravestench/dark-magic/internal/paths"
 )
 
-// Result describes which environment file Bootstrap installed and loaded.
+// Result records both the role default and the file actually loaded. Commands
+// need the default for flag help even when an explicit file won selection.
 type Result struct {
 	Role        string
 	DefaultPath string
@@ -21,7 +22,8 @@ type Result struct {
 	Created     bool
 }
 
-// Duration returns a positive environment duration or the supplied fallback.
+// Duration centralizes duration validation for composition roots. Rejecting zero
+// and negative values prevents maintenance or timeout loops from becoming busy loops.
 func Duration(name string, fallback time.Duration) (time.Duration, error) {
 	if strings.TrimSpace(name) == "" || fallback <= 0 {
 		return 0, errors.New("environment duration requires a name and positive fallback")
@@ -40,7 +42,8 @@ func Duration(name string, fallback time.Duration) (time.Duration, error) {
 	return parsed, nil
 }
 
-// Bootstrap installs the role template and loads the selected environment file.
+// Bootstrap guarantees a private role template exists before selecting a file,
+// then loads file values without overriding already-exported process authority.
 func Bootstrap(role string, arguments []string) (Result, error) {
 	defaultPath, created, err := Install(role)
 	if err != nil {
@@ -64,7 +67,8 @@ func Bootstrap(role string, arguments []string) (Result, error) {
 	}, nil
 }
 
-// selectedEnvironmentPath resolves an explicit flag or preserves the role default.
+// selectedEnvironmentPath gives an explicit --env-file selection precedence while
+// retaining the installed role default when the command line makes no choice.
 func selectedEnvironmentPath(defaultPath string, arguments []string) (string, error) {
 	explicitPath, err := ExplicitPath(arguments)
 	if err != nil {
@@ -83,7 +87,8 @@ func selectedEnvironmentPath(defaultPath string, arguments []string) (string, er
 	return expandedPath, nil
 }
 
-// environmentValue returns an environment value without surrounding whitespace.
+// environmentValue treats surrounding whitespace as configuration formatting,
+// not part of role/path policy interpreted by the composition root.
 func environmentValue(name string) string {
 	return strings.TrimSpace(os.Getenv(name))
 }

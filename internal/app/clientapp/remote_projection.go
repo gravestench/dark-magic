@@ -10,7 +10,8 @@ import (
 
 const playerPalettePath = "data/global/Palette/units/pal.dat"
 
-// installRemoteView copies the latest authenticated presentation snapshot.
+// installRemoteView reads one immutable session snapshot and forwards only its authenticated HUD,
+// private owner view, and party projection into the disposable ECS.
 func (app *application) installRemoteView(
 	session *clientsession.Session,
 	snap bool,
@@ -32,7 +33,8 @@ func (app *application) installRemoteView(
 	)
 }
 
-// installRemoteProjection updates the disposable ECS used by connected presentation.
+// installRemoteProjection refreshes owner components and private graphs, while position changes obey
+// the caller's snap policy. It also follows authoritative level changes in presentation state.
 func (app *application) installRemoteProjection(
 	hud playeradapter.HUD,
 	private playeradapter.PrivateView,
@@ -77,7 +79,8 @@ func (app *application) installRemoteProjection(
 	return nil
 }
 
-// authenticatedHero preserves one local-owner entity and removes stale duplicates.
+// authenticatedHero preserves exactly one controlled entity for the admitted player and destroys
+// every stale or duplicate control entity. Retention protects Lua code that caches the entity handle.
 func authenticatedHero(world *akara.World, playerID string) (akara.Entity, error) {
 	controls, found := akara.GetDynamicStore(world, "d2legacy.world.player_control")
 	if !found {
@@ -118,7 +121,8 @@ func authenticatedHero(world *akara.World, playerID string) (akara.Entity, error
 	return hero, nil
 }
 
-// remoteHeroComponents translates the authenticated HUD into allowlisted ECS fields.
+// remoteHeroComponents is the owner projection allowlist. It provides UI and rendering facts but no
+// simulation systems capable of overriding the server's canonical player.
 func remoteHeroComponents(
 	world *akara.World,
 	hud playeradapter.HUD,
@@ -184,7 +188,8 @@ func remoteHeroComponents(
 	}
 }
 
-// remoteVitalsFields maps HUD vitals without exposing authority-only state.
+// remoteVitalsFields maps display totals and fixed-point stamina fields expected by presentation
+// schemas. Derived mana raw values exist for compatibility, not as writable authority.
 func remoteVitalsFields(vitals playeradapter.HUDVitals) map[string]any {
 	return map[string]any{
 		"health":          vitals.Health,
@@ -200,7 +205,8 @@ func remoteVitalsFields(vitals playeradapter.HUDVitals) map[string]any {
 	}
 }
 
-// remoteProgressFields maps level progression shown by the connected HUD.
+// remoteProgressFields exposes only progression values shown by connected UI; award calculation
+// remains absent from the presentation replica.
 func remoteProgressFields(progress playeradapter.HUDProgress) map[string]any {
 	return map[string]any{
 		"level":                progress.Level,
@@ -209,7 +215,8 @@ func remoteProgressFields(progress playeradapter.HUDProgress) map[string]any {
 	}
 }
 
-// remoteCombatFields maps the allowlisted attack and defense totals.
+// remoteCombatFields exposes summary ratings for UI without projecting the modifiers or rolls used
+// by authority to calculate combat outcomes.
 func remoteCombatFields(combat playeradapter.HUDCombat) map[string]any {
 	return map[string]any{
 		"attack_rating": combat.AttackRating,
@@ -217,7 +224,8 @@ func remoteCombatFields(combat playeradapter.HUDCombat) map[string]any {
 	}
 }
 
-// remoteAnimationFields maps the authoritative animation state.
+// remoteAnimationFields carries the authority-selected mode, direction, and start tick. The client
+// may advance visual time but cannot select a different canonical action.
 func remoteAnimationFields(animation playeradapter.HUDAnimation) map[string]any {
 	return map[string]any{
 		"direction":  animation.Direction,
@@ -226,7 +234,8 @@ func remoteAnimationFields(animation playeradapter.HUDAnimation) map[string]any 
 	}
 }
 
-// remoteMovementFields maps presentation-safe movement modifiers.
+// remoteMovementFields projects only modifiers required to reproduce local prediction. Collision and
+// accepted position still come from authority corrections.
 func remoteMovementFields(movement playeradapter.HUDMovement) map[string]any {
 	return map[string]any{
 		"run_drain":               movement.RunDrain,
@@ -238,7 +247,7 @@ func remoteMovementFields(movement playeradapter.HUDMovement) map[string]any {
 	}
 }
 
-// remoteSkillAssignmentFields maps the active left and right skill slots.
+// remoteSkillAssignmentFields exposes current input-slot selection without granting either skill.
 func remoteSkillAssignmentFields(skills playeradapter.HUDSkills) map[string]any {
 	return map[string]any{
 		"left":  skills.Left,
@@ -246,7 +255,8 @@ func remoteSkillAssignmentFields(skills playeradapter.HUDSkills) map[string]any 
 	}
 }
 
-// setRemoteComponents applies one allowlisted component batch to an entity.
+// setRemoteComponents requires every allowlisted schema to be registered and stops on the first
+// failed write. Missing presentation structure is surfaced instead of silently dropping HUD facts.
 func setRemoteComponents(
 	world *akara.World,
 	entity akara.Entity,
@@ -266,7 +276,8 @@ func setRemoteComponents(
 	return nil
 }
 
-// refreshPrivateProjection rebuilds owner-private entities only when content changes.
+// refreshPrivateProjection fingerprints content without transport ticks and rebuilds only on semantic
+// change. This preserves entity handles and avoids expensive graph churn every correction.
 func (app *application) refreshPrivateProjection(
 	world *akara.World,
 	hero akara.Entity,
@@ -297,7 +308,8 @@ func (app *application) refreshPrivateProjection(
 	return nil
 }
 
-// followRemoteHero keeps frozen offline camera entities attached to the hero.
+// followRemoteHero aligns camera entities immediately because the offline follow system is frozen in
+// connected play; subsequent predicted motion moves them with the authenticated owner.
 func followRemoteHero(world *akara.World, hero akara.Entity) error {
 	follows, found := akara.GetDynamicStore(world, "d2legacy.world.camera_follow")
 	if !found {
@@ -315,7 +327,8 @@ func followRemoteHero(world *akara.World, hero akara.Entity) error {
 	return nil
 }
 
-// partyViewFields fills the fixed Lua-facing party roster shape.
+// partyViewFields converts a variable authority roster into the fixed registered Lua schema. Every
+// slot is initialized so members removed in a later revision cannot leave stale fields.
 func partyViewFields(view playeradapter.PartyView) map[string]any {
 	values := map[string]any{
 		"schema_version": int64(view.Version),
@@ -331,7 +344,8 @@ func partyViewFields(view playeradapter.PartyView) map[string]any {
 	return values
 }
 
-// setPartyRosterSlot initializes one fixed party slot and optional member.
+// setPartyRosterSlot writes neutral values before an optional member, making replacement complete even
+// when the new roster is shorter than the previous one.
 func setPartyRosterSlot(
 	values map[string]any,
 	slot int,
@@ -356,7 +370,8 @@ func setPartyRosterSlot(
 	values["relationship"+suffix] = entry.Relationship
 }
 
-// beltFields includes only belt slots supported by the registered schema.
+// beltFields intersects the projected belt with fields registered by the active package set. This
+// allows older schemas to render safely without discarding supported slots.
 func beltFields(world *akara.World, belt playeradapter.HUDBelt) map[string]any {
 	fields := map[string]any{"capacity": belt.Capacity}
 
@@ -387,7 +402,8 @@ func beltFields(world *akara.World, belt playeradapter.HUDBelt) map[string]any {
 	return fields
 }
 
-// movementBound supplies the legacy presentation fallback for absent bounds.
+// movementBound supplies a deliberately broad positive fallback for legacy projections that omit
+// bounds, preventing invalid zero-sized movement while trusted collision still constrains play.
 func movementBound(value float64) float64 {
 	if value <= 0 {
 		return 1 << 20
@@ -396,7 +412,7 @@ func movementBound(value float64) float64 {
 	return value
 }
 
-// movementRadius supplies the legacy presentation fallback for absent radius.
+// movementRadius supplies a conservative positive collision radius when an older HUD omits it.
 func movementRadius(value float64) float64 {
 	if value <= 0 {
 		return 1
@@ -405,7 +421,8 @@ func movementRadius(value float64) float64 {
 	return value
 }
 
-// classToken maps save classes to their composite animation tokens.
+// classToken maps canonical class names to the legacy two-character composite tokens consumed by
+// presentation assets; unknown classes remain empty and fail visibly rather than guessing.
 func classToken(class string) string {
 	return map[string]string{
 		"Amazon":      "AM",

@@ -19,7 +19,9 @@ import (
 
 const maximumInFlightSubmissions = 8
 
-// send drains staged input with bounded concurrent transport requests.
+// send drains staged input with limited concurrency. The cap permits parallel QUIC requests while
+// preventing renderer bursts from creating an unbounded number of goroutines and retained
+// payloads.
 func (controller *networkController) send(
 	ctx context.Context,
 	client *clientsession.Session,
@@ -49,7 +51,8 @@ func (controller *networkController) send(
 	}
 }
 
-// reserveSubmission waits for bounded capacity or connection cancellation.
+// reserveSubmission makes backpressure cancellation-aware so shutdown cannot remain blocked behind
+// requests to a dead transport.
 func reserveSubmission(ctx context.Context, inFlight chan<- struct{}) bool {
 	select {
 	case inFlight <- struct{}{}:
@@ -59,7 +62,9 @@ func reserveSubmission(ctx context.Context, inFlight chan<- struct{}) bool {
 	}
 }
 
-// sendIntent retries one staged command across recoverable transport failures.
+// sendIntent keeps a staged command pending across transport recovery and retries the same sequence.
+// Server-declared protocol errors are terminal and discard it; retrying those would duplicate an
+// invalid request forever.
 func (controller *networkController) sendIntent(
 	ctx context.Context,
 	client *clientsession.Session,
@@ -100,7 +105,8 @@ func (controller *networkController) sendIntent(
 	}
 }
 
-// watch consumes correction streams and recovers interrupted transports.
+// watch continuously consumes the authoritative correction stream. A transport interruption may
+// recover, but an authenticated remote protocol error terminates the session immediately.
 func (controller *networkController) watch(
 	ctx context.Context,
 	client *clientsession.Session,
@@ -129,7 +135,9 @@ func (controller *networkController) watch(
 	}
 }
 
-// receiveCorrectionStream drains one watch stream until failure or closure.
+// receiveCorrectionStream drains both stream channels until they close, preserving the first
+// transport failure. An unexplained clean end is still an error because corrections are a required
+// part of a connected session.
 func receiveCorrectionStream(
 	ctx context.Context,
 	client *clientsession.Session,
@@ -181,14 +189,17 @@ func receiveCorrectionStream(
 	return errors.New("network correction stream ended")
 }
 
-// isRemoteProtocolError reports a server-declared terminal request failure.
+// isRemoteProtocolError distinguishes authenticated server rejection from an interrupted transport;
+// only the latter is safe to retry against the same logical session.
 func isRemoteProtocolError(err error) bool {
 	var remote *sessionquic.RemoteError
 
 	return errors.As(err, &remote)
 }
 
-// recover reconnects the current transport, then asks Realm for replacement.
+// recover first retries the pinned endpoint, then asks Realm for a replacement worker if allowed.
+// reconnectMu ensures send and watch failures cooperate on one recovery instead of racing two
+// endpoint changes.
 func (controller *networkController) recover(
 	ctx context.Context,
 	client *clientsession.Session,
@@ -229,7 +240,9 @@ func (controller *networkController) recover(
 	return fmt.Errorf("network reconnect lease expired: %w", lastErr)
 }
 
-// beginRecovery rejects stale recovery work and marks the client reconnecting.
+// beginRecovery verifies both client ownership and the observed connection epoch. If another
+// goroutine already recovered this epoch, the late caller succeeds without touching the new
+// transport.
 func (controller *networkController) beginRecovery(
 	client *clientsession.Session,
 	observedEpoch uint64,
@@ -250,7 +263,8 @@ func (controller *networkController) beginRecovery(
 	return controller.mode, controller.address, true, nil
 }
 
-// retryTransport reconnects the existing endpoint with bounded backoff.
+// retryTransport gives the current endpoint a bounded exponential-backoff lease. Each dial also has
+// its own timeout so one attempt cannot consume the entire recovery window.
 func (controller *networkController) retryTransport(
 	ctx context.Context,
 	client *clientsession.Session,
@@ -292,7 +306,8 @@ func (controller *networkController) retryTransport(
 	return lastErr
 }
 
-// waitForRetry waits for a backoff delay without hiding cancellation.
+// waitForRetry implements backoff with a stoppable timer so cancellation releases resources and
+// returns promptly even during the longest delay.
 func waitForRetry(ctx context.Context, delay time.Duration) bool {
 	if delay <= 0 {
 		return ctx.Err() == nil
@@ -309,7 +324,8 @@ func waitForRetry(ctx context.Context, delay time.Duration) bool {
 	}
 }
 
-// completeTransportRecovery commits one successful endpoint reconnect.
+// completeTransportRecovery publishes success only while the same client remains owned. Advancing
+// the epoch causes concurrent recovery attempts based on the old failure to become no-ops.
 func (controller *networkController) completeTransportRecovery(
 	client *clientsession.Session,
 ) error {
@@ -327,7 +343,9 @@ func (controller *networkController) completeTransportRecovery(
 	return nil
 }
 
-// recoverThroughRealm requests and commits a replacement worker assignment.
+// recoverThroughRealm obtains a replacement for the same logical game, then commits its address
+// only if the client survived the allocation delay. The previous error is retained when allocation
+// also fails.
 func (controller *networkController) recoverThroughRealm(
 	ctx context.Context,
 	client *clientsession.Session,
@@ -363,7 +381,8 @@ func (controller *networkController) recoverThroughRealm(
 	return nil
 }
 
-// reassignThroughRealm retries replacement allocation and authenticated reassignment.
+// reassignThroughRealm retries because Realm may need time to allocate and restore a worker. The
+// overall caller deadline bounds this loop even when individual control-plane attempts fail fast.
 func (controller *networkController) reassignThroughRealm(
 	ctx context.Context,
 	client *clientsession.Session,
@@ -391,7 +410,8 @@ func (controller *networkController) reassignThroughRealm(
 	return realm.JoinAssignment{}, errors.Join(lastErr, ctx.Err())
 }
 
-// tryRealmReassignment requests one assignment and applies its pinned transport.
+// tryRealmReassignment treats the Realm assignment and its TLS fingerprint as one unit. The client
+// is never pointed at the replacement address before that endpoint's identity is pinned.
 func (controller *networkController) tryRealmReassignment(
 	ctx context.Context,
 	client *clientsession.Session,

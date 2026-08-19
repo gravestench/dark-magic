@@ -9,17 +9,19 @@ import (
 	d2save "github.com/gravestench/dark-magic/internal/mod/d2legacy/adapter/save"
 )
 
-// errorCollector retains every shutdown failure in the order it occurred.
+// errorCollector preserves all cleanup failures because one broken closer must
+// not prevent later resources from being released or hide their errors.
 type errorCollector struct {
 	err error
 }
 
-// add joins one resource error into the accumulated shutdown result.
+// add ignores nil and joins non-nil failures while retaining Go's error matching behavior.
 func (collector *errorCollector) add(err error) {
 	collector.err = errors.Join(collector.err, err)
 }
 
-// shutdown releases resources in reverse ownership order and joins failures.
+// shutdown mirrors assembly in reverse: callbacks stop before targets, clients
+// persist/leave before runtimes disappear, and native backends close last.
 func (app *application) shutdown() error {
 	app.stopSubscriptions()
 
@@ -33,14 +35,16 @@ func (app *application) shutdown() error {
 	return errors.err
 }
 
-// stopSubscriptions detaches renderer callbacks before closing their targets.
+// stopSubscriptions prevents late resize/frame callbacks from reaching video or
+// other services while those targets are being torn down.
 func (app *application) stopSubscriptions() {
 	app.stopCapture()
 	app.stopScene()
 	app.stopOverlay()
 }
 
-// closeConnections persists local play before closing network and realm clients.
+// closeConnections commits player state and Realm presence while session and save
+// dependencies still exist; closing transports first could lose authoritative exit data.
 func (app *application) closeConnections(errors *errorCollector) {
 	if app.network != nil {
 		if app.network.Local() {
@@ -60,7 +64,8 @@ func (app *application) closeConnections(errors *errorCollector) {
 	cancel()
 }
 
-// closeUserState writes profiles and closes optional capture and console tools.
+// closeUserState flushes durable user-facing outputs before their content and
+// presentation dependencies are released. Optional tools still participate in error reporting.
 func (app *application) closeUserState(errors *errorCollector) {
 	if app.saves != nil && app.playerProfilePath != "" {
 		errors.add(d2save.WriteProfileFile(app.playerProfilePath, app.saves.Profile()))
@@ -75,7 +80,8 @@ func (app *application) closeUserState(errors *errorCollector) {
 	}
 }
 
-// closeRuntime stops scene, script, component, host, and simulation resources.
+// closeRuntime separates frontend consumers from backend owners and gives each
+// phase a bounded context so a stuck component cannot hang process exit forever.
 func (app *application) closeRuntime(errors *errorCollector) {
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
@@ -84,7 +90,8 @@ func (app *application) closeRuntime(errors *errorCollector) {
 	app.closeRuntimeBackends(ctx, errors)
 }
 
-// closeRuntimeFrontends closes consumers before their underlying host services.
+// closeRuntimeFrontends stops scenes, managed scripts, and Lua before engine host
+// services, preventing callbacks into backends that are already closing.
 func (app *application) closeRuntimeFrontends(ctx context.Context, errors *errorCollector) {
 	if app.scenes != nil {
 		errors.add(app.scenes.Close(ctx))
@@ -104,7 +111,8 @@ func (app *application) closeRuntimeFrontends(ctx context.Context, errors *error
 	}
 }
 
-// closeRuntimeBackends closes the host and its remaining owned state.
+// closeRuntimeBackends releases host/native services before ECS engines and loading
+// coordination, preserving every backend's opportunity to detach from simulation.
 func (app *application) closeRuntimeBackends(ctx context.Context, errors *errorCollector) {
 	if app.engineHost != nil && !app.hostStopped {
 		errors.add(app.engineHost.Stop(ctx))
@@ -124,7 +132,8 @@ func (app *application) closeRuntimeBackends(ctx context.Context, errors *errorC
 	}
 }
 
-// wrap identifies the composition stage that returned an error.
+// wrap adds the failed composition stage without changing the underlying error,
+// making startup/shutdown reports actionable while preserving errors.Is semantics.
 func wrap(stage string, err error) error {
 	if err == nil {
 		return nil

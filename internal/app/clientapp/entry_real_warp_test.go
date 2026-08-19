@@ -9,7 +9,8 @@ import (
 	gameworld "github.com/gravestench/dark-magic/internal/game/world"
 )
 
-// warpLabScenario collects the authoritative state used to traverse the paired portals.
+// warpLabScenario retains authority, presentation, and portal facts needed to prove both sides of a
+// world transition remain synchronized.
 type warpLabScenario struct {
 	fixture     *realD2LegacyFixture
 	player      akara.Entity
@@ -21,7 +22,8 @@ type warpLabScenario struct {
 	selectables *akara.DynamicStore
 }
 
-// TestWarpLabUsesProductionMovementAndTransition exercises production movement and warps.
+// TestWarpLabUsesProductionMovementAndTransition proves point movement, range validation, paired
+// traversal, route clearing, and resumed locomotion through production systems.
 func TestWarpLabUsesProductionMovementAndTransition(t *testing.T) {
 	fixture := newRealD2LegacyFixture(t, realD2LegacyFixtureConfig{
 		startScene:         "warp_lab",
@@ -61,7 +63,8 @@ func TestWarpLabUsesProductionMovementAndTransition(t *testing.T) {
 	scenario.assertLocomotionResumes(t)
 }
 
-// newWarpLabScenario verifies admission and loads the portal presentation stores.
+// newWarpLabScenario requires authoritative admission and both portal endpoints before movement,
+// separating fixture/bootstrap failures from traversal policy failures.
 func newWarpLabScenario(t *testing.T, fixture *realD2LegacyFixture) *warpLabScenario {
 	t.Helper()
 
@@ -130,7 +133,8 @@ func newWarpLabScenario(t *testing.T, fixture *realD2LegacyFixture) *warpLabScen
 	return scenario
 }
 
-// assertPortalDirectory verifies that both authoritative endpoints have room residency.
+// assertPortalDirectory requires both endpoints to carry generated room residency, which transition
+// logic uses to keep inactive rooms from accepting interaction.
 func (scenario *warpLabScenario) assertPortalDirectory(t *testing.T) {
 	t.Helper()
 
@@ -152,7 +156,8 @@ func (scenario *warpLabScenario) assertPortalDirectory(t *testing.T) {
 	}
 }
 
-// portal returns the selectable identity and coordinates for one side of the pair.
+// portal resolves a portal by stable public identity and returns its authoritative coordinates,
+// avoiding hard-coded fixture positions that could diverge from generated collision.
 func (scenario *warpLabScenario) portal(
 	t *testing.T,
 	levelID int,
@@ -180,7 +185,8 @@ func (scenario *warpLabScenario) portal(
 	return "", 0, 0
 }
 
-// rejectStaleInteraction verifies that predicted range cannot operate a distant portal.
+// rejectStaleInteraction proves presentation or predicted proximity cannot authorize a remote portal;
+// authority must reject interaction until canonical movement reaches range.
 func (scenario *warpLabScenario) rejectStaleInteraction(t *testing.T, x, y float64) {
 	t.Helper()
 
@@ -198,7 +204,8 @@ func (scenario *warpLabScenario) rejectStaleInteraction(t *testing.T, x, y float
 	}
 }
 
-// moveToPortal follows production point-and-click movement until its route completes.
+// moveToPortal submits through point-and-click input and advances the full application until the
+// production route completes, exercising pathfinding rather than teleporting the player.
 func (scenario *warpLabScenario) moveToPortal(
 	t *testing.T,
 	x float64,
@@ -223,7 +230,8 @@ func (scenario *warpLabScenario) moveToPortal(
 	t.Fatalf("Warp Lab player never reached the %s warp", side)
 }
 
-// openPortal operates a reached portal through the same point-based presentation API.
+// openPortal uses the presentation interaction API at the reached point, preserving the same target
+// resolution and authority command boundary used by players.
 func (scenario *warpLabScenario) openPortal(t *testing.T, x, y float64) {
 	t.Helper()
 
@@ -234,7 +242,8 @@ func (scenario *warpLabScenario) openPortal(t *testing.T, x, y float64) {
 	scenario.fixture.advanceGame(t, 5)
 }
 
-// assertWildernessEntry verifies that authority and presentation crossed together.
+// assertWildernessEntry requires authority and active presentation map to agree after traversal,
+// catching transitions that update simulation but leave navigation on the old world.
 func (scenario *warpLabScenario) assertWildernessEntry(t *testing.T) {
 	t.Helper()
 
@@ -252,7 +261,8 @@ func (scenario *warpLabScenario) assertWildernessEntry(t *testing.T) {
 	}
 }
 
-// returnToTown verifies that a world-relative queued route is cleared across transition.
+// returnToTown queues traversal back and proves the previous world's movement route is discarded;
+// coordinates from one world must never continue driving movement in another.
 func (scenario *warpLabScenario) returnToTown(t *testing.T, x, y float64) {
 	t.Helper()
 
@@ -281,7 +291,8 @@ func (scenario *warpLabScenario) returnToTown(t *testing.T, x, y float64) {
 	}
 }
 
-// assertLocomotionResumes verifies that the returned position starts a valid production route.
+// assertLocomotionResumes starts a fresh post-transition route, proving navigation was rebound to the
+// returned world rather than merely clearing stale input.
 func (scenario *warpLabScenario) assertLocomotionResumes(t *testing.T) {
 	t.Helper()
 
@@ -321,7 +332,8 @@ func (scenario *warpLabScenario) assertLocomotionResumes(t *testing.T) {
 	t.Fatal("Warp Lab locomotion did not resume after the return warp")
 }
 
-// submitInteraction sends the point-based operation command used by presentation input.
+// submitInteraction encodes the same point-based operation intent produced by presentation input,
+// leaving target selection and range checks to authority.
 func (scenario *warpLabScenario) submitInteraction(x, y float64) error {
 	return scenario.fixture.app.commandIntents.Submit("interaction.open", map[string]any{
 		"at": true,
@@ -330,7 +342,8 @@ func (scenario *warpLabScenario) submitInteraction(x, y float64) error {
 	})
 }
 
-// currentLevel reads the player's authoritative level identity.
+// currentLevel reads the controlled player's authoritative location instead of the application's
+// active presentation cache.
 func (scenario *warpLabScenario) currentLevel() int64 {
 	level, _ := scenario.location.Get("level_id")
 

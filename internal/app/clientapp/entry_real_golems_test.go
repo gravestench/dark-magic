@@ -8,7 +8,8 @@ import (
 
 const ironGolemItemID = "fixture-short-sword"
 
-// ironGolemItem records the ground item facts that must survive invalidation and feed success.
+// ironGolemItem snapshots the selected weapon's identity, entity, and damage so invalidation and
+// successful conversion can be compared against the same production item.
 type ironGolemItem struct {
 	entity         akara.Entity
 	modifierEntity akara.Entity
@@ -16,7 +17,8 @@ type ironGolemItem struct {
 	maximum        int64
 }
 
-// assertGolemFamilies exercises replacement and each production golem's defining behavior.
+// assertGolemFamilies casts all four production golems in sequence, making summon replacement and
+// each family's defining reactive behavior part of one ownership scenario.
 func (scenario *spellLabScenario) assertGolemFamilies(t *testing.T) {
 	t.Helper()
 
@@ -26,7 +28,8 @@ func (scenario *spellLabScenario) assertGolemFamilies(t *testing.T) {
 	scenario.assertIronGolem(t)
 }
 
-// castGolem assigns, starts, validates, and completes one production summon cast.
+// castGolem routes assignment and use through production commands, checks the active cast, and waits
+// for completion before inspecting summons. It never constructs a golem directly.
 func (scenario *spellLabScenario) castGolem(t *testing.T, skillID int64, targetID string) {
 	t.Helper()
 
@@ -51,7 +54,8 @@ func (scenario *spellLabScenario) castGolem(t *testing.T, skillID int64, targetI
 	scenario.fixture.advanceOffline(t, 17)
 }
 
-// assertIronGolemCastActive provides preflight facts when the item-targeted cast fails early.
+// assertIronGolemCastActive reports item and cast state at the effect boundary so failures distinguish
+// targeting/invalidation from later summon construction.
 func (scenario *spellLabScenario) assertIronGolemCastActive(t *testing.T, targetID string) {
 	t.Helper()
 
@@ -82,7 +86,8 @@ func (scenario *spellLabScenario) assertIronGolemCastActive(t *testing.T, target
 	)
 }
 
-// ironTargetFacts snapshots the target item's availability for cast-preflight diagnostics.
+// ironTargetFacts gathers non-mutating target facts for failure output, keeping diagnostics from
+// changing the item state under test.
 func (scenario *spellLabScenario) ironTargetFacts(targetID string) map[string]any {
 	world := scenario.fixture.app.entitySimulation.World()
 	items, _ := akara.GetDynamicStore(world, "d2legacy.item.identity")
@@ -127,7 +132,8 @@ func (scenario *spellLabScenario) ironTargetFacts(targetID string) map[string]an
 	return result
 }
 
-// onlyGolem requires exactly one owned summon with the requested production definition.
+// onlyGolem requires replacement to leave exactly one owned summon of the expected definition;
+// accepting at least one would hide leaked earlier summons.
 func (scenario *spellLabScenario) onlyGolem(t *testing.T, definition string) akara.Entity {
 	t.Helper()
 
@@ -166,7 +172,8 @@ func (scenario *spellLabScenario) onlyGolem(t *testing.T, definition string) aka
 	return entity
 }
 
-// lastGolemOutcome returns the latest summon result for replacement diagnostics.
+// lastGolemOutcome exposes the newest authoritative summon event only for diagnostics when ownership
+// or definition assertions fail.
 func (scenario *spellLabScenario) lastGolemOutcome() (any, any) {
 	events, _ := akara.GetDynamicStore(
 		scenario.fixture.app.entitySimulation.World(),
@@ -191,7 +198,8 @@ func (scenario *spellLabScenario) lastGolemOutcome() (any, any) {
 	return outcome, reason
 }
 
-// createMeleeEvent injects a resolved production event to exercise reactive effects.
+// createMeleeEvent injects the already-resolved combat event expected by reactive golem systems,
+// isolating their policy without bypassing their normal event-consumption path.
 func (scenario *spellLabScenario) createMeleeEvent(
 	t *testing.T,
 	attackerID string,
@@ -225,7 +233,8 @@ func (scenario *spellLabScenario) createMeleeEvent(
 	}
 }
 
-// assertClayGolem verifies the melee-triggered state and movement/attack penalties.
+// assertClayGolem proves a melee hit applies the production slow state and both movement and attack
+// penalties, not merely a visual marker.
 func (scenario *spellLabScenario) assertClayGolem(t *testing.T) {
 	t.Helper()
 
@@ -260,7 +269,8 @@ func (scenario *spellLabScenario) assertClayGolem(t *testing.T) {
 	}
 }
 
-// clayStatPenalties finds the target's negative velocity and attack-rate sources.
+// clayStatPenalties inspects authoritative stat sources by target and sign, ensuring the state has
+// mechanical consequences rather than relying on a display total.
 func (scenario *spellLabScenario) clayStatPenalties() (bool, bool) {
 	sources, _ := akara.GetDynamicStore(
 		scenario.fixture.app.entitySimulation.World(),
@@ -286,7 +296,8 @@ func (scenario *spellLabScenario) clayStatPenalties() (bool, bool) {
 	return velocitySlow, attackSlow
 }
 
-// assertBloodGolem verifies its reactive life sharing in both transfer directions.
+// assertBloodGolem verifies owner-to-golem and golem-to-owner life sharing separately because each
+// direction has distinct production event and clamping rules.
 func (scenario *spellLabScenario) assertBloodGolem(t *testing.T) {
 	t.Helper()
 
@@ -349,7 +360,8 @@ func (scenario *spellLabScenario) assertBloodGolem(t *testing.T) {
 	}
 }
 
-// assertFireGolem verifies its granted aura facts and decoded periodic damage schedule.
+// assertFireGolem checks the granted Holy Fire identity and then its scheduled authoritative pulse,
+// connecting record-derived configuration to runtime damage behavior.
 func (scenario *spellLabScenario) assertFireGolem(t *testing.T) {
 	t.Helper()
 
@@ -359,7 +371,8 @@ func (scenario *spellLabScenario) assertFireGolem(t *testing.T) {
 	scenario.assertFireGolemPulse(t, fire)
 }
 
-// assertFireGolemGrant verifies the record-derived Holy Fire grant and period.
+// assertFireGolemGrant requires the production aura grant and decoded period instead of accepting any
+// generic state attached to the summon.
 func (scenario *spellLabScenario) assertFireGolemGrant(t *testing.T, fire akara.Entity) {
 	t.Helper()
 
@@ -398,7 +411,8 @@ func (scenario *spellLabScenario) assertFireGolemGrant(t *testing.T, fire akara.
 	}
 }
 
-// assertFireGolemPulse verifies that Holy Fire emits an authoritative damage event.
+// assertFireGolemPulse advances through the decoded schedule and requires an authoritative damage
+// event from the golem, proving the aura is active rather than merely listed.
 func (scenario *spellLabScenario) assertFireGolemPulse(t *testing.T, fire akara.Entity) {
 	t.Helper()
 

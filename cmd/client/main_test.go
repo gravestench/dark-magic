@@ -7,7 +7,8 @@ import (
 	"github.com/gravestench/dark-magic/internal/logging"
 )
 
-// TestParseLogLevel documents the accepted spellings at the command boundary.
+// TestParseLogLevel protects the CLI vocabulary so configuration examples do
+// not silently diverge from the typed logging levels accepted at startup.
 func TestParseLogLevel(t *testing.T) {
 	t.Parallel()
 
@@ -32,7 +33,8 @@ func TestParseLogLevel(t *testing.T) {
 	}
 }
 
-// TestDevelopmentCharacters protects the deterministic fixture sequence used by captures.
+// TestDevelopmentCharacters protects fixture determinism because capture and
+// acceptance comparisons rely on stable character identity and ordering.
 func TestDevelopmentCharacters(t *testing.T) {
 	t.Parallel()
 

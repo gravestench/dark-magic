@@ -11,8 +11,8 @@ import (
 	modruntime "github.com/gravestench/dark-magic/internal/runtime/lua"
 )
 
-// TestComponentDiscoveryKeepsEachResolvedPackageRoot verifies that discovery
-// evaluates every package from its own mounted content subtree.
+// TestComponentDiscoveryKeepsEachResolvedPackageRoot prevents aggregate VFS
+// lookup from letting one package shadow or supply another package's component entrypoint.
 func TestComponentDiscoveryKeepsEachResolvedPackageRoot(t *testing.T) {
 	firstManifest := discoveryManifest("first")
 	secondManifest := discoveryManifest("second")
@@ -57,7 +57,7 @@ func TestComponentDiscoveryKeepsEachResolvedPackageRoot(t *testing.T) {
 	}
 }
 
-// discoveryManifest returns one minimal package manifest for discovery tests.
+// discoveryManifest creates only the ownership metadata needed to exercise isolated discovery.
 func discoveryManifest(id string) modcache.Manifest {
 	return modcache.Manifest{
 		Schema:          modcache.ManifestSchema,
@@ -73,7 +73,8 @@ func discoveryManifest(id string) modcache.Manifest {
 	}
 }
 
-// packageLayer wraps a manifest and boot script in the production package FS.
+// packageLayer uses the production package filesystem so the test covers real
+// manifest-root enforcement rather than a permissive synthetic fs.FS.
 func packageLayer(t *testing.T, manifest modcache.Manifest, boot string) *modcache.PackageFS {
 	t.Helper()
 

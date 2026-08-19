@@ -11,7 +11,8 @@ import (
 	"github.com/gravestench/dark-magic/internal/shell"
 )
 
-// Run starts a renderer-free Lua runtime and its modal administration UI.
+// Run composes a renderer-free administrative boundary around explicitly supplied
+// modules. Policy determines mutation rights; terminal exit tears down runtime and logs.
 func Run(
 	ctx context.Context,
 	target string,

@@ -13,7 +13,8 @@ var spellLabSkillIDs = []int64{
 	251, 256, 257, 261, 262, 266, 271, 272, 276, 277,
 }
 
-// spellLabScenario owns the player, target, and stores shared by production skill assertions.
+// spellLabScenario groups authoritative entities and stores shared across skill families so each
+// assertion observes the same production session and progression state.
 type spellLabScenario struct {
 	fixture     *realD2LegacyFixture
 	player      akara.Entity
@@ -28,7 +29,8 @@ type spellLabScenario struct {
 	vitals      *akara.DynamicStore
 }
 
-// TestSpellLabCastsProductionSkillFamilies exercises production skill families.
+// TestSpellLabCastsProductionSkillFamilies proves representative projectile and summon families run
+// through production assignment, resource payment, timing, and effect systems.
 func TestSpellLabCastsProductionSkillFamilies(t *testing.T) {
 	fixture := newRealD2LegacyFixture(t, realD2LegacyFixtureConfig{
 		startScene:         "spell_lab",
@@ -43,7 +45,8 @@ func TestSpellLabCastsProductionSkillFamilies(t *testing.T) {
 	scenario.assertGolemFamilies(t)
 }
 
-// newSpellLabScenario verifies that Spell Lab admitted exactly one authoritative player.
+// newSpellLabScenario requires exactly one authoritative fixture player and records its stores before
+// selecting targets, preventing ambiguous ownership from weakening later assertions.
 func newSpellLabScenario(t *testing.T, fixture *realD2LegacyFixture) *spellLabScenario {
 	t.Helper()
 
@@ -63,7 +66,8 @@ func newSpellLabScenario(t *testing.T, fixture *realD2LegacyFixture) *spellLabSc
 	}
 }
 
-// assertLearnedSkills verifies exact fixture learning and initial left/right assignments.
+// assertLearnedSkills checks exact learned levels and input slots because a cast result is not useful
+// evidence if the fixture gained skills through unintended defaults.
 func (scenario *spellLabScenario) assertLearnedSkills(t *testing.T) {
 	t.Helper()
 
@@ -119,7 +123,8 @@ func (scenario *spellLabScenario) assertLearnedSkills(t *testing.T) {
 	}
 }
 
-// prepareTarget places one real hostile in Fire Bolt's deterministic line of travel.
+// prepareTarget repositions a naturally spawned hostile to isolate projectile behavior while retaining
+// its production monster identity, stats, and damage handling.
 func (scenario *spellLabScenario) prepareTarget(t *testing.T) {
 	t.Helper()
 
@@ -164,7 +169,8 @@ func (scenario *spellLabScenario) prepareTarget(t *testing.T) {
 	scenario.targetID = targetID.(string)
 }
 
-// requireMonsters returns real Blood Moor hostiles with generation diagnostics on failure.
+// requireMonsters requires production population and reports generation context when absent, keeping
+// missing content distinct from skill-resolution failures.
 func (scenario *spellLabScenario) requireMonsters(t *testing.T) *akara.DynamicStore {
 	t.Helper()
 
@@ -194,7 +200,8 @@ func (scenario *spellLabScenario) requireMonsters(t *testing.T) *akara.DynamicSt
 	return nil
 }
 
-// castFireBolt exercises mana payment, SC timing, projectile damage, and recovery.
+// castFireBolt verifies the complete fixed-tick lifecycle: payment at start, SC animation timing,
+// projectile effect, damage, and return to neutral state.
 func (scenario *spellLabScenario) castFireBolt(t *testing.T) {
 	t.Helper()
 
@@ -214,7 +221,8 @@ func (scenario *spellLabScenario) castFireBolt(t *testing.T) {
 	scenario.assertFireBoltCompleted(t, maximumMana, beforeHealth.(int64))
 }
 
-// assertFireBoltManaSpent verifies that payment occurs at cast start.
+// assertFireBoltManaSpent records post-payment mana and requires immediate cost, guarding against
+// clients or later effects becoming responsible for authoritative resource payment.
 func (scenario *spellLabScenario) assertFireBoltManaSpent(t *testing.T) int64 {
 	t.Helper()
 
@@ -233,7 +241,8 @@ func (scenario *spellLabScenario) assertFireBoltManaSpent(t *testing.T) int64 {
 	return maximumMana.(int64)
 }
 
-// assertFireBoltCastTiming verifies the production SC action and effect offsets.
+// assertFireBoltCastTiming checks record-derived animation and effect offsets rather than merely
+// waiting for eventual damage, preserving the timing contract other systems depend on.
 func (scenario *spellLabScenario) assertFireBoltCastTiming(t *testing.T) {
 	t.Helper()
 
@@ -267,7 +276,8 @@ func (scenario *spellLabScenario) assertFireBoltCastTiming(t *testing.T) {
 	}
 }
 
-// assertFireBoltCompleted verifies animation reset, mana recovery, and target damage.
+// assertFireBoltCompleted requires the action to leave SC, retain paid mana semantics, and damage the
+// target, proving cleanup and effect resolution both completed.
 func (scenario *spellLabScenario) assertFireBoltCompleted(
 	t *testing.T,
 	maximumMana int64,
@@ -310,7 +320,8 @@ func (scenario *spellLabScenario) assertFireBoltCompleted(
 	}
 }
 
-// submitSkill sends a production skill-use intent through the shared command controller.
+// submitSkill uses the same command controller as runtime input so acceptance tests cannot bypass
+// assignment validation or fixed-tick command ordering.
 func (scenario *spellLabScenario) submitSkill(
 	side string,
 	targetID string,

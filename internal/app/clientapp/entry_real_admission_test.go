@@ -10,7 +10,8 @@ import (
 	"github.com/gravestench/dark-magic/internal/presentation/maprender"
 )
 
-// TestCreatedCharacterEntersGeneratedActOneTown exercises the complete offline admission seam.
+// TestCreatedCharacterEntersGeneratedActOneTown proves a durable selected save enters the real
+// generated town while the paired wilderness remains renderable and memory-bounded.
 func TestCreatedCharacterEntersGeneratedActOneTown(t *testing.T) {
 	fixture := newRealD2LegacyFixture(t, realD2LegacyFixtureConfig{})
 
@@ -20,7 +21,8 @@ func TestCreatedCharacterEntersGeneratedActOneTown(t *testing.T) {
 	assertCharacterEnteredTown(t, fixture, character)
 }
 
-// assertBloodMoorPresentation verifies generated paths and bounded chunk residency.
+// assertBloodMoorPresentation checks both semantic world realization and renderer resource policy,
+// catching worlds that generate correctly but cannot be presented safely.
 func assertBloodMoorPresentation(t *testing.T, fixture *realD2LegacyFixture) {
 	t.Helper()
 
@@ -44,7 +46,8 @@ func assertBloodMoorPresentation(t *testing.T, fixture *realD2LegacyFixture) {
 	assertLazyChunkResidency(t, chunks)
 }
 
-// assertBloodMoorDirtPath verifies that semantic routes became non-default floor tiles.
+// assertBloodMoorDirtPath requires generated route semantics to survive tile realization. Merely
+// retaining path metadata would not prove players can visually identify the route.
 func assertBloodMoorDirtPath(t *testing.T, fixture *realD2LegacyFixture) {
 	t.Helper()
 
@@ -72,7 +75,8 @@ func assertBloodMoorDirtPath(t *testing.T, fixture *realD2LegacyFixture) {
 	}
 }
 
-// assertLazyChunkResidency guards against eager full-map RGBA composition.
+// assertLazyChunkResidency proves indexing does not retain expanded RGBA maps and bounds a visible
+// materialization sample, protecting production-sized wilderness from runaway memory use.
 func assertLazyChunkResidency(t *testing.T, chunks *maprender.Set) {
 	t.Helper()
 
@@ -104,7 +108,8 @@ func assertLazyChunkResidency(t *testing.T, chunks *maprender.Set) {
 	}
 }
 
-// createSelectedAcceptanceCharacter creates the durable save admitted by the session.
+// createSelectedAcceptanceCharacter uses the real save store because admission must consume durable
+// selected identity, not a test-only entity injected directly into ECS.
 func createSelectedAcceptanceCharacter(
 	t *testing.T,
 	fixture *realD2LegacyFixture,
@@ -130,7 +135,8 @@ func createSelectedAcceptanceCharacter(
 	return character
 }
 
-// assertCharacterEnteredTown verifies session admission at the generated campfire anchor.
+// assertCharacterEnteredTown independently resolves the generated campfire anchor and finds the
+// admitted entity by durable character ID, proving generation and admission agree on placement.
 func assertCharacterEnteredTown(
 	t *testing.T,
 	fixture *realD2LegacyFixture,
@@ -179,7 +185,8 @@ func assertCharacterEnteredTown(
 	t.Fatal("created and selected character was not admitted to the session")
 }
 
-// assertTownPosition checks one admitted entity's generated coordinates and level identity.
+// assertTownPosition verifies coordinates and world identity together; matching coordinates in the
+// wrong act or level would still be an invalid admission.
 func assertTownPosition(
 	t *testing.T,
 	positions *akara.DynamicStore,

@@ -1,6 +1,8 @@
 version: "2"
 
 run:
+  # CI must not update go.sum while evaluating a proposed change; dependency
+  # changes belong in the reviewed patch rather than linter side effects.
   timeout: 10m
   tests: true
   modules-download-mode: readonly
@@ -8,6 +10,8 @@ run:
 linters:
   default: standard
   enable:
+    # lll enforces the human-review budget requested for this refactor, while
+    # wsl_v5 keeps unrelated operations from being visually cuddled together.
     - lll
     - wsl_v5
   settings:
@@ -18,9 +22,13 @@ linters:
     generated: strict
 
 formatters:
+  # Treat gofmt drift as a failed check rather than rewriting contributor files
+  # on a hosted runner where the repair would be lost.
   enable:
     - gofmt
 
 issues:
+  # A repository-wide readability gate must report the complete repair surface;
+  # truncating repeated findings makes cleanup appear finished prematurely.
   max-issues-per-linter: 0
   max-same-issues: 0

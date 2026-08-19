@@ -17,7 +17,9 @@ import (
 
 var errRealmBusy = errors.New("realm client: request already in progress")
 
-// realmAPI describes the control-plane operations used by the client application.
+// realmAPI isolates the client UI from the concrete HTTPS control plane. Its methods return both
+// public lobby data and private handoffs, so callers remain responsible for keeping assignments out
+// of Lua-visible state.
 type realmAPI interface {
 	ServiceInfo(context.Context) (realm.ServiceInfo, error)
 	Signup(context.Context, string, string, string) (realm.Account, error)
@@ -41,13 +43,15 @@ type realmAPI interface {
 	LeaveGame(context.Context, string) (realm.CharacterSummary, error)
 }
 
-// realmGameConnector passes private game assignments to the native network layer.
+// realmGameConnector is the narrow native-only path for private worker tickets and TLS fingerprints.
+// Deliberately omitting it from realmClientState prevents serialization across the Lua boundary.
 type realmGameConnector interface {
 	ConnectRealm(context.Context, realm.JoinAssignment) error
 	ReconnectRealm(context.Context, realm.JoinAssignment) error
 }
 
-// realmClientState contains the Realm data that may be exposed to Lua.
+// realmClientState is the explicit allowlist serialized to Lua. Authentication secrets, bearer
+// sessions, worker tickets, and TLS fingerprints must remain on realmAPI or the native connector.
 type realmClientState struct {
 	Phase          string                     `json:"phase"`
 	Endpoint       string                     `json:"endpoint"`
@@ -63,7 +67,8 @@ type realmClientState struct {
 	ResolvedGameID string                     `json:"resolved_game_id,omitempty"`
 }
 
-// realmController owns the active Realm client, its cancellable request, and its presentation state.
+// realmController serializes one control-plane operation at a time and owns the public state that
+// drives Realm screens. The mutex makes phase changes and request cancellation visible atomically.
 type realmController struct {
 	mu     sync.RWMutex
 	app    *application
@@ -73,7 +78,8 @@ type realmController struct {
 	cancel context.CancelFunc
 }
 
-// newRealmController creates a disconnected controller using the configured gateway.
+// newRealmController starts disconnected while retaining the player's configured gateway. Network
+// gameplay is wired natively only when an application exists, which keeps controller tests small.
 func newRealmController(app *application) *realmController {
 	gateway := "127.0.0.1"
 	if app != nil && app.gameSettings != nil {
@@ -91,7 +97,8 @@ func newRealmController(app *application) *realmController {
 	return controller
 }
 
-// Connect configures a Realm client and asynchronously verifies control-plane compatibility.
+// Connect normalizes and pins trust for a gateway before publishing it, then checks protocol
+// compatibility asynchronously. Login remains unavailable until that check changes the phase.
 func (controller *realmController) Connect(endpoint string) error {
 	gateway, err := controller.connectionGateway(endpoint)
 	if err != nil {
@@ -111,7 +118,8 @@ func (controller *realmController) Connect(endpoint string) error {
 	return controller.beginConnection(client, normalized, gateway)
 }
 
-// connectionGateway selects the requested endpoint or falls back to the saved gateway.
+// connectionGateway resolves an omitted endpoint from settings while rejecting concurrent work.
+// Reading busy state and the fallback under one lock avoids connecting with a half-updated gateway.
 func (controller *realmController) connectionGateway(endpoint string) (string, error) {
 	controller.mu.RLock()
 	gateway := controller.state.Gateway
@@ -129,7 +137,9 @@ func (controller *realmController) connectionGateway(endpoint string) (string, e
 	return strings.TrimSpace(endpoint), nil
 }
 
-// newRealmAPI builds the HTTPS client used for all Realm control-plane requests.
+// newRealmAPI applies the application's network-trust policy to every control-plane request. Its
+// generous outer timeout accommodates cold deterministic worker preparation without allowing an
+// abandoned request to live forever.
 func (controller *realmController) newRealmAPI(endpoint, address string) (realmAPI, error) {
 	if controller.app == nil || controller.app.networkTrust == nil {
 		return nil, errors.New("realm client: network trust is not configured")
@@ -151,7 +161,8 @@ func (controller *realmController) newRealmAPI(endpoint, address string) (realmA
 	return realm.NewRealmClient(endpoint, httpClient)
 }
 
-// beginConnection installs a prepared client and starts its compatibility check.
+// beginConnection atomically replaces account-facing state and reserves the operation slot before
+// launching compatibility work. Old account and character data cannot bleed into a new endpoint.
 func (controller *realmController) beginConnection(client realmAPI, endpoint, gateway string) error {
 	controller.mu.Lock()
 	if controller.cancel != nil {
@@ -177,7 +188,8 @@ func (controller *realmController) beginConnection(client realmAPI, endpoint, ga
 	return nil
 }
 
-// checkRealmCompatibility verifies the server protocol before enabling login.
+// checkRealmCompatibility gates login on an exact control-plane version match. Continuing against
+// a merely reachable but incompatible Realm could misinterpret private handoff or persistence data.
 func (controller *realmController) checkRealmCompatibility(ctx context.Context, client realmAPI) error {
 	info, err := client.ServiceInfo(ctx)
 	if err != nil {
@@ -199,7 +211,8 @@ func (controller *realmController) checkRealmCompatibility(ctx context.Context, 
 	return nil
 }
 
-// Close synchronously clears live Realm presence during process shutdown.
+// Close cancels background work and logs out synchronously when authenticated. Shutdown cannot rely
+// on the normal asynchronous operation runner because the application context is already ending.
 func (controller *realmController) Close(ctx context.Context) error {
 	if controller == nil || ctx == nil {
 		return nil
@@ -222,7 +235,8 @@ func (controller *realmController) Close(ctx context.Context) error {
 	return nil
 }
 
-// prepareToClose cancels in-flight work and snapshots the session that needs logout.
+// prepareToClose releases the operation slot and returns the client plus authentication fact in one
+// critical section, preventing a racing request from changing logout obligations.
 func (controller *realmController) prepareToClose() (realmAPI, bool) {
 	controller.mu.Lock()
 	defer controller.mu.Unlock()
@@ -235,7 +249,8 @@ func (controller *realmController) prepareToClose() (realmAPI, bool) {
 	return controller.client, controller.state.Account.ID != ""
 }
 
-// SetGateway validates and persists the player's preferred Realm gateway.
+// SetGateway validates before updating memory, then persists through the settings store when one is
+// configured. A runtime-only application still receives the validated in-memory preference.
 func (controller *realmController) SetGateway(endpoint string) error {
 	if _, _, err := normalizeRealmEndpoint(endpoint); err != nil {
 		return err
@@ -262,14 +277,17 @@ func (controller *realmController) SetGateway(endpoint string) error {
 	return controller.app.gameSettings.Save()
 }
 
-// updateGateway stores the gateway without clearing an existing error message.
+// updateGateway intentionally bypasses update because changing a preference must not erase an
+// actionable request error already displayed by the frontend.
 func (controller *realmController) updateGateway(gateway string) {
 	controller.mu.Lock()
 	controller.state.Gateway = gateway
 	controller.mu.Unlock()
 }
 
-// normalizeRealmEndpoint converts a gateway into its canonical TLS URL and dial address.
+// normalizeRealmEndpoint accepts a bare host for convenience but always produces an HTTPS origin
+// and explicit legacy port. Rejecting paths keeps gateway configuration from becoming an arbitrary
+// HTTP request base.
 func normalizeRealmEndpoint(endpoint string) (string, string, error) {
 	value := strings.TrimSpace(endpoint)
 	if value == "" {
@@ -296,7 +314,8 @@ func normalizeRealmEndpoint(endpoint string) (string, string, error) {
 	return strings.TrimRight(parsed.String(), "/"), parsed.Host, nil
 }
 
-// validRealmURL accepts only HTTPS origins with no application path.
+// validRealmURL enforces the control-plane trust boundary: only an HTTPS origin is valid, with no
+// credentials, routes, query, or fragment to alter request semantics downstream.
 func validRealmURL(parsed *url.URL) bool {
 	if parsed == nil || parsed.Scheme != "https" || parsed.Hostname() == "" {
 		return false
@@ -305,7 +324,8 @@ func validRealmURL(parsed *url.URL) bool {
 	return parsed.Path == "" || parsed.Path == "/"
 }
 
-// start reserves the controller and runs one Realm operation asynchronously.
+// start reserves the single operation slot, publishes the pending phase, and runs network work off
+// the render thread. Serializing operations keeps state transitions comprehensible to Lua screens.
 func (controller *realmController) start(
 	phase string,
 	operation func(context.Context, realmAPI) error,
@@ -335,7 +355,8 @@ func (controller *realmController) start(
 	return nil
 }
 
-// finish records a background operation's failure and releases the controller.
+// finish records non-cancellation failures for the frontend and always releases the operation slot.
+// Operations publish their own successful phase because each has a different destination state.
 func (controller *realmController) finish(
 	ctx context.Context,
 	phase string,
@@ -357,7 +378,8 @@ func (controller *realmController) finish(
 	controller.cancel = nil
 }
 
-// update applies an atomic state change and clears any prior request error.
+// update publishes a coherent successful state transition and clears the previous error only after
+// the caller's complete mutation has been applied.
 func (controller *realmController) update(update func(*realmClientState)) {
 	controller.mu.Lock()
 	update(&controller.state)
@@ -365,7 +387,8 @@ func (controller *realmController) update(update func(*realmClientState)) {
 	controller.mu.Unlock()
 }
 
-// Cancel stops the active request and returns the controller to an available phase.
+// Cancel releases the operation slot immediately and returns to the nearest usable screen. The
+// canceled goroutine may finish later, but context cancellation prevents it from continuing I/O.
 func (controller *realmController) Cancel() {
 	controller.mu.Lock()
 	defer controller.mu.Unlock()
@@ -385,7 +408,8 @@ func (controller *realmController) Cancel() {
 	controller.state.Phase = "ready"
 }
 
-// Status returns a JSON-shaped copy of the Realm state for Lua consumers.
+// Status deliberately round-trips the allowlisted state through JSON so Lua observes the same field
+// names, omissions, and number shapes as the production bridge, without sharing mutable slices.
 func (controller *realmController) Status() map[string]any {
 	controller.mu.RLock()
 	state := controller.state

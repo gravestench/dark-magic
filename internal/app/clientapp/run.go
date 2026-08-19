@@ -10,7 +10,8 @@ import (
 	"github.com/gravestench/dark-magic/internal/game/simulation"
 )
 
-// Run assembles one client, runs its window, and releases owned resources.
+// Run is the package ownership boundary: it assembles one application, runs the
+// blocking window lifetime, and always attempts reverse-order cleanup.
 func Run(options Options) error {
 	app := newApplication(options)
 	defer app.stop()
@@ -22,7 +23,8 @@ func Run(options Options) error {
 	return errors.Join(app.runWindow(), app.shutdown())
 }
 
-// newApplication applies defaults and installs process-signal cancellation.
+// newApplication establishes safe zero-state callbacks and a signal-scoped root
+// context so partial assembly and OS shutdown share the same cleanup path.
 func newApplication(options Options) *application {
 	options = applyDevelopmentSceneDefaults(options)
 	if options.AssetSetID == "" {
@@ -42,7 +44,8 @@ func newApplication(options Options) *application {
 	}
 }
 
-// runWindow runs the renderer and joins the first asynchronous scene failure.
+// runWindow treats native loop exit and asynchronous scene failure as peers.
+// Joining both preserves the first actionable cause without abandoning window cleanup.
 func (app *application) runWindow() error {
 	err := app.renderer.Run(app.ctx)
 	select {
@@ -53,7 +56,8 @@ func (app *application) runWindow() error {
 	}
 }
 
-// reportSceneError records the first frame error and stops the window loop.
+// reportSceneError uses first-error semantics because later frame failures are
+// usually consequences; closing the window promptly prevents repeated mutation after failure.
 func (app *application) reportSceneError(err error) {
 	select {
 	case app.sceneErrors <- err:
@@ -63,7 +67,8 @@ func (app *application) reportSceneError(err error) {
 	}
 }
 
-// assemble builds dependencies before the consumers that rely on them.
+// assemble is intentionally top-down: durable policy precedes native services,
+// authority precedes Lua components, and components precede scene activation.
 func (app *application) assemble() error {
 	steps := []func() error{
 		app.loadSettings,

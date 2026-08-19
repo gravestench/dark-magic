@@ -9,14 +9,16 @@ import (
 	modruntime "github.com/gravestench/dark-magic/internal/runtime/lua"
 )
 
-// networkPackagePlan owns a resolved recipe and unopened live-state changes.
+// networkPackagePlan holds validated mounts before ownership transfers to application.
+// Until installation succeeds, abort must close every archive it owns.
 type networkPackagePlan struct {
 	resolved modcache.ResolvedSet
 	mounted  *modcache.MountedSet
 	changed  []string
 }
 
-// abort closes package archives that have not transferred to the application.
+// abort preserves the triggering error while releasing untransferred archives,
+// preventing preparation failures from leaking file handles or cache leases.
 func (plan *networkPackagePlan) abort(err error) error {
 	if plan.mounted != nil {
 		_ = plan.mounted.Close()
@@ -26,7 +28,8 @@ func (plan *networkPackagePlan) abort(err error) error {
 	return err
 }
 
-// validateNetworkPackageRecipe checks compatibility before cache access.
+// validateNetworkPackageRecipe rejects identity and asset incompatibility before
+// downloading or opening extension archives, keeping untrusted recipes cheap to reject.
 func (app *application) validateNetworkPackageRecipe(recipe simulation.RuntimeRecipe) error {
 	if err := recipe.Validate(); err != nil {
 		return err
@@ -51,7 +54,8 @@ func (app *application) validateNetworkPackageRecipe(recipe simulation.RuntimeRe
 	return nil
 }
 
-// prepareNetworkPackagePlan resolves, mounts, and validates extension archives.
+// prepareNetworkPackagePlan performs every fallible non-live operation first:
+// cache resolution, mount construction, metadata comparison, and Lua syntax validation.
 func (app *application) prepareNetworkPackagePlan(
 	recipe simulation.RuntimeRecipe,
 ) (*networkPackagePlan, error) {
@@ -91,7 +95,8 @@ func (app *application) prepareNetworkPackagePlan(
 	return plan, nil
 }
 
-// runtimePackageDescriptors translates transport-neutral recipe entries for the cache.
+// runtimePackageDescriptors converts authenticated wire metadata without adding
+// local defaults that could change the server-declared package identity.
 func runtimePackageDescriptors(packages []simulation.RuntimePackage) []modcache.Descriptor {
 	descriptors := make([]modcache.Descriptor, len(packages))
 
@@ -108,7 +113,8 @@ func runtimePackageDescriptors(packages []simulation.RuntimePackage) []modcache.
 	return descriptors
 }
 
-// validateLocalAssetSet prevents packages from masking incompatible game data.
+// validateLocalAssetSet ensures extension compatibility cannot hide a mismatch in
+// the player's external game assets, which packages do not carry or replace.
 func validateLocalAssetSet(recipe simulation.RuntimeRecipe, localAssetSetID string) error {
 	if recipe.AssetSetID != localAssetSetID {
 		return errors.New("network recipe requires a different external game-asset set")
@@ -117,7 +123,8 @@ func validateLocalAssetSet(recipe simulation.RuntimeRecipe, localAssetSetID stri
 	return nil
 }
 
-// validateMountedPackageSyntax compiles every extension before live mutation.
+// validateMountedPackageSyntax catches broken entrypoints while the previous
+// component set is still running, avoiding a preventable half-recomposed client.
 func validateMountedPackageSyntax(
 	mounted *modcache.MountedSet,
 	resolved modcache.ResolvedSet,
@@ -142,7 +149,8 @@ func validateMountedPackageSyntax(
 	return nil
 }
 
-// resolvedMatchesPackages compares cache output with the authenticated recipe.
+// resolvedMatchesPackages requires exact ordered ID, version, digest, and archive
+// metadata so a cache hit cannot substitute merely namespace-compatible content.
 func resolvedMatchesPackages(
 	resolved modcache.ResolvedSet,
 	packages simulation.RuntimePackageSet,
@@ -171,7 +179,8 @@ func resolvedMatchesPackages(
 	return true
 }
 
-// packageManifestsByID indexes resolved manifests for mounted archive wrapping.
+// packageManifestsByID lets each mounted archive retain its own manifest-derived
+// filesystem policy rather than consulting the aggregate resolved set.
 func packageManifestsByID(packages []modcache.LockedPackage) map[string]modcache.Manifest {
 	manifests := make(map[string]modcache.Manifest, len(packages))
 

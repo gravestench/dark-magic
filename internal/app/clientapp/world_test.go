@@ -10,7 +10,8 @@ import (
 	gametransition "github.com/gravestench/dark-magic/internal/mod/d2legacy/adapter/transition"
 )
 
-// TestEntryWorldSpawnsKeepGameplayAndSeamCaptureDistinct verifies both spawn policies.
+// TestEntryWorldSpawnsKeepGameplayAndSeamCaptureDistinct prevents screenshot fixture positioning from
+// changing normal character admission while preserving generated wilderness arrival.
 func TestEntryWorldSpawnsKeepGameplayAndSeamCaptureDistinct(t *testing.T) {
 	seam := gametransition.Seam{
 		Town:       gametransition.SeamEndpoint{ArrivalX: 11, ArrivalY: 12},
@@ -38,7 +39,8 @@ func TestEntryWorldSpawnsKeepGameplayAndSeamCaptureDistinct(t *testing.T) {
 	}
 }
 
-// TestActivateCurrentConnectedWorldKeepsClickRoute guards same-level navigation state.
+// TestActivateCurrentConnectedWorldKeepsClickRoute proves connected correction refresh can rebind the
+// same map without clearing an in-progress click route.
 func TestActivateCurrentConnectedWorldKeepsClickRoute(t *testing.T) {
 	engine := gameecs.New()
 

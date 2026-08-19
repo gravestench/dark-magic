@@ -17,7 +17,9 @@ import (
 	d2save "github.com/gravestench/dark-magic/internal/mod/d2legacy/adapter/save"
 )
 
-// networkController coordinates one local, direct, hosted, or Realm session.
+// networkController is the single state machine for local, direct, hosted, and Realm play.
+// Its generation counters prevent asynchronous work from an abandoned attempt from taking
+// ownership of a newer session.
 type networkController struct {
 	mu                            sync.Mutex
 	reconnectMu                   sync.Mutex
@@ -36,7 +38,9 @@ type networkController struct {
 	submissions                   chan gameserver.CommandIntent
 }
 
-// networkResources groups resources detached during failure or shutdown.
+// networkResources is an ownership bundle detached while the controller mutex is held.
+// Callers close the bundle after unlocking so shutdown callbacks cannot deadlock the state
+// machine.
 type networkResources struct {
 	cancel  context.CancelFunc
 	client  *clientsession.Session
@@ -46,7 +50,8 @@ type networkResources struct {
 	address string
 }
 
-// newNetworkController creates a controller in the frontend selection phase.
+// newNetworkController starts without session authority; the frontend must explicitly select a
+// character before local or network play can begin.
 func newNetworkController(app *application) *networkController {
 	return &networkController{
 		app:         app,
@@ -55,7 +60,9 @@ func newNetworkController(app *application) *networkController {
 	}
 }
 
-// Host records a host request and waits for explicit character selection.
+// Host records intent but defers authority creation until character selection. That boundary
+// keeps canceling from the selection screen cheap and prevents an unselected save from being
+// admitted accidentally.
 func (controller *networkController) Host() error {
 	controller.mu.Lock()
 	defer controller.mu.Unlock()
@@ -74,7 +81,9 @@ func (controller *networkController) Host() error {
 	return nil
 }
 
-// StartSelected activates local play or launches the pending network request.
+// StartSelected turns the selected save into the identity for the requested session. Local play
+// changes phase synchronously, while network startup receives a generation and runs in the
+// background so the frontend remains responsive.
 func (controller *networkController) StartSelected() error {
 	controller.mu.Lock()
 
@@ -128,7 +137,8 @@ func (controller *networkController) StartSelected() error {
 	return nil
 }
 
-// validateSelectedStartLocked checks whether selection can advance the phase.
+// validateSelectedStartLocked allows selection to advance only from the frontend or a pending
+// host/join request. The caller holds mu, making validation and the following transition atomic.
 func (controller *networkController) validateSelectedStartLocked() error {
 	if controller.phase == "frontend" {
 		return nil
@@ -142,7 +152,8 @@ func (controller *networkController) validateSelectedStartLocked() error {
 	return errors.New("no network operation is awaiting character selection")
 }
 
-// beginSelectedNetworkLocked allocates one cancelable startup generation.
+// beginSelectedNetworkLocked gives this attempt a cancellation scope and a unique generation.
+// Any completion carrying an older generation must discard its prepared resources.
 func (controller *networkController) beginSelectedNetworkLocked() (
 	uint64,
 	context.Context,
@@ -158,7 +169,8 @@ func (controller *networkController) beginSelectedNetworkLocked() (
 	return controller.generation, ctx, controller.mode, controller.address
 }
 
-// launchSelectedNetwork starts the requested host or direct-join workflow.
+// launchSelectedNetwork transfers startup to a goroutine after all state needed by that goroutine
+// has been copied out from under the controller lock.
 func (controller *networkController) launchSelectedNetwork(
 	ctx context.Context,
 	generation uint64,
@@ -174,7 +186,8 @@ func (controller *networkController) launchSelectedNetwork(
 	go controller.startJoin(ctx, generation, address)
 }
 
-// Cancel returns cancelable setup phases to the frontend.
+// Cancel abandons setup phases without silently tearing down an established game. Incrementing
+// generation invalidates workers that may observe cancellation only after completing more work.
 func (controller *networkController) Cancel() {
 	controller.mu.Lock()
 
@@ -198,12 +211,14 @@ func (controller *networkController) Cancel() {
 	}
 }
 
-// cancelableNetworkPhase reports whether Cancel may return to the frontend.
+// cancelableNetworkPhase is an explicit allowlist: connected and reconnecting sessions require
+// Close so their leave and persistence obligations cannot be skipped.
 func cancelableNetworkPhase(phase string) bool {
 	return phase == "selecting" || phase == "starting" || phase == "failed"
 }
 
-// Join records a normalized direct-server address and waits for selection.
+// Join normalizes a direct-server address and waits for selection. Supplying the default port here
+// gives every later trust, dialing, and status path one canonical endpoint string.
 func (controller *networkController) Join(address string) error {
 	controller.mu.Lock()
 	defer controller.mu.Unlock()
@@ -227,7 +242,9 @@ func (controller *networkController) Join(address string) error {
 	return nil
 }
 
-// fail rejects one active generation and releases all resources it owned.
+// fail publishes failure only for the active generation, then closes its detached resources.
+// Realm departure precedes transport teardown because it is the last opportunity to commit the
+// authority's canonical character state.
 func (controller *networkController) fail(generation uint64, cause error) {
 	controller.mu.Lock()
 
@@ -274,14 +291,16 @@ func (controller *networkController) fail(generation uint64, cause error) {
 	)
 }
 
-// canFailLocked prevents stale goroutines from overwriting a newer phase.
+// canFailLocked prevents stale startup or recovery goroutines from replacing a newer phase with
+// their late error.
 func (controller *networkController) canFailLocked(generation uint64) bool {
 	return generation == controller.generation &&
 		controller.phase != "closed" &&
 		controller.phase != "failed"
 }
 
-// detachResourcesLocked transfers active resources out of the controller.
+// detachResourcesLocked transfers every live network owner out of the controller exactly once.
+// Clearing the fields makes repeated failure or shutdown paths harmless.
 func (controller *networkController) detachResourcesLocked() networkResources {
 	resources := networkResources{
 		cancel:  controller.cancel,
@@ -300,7 +319,8 @@ func (controller *networkController) detachResourcesLocked() networkResources {
 	return resources
 }
 
-// rejectLocked records a synchronous request failure for frontend display.
+// rejectLocked converts a synchronous validation error into frontend-visible state as well as
+// returning it to the immediate caller.
 func (controller *networkController) rejectLocked(mode string, err error) error {
 	controller.phase = "failed"
 	controller.mode = mode
@@ -309,7 +329,8 @@ func (controller *networkController) rejectLocked(mode string, err error) error 
 	return err
 }
 
-// Status returns a presentation-safe snapshot of controller state.
+// Status returns a presentation-safe snapshot without exposing tickets, TLS material, or mutable
+// session objects. The HUD lookup happens after unlocking because it may perform its own locking.
 func (controller *networkController) Status() map[string]any {
 	controller.mu.Lock()
 	phase := controller.phase
@@ -337,7 +358,9 @@ func (controller *networkController) Status() map[string]any {
 	}
 }
 
-// hasSelectedCharacter reports whether Realm admitted a character for loading.
+// hasSelectedCharacter uses the signed admission identity rather than transient HUD state. This
+// prevents the loading flow from treating an unauthenticated or partially connected client as an
+// admitted Realm character.
 func (controller *networkController) hasSelectedCharacter() bool {
 	if controller == nil {
 		return false
@@ -356,7 +379,8 @@ func (controller *networkController) hasSelectedCharacter() bool {
 	return strings.TrimSpace(client.Admission.Admission.CharacterID) != ""
 }
 
-// Connected reports whether a remote session is ready.
+// Connected requires both the connected phase and a committed client, so presentation code never
+// mistakes an in-progress transition for a usable remote session.
 func (controller *networkController) Connected() bool {
 	controller.mu.Lock()
 	defer controller.mu.Unlock()
@@ -364,7 +388,8 @@ func (controller *networkController) Connected() bool {
 	return controller.phase == "connected" && controller.client != nil
 }
 
-// Local reports whether the selected character is playing offline.
+// Local reports the distinct offline-authority phase; hosted play is intentionally not local even
+// though its server happens to run in this process.
 func (controller *networkController) Local() bool {
 	controller.mu.Lock()
 	defer controller.mu.Unlock()
@@ -372,7 +397,7 @@ func (controller *networkController) Local() bool {
 	return controller.phase == "local"
 }
 
-// currentGeneration returns the identity of the active startup attempt.
+// currentGeneration snapshots the startup identity used to reject late asynchronous completions.
 func (controller *networkController) currentGeneration() uint64 {
 	controller.mu.Lock()
 	defer controller.mu.Unlock()
@@ -380,7 +405,8 @@ func (controller *networkController) currentGeneration() uint64 {
 	return controller.generation
 }
 
-// currentConnectionEpoch returns the transport revision used by recovery.
+// currentConnectionEpoch snapshots the committed transport revision. Recovery work must still
+// match this value before it can replace the active endpoint.
 func (controller *networkController) currentConnectionEpoch() uint64 {
 	controller.mu.Lock()
 	defer controller.mu.Unlock()
@@ -388,7 +414,8 @@ func (controller *networkController) currentConnectionEpoch() uint64 {
 	return controller.connectionEpoch
 }
 
-// resetInputLocked clears sequencing state for a newly committed connection.
+// resetInputLocked starts sequence numbers, fixed-step sampling, and backpressure from a clean
+// connection boundary; carrying any of them across servers could duplicate or suppress input.
 func (controller *networkController) resetInputLocked() {
 	controller.sequence = 0
 	controller.lastMovementTick = 0
@@ -397,7 +424,9 @@ func (controller *networkController) resetInputLocked() {
 	controller.submissions = make(chan gameserver.CommandIntent, 64)
 }
 
-// Close leaves the active game and releases every network resource.
+// Close first removes resource ownership from the state machine, then fulfills leave/persistence
+// obligations before tearing down transports and authority. This ordering preserves the last
+// canonical character state while preventing new work from observing a half-closed session.
 func (controller *networkController) Close() error {
 	slog.Debug("closing network controller")
 
@@ -431,7 +460,9 @@ func (controller *networkController) Close() error {
 	return err
 }
 
-// leaveConnectedSession persists or departs according to connection ownership.
+// leaveConnectedSession distinguishes Realm-owned persistence from self-hosted persistence. Realm
+// state is committed through its control plane, while direct and hosted games must merge the
+// authority snapshot back into the local save store.
 func (controller *networkController) leaveConnectedSession(
 	ctx context.Context,
 	resources networkResources,
@@ -447,7 +478,8 @@ func (controller *networkController) leaveConnectedSession(
 	return nil
 }
 
-// persistSelfHostedCharacter refreshes and stores the selected offline save.
+// persistSelfHostedCharacter asks the authority for a final snapshot before touching disk. Using a
+// cached HUD could lose changes accepted immediately before disconnect.
 func (controller *networkController) persistSelfHostedCharacter(
 	ctx context.Context,
 	client *clientsession.Session,
@@ -465,7 +497,8 @@ func (controller *networkController) persistSelfHostedCharacter(
 	return updateSelectedCharacter(controller.app.saves, hud)
 }
 
-// updateSelectedCharacter merges canonical HUD state into the selected save.
+// updateSelectedCharacter preserves the selected save's durable identity and replaces only fields
+// represented by the canonical HUD. The store performs the final atomic selected-save update.
 func updateSelectedCharacter(saves *d2save.Store, hud playeradapter.HUD) error {
 	baseline, selected := saves.Selected()
 	if !selected {

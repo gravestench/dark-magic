@@ -20,8 +20,8 @@ var clientEnvironmentKeys = []string{
 	"DARK_MAGIC_DEBUG_ADDR",
 }
 
-// TestBootstrapInstallsDefaultAndPreservesExportedAuthority verifies that
-// process variables remain authoritative over values in an installed file.
+// TestBootstrapInstallsDefaultAndPreservesExportedAuthority protects the
+// orchestrator-over-local-file precedence contract while still requiring a private default.
 func TestBootstrapInstallsDefaultAndPreservesExportedAuthority(t *testing.T) {
 	preserveEnvironment(t, clientEnvironmentKeys...)
 	directory := t.TempDir()
@@ -44,8 +44,8 @@ func TestBootstrapInstallsDefaultAndPreservesExportedAuthority(t *testing.T) {
 	assertPrivateFile(t, result.DefaultPath)
 }
 
-// TestBootstrapExplicitFileOverridesDefaultSelection verifies that Bootstrap
-// still installs the role default before loading an explicit file.
+// TestBootstrapExplicitFileOverridesDefaultSelection ensures explicit selection
+// changes the loaded values without suppressing first-run creation of documented defaults.
 func TestBootstrapExplicitFileOverridesDefaultSelection(t *testing.T) {
 	const key = "DARK_MAGIC_ENVCONFIG_EXPLICIT"
 	preserveEnvironment(t, key)
@@ -71,7 +71,7 @@ func TestBootstrapExplicitFileOverridesDefaultSelection(t *testing.T) {
 	}
 }
 
-// assertPrivateFile verifies that an installed environment file is owner-only.
+// assertPrivateFile protects credentials from group/other access on every install path.
 func assertPrivateFile(t *testing.T, path string) {
 	t.Helper()
 

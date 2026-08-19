@@ -10,7 +10,9 @@ import (
 	"github.com/gravestench/dark-magic/internal/app/realm"
 )
 
-// openRealmRepositories connects the durable stores and applies account URL policy.
+// openRealmRepositories creates the single durable repository set shared by API,
+// mail, maintenance, and allocation. Centralizing it prevents subsystems from
+// observing different database pools or public account URL policy.
 func openRealmRepositories(
 	ctx context.Context,
 	config realmConfig,
@@ -34,7 +36,9 @@ func openRealmRepositories(
 	return postgres, nil
 }
 
-// buildControlPlane wires repositories, audit sinks, allocation, and timing policy.
+// buildControlPlane converts process configuration into one authoritative Realm
+// service. Recovery runs before the service is returned so stale allocations
+// cannot become visible as healthy games after a process restart.
 func buildControlPlane(
 	ctx context.Context,
 	postgres *realm.Postgres,
@@ -67,7 +71,8 @@ func buildControlPlane(
 	return control, nil
 }
 
-// recoverInterruptedGames fails closed any allocations left active by a prior process.
+// recoverInterruptedGames fails closed allocations whose supervising process no
+// longer exists. Advertising them would hand players tickets to orphaned workers.
 func recoverInterruptedGames(ctx context.Context, control *realm.ControlPlane) error {
 	recovered, err := control.RecoverInterruptedGames(ctx)
 	if err != nil {

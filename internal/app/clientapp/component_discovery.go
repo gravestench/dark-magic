@@ -11,7 +11,8 @@ import (
 	modruntime "github.com/gravestench/dark-magic/internal/runtime/lua"
 )
 
-// loadScriptComponents discovers, registers, and activates requested components.
+// loadScriptComponents completes the definition lifecycle before activation,
+// ensuring dependency/ownership errors fail without leaving a partially started set.
 func (app *application) loadScriptComponents() error {
 	definitions, err := app.discoverScriptDefinitions()
 	if err != nil {
@@ -25,7 +26,8 @@ func (app *application) loadScriptComponents() error {
 	return app.activateComponents()
 }
 
-// discoverScriptDefinitions selects distribution or locked-package discovery.
+// discoverScriptDefinitions uses locked package roots when available so each mod
+// executes against authenticated mounted content rather than the aggregate filesystem.
 func (app *application) discoverScriptDefinitions() ([]modruntime.Definition, error) {
 	if app.options.Mods == nil {
 		return modruntime.DiscoverDefinitions(
@@ -40,7 +42,8 @@ func (app *application) discoverScriptDefinitions() ([]modruntime.Definition, er
 	return definitions, err
 }
 
-// discoverPackageDefinitions validates definitions for every locked package.
+// discoverPackageDefinitions evaluates packages independently and preserves lock
+// order, which is also the deterministic order used for component registration.
 func (app *application) discoverPackageDefinitions(
 	ctx context.Context,
 ) (map[string][]modruntime.Definition, []modruntime.Definition, error) {
@@ -69,7 +72,8 @@ func (app *application) discoverPackageDefinitions(
 	return byPackage, definitions, nil
 }
 
-// discoverDefinitionsForPackage validates ownership, dependencies, and entrypoints.
+// discoverDefinitionsForPackage binds a definition to its package root and manifest
+// dependencies, preventing one archive from claiming another package's scripts.
 func (app *application) discoverDefinitionsForPackage(
 	ctx context.Context,
 	pkg modcache.LockedPackage,
@@ -109,7 +113,8 @@ func (app *application) discoverDefinitionsForPackage(
 	return discovered, nil
 }
 
-// dependencyIDs extracts dependency identifiers in manifest order.
+// dependencyIDs preserves manifest order because dependency lists also influence
+// deterministic discovery diagnostics and component planning.
 func dependencyIDs(manifest modcache.Manifest) []string {
 	result := make([]string, len(manifest.Dependencies))
 	for index, dependency := range manifest.Dependencies {
@@ -119,7 +124,8 @@ func dependencyIDs(manifest modcache.Manifest) []string {
 	return result
 }
 
-// modSource resolves a distribution root or one locked package subtree.
+// modSource enforces package filesystem isolation. Falling back to distribution
+// content is permitted only when no locked package set owns the requested namespace.
 func (app *application) modSource(id string) (fs.FS, error) {
 	if app.options.Content == nil {
 		return nil, errors.New("resolve mod source: content filesystem is required")
@@ -145,7 +151,8 @@ func (app *application) modSource(id string) (fs.FS, error) {
 	return nil, fmt.Errorf("resolve mod source %q: package is not locked", id)
 }
 
-// registerManagedDefinitions registers the initial discovered component set.
+// registerManagedDefinitions creates the initial registry and identity index
+// together so later hot recomposition can distinguish replacement from addition.
 func (app *application) registerManagedDefinitions(definitions []modruntime.Definition) error {
 	app.ensureComponentIDs()
 
@@ -160,7 +167,8 @@ func (app *application) registerManagedDefinitions(definitions []modruntime.Defi
 	return nil
 }
 
-// reconcileManagedDefinitions replaces known components and registers new ones.
+// reconcileManagedDefinitions updates definitions without restarting unchanged
+// namespaces, limiting hot-recomposition disruption to packages whose digest changed.
 func (app *application) reconcileManagedDefinitions(
 	ctx context.Context,
 	definitions []modruntime.Definition,
@@ -176,7 +184,8 @@ func (app *application) reconcileManagedDefinitions(
 	return nil
 }
 
-// reconcileManagedDefinition updates one definition according to registry state.
+// reconcileManagedDefinition chooses replace versus register from the explicit ID
+// index; relying on registry errors would blur expected replacement with real failure.
 func (app *application) reconcileManagedDefinition(
 	ctx context.Context,
 	definition modruntime.Definition,
@@ -197,7 +206,8 @@ func (app *application) reconcileManagedDefinition(
 	return nil
 }
 
-// ensureComponentIDs lazily creates the discovered component index.
+// ensureComponentIDs keeps zero-value application safe during tests and partial
+// assembly while preserving one authoritative set of known component identities.
 func (app *application) ensureComponentIDs() {
 	if app.componentIDs == nil {
 		app.componentIDs = make(map[string]bool)

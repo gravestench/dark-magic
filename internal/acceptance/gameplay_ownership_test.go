@@ -12,6 +12,8 @@ import (
 	"testing"
 )
 
+// ownershipRule maps a production path prefix to its current architectural class and intended
+// destination, turning the migration inventory into executable documentation.
 type ownershipRule struct {
 	prefix      string
 	class       string
@@ -240,7 +242,11 @@ func TestD2LegacyLuaTestArchitecture(t *testing.T) {
 				}
 				relative, _ := filepath.Rel(root, path)
 				position := fileSet.Position(literal.Pos())
-				t.Errorf("%s:%d embeds Lua source; put the scenario in a checked-in Lua fixture", filepath.ToSlash(relative), position.Line)
+				t.Errorf(
+					"%s:%d embeds Lua source; put the scenario in a checked-in Lua fixture",
+					filepath.ToSlash(relative),
+					position.Line,
+				)
 				return true
 			})
 			return nil
@@ -251,6 +257,8 @@ func TestD2LegacyLuaTestArchitecture(t *testing.T) {
 	}
 }
 
+// looksLikeEmbeddedLua uses several syntax signals to avoid flagging ordinary prose that happens to
+// contain one Lua keyword. Embedded scenarios belong in checked-in Lua fixtures.
 func looksLikeEmbeddedLua(value string) bool {
 	signals := 0
 	for _, marker := range []string{"local ", "function", "require(", "return ", "end", "~=", " then"} {
@@ -284,8 +292,12 @@ func TestLuaNamespacesDescribeOwnership(t *testing.T) {
 			retiredLong := "dark" + "magic"
 			// Only quoted d2.* identifiers are namespaces. Real legacy archive
 			// names such as patch_d2.mpq are content filenames, not Lua APIs.
-			usesRetiredModShort := strings.Contains(text, `"`+retiredModShort) || strings.Contains(text, `'`+retiredModShort)
-			if strings.Contains(text, retiredShort) || usesRetiredModShort || strings.Contains(text, retiredLong+".") || strings.Contains(text, retiredLong+"/") {
+			usesRetiredModShort := strings.Contains(text, `"`+retiredModShort) ||
+				strings.Contains(text, `'`+retiredModShort)
+
+			usesRetiredLong := strings.Contains(text, retiredLong+".") ||
+				strings.Contains(text, retiredLong+"/")
+			if strings.Contains(text, retiredShort) || usesRetiredModShort || usesRetiredLong {
 				relative, _ := filepath.Rel(root, path)
 				t.Errorf("%s uses a retired Lua namespace; use engine.* or d2legacy.*", filepath.ToSlash(relative))
 			}
@@ -383,7 +395,9 @@ func TestClientDoesNotReinstallMigratedD2Policy(t *testing.T) {
 func TestWorldTransitionPolicyStaysInD2LegacyLua(t *testing.T) {
 	root := repositoryRoot(t)
 	for _, relativeRoot := range []string{"internal/app", "internal/mod/d2legacy"} {
-		err := filepath.WalkDir(filepath.Join(root, filepath.FromSlash(relativeRoot)), func(path string, entry os.DirEntry, err error) error {
+		searchRoot := filepath.Join(root, filepath.FromSlash(relativeRoot))
+
+		err := filepath.WalkDir(searchRoot, func(path string, entry os.DirEntry, err error) error {
 			if err != nil || entry.IsDir() || !strings.HasSuffix(path, ".go") || strings.HasSuffix(path, "_test.go") {
 				return err
 			}
@@ -408,10 +422,14 @@ func TestWorldTransitionPolicyStaysInD2LegacyLua(t *testing.T) {
 	}
 }
 
+// TestD2MapTilePolicyStaysInD2LegacyLua prevents generic Go world code from deciding Diablo tile
+// variants or identities after that policy moved into the first-party mod.
 func TestD2MapTilePolicyStaysInD2LegacyLua(t *testing.T) {
 	root := repositoryRoot(t)
 	for _, relativeRoot := range []string{"internal/game", "internal/mod/d2legacy/adapter"} {
-		err := filepath.WalkDir(filepath.Join(root, filepath.FromSlash(relativeRoot)), func(path string, entry os.DirEntry, err error) error {
+		searchRoot := filepath.Join(root, filepath.FromSlash(relativeRoot))
+
+		err := filepath.WalkDir(searchRoot, func(path string, entry os.DirEntry, err error) error {
 			if err != nil || entry.IsDir() || !strings.HasSuffix(path, ".go") || strings.HasSuffix(path, "_test.go") {
 				return err
 			}
@@ -419,7 +437,14 @@ func TestD2MapTilePolicyStaysInD2LegacyLua(t *testing.T) {
 			if err != nil {
 				return err
 			}
-			for _, forbidden := range []string{"actOneDirtPathSequence", "RealizeActOneDirtPath", "ActOneTownEntry", "ObjectTypeStatic && object.ID == 2"} {
+
+			forbiddenValues := []string{
+				"actOneDirtPathSequence",
+				"RealizeActOneDirtPath",
+				"ActOneTownEntry",
+				"ObjectTypeStatic && object.ID == 2",
+			}
+			for _, forbidden := range forbiddenValues {
 				if strings.Contains(string(data), forbidden) {
 					relative, _ := filepath.Rel(root, path)
 					t.Errorf("%s restores native D2 map-tile policy through %q", filepath.ToSlash(relative), forbidden)
@@ -472,7 +497,12 @@ func TestGameplayMechanismsDoNotGainPolicyDependencies(t *testing.T) {
 				}
 				edge := importer + "\t" + dependency
 				if _, allowed := debt[edge]; !allowed {
-					t.Errorf("%s imports %s (%s); generic mechanisms may not gain D2 policy dependencies", importer, dependency, dependencyClass)
+					t.Errorf(
+						"%s imports %s (%s); generic mechanisms may not gain D2 policy dependencies",
+						importer,
+						dependency,
+						dependencyClass,
+					)
 				}
 				delete(debt, edge)
 			}
@@ -494,7 +524,9 @@ func TestGenericEngineDoesNotImportFirstPartyMod(t *testing.T) {
 	root := repositoryRoot(t)
 	const projectPrefix = "github.com/gravestench/dark-magic/"
 	for _, relativeRoot := range []string{"internal/game", "internal/runtime/lua"} {
-		err := filepath.WalkDir(filepath.Join(root, filepath.FromSlash(relativeRoot)), func(path string, entry os.DirEntry, err error) error {
+		searchRoot := filepath.Join(root, filepath.FromSlash(relativeRoot))
+
+		err := filepath.WalkDir(searchRoot, func(path string, entry os.DirEntry, err error) error {
 			if err != nil || entry.IsDir() || !strings.HasSuffix(path, ".go") || strings.HasSuffix(path, "_test.go") {
 				return err
 			}
@@ -529,8 +561,18 @@ func TestGenericEngineDoesNotNameD2Policy(t *testing.T) {
 		"rogue encampment", "blood moor", "monstats", "amazon", "sorceress",
 		"necromancer", "barbarian", "paladin", "druid", "assassin",
 	}
-	for _, relativeRoot := range []string{"internal/game/ecs", "internal/game/session", "internal/game/simulation", "internal/game/worldgen", "internal/runtime/lua"} {
-		err := filepath.WalkDir(filepath.Join(root, filepath.FromSlash(relativeRoot)), func(path string, entry os.DirEntry, err error) error {
+	searchRoots := []string{
+		"internal/game/ecs",
+		"internal/game/session",
+		"internal/game/simulation",
+		"internal/game/worldgen",
+		"internal/runtime/lua",
+	}
+
+	for _, relativeRoot := range searchRoots {
+		searchRoot := filepath.Join(root, filepath.FromSlash(relativeRoot))
+
+		err := filepath.WalkDir(searchRoot, func(path string, entry os.DirEntry, err error) error {
 			if err != nil || entry.IsDir() || !strings.HasSuffix(path, ".go") || strings.HasSuffix(path, "_test.go") {
 				return err
 			}
@@ -542,7 +584,11 @@ func TestGenericEngineDoesNotNameD2Policy(t *testing.T) {
 			for _, token := range forbidden {
 				if strings.Contains(lower, token) {
 					relative, _ := filepath.Rel(root, path)
-					t.Errorf("%s names Diablo policy %q; generic engine code must use mod-neutral vocabulary", filepath.ToSlash(relative), token)
+					t.Errorf(
+						"%s names Diablo policy %q; generic engine code must use mod-neutral vocabulary",
+						filepath.ToSlash(relative),
+						token,
+					)
 				}
 			}
 			return nil
@@ -553,6 +599,8 @@ func TestGenericEngineDoesNotNameD2Policy(t *testing.T) {
 	}
 }
 
+// readOwnershipRules parses the checked-in tab-separated inventory and rejects malformed rows early,
+// so later architectural failures refer to trusted rule data.
 func readOwnershipRules(t *testing.T, path string) []ownershipRule {
 	t.Helper()
 	file, err := os.Open(path)
@@ -583,6 +631,8 @@ func readOwnershipRules(t *testing.T, path string) []ownershipRule {
 	return rules
 }
 
+// readDependencyDebt loads the exact grandfathered mechanism-to-policy imports. The set is a ratchet,
+// not an allowlist for newly introduced violations.
 func readDependencyDebt(t *testing.T, path string) map[string]struct{} {
 	t.Helper()
 	file, err := os.Open(path)
@@ -610,6 +660,8 @@ func readDependencyDebt(t *testing.T, path string) map[string]struct{} {
 	return debt
 }
 
+// ownershipClassForPath returns the inventory class for one repository-relative path; callers have
+// already enforced that production files match exactly one rule.
 func ownershipClassForPath(rules []ownershipRule, path string) string {
 	for _, rule := range rules {
 		if strings.HasPrefix(path, rule.prefix) {
@@ -619,6 +671,8 @@ func ownershipClassForPath(rules []ownershipRule, path string) string {
 	return ""
 }
 
+// isProductionOwnershipFile excludes tests, documentation, and fixtures because the ownership
+// inventory governs executable Go and Lua behavior only.
 func isProductionOwnershipFile(path string) bool {
 	if strings.HasSuffix(path, "_test.go") || strings.HasSuffix(path, "_test.lua") {
 		return false

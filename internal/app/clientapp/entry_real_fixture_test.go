@@ -14,7 +14,8 @@ import (
 	modruntime "github.com/gravestench/dark-magic/internal/runtime/lua"
 )
 
-// realD2LegacyFixtureConfig describes the production scene setup required by one acceptance scenario.
+// realD2LegacyFixtureConfig exposes only scene differences needed by production-data scenarios,
+// keeping shared authority startup identical across acceptance tests.
 type realD2LegacyFixtureConfig struct {
 	startScene         string
 	fixtureCharacters  int
@@ -22,7 +23,8 @@ type realD2LegacyFixtureConfig struct {
 	applySceneDefaults bool
 }
 
-// requireRealStore returns a required dynamic component store with a scenario-specific failure.
+// requireRealStore makes a missing production schema fail at the fixture boundary with scenario
+// context instead of producing misleading zero-state assertions later.
 func requireRealStore(
 	t *testing.T,
 	fixture *realD2LegacyFixture,
@@ -39,13 +41,15 @@ func requireRealStore(
 	return store
 }
 
-// realD2LegacyFixture owns a production-data client application for one acceptance test.
+// realD2LegacyFixture owns the application and its resolved content options so each acceptance test
+// exercises production adapters while retaining deterministic cleanup.
 type realD2LegacyFixture struct {
 	app     *application
 	options Options
 }
 
-// newRealD2LegacyFixture starts the real d2legacy authority and registers complete cleanup.
+// newRealD2LegacyFixture composes catalogs, offline session, and managed d2legacy authority through
+// production paths. Cleanup is registered immediately for every resource with external ownership.
 func newRealD2LegacyFixture(t *testing.T, config realD2LegacyFixtureConfig) *realD2LegacyFixture {
 	t.Helper()
 	requireRealD2LegacyAssets(t)
@@ -84,7 +88,8 @@ func newRealD2LegacyFixture(t *testing.T, config realD2LegacyFixtureConfig) *rea
 	return &realD2LegacyFixture{app: app, options: options}
 }
 
-// requireRealD2LegacyAssets skips production-data acceptance tests without an MPQ source.
+// requireRealD2LegacyAssets distinguishes unavailable licensed fixture data from a product failure;
+// CI without MPQs skips these scenarios rather than substituting incomplete fake content.
 func requireRealD2LegacyAssets(t *testing.T) {
 	t.Helper()
 
@@ -93,7 +98,8 @@ func requireRealD2LegacyAssets(t *testing.T) {
 	}
 }
 
-// startTestD2LegacyAuthority loads and starts the real managed d2legacy component.
+// startTestD2LegacyAuthority uses the same managed component definition and population command as the
+// application, preventing acceptance tests from bypassing Lua-owned gameplay policy.
 func startTestD2LegacyAuthority(t *testing.T, app *application) {
 	t.Helper()
 
@@ -135,7 +141,8 @@ func startTestD2LegacyAuthority(t *testing.T, app *application) {
 	})
 }
 
-// realD2LegacyOptions resolves production mod layers and pinned asset identity.
+// realD2LegacyOptions resolves the production VFS and asset-set identity together. Network and
+// gameplay identity assertions would be meaningless against unpinned test content.
 func realD2LegacyOptions(t *testing.T) Options {
 	t.Helper()
 
@@ -166,7 +173,8 @@ func realD2LegacyOptions(t *testing.T) Options {
 	}
 }
 
-// advanceOffline advances the canonical local session in host-sized fixed steps.
+// advanceOffline drives only canonical authority at 25 Hz, allowing tests to inspect simulation
+// outcomes without adding renderer behavior.
 func (fixture *realD2LegacyFixture) advanceOffline(t *testing.T, frames int) {
 	t.Helper()
 
@@ -180,7 +188,8 @@ func (fixture *realD2LegacyFixture) advanceOffline(t *testing.T, frames int) {
 	}
 }
 
-// advanceGame advances the full application path in host-sized fixed steps.
+// advanceGame includes application presentation and transition synchronization at the same 25 Hz
+// cadence when a scenario needs to assert the complete client path.
 func (fixture *realD2LegacyFixture) advanceGame(t *testing.T, frames int) {
 	t.Helper()
 

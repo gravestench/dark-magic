@@ -8,7 +8,8 @@ import (
 	playeradapter "github.com/gravestench/dark-magic/internal/mod/d2legacy/adapter/player"
 )
 
-// installPrivateProjection rebuilds authenticated owner-only presentation state.
+// installPrivateProjection rebuilds the authenticated owner's skills, inventory, and interaction as
+// one disposable graph. These facts are private to the admitted player and never join public mirrors.
 func installPrivateProjection(
 	world *akara.World,
 	hero akara.Entity,
@@ -36,7 +37,8 @@ func installPrivateProjection(
 	return installPrivateInteraction(world, owner, private.Interaction)
 }
 
-// clearPrivateProjection removes graphs that are rebuilt from each changed view.
+// clearPrivateProjection removes roots of every owner-private graph before replacement. Destroying
+// whole graphs avoids retaining items or targets omitted from the newest complete private view.
 func clearPrivateProjection(world *akara.World) error {
 	components := []string{
 		"d2legacy.player.learned_skill",
@@ -60,7 +62,8 @@ func clearPrivateProjection(world *akara.World) error {
 	return nil
 }
 
-// installLearnedSkills rebuilds the authenticated hero's skill list.
+// installLearnedSkills attaches projected learned-skill facts to the authenticated hero for menus and
+// input validation; creating these entities does not grant or execute skills locally.
 func installLearnedSkills(
 	world *akara.World,
 	hero akara.Entity,
@@ -90,7 +93,8 @@ func installLearnedSkills(
 	return nil
 }
 
-// installPrivateItemLayout creates the owner inventory's dimension record.
+// installPrivateItemLayout creates the graph owner containing dimensions, weapon-set selection, and
+// gold totals. Individual item entities reference it instead of duplicating owner identity.
 func installPrivateItemLayout(
 	world *akara.World,
 	owner string,
@@ -125,7 +129,8 @@ func installPrivateItemLayout(
 	return entity, nil
 }
 
-// installPrivateItems replaces every item owned by the private layout.
+// installPrivateItems treats the private item list as complete, destroys the previous list, and
+// rebuilds identity, placement, and presentation together for each item.
 func installPrivateItems(
 	world *akara.World,
 	layout akara.Entity,
@@ -165,7 +170,8 @@ func installPrivateItems(
 	return nil
 }
 
-// privateItemIdentity maps immutable item facts into the disposable ECS.
+// privateItemIdentity maps allowlisted stable facts and links the item to its private layout. It does
+// not copy authority-only rolls or behavior into the presentation ECS.
 func privateItemIdentity(
 	layout akara.Entity,
 	item playeradapter.ItemEntityView,
@@ -183,7 +189,8 @@ func privateItemIdentity(
 	}
 }
 
-// privateItemPlacement maps inventory coordinates and equipment placement.
+// privateItemPlacement keeps mutually applicable inventory, equipment, belt, weapon-set, and page
+// coordinates in the registered schema shape used by UI systems.
 func privateItemPlacement(item playeradapter.ItemEntityView) map[string]any {
 	return map[string]any{
 		"container":  item.Container,
@@ -196,7 +203,8 @@ func privateItemPlacement(item playeradapter.ItemEntityView) map[string]any {
 	}
 }
 
-// privateItemPresentation maps render assets without gameplay behavior.
+// privateItemPresentation exposes only asset and composite identifiers required for rendering; item
+// effects remain authoritative and absent from the connected replica.
 func privateItemPresentation(item playeradapter.ItemEntityView) map[string]any {
 	return map[string]any{
 		"inventory_dc6":  item.InventoryDC6,
@@ -207,7 +215,8 @@ func privateItemPresentation(item playeradapter.ItemEntityView) map[string]any {
 	}
 }
 
-// installPrivateInteraction rebuilds the selected interaction target and context.
+// installPrivateInteraction rebuilds owner context around either an active target or an explicit null
+// target, giving Lua a stable relationship without inventing a zero entity reference.
 func installPrivateInteraction(
 	world *akara.World,
 	owner string,
@@ -232,7 +241,8 @@ func installPrivateInteraction(
 	return err
 }
 
-// installPrivateInteractionTarget creates either a null or active target entity.
+// installPrivateInteractionTarget always creates a schema-valid null target first, then replaces it
+// with an allowlisted active target when authority reports one.
 func installPrivateInteractionTarget(
 	world *akara.World,
 	interaction playeradapter.InteractionView,
@@ -281,7 +291,8 @@ func installPrivateInteractionTarget(
 	return entity, nil
 }
 
-// privateProjectionFingerprint ignores correction ticks and hashes private content.
+// privateProjectionFingerprint removes transport tick metadata before hashing complete private
+// content. Unchanged inventories and skill graphs therefore retain ECS identity across corrections.
 func privateProjectionFingerprint(
 	learned []playeradapter.HUDLearnedSkill,
 	private playeradapter.PrivateView,

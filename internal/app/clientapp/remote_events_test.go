@@ -8,8 +8,8 @@ import (
 	playeradapter "github.com/gravestench/dark-magic/internal/mod/d2legacy/adapter/player"
 )
 
-// TestConnectedPersistentStatesBindToMirrorsWithoutGameplayFacts verifies that
-// visual aura state references mirrors without carrying authority-only values.
+// TestConnectedPersistentStatesBindToMirrorsWithoutGameplayFacts proves aura presentation binds to
+// retained targets while effect magnitude and other authority-only state remain absent.
 func TestConnectedPersistentStatesBindToMirrorsWithoutGameplayFacts(t *testing.T) {
 	engine := gameecs.New()
 	registerRemoteViewSchemas(t, engine)
@@ -71,8 +71,8 @@ func TestConnectedPersistentStatesBindToMirrorsWithoutGameplayFacts(t *testing.T
 	}
 }
 
-// TestConnectedMissilesUsePresentationOnlyECSLifecycle verifies that reliable
-// projectile views create, update, and retire presentation-only entities.
+// TestConnectedMissilesUsePresentationOnlyECSLifecycle requires complete reliable views to create,
+// update, and retire projectile mirrors without installing damage or collision authority.
 func TestConnectedMissilesUsePresentationOnlyECSLifecycle(t *testing.T) {
 	engine := gameecs.New()
 	registerRemoteViewSchemas(t, engine)
@@ -132,8 +132,8 @@ func TestConnectedMissilesUsePresentationOnlyECSLifecycle(t *testing.T) {
 	}
 }
 
-// TestConnectedMonsterBecomesANonSelectableCorpseAndDeathCue verifies that a
-// corpse retains presentation identity while losing living collision.
+// TestConnectedMonsterBecomesANonSelectableCorpseAndDeathCue proves death changes public structure,
+// removes living collision, and emits a cue without leaking reward or loot facts.
 func TestConnectedMonsterBecomesANonSelectableCorpseAndDeathCue(t *testing.T) {
 	engine := gameecs.New()
 
@@ -237,8 +237,8 @@ func TestConnectedMonsterBecomesANonSelectableCorpseAndDeathCue(t *testing.T) {
 	}
 }
 
-// TestConnectedSemanticEventsBaselineHistoryAndMirrorOnlyNewCues verifies that
-// joining establishes a cursor without replaying durable event history.
+// TestConnectedSemanticEventsBaselineHistoryAndMirrorOnlyNewCues ensures join baselines durable history
+// and presents only later reliable cues once, even across overlapping corrections.
 func TestConnectedSemanticEventsBaselineHistoryAndMirrorOnlyNewCues(t *testing.T) {
 	engine := gameecs.New()
 	registerRemoteViewSchemas(t, engine)
@@ -338,8 +338,8 @@ func TestConnectedSemanticEventsBaselineHistoryAndMirrorOnlyNewCues(t *testing.T
 	}
 }
 
-// TestConnectedSemanticEffectPreservesRecordOverlayAndSoundOnly verifies that
-// effect cues expose presentation identifiers without gameplay state.
+// TestConnectedSemanticEffectPreservesRecordOverlayAndSoundOnly protects the semantic allowlist: record
+// overlay and sound reach presentation, while gameplay cause and outcome do not.
 func TestConnectedSemanticEffectPreservesRecordOverlayAndSoundOnly(t *testing.T) {
 	engine := gameecs.New()
 	registerRemoteViewSchemas(t, engine)
@@ -389,8 +389,8 @@ func TestConnectedSemanticEffectPreservesRecordOverlayAndSoundOnly(t *testing.T)
 	}
 }
 
-// TestConnectedSemanticEventsRejectCorrectionGapAndTruncation verifies that
-// incomplete reliable event windows fail instead of silently losing cues.
+// TestConnectedSemanticEventsRejectCorrectionGapAndTruncation requires reliable projection to fail
+// closed when authority cannot provide a contiguous event window.
 func TestConnectedSemanticEventsRejectCorrectionGapAndTruncation(t *testing.T) {
 	engine := gameecs.New()
 	registerRemoteViewSchemas(t, engine)

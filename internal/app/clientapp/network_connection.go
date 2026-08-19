@@ -16,13 +16,15 @@ import (
 	d2legacy "github.com/gravestench/dark-magic/internal/mod/d2legacy"
 )
 
-// realmConnectionPlan tracks whether a failed Realm join needs composition repair.
+// realmConnectionPlan carries both the prepared client and the rollback obligation created when
+// package recomposition mutates live application state.
 type realmConnectionPlan struct {
 	client     *clientsession.Session
 	recomposed bool
 }
 
-// selfHostedJoinPlan holds verified inputs for a direct-server connection.
+// selfHostedJoinPlan separates authenticated preparation from live recomposition. Keeping these
+// values together ensures the dial uses the exact recipe and TLS policy that were verified.
 type selfHostedJoinPlan struct {
 	address   string
 	clientTLS *tls.Config
@@ -30,7 +32,8 @@ type selfHostedJoinPlan struct {
 	identity  simulation.RuntimeIdentity
 }
 
-// ConnectRealm composes and connects one private authenticated Realm handoff.
+// ConnectRealm consumes a private Realm assignment that must never pass through Lua or frontend
+// state. A failed handoff is routed through the generation-aware failure path for safe cleanup.
 func (controller *networkController) ConnectRealm(
 	ctx context.Context,
 	assignment realm.JoinAssignment,
@@ -53,7 +56,8 @@ func (controller *networkController) ConnectRealm(
 	return nil
 }
 
-// validateRealmAssignment checks the private values required for authentication.
+// validateRealmAssignment rejects incomplete private handoffs before they can mutate package or
+// controller state. The game ID and ticket bind this client to one Realm-created session.
 func validateRealmAssignment(ctx context.Context, assignment realm.JoinAssignment) error {
 	if ctx == nil || strings.TrimSpace(assignment.GameID) == "" || strings.TrimSpace(assignment.Ticket) == "" {
 		return errors.New("network: invalid Realm assignment")
@@ -62,7 +66,8 @@ func validateRealmAssignment(ctx context.Context, assignment realm.JoinAssignmen
 	return nil
 }
 
-// beginRealmConnection reserves a startup generation for a Realm handoff.
+// beginRealmConnection atomically reserves the controller and derives cancellation from the
+// caller's authenticated login flow. Its generation protects a later session from this work.
 func (controller *networkController) beginRealmConnection(
 	ctx context.Context,
 	assignment realm.JoinAssignment,
@@ -85,7 +90,8 @@ func (controller *networkController) beginRealmConnection(
 	return controller.generation, runCtx, nil
 }
 
-// ReconnectRealm atomically retargets an existing session to a replacement worker.
+// ReconnectRealm serializes reassignment and pins the replacement worker's TLS fingerprint before
+// the existing logical session is retargeted. The player and game identities do not change.
 func (controller *networkController) ReconnectRealm(
 	ctx context.Context,
 	assignment realm.JoinAssignment,
@@ -110,7 +116,8 @@ func (controller *networkController) ReconnectRealm(
 	return controller.finishRealmReconnect(client, assignment, err)
 }
 
-// validateRealmReconnect checks the durable identity required for reassignment.
+// validateRealmReconnect requires the durable game identity and a fresh ticket; an endpoint alone
+// is not authority to resume a Realm session.
 func validateRealmReconnect(ctx context.Context, assignment realm.JoinAssignment) error {
 	if ctx == nil || strings.TrimSpace(assignment.GameID) == "" || strings.TrimSpace(assignment.Ticket) == "" {
 		return errors.New("network: invalid Realm reconnect assignment")
@@ -119,7 +126,8 @@ func validateRealmReconnect(ctx context.Context, assignment realm.JoinAssignment
 	return nil
 }
 
-// beginRealmReconnect marks the current Realm client as reconnecting.
+// beginRealmReconnect moves only a committed Realm client into the reconnecting phase. Capturing
+// its pointer lets the commit path detect if Close or another transition replaced it.
 func (controller *networkController) beginRealmReconnect() (*clientsession.Session, error) {
 	controller.mu.Lock()
 	defer controller.mu.Unlock()
@@ -134,7 +142,9 @@ func (controller *networkController) beginRealmReconnect() (*clientsession.Sessi
 	return client, nil
 }
 
-// finishRealmReconnect commits a successful reassignment or restores the phase.
+// finishRealmReconnect restores the usable connected phase after a failed attempt, but commits a
+// successful endpoint only if the same client is still owned. Advancing the epoch invalidates
+// recovery work started against the previous transport.
 func (controller *networkController) finishRealmReconnect(
 	client *clientsession.Session,
 	assignment realm.JoinAssignment,
@@ -169,7 +179,9 @@ func (controller *networkController) finishRealmReconnect(
 	return nil
 }
 
-// connectRealm verifies packages, connects QUIC, and commits the client session.
+// connectRealm prepares all trust-sensitive inputs before installing the presentation world, then
+// commits ownership only if the startup generation is still active. Every later failure repairs
+// live package composition before returning.
 func (controller *networkController) connectRealm(
 	ctx context.Context,
 	generation uint64,
@@ -206,7 +218,9 @@ func (controller *networkController) connectRealm(
 	return nil
 }
 
-// prepareRealmConnection authenticates and composes before opening the client.
+// prepareRealmConnection pins transport trust, obtains the authenticated package recipe, and
+// composes it before dialing gameplay. Once recomposition begins, callers inherit a rollback
+// obligation even when the failing step appears unrelated.
 func (controller *networkController) prepareRealmConnection(
 	ctx context.Context,
 	assignment realm.JoinAssignment,
@@ -254,7 +268,9 @@ func (controller *networkController) prepareRealmConnection(
 	return plan, nil
 }
 
-// startJoin composes and connects a selected character to a direct server.
+// startJoin performs direct-server preparation, live recomposition, dialing, and commit in that
+// order. Preparing first avoids leaving the offline application half-mutated for failures that can
+// be detected without touching live state.
 func (controller *networkController) startJoin(
 	ctx context.Context,
 	generation uint64,
@@ -300,7 +316,8 @@ func (controller *networkController) startJoin(
 	controller.startClientLoops(ctx, client)
 }
 
-// prepareSelfHostedJoin verifies the server recipe without mutating live state.
+// prepareSelfHostedJoin verifies TLS and the server's recipe against locally derivable runtime
+// identity without mutating the VFS. This makes early trust or download failures rollback-free.
 func (controller *networkController) prepareSelfHostedJoin(
 	ctx context.Context,
 	address string,
@@ -359,7 +376,9 @@ func (controller *networkController) prepareSelfHostedJoin(
 	}, nil
 }
 
-// composeSelfHostedJoin installs the verified recipe and rebuilds its identity.
+// composeSelfHostedJoin installs the verified recipe, then reopens the mod source because VFS
+// replacement invalidates the previous view. A second digest check proves the live composition is
+// the one that was authenticated.
 func (controller *networkController) composeSelfHostedJoin(
 	ctx context.Context,
 	plan *selfHostedJoinPlan,
@@ -382,7 +401,8 @@ func (controller *networkController) composeSelfHostedJoin(
 	return sameRuntimeRecipe(plan.identity, plan.recipe)
 }
 
-// connectSelfHostedJoin opens the session and prepares its connected world.
+// connectSelfHostedJoin authenticates the selected local save and builds a presentation-only world
+// before returning ownership. A presentation failure closes the otherwise valid transport.
 func (controller *networkController) connectSelfHostedJoin(
 	ctx context.Context,
 	plan *selfHostedJoinPlan,
@@ -410,7 +430,8 @@ func (controller *networkController) connectSelfHostedJoin(
 	return client, nil
 }
 
-// runtimeIdentity derives deterministic identity from packages and client data.
+// runtimeIdentity binds packages, assets, generated data, and bootstrap state into the digest used
+// by both peers. Any difference can affect simulation and therefore must reject the connection.
 func (controller *networkController) runtimeIdentity(
 	source fs.FS,
 	packages simulation.RuntimePackageSet,
@@ -424,7 +445,8 @@ func (controller *networkController) runtimeIdentity(
 	)
 }
 
-// commitConnectedClient transfers one prepared client to the active generation.
+// commitConnectedClient is the ownership handoff point. It rejects canceled generations and
+// resets all connection-scoped input state before exposing the connected phase.
 func (controller *networkController) commitConnectedClient(
 	generation uint64,
 	client *clientsession.Session,
@@ -444,7 +466,9 @@ func (controller *networkController) commitConnectedClient(
 	return true
 }
 
-// restoreAfterRecomposition repairs startup package state after a failed join.
+// restoreAfterRecomposition returns the application to its configured offline package set after a
+// failed network attempt. The bounded background context keeps rollback possible after the
+// original connection context has already been canceled.
 func (controller *networkController) restoreAfterRecomposition(
 	recomposed bool,
 	cause error,
@@ -461,7 +485,8 @@ func (controller *networkController) restoreAfterRecomposition(
 	return errors.Join(cause, restoreErr)
 }
 
-// sameRuntimeRecipe compares the authenticated recipe's deterministic digest.
+// sameRuntimeRecipe compares deterministic digests rather than selected fields so newly added
+// simulation inputs cannot silently escape compatibility checks.
 func sameRuntimeRecipe(
 	identity simulation.RuntimeIdentity,
 	recipe simulation.RuntimeRecipe,

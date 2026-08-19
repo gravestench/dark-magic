@@ -10,8 +10,8 @@ import (
 	playeradapter "github.com/gravestench/dark-magic/internal/mod/d2legacy/adapter/player"
 )
 
-// TestListenDestinationRequiresCompleteTrustedWorldState verifies that host
-// admission never falls back to partially prepared client-world data.
+// TestListenDestinationRequiresCompleteTrustedWorldState ensures host admission fails closed when
+// generated map, zone, or spawn data is incomplete instead of trusting frontend coordinates.
 func TestListenDestinationRequiresCompleteTrustedWorldState(t *testing.T) {
 	controller := newNetworkController(&application{activeWorldLevel: 1})
 
@@ -21,8 +21,8 @@ func TestListenDestinationRequiresCompleteTrustedWorldState(t *testing.T) {
 	}
 }
 
-// TestListenDestinationUsesActiveWorldBounds verifies that profile admission
-// receives the selected level's spawn, dimensions, act, and level identity.
+// TestListenDestinationUsesActiveWorldBounds proves the short-lived profile credential is constrained
+// by the active generated world's spawn, dimensions, act, and level identity.
 func TestListenDestinationUsesActiveWorldBounds(t *testing.T) {
 	world, err := gameworld.NewOpenMap(40, 60)
 	if err != nil {
@@ -68,8 +68,8 @@ func TestListenDestinationUsesActiveWorldBounds(t *testing.T) {
 	}
 }
 
-// TestCommitListenHostRejectsStaleGeneration verifies that canceled startup
-// cannot transfer ownership of its resources into a newer controller run.
+// TestCommitListenHostRejectsStaleGeneration protects the ownership handoff: canceled startup cannot
+// publish its host, transport, or client into a newer controller generation.
 func TestCommitListenHostRejectsStaleGeneration(t *testing.T) {
 	controller := newNetworkController(&application{})
 	controller.generation = 2

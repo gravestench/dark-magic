@@ -14,6 +14,9 @@ import (
 	"testing"
 )
 
+// TestRetiredPublicPackagesCannotReturn prevents convenience imports from recreating packages whose
+// ownership was deliberately moved inward. It also keeps passive game-data models independent of
+// engine and Lua runtime behavior.
 func TestRetiredPublicPackagesCannotReturn(t *testing.T) {
 	root := repositoryRoot(t)
 	forbidden := map[string]struct{}{
@@ -75,8 +78,14 @@ func TestRetiredPublicPackagesCannotReturn(t *testing.T) {
 			if strings.Contains(name, "servicemesh") {
 				t.Errorf("%s imports retired service-mesh package %s", path, name)
 			}
+
 			modelRoot := filepath.Join(root, "internal", "game", "data", "model")
-			if pathWithin(path, modelRoot) && (name == "github.com/yuin/gopher-lua" || strings.HasPrefix(name, "github.com/gravestench/dark-magic/internal/")) {
+
+			engineRuntime := strings.HasPrefix(
+				name,
+				"github.com/gravestench/dark-magic/internal/",
+			)
+			if pathWithin(path, modelRoot) && (name == "github.com/yuin/gopher-lua" || engineRuntime) {
 				t.Errorf("%s couples typed game data to engine/runtime package %s", path, name)
 			}
 		}
@@ -87,6 +96,9 @@ func TestRetiredPublicPackagesCannotReturn(t *testing.T) {
 	}
 }
 
+// TestDependencyDirection enforces the repository's inward dependency arrows by inspecting imports.
+// Without this ratchet, a small convenience import can quietly make mechanisms depend on apps,
+// developer tools, presentation, or runtime composition.
 func TestDependencyDirection(t *testing.T) {
 	root := repositoryRoot(t)
 	err := filepath.WalkDir(filepath.Join(root, "internal"), func(path string, entry fs.DirEntry, err error) error {
@@ -141,7 +153,9 @@ func TestGameDataHasNoGlobalD2Catalog(t *testing.T) {
 		t.Fatal(err)
 	}
 	for _, relative := range []string{"internal/game/data/typed", "internal/game/data/store"} {
-		err := filepath.WalkDir(filepath.Join(root, filepath.FromSlash(relative)), func(path string, entry fs.DirEntry, err error) error {
+		searchRoot := filepath.Join(root, filepath.FromSlash(relative))
+
+		err := filepath.WalkDir(searchRoot, func(path string, entry fs.DirEntry, err error) error {
 			if err != nil || entry.IsDir() || !strings.HasSuffix(path, ".go") {
 				return err
 			}
@@ -168,6 +182,8 @@ func TestGameDataHasNoGlobalD2Catalog(t *testing.T) {
 	}
 }
 
+// TestD2ModelsRemainPassiveSchemas keeps typed records as inert decoded data. Constants, variables,
+// or methods would let Diablo-specific interpretation leak out of d2legacy and into generic storage.
 func TestD2ModelsRemainPassiveSchemas(t *testing.T) {
 	root := filepath.Join(repositoryRoot(t), "internal", "game", "data", "model")
 	err := filepath.WalkDir(root, func(path string, entry fs.DirEntry, err error) error {
@@ -193,6 +209,8 @@ func TestD2ModelsRemainPassiveSchemas(t *testing.T) {
 	}
 }
 
+// forbiddenLayerImport encodes the permitted direction between repository layers. Returning true
+// means the dependency points from an inner mechanism toward a more contextual outer owner.
 func forbiddenLayerImport(packagePath, dependency string) bool {
 	for _, root := range []string{"internal/cache", "internal/paths", "internal/logging", "internal/game/data/model"} {
 		if packagePath == root || strings.HasPrefix(packagePath, root+"/") {
@@ -203,7 +221,14 @@ func forbiddenLayerImport(packagePath, dependency string) bool {
 		return strings.HasPrefix(dependency, "internal/") && dependency != "internal/paths"
 	}
 	if strings.HasPrefix(packagePath, "internal/game/") {
-		return hasAnyPrefix(dependency, "internal/app/", "internal/dev/", "internal/platform/", "internal/presentation/", "internal/runtime/")
+		return hasAnyPrefix(
+			dependency,
+			"internal/app/",
+			"internal/dev/",
+			"internal/platform/",
+			"internal/presentation/",
+			"internal/runtime/",
+		)
 	}
 	if strings.HasPrefix(packagePath, "internal/presentation/") {
 		return hasAnyPrefix(dependency, "internal/app/", "internal/dev/", "internal/platform/", "internal/runtime/")
@@ -214,6 +239,8 @@ func forbiddenLayerImport(packagePath, dependency string) bool {
 	return false
 }
 
+// hasAnyPrefix keeps layer checks readable while preserving path-segment prefixes supplied by the
+// caller.
 func hasAnyPrefix(value string, prefixes ...string) bool {
 	for _, prefix := range prefixes {
 		if strings.HasPrefix(value, prefix) {
@@ -223,6 +250,8 @@ func hasAnyPrefix(value string, prefixes ...string) bool {
 	return false
 }
 
+// TestCommandRemainsCompositionOnly keeps cmd packages as documented, private wiring code. Exported
+// helpers would invite application behavior to depend on executable entry points.
 func TestCommandRemainsCompositionOnly(t *testing.T) {
 	root := repositoryRoot(t)
 	err := filepath.WalkDir(filepath.Join(root, "cmd"), func(path string, entry fs.DirEntry, err error) error {
@@ -232,6 +261,7 @@ func TestCommandRemainsCompositionOnly(t *testing.T) {
 		if entry.IsDir() || !strings.HasSuffix(entry.Name(), ".go") || strings.HasSuffix(entry.Name(), "_test.go") {
 			return nil
 		}
+
 		file, err := parser.ParseFile(token.NewFileSet(), path, nil, parser.ParseComments)
 		if err != nil {
 			return err
@@ -241,9 +271,11 @@ func TestCommandRemainsCompositionOnly(t *testing.T) {
 			if !ok {
 				continue
 			}
+
 			if function.Name.Name != "main" && ast.IsExported(function.Name.Name) {
 				t.Errorf("command exposes %s; composition helpers must remain private", function.Name.Name)
 			}
+
 			if function.Doc == nil {
 				t.Errorf("command function %s lacks a documentation comment", function.Name.Name)
 			}
@@ -255,11 +287,15 @@ func TestCommandRemainsCompositionOnly(t *testing.T) {
 	}
 }
 
+// pathWithin performs a segment-aware containment check so similarly prefixed sibling directories do
+// not accidentally inherit architectural restrictions intended for root.
 func pathWithin(path, root string) bool {
 	relative, err := filepath.Rel(root, path)
 	return err == nil && relative != ".." && !strings.HasPrefix(relative, ".."+string(filepath.Separator))
 }
 
+// TestRetiredDeveloperDirectoriesCannotReturn prevents old miscellaneous tool buckets from becoming
+// an easy home for code whose ownership should be explicit.
 func TestRetiredDeveloperDirectoriesCannotReturn(t *testing.T) {
 	root := repositoryRoot(t)
 	for _, relative := range []string{"internal/tools", "internal/testapps"} {
@@ -274,6 +310,8 @@ func TestRetiredDeveloperDirectoriesCannotReturn(t *testing.T) {
 	}
 }
 
+// TestLegacyRendererObjectAPIAndWorldAdapterCannotReturn protects the ECS presentation boundary from
+// the retired direct-renderable object model and its parallel world ownership.
 func TestLegacyRendererObjectAPIAndWorldAdapterCannotReturn(t *testing.T) {
 	root := repositoryRoot(t)
 	world := filepath.Join(root, "internal", "platform", "raylib", "world")
@@ -286,7 +324,13 @@ func TestLegacyRendererObjectAPIAndWorldAdapterCannotReturn(t *testing.T) {
 	}
 
 	renderer := filepath.Join(root, "internal", "platform", "raylib", "renderer")
-	forbidden := map[string]bool{"Renderable": true, "NewRenderable": true, "ProvidesRenderables": true, "ProvidesTextures": true, "ManagesCameras": true}
+	forbidden := map[string]bool{
+		"Renderable":          true,
+		"NewRenderable":       true,
+		"ProvidesRenderables": true,
+		"ProvidesTextures":    true,
+		"ManagesCameras":      true,
+	}
 	err = filepath.WalkDir(renderer, func(path string, entry fs.DirEntry, err error) error {
 		if err != nil || entry.IsDir() || !strings.HasSuffix(path, ".go") {
 			return err
@@ -315,6 +359,8 @@ func TestLegacyRendererObjectAPIAndWorldAdapterCannotReturn(t *testing.T) {
 	}
 }
 
+// TestNoAccidentalPublicGoPackages requires new reusable code to remain internal unless the project
+// deliberately establishes a supported external API under pkg.
 func TestNoAccidentalPublicGoPackages(t *testing.T) {
 	pkgRoot := filepath.Join(repositoryRoot(t), "pkg")
 	if _, err := os.Stat(pkgRoot); errors.Is(err, fs.ErrNotExist) {
@@ -336,6 +382,8 @@ func TestNoAccidentalPublicGoPackages(t *testing.T) {
 	}
 }
 
+// repositoryRoot derives the checkout from this source file rather than the process working
+// directory, allowing architecture tests to run consistently from any package or CI command.
 func repositoryRoot(t *testing.T) string {
 	t.Helper()
 	_, filename, _, ok := runtime.Caller(0)

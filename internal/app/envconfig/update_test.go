@@ -6,8 +6,8 @@ import (
 	"testing"
 )
 
-// TestUpdatePreservesTemplateAndRejectsUnknownKeys verifies that updates retain
-// the surrounding human-readable template and validate caller keys.
+// TestUpdatePreservesTemplateAndRejectsUnknownKeys protects both sides of the
+// configuration contract: humans retain documentation and tools cannot invent schema.
 func TestUpdatePreservesTemplateAndRejectsUnknownKeys(t *testing.T) {
 	directory := t.TempDir()
 	t.Setenv("DARK_MAGIC_CONFIG_DIR", directory)

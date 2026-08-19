@@ -35,7 +35,9 @@ import (
 	"github.com/gravestench/dark-magic/internal/shell"
 )
 
-// Options contains the choices made outside the client composition root.
+// Options is the immutable policy and capability set supplied by the executable.
+// Resource-owning command code retains cleanup responsibility unless an option's
+// contract explicitly transfers it to application.
 type Options struct {
 	Content               *content.FS
 	Mods                  *modcache.ResolvedSet
@@ -62,28 +64,33 @@ type Options struct {
 	Logs                  *shell.LogBuffer
 }
 
-// Profile describes the optional developer profiler used by the client.
+// Profile is the narrow diagnostic surface clientapp needs from an optional
+// profiler, keeping production composition independent of its concrete implementation.
 type Profile interface {
 	CaptureSceneHeap(string) error
 	SetDiagnostics(func() any)
 }
 
-// Capture observes completed frames and writes requested screenshots.
+// Capture observes fully presented frames; it must not participate in simulation
+// or scene authority because capture failures are developer-tool concerns.
 type Capture interface {
 	Observe([]string, uint64, bool)
 	Complete() bool
 	Close() error
 }
 
-// Screenshotter describes the renderer operation required by a capture.
+// Screenshotter exposes only pixel capture, preventing the developer capture
+// adapter from gaining general renderer control.
 type Screenshotter interface {
 	CaptureScreenshot(string) error
 }
 
-// CaptureFactory constructs optional developer captures outside production code.
+// CaptureFactory lets the executable inject developer tooling without importing
+// that tooling into the reusable client composition package.
 type CaptureFactory func(string, string, int, Screenshotter) (Capture, error)
 
-// application owns the dependencies and mutable state of one client process.
+// application is the ownership ledger for one client process. Field grouping
+// mirrors startup/shutdown phases so dependencies are released after their consumers.
 type application struct {
 	options Options
 	ctx     context.Context
@@ -168,5 +175,6 @@ type application struct {
 	frameMetrics frameMetrics
 }
 
-// noCleanup is the safe default for optional subscription cleanup callbacks.
+// noCleanup removes nil checks from shutdown paths, which must remain safe even
+// when assembly fails before an optional subscription is installed.
 func noCleanup() {}

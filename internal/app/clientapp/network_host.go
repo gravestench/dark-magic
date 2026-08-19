@@ -29,7 +29,9 @@ const (
 	listenCredentialTTL = time.Minute
 )
 
-// listenHostRuntime owns resources created while starting a self-hosted game.
+// listenHostRuntime is the temporary owner of a listen server until commitListenHost succeeds.
+// Keeping partial construction outside networkController prevents half-ready resources from being
+// visible as a connected session.
 type listenHostRuntime struct {
 	host              *gameserver.Host
 	server            *sessionquic.Server
@@ -40,7 +42,8 @@ type listenHostRuntime struct {
 	profileCredential string
 }
 
-// close releases partially prepared resources in transport-to-authority order.
+// close releases any subset produced by failed preparation. The client and transport close before
+// authority so their shutdown paths can still make final calls while authority exists.
 func (runtime *listenHostRuntime) close() {
 	if runtime.client != nil {
 		_ = runtime.client.Close(context.Background())
@@ -55,7 +58,9 @@ func (runtime *listenHostRuntime) close() {
 	}
 }
 
-// startHost builds a listen authority and connects the selected local player.
+// startHost builds the authority, exposes it through the normal authenticated protocol, and joins
+// the selected local player as a real client. This keeps hosted behavior aligned with remote play
+// instead of adding an in-process gameplay shortcut.
 func (controller *networkController) startHost(ctx context.Context, generation uint64) {
 	slog.Debug("starting listen server", "address", listenBindAddress)
 
@@ -86,7 +91,8 @@ func (controller *networkController) startHost(ctx context.Context, generation u
 	controller.startClientLoops(ctx, runtime.client)
 }
 
-// prepareListenHost completes every setup phase before background services run.
+// prepareListenHost completes deterministic authority, transport, world, and profile setup before
+// service goroutines run. No request can therefore observe a partially populated session.
 func (controller *networkController) prepareListenHost(
 	ctx context.Context,
 	runtime *listenHostRuntime,
@@ -110,7 +116,8 @@ func (controller *networkController) prepareListenHost(
 	return nil
 }
 
-// startListenAuthority creates the in-process authoritative game session.
+// startListenAuthority creates the sole gameplay authority for hosted play. The client renderer
+// receives projections from this host and must not mutate its simulation directly.
 func (controller *networkController) startListenAuthority(
 	ctx context.Context,
 	runtime *listenHostRuntime,
@@ -144,7 +151,9 @@ func (controller *networkController) startListenAuthority(
 	return nil
 }
 
-// bindListenTransport creates tickets, TLS, QUIC, and package distribution.
+// bindListenTransport places the in-process authority behind the same ticket, TLS, QUIC, and
+// package-distribution boundaries used by external clients. Loopback is a location, not a trust
+// exemption.
 func (controller *networkController) bindListenTransport(runtime *listenHostRuntime) error {
 	endpoint, err := controller.listenEndpoint(runtime)
 	if err != nil {
@@ -178,7 +187,9 @@ func (controller *networkController) bindListenTransport(runtime *listenHostRunt
 	return nil
 }
 
-// listenEndpoint creates the authenticated protocol endpoint and leave hook.
+// listenEndpoint uses a fresh per-session ticket secret and queues departures through authority.
+// The leave hook must not write saves directly because the authoritative simulation owns the final
+// player state.
 func (controller *networkController) listenEndpoint(
 	runtime *listenHostRuntime,
 ) (*gameserver.Endpoint, error) {
@@ -214,7 +225,8 @@ func (controller *networkController) listenEndpoint(
 	return endpoint, nil
 }
 
-// installListenWorlds gives the authority collision data and initial population.
+// installListenWorlds supplies trusted collision maps before submitting population bootstrap.
+// Reversing that order could spawn entities into a world whose movement bounds do not yet exist.
 func (controller *networkController) installListenWorlds(
 	ctx context.Context,
 	host *gameserver.Host,
@@ -246,7 +258,8 @@ func (controller *networkController) installListenWorlds(
 	return nil
 }
 
-// configureListenProfile admits the locally selected save into the authority.
+// configureListenProfile gives the selected local save a short-lived opaque credential. Even the
+// host player crosses profile admission so direct and Realm sessions share identity rules.
 func (controller *networkController) configureListenProfile(runtime *listenHostRuntime) error {
 	destination, err := controller.listenDestination()
 	if err != nil {
@@ -282,7 +295,8 @@ func (controller *networkController) configureListenProfile(runtime *listenHostR
 	return nil
 }
 
-// listenDestination describes the selected entry point in trusted world bounds.
+// listenDestination derives spawn coordinates and bounds from already loaded world data. Treating
+// frontend-provided coordinates as authoritative would permit invalid or out-of-bounds admission.
 func (controller *networkController) listenDestination() (playeradapter.Destination, error) {
 	level := controller.app.activeWorldLevel
 	world := controller.app.gameWorlds[level]
@@ -305,7 +319,8 @@ func (controller *networkController) listenDestination() (playeradapter.Destinat
 	)
 }
 
-// startListenServices runs the authority and QUIC server until their context ends.
+// startListenServices starts background work only after all prerequisites are installed. Either
+// unexpected service failure invalidates the same startup generation and tears down the pair.
 func (controller *networkController) startListenServices(
 	ctx context.Context,
 	generation uint64,
@@ -324,7 +339,8 @@ func (controller *networkController) startListenServices(
 	}()
 }
 
-// connectListenPlayer authenticates the selected save and prepares its client view.
+// connectListenPlayer dials loopback through pinned TLS and profile admission, then activates only
+// network-safe components and an entity-empty presentation replica.
 func (controller *networkController) connectListenPlayer(
 	ctx context.Context,
 	runtime *listenHostRuntime,
@@ -360,7 +376,8 @@ func (controller *networkController) connectListenPlayer(
 	return controller.app.prepareConnectedWorld(ctx)
 }
 
-// commitListenHost transfers prepared resources to the active controller generation.
+// commitListenHost is the all-or-nothing ownership transfer. A canceled or superseded generation
+// rejects the runtime, leaving its temporary owner responsible for cleanup.
 func (controller *networkController) commitListenHost(
 	generation uint64,
 	runtime *listenHostRuntime,
@@ -385,7 +402,8 @@ func (controller *networkController) commitListenHost(
 	return true
 }
 
-// startClientLoops begins outbound input and inbound correction processing.
+// startClientLoops begins transport work only after client ownership is committed, so either loop
+// can safely route terminal failure through the controller.
 func (controller *networkController) startClientLoops(
 	ctx context.Context,
 	client *clientsession.Session,
@@ -394,7 +412,8 @@ func (controller *networkController) startClientLoops(
 	go controller.watch(ctx, client)
 }
 
-// logListenPlayer records the canonical player admitted by the new authority.
+// logListenPlayer records authority-issued identities rather than the requested local save values,
+// making admission mismatches visible during diagnosis.
 func (controller *networkController) logListenPlayer(runtime *listenHostRuntime) {
 	hud, _ := runtime.client.View()
 	slog.Debug(
@@ -408,7 +427,8 @@ func (controller *networkController) logListenPlayer(runtime *listenHostRuntime)
 	)
 }
 
-// randomBytes returns cryptographically secure opaque credential material.
+// randomBytes uses the operating system CSPRNG because ticket secrets and profile credentials are
+// authentication material, not merely collision-resistant identifiers.
 func randomBytes(size int) ([]byte, error) {
 	value := make([]byte, size)
 

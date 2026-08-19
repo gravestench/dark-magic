@@ -9,7 +9,8 @@ import (
 	"github.com/gravestench/dark-magic/internal/shell"
 )
 
-// buildRuntime registers the requested modules and starts a Lua runtime.
+// buildRuntime installs only caller-supplied capabilities before starting Lua,
+// ensuring scripts cannot observe a partially registered administrative surface.
 func buildRuntime(
 	ctx context.Context,
 	policy shell.Policy,
@@ -38,7 +39,8 @@ func buildRuntime(
 	return runtime, settings, policy, nil
 }
 
-// registerModule exposes one runtime module and records its capability.
+// registerModule keeps shell authorization aligned with Lua registration: a
+// module is added to policy only after its installer succeeds.
 func registerModule(runtime *modruntime.Runtime, module modruntime.Module, policy *shell.Policy) error {
 	if err := runtime.RegisterModule(module); err != nil {
 		return err
@@ -49,7 +51,8 @@ func registerModule(runtime *modruntime.Runtime, module modruntime.Module, polic
 	return nil
 }
 
-// registerShellModule exposes settings operations to the administration shell.
+// registerShellModule gives the shell its own settings capability and records it
+// under the same policy gate as command-specific modules.
 func registerShellModule(runtime *modruntime.Runtime, settings *shell.Settings, policy *shell.Policy) error {
 	if err := runtime.RegisterModule(modruntime.ShellModule(settings)); err != nil {
 		return err
@@ -60,7 +63,8 @@ func registerShellModule(runtime *modruntime.Runtime, settings *shell.Settings, 
 	return nil
 }
 
-// loadSettings resolves the optional host path before opening shell settings.
+// loadSettings expands host syntax at the boundary; an empty configured path
+// intentionally selects transient settings instead of inventing persistence.
 func loadSettings() (*shell.Settings, error) {
 	path, err := darkpaths.ExpandHost(os.Getenv("DARK_MAGIC_SHELL_CONFIG"))
 	if err != nil {

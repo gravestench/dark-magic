@@ -11,8 +11,8 @@ import (
 	playeradapter "github.com/gravestench/dark-magic/internal/mod/d2legacy/adapter/player"
 )
 
-// TestConnectedProjectionCreatesDistinctAuthenticatedAndPeerPlayers verifies
-// that the local hero and public peer retain separate presentation identities.
+// TestConnectedProjectionCreatesDistinctAuthenticatedAndPeerPlayers proves owner-private projection
+// attaches only to the authenticated hero while public peers retain separate entities.
 func TestConnectedProjectionCreatesDistinctAuthenticatedAndPeerPlayers(t *testing.T) {
 	engine := gameecs.New()
 	registerRemoteViewSchemas(t, engine)
@@ -104,8 +104,8 @@ func TestConnectedProjectionCreatesDistinctAuthenticatedAndPeerPlayers(t *testin
 	}
 }
 
-// TestRemoteMirrorStructureAndSampledTransformHaveSeparateLifecycles ensures
-// snapshot structure cannot move a retained entity before frame interpolation.
+// TestRemoteMirrorStructureAndSampledTransformHaveSeparateLifecycles protects the no-cuddling boundary
+// between discrete roster changes and per-frame interpolation writes.
 func TestRemoteMirrorStructureAndSampledTransformHaveSeparateLifecycles(t *testing.T) {
 	engine := gameecs.New()
 	registerRemoteViewSchemas(t, engine)
@@ -160,8 +160,8 @@ func TestRemoteMirrorStructureAndSampledTransformHaveSeparateLifecycles(t *testi
 	}
 }
 
-// TestCorrectionDoesNotMoveAnExistingPresentationMirror verifies that a
-// correction with zero alpha leaves an initialized transform untouched.
+// TestCorrectionDoesNotMoveAnExistingPresentationMirror ensures packet arrival updates interpolation
+// targets without producing an immediate visible teleport.
 func TestCorrectionDoesNotMoveAnExistingPresentationMirror(t *testing.T) {
 	engine := gameecs.New()
 	registerRemoteViewSchemas(t, engine)
@@ -190,8 +190,8 @@ func TestCorrectionDoesNotMoveAnExistingPresentationMirror(t *testing.T) {
 	}
 }
 
-// TestLocalPredictionUpdatesOnlyAuthenticatedOwnerTransform verifies that
-// prediction cannot move a peer presentation entity.
+// TestLocalPredictionUpdatesOnlyAuthenticatedOwnerTransform requires player_control ownership to select
+// the predicted entity, preventing local input from moving a peer.
 func TestLocalPredictionUpdatesOnlyAuthenticatedOwnerTransform(t *testing.T) {
 	engine := gameecs.New()
 	registerRemoteViewSchemas(t, engine)
@@ -235,8 +235,8 @@ func TestLocalPredictionUpdatesOnlyAuthenticatedOwnerTransform(t *testing.T) {
 	}
 }
 
-// TestAnimationTimelineUsesPredictionForOwnerAndInterpolationForPeer verifies
-// each player uses the clock appropriate to its presentation role.
+// TestAnimationTimelineUsesPredictionForOwnerAndInterpolationForPeer preserves low-latency owner
+// animation and delayed smooth peer animation as separate timeline policies.
 func TestAnimationTimelineUsesPredictionForOwnerAndInterpolationForPeer(t *testing.T) {
 	engine := gameecs.New()
 	registerRemoteViewSchemas(t, engine)
@@ -291,8 +291,8 @@ func TestAnimationTimelineUsesPredictionForOwnerAndInterpolationForPeer(t *testi
 	}
 }
 
-// TestPrivateProjectionFingerprintChangesOnlyWithPrivateState verifies that
-// transport ticks do not trigger graph rebuilds but private content does.
+// TestPrivateProjectionFingerprintChangesOnlyWithPrivateState ensures transport metadata cannot churn
+// owner graphs while real skill, inventory, or interaction changes do rebuild them.
 func TestPrivateProjectionFingerprintChangesOnlyWithPrivateState(t *testing.T) {
 	learned := []playeradapter.HUDLearnedSkill{{SkillID: 7, Level: 1}}
 	private := playeradapter.PrivateView{Version: playeradapter.PrivateViewVersion, Tick: 10}

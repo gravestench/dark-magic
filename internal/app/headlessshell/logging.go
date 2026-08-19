@@ -7,7 +7,8 @@ import (
 	"github.com/gravestench/dark-magic/internal/shell"
 )
 
-// installLogCapture temporarily points slog at a buffer the terminal can show.
+// installLogCapture redirects the process-global logger into the terminal session
+// and returns a restoration closure so embedding commands do not retain shell logging.
 func installLogCapture(level slog.Level) (*shell.LogBuffer, func()) {
 	logs := shell.NewLogBuffer(1000)
 	handler := logging.NewObserverHandler(

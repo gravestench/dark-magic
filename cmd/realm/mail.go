@@ -10,7 +10,9 @@ import (
 	"github.com/gravestench/dark-magic/internal/app/realm"
 )
 
-// startMailWorker configures optional account mail and starts its outbox consumer.
+// startMailWorker binds durable outbox entries to the selected delivery policy.
+// Starting it only after the control plane exists prevents account operations
+// from using a sender disconnected from the authoritative repository.
 func startMailWorker(
 	ctx context.Context,
 	postgres *realm.Postgres,
@@ -32,7 +34,8 @@ func startMailWorker(
 	return nil
 }
 
-// buildMailer validates the selected delivery mode and creates its sender.
+// buildMailer interprets delivery policy once at startup. Invalid or incomplete
+// SMTP configuration fails the process instead of stranding security links later.
 func buildMailer(control *realm.ControlPlane, config realmConfig) (realm.MailSender, error) {
 	switch config.accountMailMode {
 	case "smtp":
@@ -63,7 +66,8 @@ func buildMailer(control *realm.ControlPlane, config realmConfig) (realm.MailSen
 	}
 }
 
-// logMailResult records one asynchronous outbox delivery result.
+// logMailResult makes asynchronous delivery outcomes observable without logging
+// link contents or credentials; those values are security-sensitive account material.
 func logMailResult(result realm.MailWorkerResult) {
 	if result.Err != nil {
 		slog.Warn(

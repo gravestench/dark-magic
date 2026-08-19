@@ -16,7 +16,8 @@ var templates embed.FS
 
 var roles = map[string]struct{}{"client": {}, "server": {}, "realm": {}}
 
-// Install creates the private default environment file for a known process role.
+// Install materializes a documented role template with owner-only permissions.
+// Existing files are never overwritten because they may contain operator secrets.
 func Install(role string) (string, bool, error) {
 	if _, found := roles[role]; !found {
 		return "", false, fmt.Errorf("unknown environment role %q", role)
@@ -50,7 +51,8 @@ func Install(role string) (string, bool, error) {
 	return path, true, nil
 }
 
-// ensureConfigDirectory resolves, creates, and secures the configuration directory.
+// ensureConfigDirectory enforces owner-only access before any template or secret
+// is written, including when the directory predates this process.
 func ensureConfigDirectory() (string, error) {
 	directory, err := configDirectory()
 	if err != nil {
@@ -68,7 +70,8 @@ func ensureConfigDirectory() (string, error) {
 	return directory, nil
 }
 
-// secureExistingFile reports whether a path exists after enforcing private permissions.
+// secureExistingFile preserves existing contents while repairing permissions.
+// The Boolean lets Install distinguish an operator file from a missing default.
 func secureExistingFile(path string) (bool, error) {
 	_, err := os.Stat(path)
 	if errors.Is(err, fs.ErrNotExist) {
@@ -86,7 +89,8 @@ func secureExistingFile(path string) (bool, error) {
 	return true, nil
 }
 
-// configDirectory returns the configured directory or the platform default.
+// configDirectory supports portable deployments through an explicit host path
+// and otherwise keeps per-user process policy in the platform configuration area.
 func configDirectory() (string, error) {
 	if configured := environmentValue("DARK_MAGIC_CONFIG_DIR"); configured != "" {
 		expanded, err := darkpaths.ExpandHost(configured)

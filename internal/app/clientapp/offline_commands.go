@@ -9,7 +9,8 @@ import (
 	gameplayer "github.com/gravestench/dark-magic/internal/mod/d2legacy/adapter/player"
 )
 
-// registerOfflineCommands connects movement, entry, and intent command sources.
+// registerOfflineCommands assembles one deterministic command stream for the
+// local authority. Entry precedes movement and generic intents so a player exists first.
 func (app *application) registerOfflineCommands() error {
 	if err := app.registerOfflineMovementSystem(); err != nil {
 		return err
@@ -31,7 +32,8 @@ func (app *application) registerOfflineCommands() error {
 	return nil
 }
 
-// registerOfflineMovementSystem installs collision-aware velocity movement.
+// registerOfflineMovementSystem installs production fixed-step movement against
+// the authoritative ECS and pinned movement catalog, not a presentation shortcut.
 func (app *application) registerOfflineMovementSystem() error {
 	bloodMoor := app.gameWorlds[2]
 	if bloodMoor == nil {
@@ -48,7 +50,8 @@ func (app *application) registerOfflineMovementSystem() error {
 	return wrap("register generic velocity movement", err)
 }
 
-// createOfflineMovementSource creates local input and selects its navigation map.
+// createOfflineMovementSource binds player input to authority and initializes
+// navigation from the currently active generated map before the first command tick.
 func (app *application) createOfflineMovementSource() (
 	*d2movement.MovementSource,
 	*d2movement.MovementController,
@@ -80,7 +83,8 @@ func (app *application) createOfflineMovementSource() (
 	return source, movement, nil
 }
 
-// createOfflineEntrySource admits the local player at the trusted world spawn.
+// createOfflineEntrySource derives admission from native save selection and
+// generated spawn data; Lua never chooses identity or trusted entry coordinates.
 func (app *application) createOfflineEntrySource() (*gameplayer.EntrySource, error) {
 	entryLevel := app.activeWorldLevel
 	worldMap := app.gameWorlds[entryLevel]
@@ -117,7 +121,8 @@ func (app *application) createOfflineEntrySource() (*gameplayer.EntrySource, err
 	return entry, nil
 }
 
-// installOfflineCommandSource sequences entry, movement, and intent commands.
+// installOfflineCommandSource fixes command-source order explicitly because
+// changing it can alter same-tick admission, movement, and action semantics.
 func (app *application) installOfflineCommandSource(
 	entry *gameplayer.EntrySource,
 	movement *d2movement.MovementSource,

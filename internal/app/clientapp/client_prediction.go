@@ -12,7 +12,8 @@ import (
 	playeradapter "github.com/gravestench/dark-magic/internal/mod/d2legacy/adapter/player"
 )
 
-// positionPrediction carries the mutable state used to replay pending movement.
+// positionPrediction is a disposable replay of unacknowledged movement from one canonical HUD.
+// Mutating it affects presentation only and cannot advance the authoritative simulation.
 type positionPrediction struct {
 	hud        playeradapter.HUD
 	pending    []gameserver.CommandIntent
@@ -29,7 +30,8 @@ type positionPrediction struct {
 	classKnown bool
 }
 
-// predictPosition replays unacknowledged movement from the latest canonical owner state.
+// predictPosition advances full authority ticks and then a presentation-only fractional remainder.
+// It returns canonical position unchanged when the timeline cannot safely move forward.
 func predictPosition(
 	hud playeradapter.HUD,
 	pending []gameserver.CommandIntent,
@@ -57,7 +59,9 @@ func predictPosition(
 	}
 }
 
-// newPositionPrediction initializes replay state from one authoritative HUD snapshot.
+// newPositionPrediction seeds every movement rule from the authoritative HUD and trusted collision
+// map. Collision dimensions replace HUD bounds when available because loaded world data is the more
+// complete constraint.
 func newPositionPrediction(
 	hud playeradapter.HUD,
 	pending []gameserver.CommandIntent,
@@ -95,20 +99,23 @@ func newPositionPrediction(
 	}
 }
 
-// advanceTick applies queued input, stamina rules, and one fixed movement step.
+// advanceTick mirrors authority ordering: apply eligible input, advance stamina once, then integrate
+// one fixed step. Changing that order would create recurring prediction corrections.
 func (prediction *positionPrediction) advanceTick(tick uint64) {
 	prediction.applyInputs(tick)
 	prediction.advanceStamina()
 	prediction.integrate(1)
 }
 
-// advanceFraction applies next-tick input before projecting the fractional frame remainder.
+// advanceFraction applies next-tick direction for responsive rendering but deliberately skips
+// stamina advancement; fractional presentation time must not consume authoritative resources.
 func (prediction *positionPrediction) advanceFraction(tick uint64, fraction float64) {
 	prediction.applyInputs(tick)
 	prediction.integrate(fraction)
 }
 
-// applyInputs installs each eligible movement intent at most once during replay.
+// applyInputs processes pending movement by target tick and sequence. Invalid payloads are marked
+// consumed for this replay so one malformed command cannot be reconsidered on every later tick.
 func (prediction *positionPrediction) applyInputs(tick uint64) {
 	for _, intent := range prediction.pending {
 		if prediction.skipIntent(intent, tick) {
@@ -132,14 +139,17 @@ func (prediction *positionPrediction) applyInputs(tick uint64) {
 	}
 }
 
-// skipIntent reports whether an intent is unavailable or unrelated to this replay tick.
+// skipIntent excludes already applied, non-movement, and future input while preserving original
+// pending order for commands eligible on the same tick.
 func (prediction *positionPrediction) skipIntent(intent gameserver.CommandIntent, tick uint64) bool {
 	return prediction.applied[intent.Sequence] ||
 		intent.Kind != movement.MoveCommand ||
 		intent.TargetTick > tick
 }
 
-// advanceStamina updates run energy and forces walk speed when stamina is exhausted.
+// advanceStamina invokes the production stamina rules with HUD-projected modifiers. ForceWalk also
+// adjusts velocity immediately so prediction does not continue running after local stamina reaches
+// zero.
 func (prediction *positionPrediction) advanceStamina() {
 	moving := prediction.velocity.X != 0 || prediction.velocity.Y != 0
 	inTown := movement.IsTownLevel(prediction.hud.Location.LevelID)
@@ -164,7 +174,8 @@ func (prediction *positionPrediction) advanceStamina() {
 	}
 }
 
-// canRecoverStamina applies the production recovery exceptions for movement and town.
+// canRecoverStamina duplicates authority recovery exceptions explicitly because omitting any one
+// creates deterministic drift during long movement sequences.
 func (prediction *positionPrediction) canRecoverStamina(moving, inTown bool) bool {
 	return prediction.hud.Animation.Mode == "NU" ||
 		(moving && !prediction.running) ||
@@ -172,7 +183,8 @@ func (prediction *positionPrediction) canRecoverStamina(moving, inTown bool) boo
 		prediction.hud.Movement.StaminaRecoveryBonus >= 1000
 }
 
-// forceWalk converts the current direction to the class's effective walking speed.
+// forceWalk preserves direction while reducing magnitude to effective walking speed. This avoids a
+// visible heading change at the exact tick stamina is exhausted.
 func (prediction *positionPrediction) forceWalk() {
 	prediction.running = false
 	effective := movement.EffectiveRates(prediction.rates, prediction.movementModifiers())
@@ -186,7 +198,8 @@ func (prediction *positionPrediction) forceWalk() {
 	prediction.velocity.Y = prediction.velocity.Y / magnitude * effective.Walk
 }
 
-// movementModifiers returns the HUD-derived rate modifiers used by replay.
+// movementModifiers restricts prediction to modifiers projected by authority; client-only stats
+// must not influence the movement result.
 func (prediction *positionPrediction) movementModifiers() movement.Modifiers {
 	return movement.Modifiers{
 		VelocityPercent:        prediction.hud.Movement.VelocityPercent,
@@ -194,7 +207,8 @@ func (prediction *positionPrediction) movementModifiers() movement.Modifiers {
 	}
 }
 
-// integrate advances collision-aware position by a fixed-step fraction.
+// integrate delegates bounds and collision resolution to the same world primitive used by
+// authority, which keeps prediction differences limited to network timing rather than geometry.
 func (prediction *positionPrediction) integrate(fraction float64) {
 	prediction.position = gameworld.IntegrateVelocity(
 		prediction.collision,

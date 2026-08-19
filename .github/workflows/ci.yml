@@ -21,6 +21,8 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  # Lint runs separately from tests so style and structural failures remain
+  # visible even when native compilation or integration setup fails later.
   lint:
     name: Go lint
     runs-on: macos-latest
@@ -36,9 +38,13 @@ jobs:
       - name: Run Go linters
         uses: golangci/golangci-lint-action@v9
         with:
+          # Pinning prevents a hosted image update from silently changing the
+          # repository's accepted style or formatter behavior.
           version: v2.12.2
           args: ./cmd/... ./internal/app/envconfig ./internal/app/headlessshell
 
+  # Tests retain their own checkout and toolchain so neither job depends on
+  # mutable artifacts produced by the other.
   test:
     name: Go test and race
     runs-on: macos-latest

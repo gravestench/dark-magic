@@ -9,7 +9,8 @@ import (
 	"github.com/gravestench/dark-magic/internal/app/realm"
 )
 
-// CreateGame validates UI options, creates a Realm game, and connects to its worker.
+// CreateGame converts the untyped Lua boundary before contacting Realm, then passes the private
+// worker handoff directly into native networking without exposing it in controller status.
 func (controller *realmController) CreateGame(options map[string]any) error {
 	request, err := realmCreateGameRequest(options)
 	if err != nil {
@@ -26,7 +27,8 @@ func (controller *realmController) CreateGame(options map[string]any) error {
 	})
 }
 
-// realmCreateGameRequest converts loosely typed Lua options into a Realm request.
+// realmCreateGameRequest centralizes defaults and integer validation at the Lua boundary. Native
+// Realm code can then operate on a fully typed request instead of repeating coercion rules.
 func realmCreateGameRequest(options map[string]any) (realm.CreateGameRequest, error) {
 	maximum, err := realmOptionInt(options, "maximum_players", 8)
 	if err != nil {
@@ -55,7 +57,8 @@ func realmCreateGameRequest(options map[string]any) (realm.CreateGameRequest, er
 	}, nil
 }
 
-// JoinGame resolves a directory reference and connects to the assigned worker.
+// JoinGame lets Realm resolve names and IDs and verify any password before the client receives a
+// private worker assignment. The directory reference itself is not treated as authority.
 func (controller *realmController) JoinGame(reference, password string) error {
 	return controller.start("resolving_game", func(ctx context.Context, client realmAPI) error {
 		handoff, err := client.JoinGame(ctx, reference, password)
@@ -67,7 +70,8 @@ func (controller *realmController) JoinGame(reference, password string) error {
 	})
 }
 
-// connectGame passes a private assignment directly to the native network layer.
+// connectGame publishes only the public game ID and phase, while the ticket and pinned endpoint move
+// directly to native networking. Successful connection is the sole transition to game_connected.
 func (controller *realmController) connectGame(ctx context.Context, handoff realm.GameHandoff) error {
 	if controller.games == nil || handoff.Assignment.GameID == "" {
 		return errors.New("realm client: game assignment is unavailable")
@@ -89,7 +93,8 @@ func (controller *realmController) connectGame(ctx context.Context, handoff real
 	return nil
 }
 
-// ReconnectConnectedGame obtains a fresh private assignment for the active game.
+// ReconnectConnectedGame obtains a fresh ticket for the existing game and delegates the atomic
+// endpoint swap to networking. It cannot create or select a different logical game.
 func (controller *realmController) ReconnectConnectedGame(ctx context.Context) error {
 	if controller == nil || ctx == nil || controller.games == nil {
 		return errors.New("realm client: reconnect is unavailable")
@@ -103,7 +108,8 @@ func (controller *realmController) ReconnectConnectedGame(ctx context.Context) e
 	return controller.games.ReconnectRealm(ctx, assignment)
 }
 
-// reconnectAssignment renews a worker credential without allowing game identity to change.
+// reconnectAssignment rejects a control-plane response that changes GameID, even if its ticket and
+// endpoint are otherwise valid. Recovery must preserve the player's current durable session.
 func (controller *realmController) reconnectAssignment(ctx context.Context) (realm.JoinAssignment, error) {
 	client, gameID := controller.connectedGame()
 	if client == nil || gameID == "" {
@@ -122,7 +128,8 @@ func (controller *realmController) reconnectAssignment(ctx context.Context) (rea
 	return handoff.Assignment, nil
 }
 
-// LeaveConnectedGame commits the player's final character state before transport close.
+// LeaveConnectedGame asks Realm to commit authority state while the session is still identifiable,
+// then replaces cached character views and returns to lobby. Transport teardown happens afterward.
 func (controller *realmController) LeaveConnectedGame(ctx context.Context) error {
 	if controller == nil || ctx == nil {
 		return nil
@@ -147,7 +154,8 @@ func (controller *realmController) LeaveConnectedGame(ctx context.Context) error
 	return nil
 }
 
-// connectedGame snapshots the private client and public game identity under one lock.
+// connectedGame snapshots the API owner and current durable game ID together so callers cannot pair
+// a newly installed client with stale game identity.
 func (controller *realmController) connectedGame() (realmAPI, string) {
 	controller.mu.RLock()
 	defer controller.mu.RUnlock()
@@ -155,7 +163,8 @@ func (controller *realmController) connectedGame() (realmAPI, string) {
 	return controller.client, controller.state.ResolvedGameID
 }
 
-// applyCommittedCharacter replaces every cached view of a character after game exit.
+// applyCommittedCharacter updates both directory and selection copies because the frontend retains
+// each independently. Missing either copy would show stale progression or admit an old revision.
 func applyCommittedCharacter(state *realmClientState, committed realm.CharacterSummary) {
 	for index := range state.Characters {
 		if state.Characters[index].Character.ID == committed.Character.ID {
@@ -168,14 +177,15 @@ func applyCommittedCharacter(state *realmClientState, committed realm.CharacterS
 	}
 }
 
-// realmOptionString returns a string-valued Lua option or its zero value.
+// realmOptionString accepts only actual strings; silently formatting arbitrary Lua values would hide
+// malformed UI requests from validation in the control plane.
 func realmOptionString(options map[string]any, name string) string {
 	value, _ := options[name].(string)
 
 	return value
 }
 
-// realmOptionBool returns a Boolean-valued Lua option or the supplied fallback.
+// realmOptionBool distinguishes omission from an explicit false so defaults remain predictable.
 func realmOptionBool(options map[string]any, name string, fallback bool) bool {
 	value, found := options[name].(bool)
 	if !found {
@@ -185,7 +195,8 @@ func realmOptionBool(options map[string]any, name string, fallback bool) bool {
 	return value
 }
 
-// realmOptionInt accepts integral JSON numbers and decimal strings from Lua options.
+// realmOptionInt accepts the two integer representations produced by Lua/JSON bridges but rejects
+// fractional numbers. Truncation would silently change game admission policy.
 func realmOptionInt(options map[string]any, name string, fallback int) (int, error) {
 	value, found := options[name]
 	if !found {

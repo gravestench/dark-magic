@@ -16,7 +16,9 @@ import (
 	"github.com/gravestench/dark-magic/internal/shell"
 )
 
-// run translates command-owned resources into the client application's options.
+// run crosses the process/application ownership boundary. The command keeps
+// responsibility for closing mounted content and profiling resources; the
+// application receives only the capabilities and immutable policy it needs.
 func run(
 	contentFS *content.FS,
 	mods *distribution.ModSet,
@@ -69,7 +71,9 @@ func run(
 	return clientapp.Run(options)
 }
 
-// resolvePlayerProfilePath chooses the configured profile or the platform default.
+// resolvePlayerProfilePath locates durable offline character state. An explicit
+// environment path supports portable/dev setups, while the platform default
+// keeps ordinary players out of the working tree.
 func resolvePlayerProfilePath() (string, error) {
 	if configured := strings.TrimSpace(os.Getenv("DARK_MAGIC_PLAYER_PROFILE")); configured != "" {
 		return configured, nil
@@ -83,7 +87,8 @@ func resolvePlayerProfilePath() (string, error) {
 	return filepath.Join(configurationDirectory, "dark-magic", "player-profile.json"), nil
 }
 
-// newCapture adapts the developer capture package to the client application's factory type.
+// newCapture keeps the reusable clientapp package independent of the concrete
+// developer capture implementation selected by this executable.
 func newCapture(
 	directory string,
 	scenes string,
@@ -93,7 +98,8 @@ func newCapture(
 	return capture.New(directory, scenes, settle, renderer)
 }
 
-// developmentCharacters preserves the command's historical fixture entry point.
+// developmentCharacters preserves the command-level fixture seam used by older
+// tests and tools while clientapp remains the single owner of fixture contents.
 func developmentCharacters(count int) []d2save.Character {
 	return clientapp.DevelopmentCharacters(count)
 }

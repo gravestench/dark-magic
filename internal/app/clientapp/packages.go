@@ -8,7 +8,8 @@ import (
 	"github.com/gravestench/dark-magic/internal/modcache"
 )
 
-// ensureModCache returns the configured cache or creates the platform default.
+// ensureModCache centralizes cache ownership: injected stores remain caller-owned,
+// while a lazily created platform store is recorded for application shutdown.
 func (app *application) ensureModCache() (*modcache.Store, error) {
 	if app.options.ModCache != nil {
 		return app.options.ModCache, nil
@@ -29,14 +30,16 @@ func (app *application) ensureModCache() (*modcache.Store, error) {
 	return store, nil
 }
 
-// cloneRuntimePackages copies the extension slice owned by a runtime recipe.
+// cloneRuntimePackages prevents authenticated recipe slices from aliasing mutable
+// application state during later network recomposition.
 func cloneRuntimePackages(packages simulation.RuntimePackageSet) simulation.RuntimePackageSet {
 	packages.Extensions = append([]simulation.RuntimePackage(nil), packages.Extensions...)
 
 	return packages
 }
 
-// restoreConfiguredPackages returns to the package recipe selected at startup.
+// restoreConfiguredPackages reverses network-provided extensions when leaving a
+// session, restoring the command-selected content generation before offline play resumes.
 func (app *application) restoreConfiguredPackages(ctx context.Context) error {
 	if app.configuredMods.Base.ID == "" {
 		return nil
@@ -65,7 +68,8 @@ func (app *application) restoreConfiguredPackages(ctx context.Context) error {
 	return app.recomposeForNetworkRecipe(ctx, identity.Recipe)
 }
 
-// recomposeForNetworkRecipe applies one authenticated package recipe in phases.
+// recomposeForNetworkRecipe uses prepare-then-mutate phases: archives and syntax
+// are validated before live components stop, minimizing both downtime and rollback risk.
 func (app *application) recomposeForNetworkRecipe(
 	ctx context.Context,
 	recipe simulation.RuntimeRecipe,

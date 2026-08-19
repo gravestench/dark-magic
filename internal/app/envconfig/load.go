@@ -5,7 +5,8 @@ import (
 	"os"
 )
 
-// Load applies file values only when the process has not already exported a key.
+// Load treats the process environment as authoritative and the file as defaults.
+// This precedence lets orchestrators override local files without rewriting them.
 func Load(path string) error {
 	file, err := os.Open(path)
 	if err != nil {

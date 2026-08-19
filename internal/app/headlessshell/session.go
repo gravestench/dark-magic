@@ -6,7 +6,8 @@ import (
 	"github.com/gravestench/dark-magic/internal/shell/luashell"
 )
 
-// buildSession connects the Lua evaluator, captured logs, and persisted settings.
+// buildSession gives the terminal one façade over evaluation, log history, and
+// settings while keeping the underlying runtime ownership inside Run.
 func buildSession(
 	target string,
 	policy shell.Policy,

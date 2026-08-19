@@ -25,7 +25,8 @@ import (
 	"github.com/gravestench/dark-magic/internal/shell"
 )
 
-// loadSettings opens shell, game, and network-trust configuration stores.
+// loadSettings establishes user policy before any backend or network client is
+// created, ensuring all later capabilities derive paths and trust from one snapshot.
 func (app *application) loadSettings() error {
 	if err := app.loadShellSettings(); err != nil {
 		return err
@@ -38,7 +39,8 @@ func (app *application) loadSettings() error {
 	return app.loadNetworkTrust()
 }
 
-// loadShellSettings resolves and opens the optional shell configuration.
+// loadShellSettings expands host syntax at the boundary and selects transient
+// settings when persistence was not requested, rather than inventing a path.
 func (app *application) loadShellSettings() error {
 	path, err := darkpaths.ExpandHost(os.Getenv("DARK_MAGIC_SHELL_CONFIG"))
 	if err != nil {
@@ -50,7 +52,8 @@ func (app *application) loadShellSettings() error {
 	return wrap("load shell settings", err)
 }
 
-// loadGameSettings opens the preferences used by gameplay and presentation.
+// loadGameSettings loads the durable preferences shared by presentation and
+// connection setup; later services receive this store instead of rereading disk.
 func (app *application) loadGameSettings() error {
 	settings, err := preferences.New(os.Getenv("DARK_MAGIC_PREFERENCES"))
 	app.gameSettings = settings
@@ -58,7 +61,8 @@ func (app *application) loadGameSettings() error {
 	return wrap("load game preferences", err)
 }
 
-// loadNetworkTrust derives the trust store location from game preferences.
+// loadNetworkTrust derives persistent certificate pinning from the preferences
+// directory so gateway trust survives restarts alongside the setting that names it.
 func (app *application) loadNetworkTrust() error {
 	trustDirectory, err := networktrust.Directory(app.gameSettings.Path())
 	if err != nil {
@@ -70,7 +74,8 @@ func (app *application) loadNetworkTrust() error {
 	return wrap("create network trust store", err)
 }
 
-// buildPresentationCore creates the native backend and neutral presentation services.
+// buildPresentationCore creates the native backend before backend-neutral stores
+// are wired to it. Keeping this phase separate makes native capability ownership explicit.
 func (app *application) buildPresentationCore() error {
 	if err := app.loadPresentationConfiguration(); err != nil {
 		return err
@@ -89,7 +94,8 @@ func (app *application) buildPresentationCore() error {
 	return nil
 }
 
-// loadPresentationConfiguration resolves the profile and its bootstrap assets.
+// loadPresentationConfiguration pins one manifest-owned profile and validates its
+// bootstrap assets before scenes can request presentation data.
 func (app *application) loadPresentationConfiguration() error {
 	profile, err := content.ResolvePresentationProfile(
 		app.options.Content,
@@ -106,7 +112,8 @@ func (app *application) loadPresentationConfiguration() error {
 	return err
 }
 
-// desktopOptions translates client options into backend-independent window policy.
+// desktopOptions contains the only translation from external process policy to
+// desktop backend configuration, preventing scenes from interpreting CLI choices.
 func (app *application) desktopOptions() desktop.Options {
 	options := desktop.DefaultOptions()
 	options.Content = app.options.Content
@@ -121,7 +128,8 @@ func (app *application) desktopOptions() desktop.Options {
 	return options
 }
 
-// installPresentationServices connects backend-neutral stores to the new backend.
+// installPresentationServices installs stable façades after backend creation.
+// Consumers hold these façades so a backend choice does not leak through the application.
 func (app *application) installPresentationServices(bundle *desktop.Bundle, options desktop.Options) {
 	// Native adapters and the window geometry form the outer presentation edge.
 	app.renderer, app.input = bundle.Renderer, bundle.Input
@@ -144,7 +152,8 @@ func (app *application) installPresentationServices(bundle *desktop.Bundle, opti
 	}
 }
 
-// loadGameCatalogs pins authoritative records and builds recovered-data adapters.
+// loadGameCatalogs pins all record-derived behavior to one content generation.
+// Simulation, prediction, and world generation must never mix catalogs from different mounts.
 func (app *application) loadGameCatalogs() error {
 	pinned, generation, err := recordstore.Pin(app.options.Content)
 	if err != nil && !errors.Is(err, recordstore.ErrNoAuthoritativeTables) {
@@ -185,7 +194,8 @@ func (app *application) loadGameCatalogs() error {
 	return nil
 }
 
-// loadRecoveredCatalogs snapshots recovered data for the world-object resolver.
+// loadRecoveredCatalogs takes one immutable recovered-data snapshot so world
+// object resolution cannot change underneath already generated maps.
 func (app *application) loadRecoveredCatalogs() (recovered.Snapshot, error) {
 	recoveredData, err := app.questCatalog.Snapshot()
 	if err != nil {
@@ -197,7 +207,8 @@ func (app *application) loadRecoveredCatalogs() (recovered.Snapshot, error) {
 	return recoveredData, err
 }
 
-// gameDataGenerationID returns authoritative identity or its asset-set fallback.
+// gameDataGenerationID prefers the record store's content identity and falls back
+// only before records exist; the value participates in multiplayer compatibility.
 func (app *application) gameDataGenerationID() string {
 	if app.records != nil && app.records.GenerationID() != "" {
 		return app.records.GenerationID()

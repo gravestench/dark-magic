@@ -13,7 +13,9 @@ import (
 	"github.com/gravestench/dark-magic/internal/shell"
 )
 
-// runRealm assembles owned resources and coordinates their shutdown.
+// runRealm acquires Realm dependencies in the order required for safe service:
+// durability, allocation, control plane, background workers, then listeners.
+// Teardown reverses that ownership so no listener survives its backing services.
 func runRealm(ctx context.Context, config realmConfig) error {
 	directory, err := realm.DataDirectory(config.dataDirectory)
 	if err != nil {
@@ -58,7 +60,9 @@ func runRealm(ctx context.Context, config realmConfig) error {
 	return errors.Join(runErr, shutdownRealm(servers, processAllocator))
 }
 
-// startAdminShell begins the optional mutable local administration shell.
+// startAdminShell exposes mutation-capable operations only when explicitly
+// enabled. Its buffered error channel lets shell termination participate in the
+// same first-failure shutdown path as HTTP servers.
 func startAdminShell(ctx context.Context, config realmConfig) <-chan error {
 	if !config.adminShell {
 		return nil
@@ -81,7 +85,8 @@ func startAdminShell(ctx context.Context, config realmConfig) <-chan error {
 	return errors
 }
 
-// startMaintenance begins session pruning and worker reconciliation.
+// startMaintenance launches housekeeping under the process context so pruning
+// and worker reconciliation stop with the Realm rather than outliving repositories.
 func startMaintenance(
 	ctx context.Context,
 	control *realm.ControlPlane,
@@ -91,7 +96,8 @@ func startMaintenance(
 	go realm.RunMaintenance(ctx, control, hasProcessAllocator, interval, logMaintenanceResult)
 }
 
-// logMaintenanceResult records failures and state-changing maintenance passes.
+// logMaintenanceResult suppresses no-op noise but records failures and mutations,
+// giving operators evidence when presence, sessions, or game records are changed.
 func logMaintenanceResult(result realm.MaintenanceResult) {
 	attributes := []any{
 		"pruned_sessions", result.PrunedSessions,
@@ -108,7 +114,8 @@ func logMaintenanceResult(result realm.MaintenanceResult) {
 	}
 }
 
-// waitForRealmStop waits for cancellation or a component failure.
+// waitForRealmStop implements first-failure process semantics: cancellation,
+// shell exit, or either listener ending initiates one coordinated shutdown.
 func waitForRealmStop(
 	ctx context.Context,
 	servers realmServers,
@@ -126,7 +133,8 @@ func waitForRealmStop(
 	}
 }
 
-// normalizeServerError treats an intentional HTTP shutdown as success.
+// normalizeServerError removes http.ErrServerClosed from coordinated teardown;
+// retaining it would turn every clean listener shutdown into a false process failure.
 func normalizeServerError(err error) error {
 	if errors.Is(err, http.ErrServerClosed) {
 		return nil
@@ -135,7 +143,8 @@ func normalizeServerError(err error) error {
 	return err
 }
 
-// shutdownRealm closes listeners and supervised workers within a bounded window.
+// shutdownRealm stops ingress before child workers and applies one shared deadline.
+// The bound prevents a stuck connection or worker from hanging process termination.
 func shutdownRealm(
 	servers realmServers,
 	processAllocator *realm.ProcessAllocator,

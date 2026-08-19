@@ -10,7 +10,8 @@ import (
 	d2save "github.com/gravestench/dark-magic/internal/mod/d2legacy/adapter/save"
 )
 
-// TestRealmControllerRunsCharacterThenLobbyFlowAsynchronously covers the core lobby entry flow.
+// TestRealmControllerRunsCharacterThenLobbyFlowAsynchronously proves character and channel phases
+// publish coherently while network operations remain off the render thread.
 func TestRealmControllerRunsCharacterThenLobbyFlowAsynchronously(t *testing.T) {
 	controller := newFakeRealmController()
 	controller.state.Phase = "characters"
@@ -45,7 +46,8 @@ func TestRealmControllerRunsCharacterThenLobbyFlowAsynchronously(t *testing.T) {
 	waitRealmPhase(t, controller, "lobby")
 }
 
-// createTestRealmCharacter restores the standard character used by lobby tests.
+// createTestRealmCharacter creates and selects through controller APIs so lobby tests inherit the
+// same canonical state transitions as the frontend.
 func createTestRealmCharacter(t *testing.T, controller *realmController) {
 	t.Helper()
 
@@ -56,7 +58,8 @@ func createTestRealmCharacter(t *testing.T, controller *realmController) {
 	waitRealmPhase(t, controller, "characters")
 }
 
-// TestRealmControllerRenewsPrunedChannelPresence verifies automatic membership recovery.
+// TestRealmControllerRenewsPrunedChannelPresence requires refresh to rejoin after server pruning and
+// reset its event cursor rather than applying stale membership history.
 func TestRealmControllerRenewsPrunedChannelPresence(t *testing.T) {
 	api := &fakeRealmAPI{channelErr: realm.ErrChannelMember}
 	controller := newFakeRealmControllerWithAPI(api)
@@ -76,7 +79,8 @@ func TestRealmControllerRenewsPrunedChannelPresence(t *testing.T) {
 	}
 }
 
-// TestRealmControllerLoadsSelectedGameDetail verifies directory selection and player detail.
+// TestRealmControllerLoadsSelectedGameDetail proves selection is populated from server detail, not
+// merely copied from the less complete directory entry.
 func TestRealmControllerLoadsSelectedGameDetail(t *testing.T) {
 	api := &fakeRealmAPI{}
 	controller := newFakeRealmControllerWithAPI(api)
@@ -94,7 +98,8 @@ func TestRealmControllerLoadsSelectedGameDetail(t *testing.T) {
 	}
 }
 
-// TestRealmControllerHandsPrivateAssignmentDirectlyToNetwork guards the native trust boundary.
+// TestRealmControllerHandsPrivateAssignmentDirectlyToNetwork proves worker tickets and fingerprints
+// reach the native connector while remaining absent from Lua-visible status.
 func TestRealmControllerHandsPrivateAssignmentDirectlyToNetwork(t *testing.T) {
 	controller, api, games := newRealmGameController()
 
@@ -120,7 +125,8 @@ func TestRealmControllerHandsPrivateAssignmentDirectlyToNetwork(t *testing.T) {
 	assertRealmStatusHidesAssignment(t, controller.Status())
 }
 
-// TestRealmControllerLeaveCommitsCharacter verifies post-game state reconciliation.
+// TestRealmControllerLeaveCommitsCharacter requires Realm's committed revision to replace both
+// selected and directory copies before the controller returns to lobby.
 func TestRealmControllerLeaveCommitsCharacter(t *testing.T) {
 	controller, api, _ := newRealmGameController()
 	controller.state.ResolvedGameID = "game"
@@ -141,12 +147,13 @@ func TestRealmControllerLeaveCommitsCharacter(t *testing.T) {
 	}
 }
 
-// newFakeRealmController creates a controller backed by the standard fake API.
+// newFakeRealmController builds the common deterministic control-plane fixture for state-machine tests.
 func newFakeRealmController() *realmController {
 	return newFakeRealmControllerWithAPI(&fakeRealmAPI{})
 }
 
-// newFakeRealmControllerWithAPI creates a controller backed by a caller-configured fake API.
+// newFakeRealmControllerWithAPI permits one behavior override while retaining the normal application
+// context and native game-connector boundary.
 func newFakeRealmControllerWithAPI(api *fakeRealmAPI) *realmController {
 	controller := newRealmController(&application{ctx: context.Background()})
 	controller.client = api
@@ -154,7 +161,8 @@ func newFakeRealmControllerWithAPI(api *fakeRealmAPI) *realmController {
 	return controller
 }
 
-// newRealmGameController creates the standard game handoff test fixture.
+// newRealmGameController returns controller, API recorder, and connector recorder separately so tests
+// can assert public state and private handoff flow independently.
 func newRealmGameController() (*realmController, *fakeRealmAPI, *fakeRealmGameConnector) {
 	api := &fakeRealmAPI{
 		character: realm.CharacterSummary{
@@ -174,7 +182,8 @@ func newRealmGameController() (*realmController, *fakeRealmAPI, *fakeRealmGameCo
 	return controller, api, games
 }
 
-// assertRealmStatusHidesAssignment verifies that Lua-visible state contains no worker secrets.
+// assertRealmStatusHidesAssignment recursively checks the serialized status boundary for ticket,
+// endpoint fingerprint, and assignment leakage.
 func assertRealmStatusHidesAssignment(t *testing.T, status map[string]any) {
 	t.Helper()
 

@@ -2,8 +2,9 @@ package main
 
 import "log/slog"
 
-// clientConfig collects the command-line policy consumed while assembling the client.
-// Keeping it as one value makes the handoff between parsing and startup explicit.
+// clientConfig is the immutable process policy produced after flag parsing.
+// Keeping raw flag pointers out of startup code prevents later reads from
+// observing mutable global flag state and makes the command/application handoff explicit.
 type clientConfig struct {
 	profileDirectory      string
 	profileScenes         string

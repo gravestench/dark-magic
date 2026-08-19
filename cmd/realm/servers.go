@@ -16,7 +16,8 @@ import (
 	portalassets "github.com/gravestench/dark-magic/internal/app/realmportal/assets"
 )
 
-// realmServers owns the public and optional private HTTP server lifecycles.
+// realmServers keeps listener handles and terminal errors together so the runtime
+// can coordinate first failure and close every surface it successfully opened.
 type realmServers struct {
 	public         *http.Server
 	publicErrors   <-chan error
@@ -24,7 +25,9 @@ type realmServers struct {
 	operatorErrors <-chan error
 }
 
-// startRealmServers creates the portal, TLS identity, and configured listeners.
+// startRealmServers validates the private surface before opening public ingress,
+// then shares one Realm TLS identity across both listeners. Partial startup is
+// rolled back so callers never inherit an unmanaged public server.
 func startRealmServers(
 	control *realm.ControlPlane,
 	assets *portalassets.Cache,
@@ -64,7 +67,8 @@ func startRealmServers(
 	return servers, nil
 }
 
-// buildPublicHandler combines the authenticated API and browser portal.
+// buildPublicHandler mounts browser account flows around the authenticated API
+// without giving the portal a second control-plane instance or repository view.
 func buildPublicHandler(
 	control *realm.ControlPlane,
 	assets *portalassets.Cache,
@@ -82,7 +86,8 @@ func buildPublicHandler(
 	return handler, nil
 }
 
-// loadServerTLS loads or creates the Realm network identity.
+// loadServerTLS loads the persistent Realm network identity whose fingerprint is
+// pinned by clients and workers; regenerating it casually would break established trust.
 func loadServerTLS(directory string) (*tls.Config, string, error) {
 	trust, err := networktrust.New(filepath.Join(directory, "network"))
 	if err != nil {
@@ -97,7 +102,8 @@ func loadServerTLS(directory string) (*tls.Config, string, error) {
 	return serverTLS, fingerprint, nil
 }
 
-// startPublicServer begins serving the authenticated Realm API and portal.
+// startPublicServer opens the player-facing ingress only after handler and TLS
+// construction succeed, then reports the fingerprint operators must distribute.
 func startPublicServer(
 	handler http.Handler,
 	serverTLS *tls.Config,
@@ -126,7 +132,8 @@ func startPublicServer(
 	return realmServers{public: server, publicErrors: errors}, nil
 }
 
-// startOperatorServer begins the optional loopback-only operator API.
+// startOperatorServer creates a mutation-capable API only on an explicit loopback
+// address and with a durable bearer token. Public binding is rejected before listen.
 func startOperatorServer(
 	control *realm.ControlPlane,
 	serverTLS *tls.Config,
@@ -171,7 +178,8 @@ func startOperatorServer(
 	return server, errors, nil
 }
 
-// serveTLS starts one HTTP server and returns its buffered error channel.
+// serveTLS wraps an already-bound listener and captures its sole terminal error.
+// Buffering prevents the serving goroutine from leaking while shutdown selects elsewhere.
 func serveTLS(server *http.Server, listener net.Listener, config *tls.Config) <-chan error {
 	errors := make(chan error, 1)
 	go func() {
@@ -181,7 +189,8 @@ func serveTLS(server *http.Server, listener net.Listener, config *tls.Config) <-
 	return errors
 }
 
-// validateOperatorConfig requires both private endpoint settings or neither.
+// validateOperatorConfig makes the private API all-or-nothing: a token without a
+// listener is misleading, while a listener without a token would be unsafe.
 func validateOperatorConfig(config realmConfig) error {
 	if (config.operatorTokenFile == "") != (config.operatorListen == "") {
 		return errors.New("operator-token-file and operator-listen must be set together")
@@ -190,7 +199,8 @@ func validateOperatorConfig(config realmConfig) error {
 	return nil
 }
 
-// validateLoopbackAddress prevents the private operator API from binding publicly.
+// validateLoopbackAddress requires a literal loopback IP rather than a hostname.
+// This avoids DNS or hosts-file changes silently widening the operator trust boundary.
 func validateLoopbackAddress(address string) error {
 	host, port, err := net.SplitHostPort(address)
 
