@@ -53,7 +53,7 @@ lint:
 		./internal/app/clientsession \
 		./internal/app/envconfig \
 		./internal/app/filewatch \
-		./internal/app/gameserver \
+		./internal/app/gameserver/... \
 		./internal/app/headlessshell
 
 # Vet remains a separate repository-wide semantic check; lint's focused style

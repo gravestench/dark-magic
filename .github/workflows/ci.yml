@@ -47,7 +47,7 @@ jobs:
             ./internal/app/clientsession
             ./internal/app/envconfig
             ./internal/app/filewatch
-            ./internal/app/gameserver
+            ./internal/app/gameserver/...
             ./internal/app/headlessshell
 
   # Tests retain their own checkout and toolchain so neither job depends on
