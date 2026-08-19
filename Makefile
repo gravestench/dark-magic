@@ -1,4 +1,4 @@
-.PHONY: test test-lua test-lua-hardening test-lua-format test-lua-syntax test-network-hardening test-network-soak test-network-fuzz architecture test-race fmt vet build-client-backends d2legacy bik-view presentation-coverage skill-behavior-coverage skill-evidence profile profile-acceptance profile-render-backends profile-check realm-up realm-down realm-fresh-install realm-drain-game realm-mailpit-up realm-mailpit-down realm-test-production capture capture-all capture-game-world capture-game-world-movement capture-game-world-panels capture-blood-moor capture-act1-seam capture-monster-lab capture-missile-lab capture-combat-lab capture-spell-lab capture-warp-lab play-game-world play-monster-lab play-missile-lab play-combat-lab play-spell-lab play-warp-lab
+.PHONY: test test-lua test-lua-hardening test-lua-format test-lua-syntax test-network-hardening test-network-soak test-network-fuzz architecture test-race fmt lint vet build-client-backends d2legacy bik-view presentation-coverage skill-behavior-coverage skill-evidence profile profile-acceptance profile-render-backends profile-check realm-up realm-down realm-fresh-install realm-drain-game realm-mailpit-up realm-mailpit-down realm-test-production capture capture-all capture-game-world capture-game-world-movement capture-game-world-panels capture-blood-moor capture-act1-seam capture-monster-lab capture-missile-lab capture-combat-lab capture-spell-lab capture-warp-lab play-game-world play-monster-lab play-missile-lab play-combat-lab play-spell-lab play-warp-lab
 
 test:
 	go test ./...
@@ -42,6 +42,11 @@ test-network-fuzz:
 
 fmt:
 	gofmt -w $$(find cmd internal pkg -name '*.go')
+
+GOLANGCI_LINT ?= golangci-lint
+
+lint:
+	$(GOLANGCI_LINT) run ./cmd/...
 
 vet:
 	go vet ./...

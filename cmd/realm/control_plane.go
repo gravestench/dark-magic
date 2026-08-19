@@ -16,7 +16,7 @@ func openRealmRepositories(
 	config realmConfig,
 ) (*realm.Postgres, error) {
 	if strings.TrimSpace(config.postgresURL) == "" {
-		return nil, errors.New("Realm requires --postgres-url or DARK_MAGIC_REALM_POSTGRES_URL")
+		return nil, errors.New("realm requires --postgres-url or DARK_MAGIC_REALM_POSTGRES_URL")
 	}
 	postgres, err := realm.OpenPostgres(ctx, config.postgresURL, 0)
 	if err != nil {

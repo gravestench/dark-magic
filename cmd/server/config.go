@@ -140,10 +140,10 @@ func (config serverConfig) validate() error {
 		return errors.New("game-maximum-players must be from 1 through 8")
 	}
 	if config.workerConfigured() && !config.completeWorkerConfig() {
-		return errors.New("Realm worker, control, readiness, QUIC, TLS, and admission flags must be set together")
+		return errors.New("realm worker, control, readiness, QUIC, TLS, and admission flags must be set together")
 	}
 	if config.workerConfigured() && (config.playerProfile != "" || config.remoteProfileKey != "") {
-		return errors.New("Realm workers cannot admit player-controlled profiles")
+		return errors.New("realm workers cannot admit player-controlled profiles")
 	}
 	if config.restoreCheckpoint != "" && !config.realmWorker {
 		return errors.New("restore-checkpoint is valid only for Realm workers")

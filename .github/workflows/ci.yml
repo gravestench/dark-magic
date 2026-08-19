@@ -21,6 +21,24 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  lint:
+    name: Go lint
+    runs-on: macos-latest
+    timeout-minutes: 15
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v6
+      - name: Set up Go
+        uses: actions/setup-go@v6
+        with:
+          go-version-file: go.mod
+          cache: true
+      - name: Run Go linters
+        uses: golangci/golangci-lint-action@v9
+        with:
+          version: v2.12.2
+          args: ./cmd/...
+
   test:
     name: Go test and race
     runs-on: macos-latest

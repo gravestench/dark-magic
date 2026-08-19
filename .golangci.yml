@@ -1,0 +1,25 @@
+version: "2"
+
+run:
+  timeout: 10m
+  tests: true
+  modules-download-mode: readonly
+
+linters:
+  default: standard
+  enable:
+    - lll
+  settings:
+    lll:
+      line-length: 120
+      tab-width: 1
+  exclusions:
+    generated: strict
+
+formatters:
+  enable:
+    - gofmt
+
+issues:
+  max-issues-per-linter: 0
+  max-same-issues: 0

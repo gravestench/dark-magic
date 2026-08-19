@@ -92,8 +92,3 @@ func newCapture(
 func developmentCharacters(count int) []d2save.Character {
 	return clientapp.DevelopmentCharacters(count)
 }
-
-// buildVersion exposes the client build identifier to historical command tests.
-func buildVersion() string {
-	return clientapp.BuildVersion()
-}
