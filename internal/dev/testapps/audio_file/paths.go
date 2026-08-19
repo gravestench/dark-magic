@@ -1,5 +1,7 @@
 package main
 
+// These asset names preserve the archive's legacy slash and capitalization conventions. Callers can pass them to the
+// layered content filesystem without introducing a second normalization policy at each use site.
 const (
 	QuestLogDoneSfx             = "cursor/questdone.wav"
 	BGMTitle                    = "/data/global/music/introedit.wav"

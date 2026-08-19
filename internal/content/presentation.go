@@ -6,7 +6,10 @@ import (
 	"io/fs"
 )
 
-const presentationManifest = "manifests/presentation.v1.json"
+const (
+	presentationManifest = "manifests/presentation.v1.json"
+	presentationSchema   = "d2legacy.presentation/v1"
+)
 
 // PresentationBootstrap contains the small set of authored presentation assets
 // needed before Lua scenes take ownership. Asset identity remains d2legacy data;
@@ -24,6 +27,28 @@ type PresentationMapRecipe struct {
 	DT1 []string
 }
 
+// presentationBootstrapDocument decodes only the manifest facts required before Lua scenes own presentation.
+// Keeping this view narrow prevents native startup from becoming a second authority for the complete manifest.
+type presentationBootstrapDocument struct {
+	Schema   string            `json:"schema"`
+	Palettes map[string]string `json:"palettes"`
+	Screens  struct {
+		Title struct {
+			Background string `json:"background"`
+		} `json:"title"`
+		GameLoading struct {
+			Sheet   string `json:"sheet"`
+			Palette string `json:"palette"`
+		} `json:"game_loading"`
+		GameWorld struct {
+			Map struct {
+				DS1 string   `json:"ds1"`
+				DT1 []string `json:"dt1"`
+			} `json:"map"`
+		} `json:"game_world"`
+	} `json:"screens"`
+}
+
 // LoadPresentationBootstrap reads startup facts from the versioned d2legacy
 // manifest without duplicating Blizzard paths or palette choices in Go.
 func LoadPresentationBootstrap(source fs.FS) (PresentationBootstrap, error) {
@@ -31,35 +56,26 @@ func LoadPresentationBootstrap(source fs.FS) (PresentationBootstrap, error) {
 	if err != nil {
 		return PresentationBootstrap{}, fmt.Errorf("content: read presentation manifest: %w", err)
 	}
-	var document struct {
-		Schema   string            `json:"schema"`
-		Palettes map[string]string `json:"palettes"`
-		Screens  struct {
-			Title struct {
-				Background string `json:"background"`
-			} `json:"title"`
-			GameLoading struct {
-				Sheet   string `json:"sheet"`
-				Palette string `json:"palette"`
-			} `json:"game_loading"`
-			GameWorld struct {
-				Map struct {
-					DS1 string   `json:"ds1"`
-					DT1 []string `json:"dt1"`
-				} `json:"map"`
-			} `json:"game_world"`
-		} `json:"screens"`
-	}
+
+	var document presentationBootstrapDocument
 	if err := json.Unmarshal(data, &document); err != nil {
 		return PresentationBootstrap{}, fmt.Errorf("content: decode presentation manifest: %w", err)
 	}
-	if document.Schema != "d2legacy.presentation/v1" {
-		return PresentationBootstrap{}, fmt.Errorf("content: presentation schema is %q, want %q", document.Schema, "d2legacy.presentation/v1")
+
+	if document.Schema != presentationSchema {
+		return PresentationBootstrap{}, fmt.Errorf(
+			"content: presentation schema is %q, want %q",
+			document.Schema,
+			presentationSchema,
+		)
 	}
+
 	loadingPalette := document.Palettes[document.Screens.GameLoading.Palette]
 	if document.Screens.Title.Background == "" || document.Screens.GameLoading.Sheet == "" || loadingPalette == "" {
 		return PresentationBootstrap{}, fmt.Errorf("content: presentation manifest has incomplete title or loading assets")
 	}
+
+	// Copy the recipe because the decoded slice is temporary while the returned bootstrap may be retained for startup.
 	return PresentationBootstrap{
 		TitleBackground: document.Screens.Title.Background,
 		LoadingAssets:   []string{document.Screens.GameLoading.Sheet, loadingPalette},
@@ -77,8 +93,14 @@ func ValidateClientAssets(source fs.FS) error {
 	if err != nil {
 		return err
 	}
+
 	if _, err := fs.Stat(source, bootstrap.TitleBackground); err != nil {
-		return fmt.Errorf("required Diablo II asset %q is unavailable; set MPQ_DIRECTORY to the directory containing the game MPQs: %w", bootstrap.TitleBackground, err)
+		return fmt.Errorf(
+			"required Diablo II asset %q is unavailable; set MPQ_DIRECTORY to the directory containing the game MPQs: %w",
+			bootstrap.TitleBackground,
+			err,
+		)
 	}
+
 	return nil
 }

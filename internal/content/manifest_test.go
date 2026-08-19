@@ -11,22 +11,32 @@ import (
 	"github.com/gravestench/dark-magic/internal/assets/catalog"
 )
 
+// TestD2LegacyRealmTerminologyDoesNotUseThirdPartyServiceMark prevents embedded first-party text from leaking a mark.
 func TestD2LegacyRealmTerminologyDoesNotUseThirdPartyServiceMark(t *testing.T) {
 	t.Parallel()
+
 	if err := fs.WalkDir(D2Legacy(), ".", func(path string, entry fs.DirEntry, err error) error {
-		if err != nil || entry.IsDir() || !(strings.HasSuffix(path, ".lua") || strings.HasSuffix(path, ".json")) {
+		if err != nil || entry.IsDir() {
 			return err
 		}
+
+		if !strings.HasSuffix(path, ".lua") && !strings.HasSuffix(path, ".json") {
+			return nil
+		}
+
 		data, err := fs.ReadFile(D2Legacy(), path)
 		if err != nil {
 			return err
 		}
+
 		lower := strings.ToLower(string(data))
 		markedName := "battle" + "." + "net"
+
 		markedAlias := "battle" + "net"
 		if strings.Contains(lower, markedName) || strings.Contains(lower, markedAlias) {
 			t.Errorf("%s uses a third-party service mark; Dark Magic calls this service Realm", path)
 		}
+
 		return nil
 	}); err != nil {
 		t.Fatal(err)
@@ -43,6 +53,7 @@ func TestD2LegacyPresentationManifestContract(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+
 	var manifest struct {
 		Schema     string                     `json:"schema"`
 		Version    int                        `json:"version"`
@@ -82,65 +93,103 @@ func TestD2LegacyPresentationManifestContract(t *testing.T) {
 	if err := json.Unmarshal(data, &manifest); err != nil {
 		t.Fatalf("decode presentation manifest: %v", err)
 	}
+
 	if manifest.Schema != "d2legacy.presentation/v1" || manifest.Version != 1 {
 		t.Fatalf("unexpected presentation contract %q version %d", manifest.Schema, manifest.Version)
 	}
+
 	if manifest.Resolution.Width <= 0 || manifest.Resolution.Height <= 0 {
 		t.Fatalf("invalid presentation resolution: %#v", manifest.Resolution)
 	}
+
 	if len(manifest.Profiles) != 2 {
 		t.Fatalf("supported presentation profiles = %d, want 2", len(manifest.Profiles))
 	}
+
 	desktop, gameplay := manifest.Profiles[0], manifest.Profiles[1]
 	if desktop.ID != "lod-english-800x600" || desktop.GameVersion != "diablo-ii-lod" || desktop.Language != "English" ||
 		desktop.Resolution.Width != manifest.Resolution.Width || desktop.Resolution.Height != manifest.Resolution.Height {
 		t.Fatalf("unsupported or inconsistent desktop presentation profile: %#v", desktop)
 	}
-	if gameplay.ID != "lod-english-640x480-gameplay" || gameplay.Resolution.Width != 640 || gameplay.Resolution.Height != 480 || !reflect.DeepEqual(gameplay.Screens, []string{"game_world", "inventory", "character", "skills", "quests", "party", "help", "stash", "cube", "hireling", "vendor", "waypoint", "pause", "options", "automap", "death", "loading", "game_loading"}) {
+
+	wantGameplayScreens := []string{
+		"game_world", "inventory", "character", "skills", "quests", "party", "help", "stash", "cube", "hireling",
+		"vendor", "waypoint", "pause", "options", "automap", "death", "loading", "game_loading",
+	}
+	if gameplay.ID != "lod-english-640x480-gameplay" || gameplay.Resolution.Width != 640 ||
+		gameplay.Resolution.Height != 480 || !reflect.DeepEqual(gameplay.Screens, wantGameplayScreens) {
 		t.Fatalf("unsupported or inconsistent gameplay presentation profile: %#v", gameplay)
 	}
+
 	if len(manifest.Palettes) == 0 || len(manifest.Fonts) == 0 || len(manifest.Sounds) == 0 {
 		t.Fatal("presentation manifest must own palette, font, and sound facts")
 	}
-	for _, name := range []string{"panel_heading", "panel_label", "panel_value", "frontend_version", "frontend_legal", "character_select_title", "character_select_metadata", "character_create_heading", "character_create_class", "character_create_description", "character_create_option", "credits", "button_normal", "button_hover", "label_button_normal", "label_button_hover", "dialog_button_normal", "dialog_button_hover", "dialog_text", "network_status", "network_error", "tooltip", "disabled", "font_lab_heading", "font_lab_caption", "font_lab_font6", "font_lab_font16", "font_lab_font30", "font_lab_font42", "font_lab_formal10", "font_lab_formal11", "font_lab_formal12", "font_lab_color", "font_lab_gold_sky", "font_lab_gold_fechar", "font_lab_gold_act1"} {
+
+	requiredStyles := []string{
+		"panel_heading", "panel_label", "panel_value", "frontend_version", "frontend_legal",
+		"character_select_title", "character_select_metadata", "character_create_heading", "character_create_class",
+		"character_create_description", "character_create_option", "credits", "button_normal", "button_hover",
+		"label_button_normal", "label_button_hover", "dialog_button_normal", "dialog_button_hover", "dialog_text",
+		"network_status", "network_error", "tooltip", "disabled", "font_lab_heading", "font_lab_caption",
+		"font_lab_font6", "font_lab_font16", "font_lab_font30", "font_lab_font42", "font_lab_formal10",
+		"font_lab_formal11", "font_lab_formal12", "font_lab_color", "font_lab_gold_sky", "font_lab_gold_fechar",
+		"font_lab_gold_act1",
+	}
+	for _, name := range requiredStyles {
 		style, ok := manifest.Styles[name]
 		if !ok {
 			t.Errorf("presentation manifest is missing text style %q", name)
 			continue
 		}
+
 		if _, ok := manifest.Fonts[style.Font]; !ok {
 			t.Errorf("text style %q references unknown font %q", name, style.Font)
 		}
+
 		if style.Transform != "" {
 			if _, ok := manifest.Transforms[style.Transform]; !ok {
 				t.Errorf("text style %q references unknown palette transform %q", name, style.Transform)
 			}
 		}
 	}
+
 	if len(manifest.Cursor) == 0 || len(manifest.Startup) == 0 {
 		t.Fatal("presentation manifest must own cursor and startup facts")
 	}
-	for _, name := range []string{"button_normal", "button_hover", "label_button_normal", "label_button_hover", "dialog_text"} {
+
+	exocetStyles := []string{
+		"button_normal", "button_hover", "label_button_normal", "label_button_hover", "dialog_text",
+	}
+	for _, name := range exocetStyles {
 		if manifest.Styles[name].Transform != "" {
-			t.Errorf("Exocet UI style %q must use its Units palette directly, not PL2 transform %q", name, manifest.Styles[name].Transform)
+			t.Errorf(
+				"Exocet UI style %q must use its Units palette directly, not PL2 transform %q",
+				name,
+				manifest.Styles[name].Transform,
+			)
 		}
 	}
+
 	for _, name := range []string{"button_normal", "label_button_normal", "dialog_text"} {
 		got := manifest.Styles[name].Color
 		if got.Red != 100 || got.Green != 100 || got.Blue != 100 || got.Alpha != 255 {
 			t.Errorf("Exocet UI style %q modulation = %#v, want neutral 0x646464ff", name, got)
 		}
 	}
+
 	if manifest.Styles["network_error"].TextColor != "red" {
 		t.Fatalf("network error style color = %q, want red", manifest.Styles["network_error"].TextColor)
 	}
+
 	dialogNormal, dialogHover := manifest.Styles["dialog_button_normal"], manifest.Styles["dialog_button_hover"]
 	if dialogNormal.Font != "font16" || dialogNormal.Transform != "sky" || dialogNormal.TextColor != "grey" {
 		t.Fatalf("dialog button normal style = %#v, want standalone grey font16", dialogNormal)
 	}
+
 	if dialogHover.Font != "font16" || dialogHover.Transform != "sky" || dialogHover.TextColor != "blue" {
 		t.Fatalf("dialog button hover style = %#v, want standalone blue font16", dialogHover)
 	}
+
 	for _, screen := range []string{
 		"font_lab",
 		"title",
@@ -161,6 +210,7 @@ func TestD2LegacyPresentationManifestContract(t *testing.T) {
 	}
 }
 
+// TestTCPIPJoinDialogUsesAuthoredTextFieldAndVisibleStatus pins field calibration and unobscured connection feedback.
 func TestTCPIPJoinDialogUsesAuthoredTextFieldAndVisibleStatus(t *testing.T) {
 	t.Parallel()
 
@@ -168,6 +218,7 @@ func TestTCPIPJoinDialogUsesAuthoredTextFieldAndVisibleStatus(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+
 	var manifest struct {
 		Screens struct {
 			TCPIP struct {
@@ -193,23 +244,37 @@ func TestTCPIPJoinDialogUsesAuthoredTextFieldAndVisibleStatus(t *testing.T) {
 	}
 
 	tcpip := manifest.Screens.TCPIP
-	if tcpip.Dialog.Field.Kind != "ip" || tcpip.Dialog.Field.Palette == "" || tcpip.Dialog.Field.Width <= 0 || tcpip.Dialog.Field.Height <= 0 || tcpip.Dialog.Field.MaxLength <= 0 {
+	if tcpip.Dialog.Field.Kind != "ip" || tcpip.Dialog.Field.Palette == "" ||
+		tcpip.Dialog.Field.Width <= 0 || tcpip.Dialog.Field.Height <= 0 || tcpip.Dialog.Field.MaxLength <= 0 {
 		t.Fatalf("TCP/IP dialog field = %#v", tcpip.Dialog.Field)
 	}
+
 	if tcpip.Dialog.Field.Palette != "units" || tcpip.Dialog.Field.LabelAlign != "center" {
 		t.Fatalf("TCP/IP dialog field presentation = %#v", tcpip.Dialog.Field)
 	}
+
 	if tcpip.Dialog.Field.X+tcpip.Dialog.Field.Width/2 != tcpip.Dialog.X+tcpip.Dialog.Width/2 {
-		t.Fatalf("TCP/IP dialog field center=%d, want dialog center=%d", tcpip.Dialog.Field.X+tcpip.Dialog.Field.Width/2, tcpip.Dialog.X+tcpip.Dialog.Width/2)
+		t.Fatalf(
+			"TCP/IP dialog field center=%d, want dialog center=%d",
+			tcpip.Dialog.Field.X+tcpip.Dialog.Field.Width/2,
+			tcpip.Dialog.X+tcpip.Dialog.Width/2,
+		)
 	}
+
 	if tcpip.Status.Y <= tcpip.Dialog.Y+tcpip.Dialog.Height {
-		t.Fatalf("TCP/IP status y=%d is occluded by dialog ending at y=%d", tcpip.Status.Y, tcpip.Dialog.Y+tcpip.Dialog.Height)
+		t.Fatalf(
+			"TCP/IP status y=%d is occluded by dialog ending at y=%d",
+			tcpip.Status.Y,
+			tcpip.Dialog.Y+tcpip.Dialog.Height,
+		)
 	}
+
 	if tcpip.Status.Width <= 0 || tcpip.Status.Style != "network_status" || tcpip.Status.ErrorStyle != "network_error" {
 		t.Fatalf("TCP/IP status = %#v", tcpip.Status)
 	}
 }
 
+// TestSupportedPresentationCompositionMatrix validates geometry and locale coverage for every declared profile.
 func TestSupportedPresentationCompositionMatrix(t *testing.T) {
 	t.Parallel()
 
@@ -217,53 +282,70 @@ func TestSupportedPresentationCompositionMatrix(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+
 	var document map[string]any
 	if err := json.Unmarshal(data, &document); err != nil {
 		t.Fatal(err)
 	}
+
 	profiles, ok := document["supported_profiles"].([]any)
 	if !ok || len(profiles) == 0 {
 		t.Fatal("presentation manifest must declare supported profiles")
 	}
+
 	for _, rawProfile := range profiles {
 		profile := rawProfile.(map[string]any)
 		name := profile["id"].(string)
 		t.Run(name, func(t *testing.T) {
+			// Apply the same profile merge used by startup before validating the resulting authored surface.
 			selected, _, err := ApplyPresentationProfile(document, name)
 			if err != nil {
 				t.Fatal(err)
 			}
+
 			resolution := selected["resolution"].(map[string]any)
+
 			width, height := resolution["width"].(float64), resolution["height"].(float64)
 			if width <= 0 || height <= 0 {
 				t.Fatalf("invalid resolution %.0fx%.0f", width, height)
 			}
+
 			screens := selected["screens"].(map[string]any)
 			validatedScreens := any(screens)
+
 			if scope, ok := profile["screens"].([]any); ok {
+				// Scoped profiles promise only the listed screens; unscoped profiles own the complete frontend tile grid.
 				scoped := make(map[string]any, len(scope))
 				for _, value := range scope {
 					id := value.(string)
 					scoped[id] = screens[id]
 				}
+
 				validatedScreens = scoped
 			} else {
 				layouts := selected["layouts"].(map[string]any)
+
 				tiles := layouts["frontend_tiles"].(map[string]any)
-				if sumJSONNumbers(tiles["columns"].([]any)) != width || sumJSONNumbers(tiles["rows"].([]any)) != height {
+				if sumJSONNumbers(tiles["columns"].([]any)) != width ||
+					sumJSONNumbers(tiles["rows"].([]any)) != height {
 					t.Fatalf("frontend tile grid does not cover %.0fx%.0f", width, height)
 				}
 			}
+
 			validatePresentationGeometry(t, validatedScreens, width, height, "screens")
+
 			language := profile["language"].(string)
+
 			localeData, err := fs.ReadFile(D2Legacy(), "locales/"+language+".json")
 			if err != nil {
 				t.Fatalf("read %s locale: %v", language, err)
 			}
+
 			var localized map[string]string
 			if err := json.Unmarshal(localeData, &localized); err != nil {
 				t.Fatalf("decode %s locale: %v", language, err)
 			}
+
 			for key := range presentationLocaleKeys(validatedScreens) {
 				if localized[key] == "" {
 					t.Errorf("%s locale is missing presentation key %q", language, key)
@@ -273,9 +355,12 @@ func TestSupportedPresentationCompositionMatrix(t *testing.T) {
 	}
 }
 
+// presentationLocaleKeys recursively collects authored label and key references that a profile must localize.
 func presentationLocaleKeys(value any) map[string]bool {
 	result := make(map[string]bool)
+
 	var visit func(any)
+
 	visit = func(value any) {
 		switch current := value.(type) {
 		case []any:
@@ -289,16 +374,20 @@ func presentationLocaleKeys(value any) map[string]bool {
 						result[text] = true
 					}
 				}
+
 				visit(item)
 			}
 		}
 	}
 	visit(value)
+
 	return result
 }
 
+// validatePresentationGeometry recursively keeps authored rectangles and anchors within the selected viewport.
 func validatePresentationGeometry(t *testing.T, value any, width, height float64, path string) {
 	t.Helper()
+
 	switch current := value.(type) {
 	case []any:
 		for index, item := range current {
@@ -308,29 +397,36 @@ func validatePresentationGeometry(t *testing.T, value any, width, height float64
 		if x, exists := current["x"].(float64); exists && (x < 0 || x > width) {
 			t.Errorf("%s.x = %v outside width %v", path, x, width)
 		}
+
 		if y, exists := current["y"].(float64); exists && (y < 0 || y > height) {
 			t.Errorf("%s.y = %v outside height %v", path, y, height)
 		}
+
 		if itemWidth, exists := current["width"].(float64); exists && (itemWidth <= 0 || itemWidth > width) {
 			t.Errorf("%s.width = %v invalid for width %v", path, itemWidth, width)
 		}
+
 		if itemHeight, exists := current["height"].(float64); exists && (itemHeight <= 0 || itemHeight > height) {
 			t.Errorf("%s.height = %v invalid for height %v", path, itemHeight, height)
 		}
+
 		for key, item := range current {
 			validatePresentationGeometry(t, item, width, height, path+"."+key)
 		}
 	}
 }
 
+// sumJSONNumbers totals one decoded numeric layout axis without hiding malformed fixture types behind coercion.
 func sumJSONNumbers(values []any) float64 {
 	var result float64
 	for _, value := range values {
 		result += value.(float64)
 	}
+
 	return result
 }
 
+// TestD2LegacyAssetFixtureContract pins the validated fixture cardinality used by presentation coverage.
 func TestD2LegacyAssetFixtureContract(t *testing.T) {
 	t.Parallel()
 
@@ -338,18 +434,22 @@ func TestD2LegacyAssetFixtureContract(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+
 	var fixture assetcatalog.Fixture
 	if err := json.Unmarshal(data, &fixture); err != nil {
 		t.Fatalf("decode asset fixture: %v", err)
 	}
+
 	if err := fixture.Validate(); err != nil {
 		t.Fatal(err)
 	}
+
 	if len(fixture.Assets) != 113 {
 		t.Fatalf("asset fixture contains %d entries, want 113", len(fixture.Assets))
 	}
 }
 
+// TestD2LegacyPresentationAssetCoverageBaseline requires every inventory change to update the audited fingerprint.
 func TestD2LegacyPresentationAssetCoverageBaseline(t *testing.T) {
 	t.Parallel()
 
@@ -357,22 +457,30 @@ func TestD2LegacyPresentationAssetCoverageBaseline(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+
 	fixtureData, err := fs.ReadFile(D2Legacy(), "manifests/asset-fixture.v1.json")
 	if err != nil {
 		t.Fatal(err)
 	}
-	var manifest assetcatalog.Manifest
-	var fixture assetcatalog.Fixture
+
+	var (
+		manifest assetcatalog.Manifest
+		fixture  assetcatalog.Fixture
+	)
+
 	if err := json.Unmarshal(manifestData, &manifest); err != nil {
 		t.Fatal(err)
 	}
+
 	if err := json.Unmarshal(fixtureData, &fixture); err != nil {
 		t.Fatal(err)
 	}
+
 	coverage, err := assetcatalog.BuildCoverage(D2Legacy(), manifest, fixture)
 	if err != nil {
 		t.Fatal(err)
 	}
+
 	if len(coverage.CatalogFixtureGaps) != 0 {
 		t.Fatalf("catalog/fixture join gaps: %v", coverage.CatalogFixtureGaps)
 	}
@@ -433,10 +541,16 @@ func TestD2LegacyPresentationAssetCoverageBaseline(t *testing.T) {
 	// inventory grows only by source/test paths rather than shipping assets.
 	const auditedFingerprint = "4fb4572bd9f37ab9ac81f623b8a2e39feb6b8d2c576adf4743e30c4b331f9573"
 	if coverage.Fingerprint != auditedFingerprint {
-		t.Fatalf("presentation asset coverage changed: got %s, want audited %s; run `make presentation-coverage` and classify every changed path", coverage.Fingerprint, auditedFingerprint)
+		t.Fatalf(
+			"presentation asset coverage changed: got %s, want audited %s; "+
+				"run `make presentation-coverage` and classify every changed path",
+			coverage.Fingerprint,
+			auditedFingerprint,
+		)
 	}
 }
 
+// TestCharacterCreationTransitionFacts pins class staging, animation completeness, overlays, and foreground depth.
 func TestCharacterCreationTransitionFacts(t *testing.T) {
 	t.Parallel()
 
@@ -444,6 +558,7 @@ func TestCharacterCreationTransitionFacts(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+
 	var manifest struct {
 		Screens struct {
 			CharacterCreate struct {
@@ -475,38 +590,67 @@ func TestCharacterCreationTransitionFacts(t *testing.T) {
 	if err := json.Unmarshal(data, &manifest); err != nil {
 		t.Fatal(err)
 	}
+
 	classes := manifest.Screens.CharacterCreate.Classes
+
 	creation := manifest.Screens.CharacterCreate
-	if creation.Palette != "fechar" || creation.ClassPalette != "fechar" || creation.IdleFPS != 15 || creation.TransitionFPS != 25 || creation.Campfire.Sheet == "" || creation.Campfire.Z <= 0 {
+	if creation.Palette != "fechar" || creation.ClassPalette != "fechar" || creation.IdleFPS != 15 ||
+		creation.TransitionFPS != 25 || creation.Campfire.Sheet == "" || creation.Campfire.Z <= 0 {
 		t.Fatalf("character creation palette/campfire facts = %#v", creation)
 	}
+
 	if len(classes) != 7 {
 		t.Fatalf("character creation classes = %d, want 7", len(classes))
 	}
+
 	for _, class := range classes {
 		if class.Class == "" || class.Forward == "" || class.Back == "" || class.ForwardFrames <= 0 || class.BackFrames <= 0 {
 			t.Errorf("incomplete walk transition for %#v", class)
 		}
-		wantForwardOverlay := map[string]bool{"Amazon": true, "Sorceress": true, "Necromancer": true, "Paladin": true, "Barbarian": true}[class.Class]
+
+		forwardOverlays := map[string]bool{
+			"Amazon": true, "Sorceress": true, "Necromancer": true, "Paladin": true, "Barbarian": true,
+		}
+		wantForwardOverlay := forwardOverlays[class.Class]
+
 		wantBackOverlay := map[string]bool{"Sorceress": true, "Necromancer": true}[class.Class]
 		if (class.ForwardOverlay != "") != wantForwardOverlay || (class.BackOverlay != "") != wantBackOverlay {
-			t.Errorf("unexpected shipped overlay pairing for %q: forward=%q back=%q", class.Class, class.ForwardOverlay, class.BackOverlay)
+			t.Errorf(
+				"unexpected shipped overlay pairing for %q: forward=%q back=%q",
+				class.Class,
+				class.ForwardOverlay,
+				class.BackOverlay,
+			)
 		}
+
 		placement, ok := creation.Stage[class.Class]
-		if !ok || placement.Anchor.X <= 0 || placement.Anchor.Y <= 0 || placement.Z <= 0 || placement.Hit.Width <= 0 || placement.Hit.Height <= 0 {
+		if !ok || placement.Anchor.X <= 0 || placement.Anchor.Y <= 0 || placement.Z <= 0 ||
+			placement.Hit.Width <= 0 || placement.Hit.Height <= 0 {
 			t.Errorf("missing calibrated stage placement for %q: %#v", class.Class, placement)
 		}
 	}
+
 	if creation.Stage["Paladin"].Z <= creation.Stage["Barbarian"].Z {
-		t.Errorf("Paladin depth %d must render in front of Barbarian depth %d", creation.Stage["Paladin"].Z, creation.Stage["Barbarian"].Z)
+		t.Errorf(
+			"Paladin depth %d must render in front of Barbarian depth %d",
+			creation.Stage["Paladin"].Z,
+			creation.Stage["Barbarian"].Z,
+		)
 	}
+
 	for class, placement := range creation.Stage {
 		if placement.Z >= creation.Campfire.Z {
-			t.Errorf("class %q depth %d must remain behind foreground campfire depth %d", class, placement.Z, creation.Campfire.Z)
+			t.Errorf(
+				"class %q depth %d must remain behind foreground campfire depth %d",
+				class,
+				placement.Z,
+				creation.Campfire.Z,
+			)
 		}
 	}
 }
 
+// TestGameHUDCompositionFacts pins world assets and calibrated desktop HUD controls as one authored composition.
 func TestGameHUDCompositionFacts(t *testing.T) {
 	t.Parallel()
 
@@ -514,6 +658,7 @@ func TestGameHUDCompositionFacts(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+
 	var manifest struct {
 		Screens struct {
 			GameWorld struct {
@@ -573,45 +718,57 @@ func TestGameHUDCompositionFacts(t *testing.T) {
 	if err := json.Unmarshal(data, &manifest); err != nil {
 		t.Fatal(err)
 	}
+
 	hud := manifest.Screens.GameWorld.HUD
+
 	worldMap := manifest.Screens.GameWorld.Map
 	if worldMap.DS1 == "" || len(worldMap.DT1) == 0 || worldMap.Palette == "" {
 		t.Fatalf("incomplete world-map asset facts: %#v", worldMap)
 	}
+
 	if hud.PanelSheet == "" || hud.Globes.Sheet == "" || hud.Globes.OverlapSheet == "" || hud.Skills.Sheet == "" {
 		t.Fatalf("incomplete HUD asset facts: %#v", hud)
 	}
 	// The expansion panel begins with a 117px globe and 48px skill well.
 	// Riiablo places the belt at x=177 inside the following control widget:
 	// 117 + 48 + 177 = 342.
-	if hud.Belt.Sheet == "" || hud.Belt.X != 342 || hud.Belt.Y != 561 || hud.Belt.Columns != 4 || hud.Belt.Rows != 4 || hud.Belt.CellWidth != 31 || hud.Belt.CellHeight != 31 {
+	if hud.Belt.Sheet == "" || hud.Belt.X != 342 || hud.Belt.Y != 561 || hud.Belt.Columns != 4 ||
+		hud.Belt.Rows != 4 || hud.Belt.CellWidth != 31 || hud.Belt.CellHeight != 31 {
 		t.Fatalf("unexpected desktop belt facts: %#v", hud.Belt)
 	}
+
 	if hud.Run.Sheet == "" || hud.Menu.Sheet == "" || hud.Minipanel.Sheet == "" || hud.Minipanel.ButtonSheet == "" {
 		t.Fatalf("incomplete HUD control assets: %#v", hud)
 	}
+
 	if hud.Run.WalkFrame != 0 || hud.Run.RunFrame != 2 || hud.Menu.ClosedFrame != 0 || hud.Menu.OpenFrame != 2 {
 		t.Fatalf("unexpected HUD toggle frames: run=%#v menu=%#v", hud.Run, hud.Menu)
 	}
+
 	if len(hud.Minipanel.Buttons) != 7 {
 		t.Fatalf("minipanel buttons = %d, want 7", len(hud.Minipanel.Buttons))
 	}
+
 	wantFrames := []int{0, 2, 4, 8, 10, 12, 14}
 	for index, button := range hud.Minipanel.Buttons {
 		if button.ID == "" || button.Frame != wantFrames[index] {
 			t.Errorf("minipanel button %d = %#v", index, button)
 		}
+
 		if button.ID == "messages" && (!button.Enabled || button.Scene != "messages") {
 			t.Errorf("messages minipanel route = %#v, want enabled messages scene", button)
 		}
+
 		if button.Slot != "left" && button.Slot != "right" && button.Slot != "full" {
 			t.Errorf("minipanel button %q has invalid overlay slot %q", button.ID, button.Slot)
 		}
 	}
+
 	wantX := []int{0, 165, 293, 421, 549, 683}
 	if len(hud.PanelParts) != len(wantX) {
 		t.Fatalf("panel parts = %d, want %d", len(hud.PanelParts), len(wantX))
 	}
+
 	for index, part := range hud.PanelParts {
 		if part.Frame != index || part.X != wantX[index] || part.Bottom != 600 {
 			t.Errorf("panel part %d = %#v", index, part)
@@ -619,6 +776,7 @@ func TestGameHUDCompositionFacts(t *testing.T) {
 	}
 }
 
+// TestInventoryPresentationUsesRecordGeometry keeps equipment slots record-driven while pinning surrounding assets.
 func TestInventoryPresentationUsesRecordGeometry(t *testing.T) {
 	t.Parallel()
 
@@ -626,6 +784,7 @@ func TestInventoryPresentationUsesRecordGeometry(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+
 	var manifest struct {
 		Screens struct {
 			Inventory struct {
@@ -648,16 +807,21 @@ func TestInventoryPresentationUsesRecordGeometry(t *testing.T) {
 	if err := json.Unmarshal(data, &manifest); err != nil {
 		t.Fatal(err)
 	}
+
 	inventory := manifest.Screens.Inventory
 	if inventory.Records != "data/global/excel/Inventory.txt" || inventory.RecordSuffix != "2" {
 		t.Fatalf("inventory record contract = %#v", inventory)
 	}
-	if inventory.Panel.Sheet == "" || inventory.Close.Sheet == "" || !reflect.DeepEqual(inventory.Panel.Frames, []int{4, 5, 7, 6}) {
+
+	if inventory.Panel.Sheet == "" || inventory.Close.Sheet == "" ||
+		!reflect.DeepEqual(inventory.Panel.Frames, []int{4, 5, 7, 6}) {
 		t.Fatalf("inventory presentation assets = %#v", inventory)
 	}
+
 	if len(inventory.Slots) != 10 {
 		t.Fatalf("inventory equipment slots = %d, want 10", len(inventory.Slots))
 	}
+
 	for _, slot := range inventory.Slots {
 		if slot.ID == "" || slot.Prefix == "" {
 			t.Errorf("incomplete inventory slot = %#v", slot)
@@ -665,6 +829,7 @@ func TestInventoryPresentationUsesRecordGeometry(t *testing.T) {
 	}
 }
 
+// Test640GameplayProfileUsesClassicOverlayGeometry pins sparse overrides for every supported classic gameplay panel.
 func Test640GameplayProfileUsesClassicOverlayGeometry(t *testing.T) {
 	t.Parallel()
 
@@ -672,60 +837,77 @@ func Test640GameplayProfileUsesClassicOverlayGeometry(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+
 	var document map[string]any
 	if err := json.Unmarshal(data, &document); err != nil {
 		t.Fatal(err)
 	}
+
 	selected, _, err := ApplyPresentationProfile(document, "lod-english-640x480-gameplay")
 	if err != nil {
 		t.Fatal(err)
 	}
+
 	screens := selected["screens"].(map[string]any)
 	inventory := screens["inventory"].(map[string]any)
+
 	panel := inventory["panel"].(map[string]any)
-	if inventory["record_suffix"] != "" || panel["origin_y_correction"] != float64(4) || inventory["offset_x"] != float64(-80) || inventory["offset_y"] != float64(-60) {
+	if inventory["record_suffix"] != "" || panel["origin_y_correction"] != float64(4) ||
+		inventory["offset_x"] != float64(-80) || inventory["offset_y"] != float64(-60) {
 		t.Fatalf("classic inventory geometry = %#v", inventory)
 	}
+
 	for _, id := range []string{"character", "quests", "party"} {
 		screen := screens[id].(map[string]any)
 		if screen["offset_x"] != float64(-80) || screen["offset_y"] != float64(-60) {
 			t.Errorf("classic %s offset = %v,%v", id, screen["offset_x"], screen["offset_y"])
 		}
 	}
+
 	skills := screens["skills"].(map[string]any)
 	if skills["x"] != float64(320) || skills["y"] != float64(4) {
 		t.Fatalf("classic skill-tree origin = %v,%v", skills["x"], skills["y"])
 	}
+
 	help := screens["help"].(map[string]any)
 	helpBorder := help["border"].(map[string]any)
+
 	placements := helpBorder["placements"].([]any)
 	if helpBorder["sheet"] != "data/global/ui/MENU/helpborder.DC6" || len(placements) != 8 {
 		t.Fatalf("classic help border = %#v", helpBorder)
 	}
+
 	last := placements[7].(map[string]any)
 	if last["frame"] != float64(7) || last["x"] != float64(576) || last["y"] != float64(256) {
 		t.Fatalf("classic help lower-right placement = %#v", last)
 	}
+
 	for _, id := range []string{"stash", "cube", "hireling", "vendor", "waypoint"} {
 		screen := screens[id].(map[string]any)
 		if screen["x"] != float64(0) || screen["y"] != float64(4) {
 			t.Errorf("classic fixed panel %s origin = %v,%v", id, screen["x"], screen["y"])
 		}
+
 		if screen["sheet"] == "" || screen["close"] == nil {
 			t.Errorf("incomplete fixed panel %s = %#v", id, screen)
 		}
 	}
+
 	automap := screens["automap"].(map[string]any)
-	if automap["x"] != float64(320) || automap["y"] != float64(240) || automap["width"] != float64(540) || automap["height"] != float64(380) {
+	if automap["x"] != float64(320) || automap["y"] != float64(240) ||
+		automap["width"] != float64(540) || automap["height"] != float64(380) {
 		t.Fatalf("classic automap viewport = %#v", automap)
 	}
+
 	death := screens["death"].(map[string]any)
 	if death["x"] != float64(320) || death["width"] != float64(600) || death["died_y"] != float64(145) {
 		t.Fatalf("classic death presentation = %#v", death)
 	}
+
 	for _, id := range []string{"loading", "game_loading"} {
 		screen := screens[id].(map[string]any)
-		if screen["x"] != float64(320) || screen["y"] != float64(240) || screen["width"] != float64(640) || screen["height"] != float64(480) {
+		if screen["x"] != float64(320) || screen["y"] != float64(240) ||
+			screen["width"] != float64(640) || screen["height"] != float64(480) {
 			t.Errorf("classic %s viewport = %#v", id, screen)
 		}
 	}

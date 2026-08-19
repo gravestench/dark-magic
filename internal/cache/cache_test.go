@@ -1,157 +1,239 @@
 package cache
 
-import (
-	"testing"
-)
+import "testing"
 
+// TestCacheInsert verifies that a valid entry becomes resident with its declared
+// value and weight, establishing the basic unversioned cache contract.
 func TestCacheInsert(t *testing.T) {
 	cache := New(1)
-	insertError := cache.Insert("A", "", 1)
 
-	if insertError != nil {
-		t.Fatalf("Cache insert resulted in unexpected error: %s", insertError)
-	}
+	insertCacheEntry(t, cache, "A", "value", 1)
+	requireCachedValue(t, cache, "A", "value")
 }
 
+// TestCacheInsertWithinBudget verifies that an oversized entry is accepted and
+// immediately evicted rather than leaving the cache over budget.
 func TestCacheInsertWithinBudget(t *testing.T) {
 	cache := New(1)
-	insertError := cache.Insert("A", "", 2)
 
-	if insertError != nil {
-		t.Fatalf("Cache insert resulted in unexpected error: %s", insertError)
-	}
-	if cache.GetWeight() != 0 {
-		t.Fatal("oversized entry should be evicted")
+	insertCacheEntry(t, cache, "A", "value", 2)
+
+	if got := cache.GetWeight(); got != 0 {
+		t.Fatalf("weight = %d, want 0 after oversized entry eviction", got)
 	}
 }
 
+// TestCacheInsertUpdatesWeight verifies that automatic eviction subtracts only
+// the least-recently-used entry's weight from the resident total.
 func TestCacheInsertUpdatesWeight(t *testing.T) {
 	cache := New(2)
-	_ = cache.Insert("A", "", 1)
-	_ = cache.Insert("B", "", 1)
-	_ = cache.Insert("budget_exceeded", "", 1)
 
-	if cache.GetWeight() != 2 {
-		t.Fatal("Cache with budget 2 did not correctly set weight after evicting one of three nodes")
+	insertCacheEntry(t, cache, "A", "A", 1)
+	insertCacheEntry(t, cache, "B", "B", 1)
+	insertCacheEntry(t, cache, "budget_exceeded", "C", 1)
+
+	if got := cache.GetWeight(); got != 2 {
+		t.Fatalf("weight = %d, want 2 after evicting one of three entries", got)
 	}
 }
 
+// TestCacheInsertDuplicateRejected verifies that a second composite key cannot
+// replace the resident value or change the package's established error text.
 func TestCacheInsertDuplicateRejected(t *testing.T) {
 	cache := New(2)
-	_ = cache.Insert("dupe", "", 1)
-	dupeError := cache.Insert("dupe", "", 1)
+	insertCacheEntry(t, cache, "dupe", "original", 1)
 
-	if dupeError == nil {
-		t.Fatal("Cache insert of duplicate key did not result in any err")
+	err := cache.Insert("dupe", "replacement", 1)
+	if err == nil || err.Error() != "key already exists in Cache" {
+		t.Fatalf("duplicate insert error = %v, want %q", err, "key already exists in Cache")
+	}
+
+	requireCachedValue(t, cache, "dupe", "original")
+}
+
+// TestCacheInsertRejectsInvalidInput verifies that validation failures preserve
+// their public error strings and leave residency unchanged.
+func TestCacheInsertRejectsInvalidInput(t *testing.T) {
+	cache := New(2)
+
+	err := cache.Insert("", "missing-key", 1)
+	if err == nil || err.Error() != "cache key is required" {
+		t.Fatalf("empty-key insert error = %v, want %q", err, "cache key is required")
+	}
+
+	err = cache.Insert("negative-weight", "value", -1)
+	if err == nil || err.Error() != "cache weight cannot be negative" {
+		t.Fatalf("negative-weight insert error = %v, want %q", err, "cache weight cannot be negative")
+	}
+
+	if stats := cache.Diagnostics(); stats != (Stats{Budget: 2}) {
+		t.Fatalf("diagnostics after rejected inserts = %#v, want empty cache", stats)
 	}
 }
 
+// TestCacheInsertEvictsLeastRecentlyUsed verifies that capacity pressure removes
+// exactly the oldest entry and leaves newer entries resident.
 func TestCacheInsertEvictsLeastRecentlyUsed(t *testing.T) {
 	cache := New(2)
-	// with a budget of 2, inserting 3 keys should evict the last
-	_ = cache.Insert("evicted", "", 1)
-	_ = cache.Insert("A", "", 1)
-	_ = cache.Insert("B", "", 1)
 
-	_, foundEvicted := cache.Retrieve("evicted")
-	if foundEvicted {
-		t.Fatal("Cache insert did not trigger eviction after weight exceedance")
-	}
+	insertCacheEntry(t, cache, "evicted", "oldest", 1)
+	insertCacheEntry(t, cache, "A", "A", 1)
+	insertCacheEntry(t, cache, "B", "B", 1)
 
-	// double check that only 1 one was evicted and not any extra
-	_, foundA := cache.Retrieve("A")
-	_, foundB := cache.Retrieve("B")
-
-	if !foundA || !foundB {
-		t.Fatal("Cache insert evicted more than necessary")
-	}
+	requireCacheMiss(t, cache, "evicted")
+	requireCachedValue(t, cache, "A", "A")
+	requireCachedValue(t, cache, "B", "B")
 }
 
+// TestCacheInsertEvictsLeastRecentlyRetrieved verifies that a successful lookup
+// promotes its entry, shifting the next eviction to the previously newer key.
 func TestCacheInsertEvictsLeastRecentlyRetrieved(t *testing.T) {
 	cache := New(2)
-	_ = cache.Insert("A", "", 1)
-	_ = cache.Insert("evicted", "", 1)
+	insertCacheEntry(t, cache, "A", "A", 1)
+	insertCacheEntry(t, cache, "evicted", "oldest-after-promotion", 1)
 
-	// retrieve the oldest node, promoting it head so it is not evicted
-	cache.Retrieve("A")
+	// The lookup makes A most recently used before the insertion exceeds capacity.
+	requireCachedValue(t, cache, "A", "A")
+	insertCacheEntry(t, cache, "B", "B", 1)
 
-	// insert once more, exceeding weight capacity
-	_ = cache.Insert("B", "", 1)
-	// now the least recently used key should be evicted
-	_, foundEvicted := cache.Retrieve("evicted")
-	if foundEvicted {
-		t.Fatal("Cache insert did not evict least recently used after weight exceedance")
-	}
+	requireCacheMiss(t, cache, "evicted")
+	requireCachedValue(t, cache, "A", "A")
+	requireCachedValue(t, cache, "B", "B")
 }
 
+// TestClear verifies that clearing makes every resident entry unavailable while
+// retaining a usable cache object for subsequent lookups.
 func TestClear(t *testing.T) {
 	cache := New(1)
-	_ = cache.Insert("cleared", "", 1)
-	cache.Clear()
-	_, found := cache.Retrieve("cleared")
+	insertCacheEntry(t, cache, "cleared", "value", 1)
 
-	if found {
-		t.Fatal("Still able to retrieve nodes after cache was cleared")
-	}
+	cache.Clear()
+
+	requireCacheMiss(t, cache, "cleared")
 }
 
+// TestVersionedCacheInvalidationAndDiagnostics exercises the generation
+// lifecycle as one narrative and verifies its observable counters and callbacks.
 func TestVersionedCacheInvalidationAndDiagnostics(t *testing.T) {
 	cache := New(3)
-	var evicted []string
-	cache.SetEvictionHandler(func(value interface{}) { evicted = append(evicted, value.(string)) })
-	if err := cache.InsertVersioned("vfs", "hero", 1, "old", 2); err != nil {
-		t.Fatal(err)
+	recorder := &evictionRecorder{}
+	cache.SetEvictionHandler(recorder.record)
+
+	// Establish a hit in the old generation before advancing the namespace.
+	insertVersionedCacheEntry(t, cache, "vfs", "hero", 1, "old", 2)
+
+	if value, found := cache.RetrieveVersioned("vfs", "hero", 1); !found || value != "old" {
+		t.Fatalf("old generation lookup = %v/%v, want old/true", value, found)
 	}
-	if value, ok := cache.RetrieveVersioned("vfs", "hero", 1); !ok || value != "old" {
-		t.Fatalf("value = %v, ok = %v", value, ok)
-	}
+
+	// Invalidation removes generation one, so generation two cannot see stale data.
 	cache.InvalidateNamespace("vfs", 2)
-	if _, ok := cache.RetrieveVersioned("vfs", "hero", 2); ok {
-		t.Fatal("stale generation remained")
+
+	if value, found := cache.RetrieveVersioned("vfs", "hero", 2); found || value != nil {
+		t.Fatalf("invalidated generation lookup = %v/%v, want nil/false", value, found)
 	}
-	if err := cache.InsertVersioned("vfs", "hero", 2, "new", 2); err != nil {
-		t.Fatal(err)
-	}
+
+	// The replacement is valid but cannot remain after the budget is reduced below its weight.
+	insertVersionedCacheEntry(t, cache, "vfs", "hero", 2, "new", 2)
+
 	if err := cache.SetBudget(1); err != nil {
-		t.Fatal(err)
+		t.Fatalf("SetBudget(1) error = %v", err)
 	}
-	stats := cache.Diagnostics()
-	if stats.Entries != 0 || stats.Weight != 0 || stats.Budget != 1 || stats.Hits != 1 || stats.Misses != 1 || stats.Evictions != 2 {
-		t.Fatalf("stats = %#v", stats)
+
+	wantStats := Stats{Budget: 1, Hits: 1, Misses: 1, Evictions: 2}
+	if stats := cache.Diagnostics(); stats != wantStats {
+		t.Fatalf("diagnostics = %#v, want %#v", stats, wantStats)
 	}
-	if len(evicted) != 2 || evicted[0] != "old" || evicted[1] != "new" {
-		t.Fatalf("evicted = %v", evicted)
-	}
+
+	recorder.requireValues(t, []string{"old", "new"})
 }
 
+// TestVersionMismatchEvictsStaleEntry verifies that a mismatched generation is
+// counted as a miss and cannot leave stale residency behind.
 func TestVersionMismatchEvictsStaleEntry(t *testing.T) {
 	cache := New(10)
-	if err := cache.InsertVersioned("assets", "font", 4, "font", 1); err != nil {
-		t.Fatal(err)
+	insertVersionedCacheEntry(t, cache, "assets", "font", 4, "font", 1)
+
+	if value, found := cache.RetrieveVersioned("assets", "font", 5); found || value != nil {
+		t.Fatalf("mismatched generation lookup = %v/%v, want nil/false", value, found)
 	}
-	if _, ok := cache.RetrieveVersioned("assets", "font", 5); ok {
-		t.Fatal("version mismatch hit")
-	}
-	if cache.Diagnostics().Entries != 0 {
-		t.Fatal("stale entry was not evicted")
+
+	wantStats := Stats{Budget: 10, Misses: 1, Evictions: 1}
+	if stats := cache.Diagnostics(); stats != wantStats {
+		t.Fatalf("diagnostics = %#v, want %#v", stats, wantStats)
 	}
 }
 
+// TestCanInsertWithoutEvictionDoesNotTouchResidency verifies that admission
+// checks neither promote entries nor change diagnostics while assessing capacity.
 func TestCanInsertWithoutEvictionDoesNotTouchResidency(t *testing.T) {
 	cache := New(10)
-	if err := cache.Insert("active", "scene", 7); err != nil {
-		t.Fatal(err)
-	}
+	insertCacheEntry(t, cache, "active", "scene", 7)
+
 	if !cache.CanInsertWithoutEviction("active", 100) {
 		t.Fatal("resident key was rejected")
 	}
+
 	if cache.CanInsertWithoutEviction("warm", 4) {
 		t.Fatal("speculative insertion that requires eviction was admitted")
 	}
+
 	if !cache.CanInsertWithoutEviction("warm", 3) {
 		t.Fatal("speculative insertion that fits was rejected")
 	}
-	if stats := cache.Diagnostics(); stats.Entries != 1 || stats.Weight != 7 || stats.Hits != 0 || stats.Misses != 0 {
-		t.Fatalf("admission changed cache state: %#v", stats)
+
+	wantStats := Stats{Entries: 1, Weight: 7, Budget: 10}
+	if stats := cache.Diagnostics(); stats != wantStats {
+		t.Fatalf("admission changed cache state: got %#v, want %#v", stats, wantStats)
+	}
+}
+
+// insertCacheEntry inserts a fixture through the public API and fails at the
+// contract boundary, so later assertions never run against incomplete setup.
+func insertCacheEntry(t *testing.T, cache *Cache, key string, value interface{}, weight int) {
+	t.Helper()
+
+	if err := cache.Insert(key, value, weight); err != nil {
+		t.Fatalf("Insert(%q) error = %v", key, err)
+	}
+}
+
+// insertVersionedCacheEntry establishes a namespaced fixture and reports all
+// identifying fields when setup fails, keeping generation failures diagnostic.
+func insertVersionedCacheEntry(
+	t *testing.T,
+	cache *Cache,
+	namespace string,
+	key string,
+	generation uint64,
+	value interface{},
+	weight int,
+) {
+	t.Helper()
+
+	if err := cache.InsertVersioned(namespace, key, generation, value, weight); err != nil {
+		t.Fatalf("InsertVersioned(%q, %q, %d) error = %v", namespace, key, generation, err)
+	}
+}
+
+// requireCachedValue performs a public lookup and asserts its value. Its use is
+// intentional when the test also needs Retrieve's hit and promotion side effects.
+func requireCachedValue(t *testing.T, cache *Cache, key string, want interface{}) {
+	t.Helper()
+
+	value, found := cache.Retrieve(key)
+	if !found || value != want {
+		t.Fatalf("Retrieve(%q) = %v/%v, want %v/true", key, value, found, want)
+	}
+}
+
+// requireCacheMiss performs a public lookup and verifies that no value leaks on
+// a miss, preserving both halves of Retrieve's result contract.
+func requireCacheMiss(t *testing.T, cache *Cache, key string) {
+	t.Helper()
+
+	value, found := cache.Retrieve(key)
+	if found || value != nil {
+		t.Fatalf("Retrieve(%q) = %v/%v, want nil/false", key, value, found)
 	}
 }

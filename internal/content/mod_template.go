@@ -16,5 +16,6 @@ func ModTemplate() fs.FS {
 	if err != nil {
 		panic(err)
 	}
+
 	return mod
 }

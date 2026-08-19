@@ -1,20 +1,35 @@
 package main
 
 import (
-	"encoding/json"
+	"errors"
 	"flag"
 	"fmt"
 	"io/fs"
 	"os"
-	"path/filepath"
 	"strings"
-
-	"github.com/gravestench/dark-magic/internal/assets/catalog"
-	"github.com/gravestench/dark-magic/internal/content"
-	darkpaths "github.com/gravestench/dark-magic/internal/paths"
 )
 
+type commandOptions struct {
+	mpqDirectory    string
+	manifestPath    string
+	listfilePath    string
+	outputDirectory string
+	noSheets        bool
+	writeFixture    string
+	fixturePath     string
+}
+
+// main keeps process termination at the command boundary so the workflow can return failures without changing
+// the CLI's fail-fast exit behavior.
 func main() {
+	if err := executeCommand(parseCommandOptions()); err != nil {
+		fatal(err.Error())
+	}
+}
+
+// parseCommandOptions defines the command's existing flag contract in one place, keeping defaults and help text
+// visible without mixing them into path validation or catalog verification.
+func parseCommandOptions() commandOptions {
 	mpqDirectory := flag.String("mpq-dir", os.Getenv("MPQ_DIRECTORY"), "directory containing Diablo II MPQ files")
 	manifestPath := flag.String("manifest", "", "optional JSON manifest; defaults to the curated screen catalog")
 	listfilePath := flag.String("listfile", "", "optional community MPQ listfile to audit against this installation")
@@ -22,223 +37,127 @@ func main() {
 	noSheets := flag.Bool("no-sheets", false, "skip DC6 contact sheet generation")
 	writeFixture := flag.String("write-fixture", "", "write a structural fixture after every manifest asset verifies")
 	fixturePath := flag.String("fixture", "", "validate the installation against a structural fixture")
+
 	flag.Parse()
 
-	if *mpqDirectory == "" {
-		fatal("-mpq-dir or MPQ_DIRECTORY is required")
+	return commandOptions{
+		mpqDirectory:    *mpqDirectory,
+		manifestPath:    *manifestPath,
+		listfilePath:    *listfilePath,
+		outputDirectory: *outputDirectory,
+		noSheets:        *noSheets,
+		writeFixture:    *writeFixture,
+		fixturePath:     *fixturePath,
 	}
-	expandedMPQDirectory, err := darkpaths.ExpandHost(*mpqDirectory)
-	if err != nil {
-		fatal(err.Error())
-	}
-	expandedManifestPath, err := darkpaths.ExpandHost(*manifestPath)
-	if err != nil {
-		fatal(err.Error())
-	}
-	expandedOutputDirectory, err := darkpaths.ExpandHost(*outputDirectory)
-	if err != nil {
-		fatal(err.Error())
-	}
-	expandedListfilePath, err := darkpaths.ExpandHost(*listfilePath)
-	if err != nil {
-		fatal(err.Error())
-	}
-	expandedWriteFixture, err := darkpaths.ExpandHost(*writeFixture)
-	if err != nil {
-		fatal(err.Error())
-	}
-	expandedFixturePath, err := darkpaths.ExpandHost(*fixturePath)
-	if err != nil {
-		fatal(err.Error())
-	}
-	if expandedWriteFixture != "" && expandedFixturePath != "" {
-		fatal("-write-fixture and -fixture are mutually exclusive")
-	}
-	manifest, err := loadManifest(expandedManifestPath)
-	if err != nil {
-		fatal(err.Error())
-	}
-	if err := manifest.Validate(); err != nil {
-		fatal(err.Error())
+}
+
+// expandHostPaths normalizes every user-owned filesystem path before any I/O. Expansion remains ordered by the
+// historical flag sequence so the first reported configuration error does not change.
+func (options commandOptions) expandHostPaths() (commandOptions, error) {
+	if options.mpqDirectory == "" {
+		return commandOptions{}, errors.New("-mpq-dir or MPQ_DIRECTORY is required")
 	}
 
-	contentFS, err := openMPQStack(expandedMPQDirectory)
+	var err error
+
+	options.mpqDirectory, err = expandHostPath(options.mpqDirectory)
 	if err != nil {
-		fatal(err.Error())
-	}
-	if err := os.MkdirAll(expandedOutputDirectory, 0o755); err != nil {
-		fatal(err.Error())
+		return commandOptions{}, err
 	}
 
-	options := assetcatalog.Options{Resolve: func(name string) (assetcatalog.Source, error) {
-		source, err := contentFS.Resolve(name)
-		return assetcatalog.Source{Layer: source.Layer, Path: source.Path}, err
-	}}
-	if !*noSheets {
-		sheetsDirectory := filepath.Join(expandedOutputDirectory, "contact-sheets")
-		if err := os.MkdirAll(sheetsDirectory, 0o755); err != nil {
-			fatal(err.Error())
-		}
-		options.SheetWriter = func(name string, data []byte) (string, error) {
-			path := filepath.Join(sheetsDirectory, name)
-			if err := os.WriteFile(path, data, 0o644); err != nil {
-				return "", err
-			}
-			return filepath.ToSlash(filepath.Join("contact-sheets", name)), nil
-		}
-	}
-
-	report := assetcatalog.Verify(contentFS, manifest, options)
-	reportPath := filepath.Join(expandedOutputDirectory, "report.json")
-	file, err := os.Create(reportPath)
+	options.manifestPath, err = expandHostPath(options.manifestPath)
 	if err != nil {
-		fatal(err.Error())
-	}
-	encoder := json.NewEncoder(file)
-	encoder.SetIndent("", "  ")
-	encodeErr := encoder.Encode(report)
-	closeErr := file.Close()
-	if encodeErr != nil {
-		fatal(encodeErr.Error())
-	}
-	if closeErr != nil {
-		fatal(closeErr.Error())
+		return commandOptions{}, err
 	}
 
-	found := 0
-	for _, result := range report.Results {
-		if result.Found {
-			found++
-		}
+	options.outputDirectory, err = expandHostPath(options.outputDirectory)
+	if err != nil {
+		return commandOptions{}, err
 	}
+
+	options.listfilePath, err = expandHostPath(options.listfilePath)
+	if err != nil {
+		return commandOptions{}, err
+	}
+
+	options.writeFixture, err = expandHostPath(options.writeFixture)
+	if err != nil {
+		return commandOptions{}, err
+	}
+
+	options.fixturePath, err = expandHostPath(options.fixturePath)
+	if err != nil {
+		return commandOptions{}, err
+	}
+
+	if options.writeFixture != "" && options.fixturePath != "" {
+		return commandOptions{}, errors.New("-write-fixture and -fixture are mutually exclusive")
+	}
+
+	return options, nil
+}
+
+// executeCommand runs verification and optional follow-up reports in their established order. Earlier output remains
+// visible when a later fixture or listfile phase fails, which is part of the command's diagnostic behavior.
+func executeCommand(options commandOptions) error {
+	expandedOptions, err := options.expandHostPaths()
+	if err != nil {
+		return err
+	}
+
+	contentFS, report, err := verifyCatalog(expandedOptions)
+	if err != nil {
+		return err
+	}
+
+	reportPath, err := writeVerificationReport(expandedOptions.outputDirectory, report)
+	if err != nil {
+		return err
+	}
+
+	found := foundHypothesisCount(report)
 	fmt.Printf("verified %d/%d hypotheses; report: %s\n", found, len(report.Results), reportPath)
-	if expandedWriteFixture != "" {
-		fixture, err := assetcatalog.FixtureFromReport(report)
-		if err != nil {
-			fatal(err.Error())
+
+	if expandedOptions.writeFixture != "" {
+		if err := writeStructuralFixture(expandedOptions.writeFixture, report); err != nil {
+			return err
 		}
-		if err := writeJSON(expandedWriteFixture, fixture); err != nil {
-			fatal(err.Error())
-		}
-		fmt.Printf("wrote structural fixture: %s\n", expandedWriteFixture)
+
+		fmt.Printf("wrote structural fixture: %s\n", expandedOptions.writeFixture)
 	}
-	if expandedFixturePath != "" {
-		var fixture assetcatalog.Fixture
-		if err := readJSON(expandedFixturePath, &fixture); err != nil {
-			fatal(err.Error())
+
+	if expandedOptions.fixturePath != "" {
+		if err := verifyStructuralFixture(expandedOptions.fixturePath, report); err != nil {
+			return err
 		}
-		if mismatches := assetcatalog.CompareFixture(report, fixture); len(mismatches) != 0 {
-			fatal("fixture mismatch:\n  " + strings.Join(mismatches, "\n  "))
-		}
-		fmt.Printf("fixture verified: %s\n", expandedFixturePath)
+
+		fmt.Printf("fixture verified: %s\n", expandedOptions.fixturePath)
 	}
-	if expandedListfilePath != "" {
-		listfile, err := os.Open(expandedListfilePath)
+
+	if expandedOptions.listfilePath != "" {
+		audit, auditPath, err := auditCommunityListfile(
+			contentFS,
+			expandedOptions.listfilePath,
+			expandedOptions.outputDirectory,
+		)
 		if err != nil {
-			fatal(err.Error())
+			return err
 		}
-		entries, parseErr := assetcatalog.ParseListfile(listfile)
-		closeErr := listfile.Close()
-		if parseErr != nil {
-			fatal(parseErr.Error())
-		}
-		if closeErr != nil {
-			fatal(closeErr.Error())
-		}
-		audit := assetcatalog.AuditListfile(contentFS, entries)
-		auditPath := filepath.Join(expandedOutputDirectory, "listfile-report.json")
-		output, err := os.Create(auditPath)
-		if err != nil {
-			fatal(err.Error())
-		}
-		encoder := json.NewEncoder(output)
-		encoder.SetIndent("", "  ")
-		encodeErr, closeErr := encoder.Encode(audit), output.Close()
-		if encodeErr != nil {
-			fatal(encodeErr.Error())
-		}
-		if closeErr != nil {
-			fatal(closeErr.Error())
-		}
+
 		fmt.Printf("resolved %d/%d listed paths; report: %s\n", audit.Found, audit.Listed, auditPath)
 	}
+
+	return nil
 }
 
-func readJSON(name string, destination any) error {
-	data, err := os.ReadFile(name)
-	if err != nil {
-		return err
-	}
-	return json.Unmarshal(data, destination)
-}
-
-func writeJSON(name string, value any) error {
-	if err := os.MkdirAll(filepath.Dir(name), 0o755); err != nil {
-		return err
-	}
-	file, err := os.Create(name)
-	if err != nil {
-		return err
-	}
-	encoder := json.NewEncoder(file)
-	encoder.SetIndent("", "  ")
-	encodeErr, closeErr := encoder.Encode(value), file.Close()
-	if encodeErr != nil {
-		return encodeErr
-	}
-	return closeErr
-}
-
-func loadManifest(name string) (assetcatalog.Manifest, error) {
-	var data []byte
-	var err error
-	if name == "" {
-		data, err = fs.ReadFile(content.D2Legacy(), "manifests/asset-catalog.v1.json")
-	} else {
-		data, err = os.ReadFile(name)
-	}
-	if err != nil {
-		return assetcatalog.Manifest{}, err
-	}
-	var manifest assetcatalog.Manifest
-	if err := json.Unmarshal(data, &manifest); err != nil {
-		return assetcatalog.Manifest{}, err
-	}
-	return manifest, nil
-}
-
-func openMPQStack(directory string) (*content.FS, error) {
-	priority := []string{
-		"patch_d2.mpq", "d2exp.mpq", "d2data.mpq", "d2char.mpq",
-		"d2music.mpq", "d2sfx.mpq", "d2speech.mpq", "d2video.mpq",
-		"d2xmusic.mpq", "d2xtalk.mpq", "d2xvideo.mpq",
-	}
-	layers := make([]content.Layer, 0, len(priority))
-	for _, name := range priority {
-		path := filepath.Join(directory, name)
-		if _, err := os.Stat(path); err != nil {
-			if os.IsNotExist(err) {
-				continue
-			}
-			return nil, err
-		}
-		archive, err := content.OpenSource(path)
-		if err != nil {
-			return nil, err
-		}
-		layers = append(layers, content.Layer{Name: name, FS: archive})
-	}
-	if len(layers) == 0 {
-		return nil, fmt.Errorf("no supported MPQs found in %q", directory)
-	}
-	return content.New(layers...)
-}
-
+// fatal emits one normalized diagnostic and exits immediately, preserving the command's established handling for
+// empty error strings as well as ordinary failures.
 func fatal(message string) {
 	message = strings.TrimSpace(message)
 	if message == "" {
 		message = fs.ErrInvalid.Error()
 	}
+
 	fmt.Fprintln(os.Stderr, message)
 	os.Exit(1)
 }
