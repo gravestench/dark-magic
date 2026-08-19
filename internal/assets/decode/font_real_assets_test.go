@@ -19,11 +19,16 @@ func TestRealFontUsesContextualPL2TextTransforms(t *testing.T) {
 	if directory == "" {
 		t.Skip("set DARK_MAGIC_TEST_MPQ_DIRECTORY to the Diablo II MPQ directory")
 	}
+
+	// The environment handoff exercises the same layered asset source used by
+	// production while keeping legally supplied data outside the repository.
 	t.Setenv("MPQ_DIRECTORY", directory)
+
 	assets, err := content.FromEnvironment(content.Layer{Name: "d2legacy", FS: content.D2Legacy()})
 	if err != nil {
 		t.Fatal(err)
 	}
+
 	font, err := assetdecode.LoadBitmapFontWithTransform(
 		assets,
 		"data/local/FONT/latin/font16.tbl",
@@ -34,38 +39,49 @@ func TestRealFontUsesContextualPL2TextTransforms(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+
 	if len(font.TextFrames) != 13 {
 		t.Fatalf("PL2 text transforms = %d, want 13", len(font.TextFrames))
 	}
+
 	white, err := font.Render("[white]Hero", color.White, 0, "left")
 	if err != nil {
 		t.Fatal(err)
 	}
+
 	unshifted, err := font.Render("Hero", color.White, 0, "left")
 	if err != nil {
 		t.Fatal(err)
 	}
+
 	if !bytes.Equal(white.Pix, unshifted.Pix) {
 		t.Fatal("real PL2 white run must preserve the palette-authored glyph")
 	}
+
 	gold, err := font.Render("[gold]Hero", color.White, 0, "left")
 	if err != nil {
 		t.Fatal(err)
 	}
+
 	if bytes.Equal(white.Pix, gold.Pix) {
 		t.Fatal("real PL2 white and gold runs produced identical pixels")
 	}
+
 	if opaquePixels(white) == 0 || opaquePixels(gold) == 0 {
 		t.Fatal("real PL2 text transform produced an empty glyph image")
 	}
 }
 
+// opaquePixels counts visible output without assuming any authored glyph shape,
+// ensuring transform tests reject valid-size but empty images.
 func opaquePixels(source *image.RGBA) int {
 	count := 0
+
 	for offset := 3; offset < len(source.Pix); offset += 4 {
 		if source.Pix[offset] != 0 {
 			count++
 		}
 	}
+
 	return count
 }

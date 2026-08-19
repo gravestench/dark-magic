@@ -4,7 +4,6 @@ package runtimeapi
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"net"
@@ -15,6 +14,8 @@ import (
 	"github.com/gravestench/dark-magic/internal/app/host"
 )
 
+const readHeaderTimeout = 5 * time.Second
+
 // Server is an optional local administration adapter. Host.Manager remains the
 // sole lifecycle reconciler; HTTP requests express desired transitions only.
 type Server struct {
@@ -24,96 +25,52 @@ type Server struct {
 	listen  net.Listener
 }
 
-// New constructs a stopped server. An empty address intentionally disables it.
+// New constructs a stopped server. A blank address disables listening while preserving the handler for tests and
+// embedding, so callers do not need a second construction path for development and production configurations.
 func New(address string, manager *host.Manager) *Server {
 	server := &Server{address: address, manager: manager}
-	server.server = &http.Server{Addr: address, Handler: server.Handler(), ReadHeaderTimeout: 5 * time.Second}
+	server.server = &http.Server{
+		Addr:              address,
+		Handler:           server.Handler(),
+		ReadHeaderTimeout: readHeaderTimeout,
+	}
+
 	return server
 }
 
-// Handler exposes the versioned management surface for tests and embedding.
-func (s *Server) Handler() http.Handler {
-	mux := http.NewServeMux()
-	mux.HandleFunc("GET /v1/components", s.list)
-	mux.HandleFunc("POST /v1/components/{id}/{action}", s.transition)
-	return mux
-}
-
-// Start begins background serving after the host has started dependencies.
+// Start binds the configured address before returning, then serves in the background. Binding synchronously ensures
+// the host never reports a successful start for an address that was already unavailable.
 func (s *Server) Start(context.Context) error {
 	if strings.TrimSpace(s.address) == "" {
 		return nil
 	}
+
 	listener, err := net.Listen("tcp", s.address)
 	if err != nil {
 		return fmt.Errorf("runtimeapi: listen: %w", err)
 	}
+
 	s.listen = listener
-	go func() {
-		if err := s.server.Serve(listener); err != nil && !errors.Is(err, http.ErrServerClosed) {
-			// Runtime serving errors surface on shutdown through Server.Shutdown;
-			// lifecycle transitions themselves remain synchronous HTTP responses.
-			_ = listener.Close()
-		}
-	}()
+	go s.serve(listener)
+
 	return nil
 }
 
-// Stop performs bounded HTTP shutdown through the host lifecycle context.
+// serve owns the background accept loop. Unexpected serving failures trigger defensive listener cleanup at this
+// adapter boundary; expected shutdown errors need no additional handling.
+func (s *Server) serve(listener net.Listener) {
+	if err := s.server.Serve(listener); err != nil && !errors.Is(err, http.ErrServerClosed) {
+		// Retain the explicit close so unexpected exits cannot leave adapter ownership ambiguous.
+		_ = listener.Close()
+	}
+}
+
+// Stop performs bounded HTTP shutdown through the host lifecycle context. A server that never listened is already
+// stopped, which keeps disabled configurations and failed host startup cleanup idempotent.
 func (s *Server) Stop(ctx context.Context) error {
 	if s.listen == nil {
 		return nil
 	}
+
 	return s.server.Shutdown(ctx)
-}
-
-func (s *Server) list(writer http.ResponseWriter, _ *http.Request) {
-	type status struct {
-		ID      string     `json:"id"`
-		Desired bool       `json:"desired"`
-		State   host.State `json:"state"`
-		Error   string     `json:"error,omitempty"`
-	}
-	entries := s.manager.Statuses()
-	result := make([]status, 0, len(entries))
-	for _, entry := range entries {
-		item := status{ID: entry.ID, Desired: entry.Desired, State: entry.State}
-		if entry.Err != nil {
-			item.Error = entry.Err.Error()
-		}
-		result = append(result, item)
-	}
-	writeJSON(writer, http.StatusOK, result)
-}
-
-func (s *Server) transition(writer http.ResponseWriter, request *http.Request) {
-	id, action := request.PathValue("id"), request.PathValue("action")
-	var err error
-	switch action {
-	case "enable":
-		err = s.manager.Enable(request.Context(), id)
-	case "disable":
-		if request.URL.Query().Get("cascade") == "true" {
-			err = s.manager.DisableCascade(request.Context(), id)
-		} else {
-			err = s.manager.Disable(request.Context(), id)
-		}
-	case "restart":
-		err = s.manager.Restart(request.Context(), id)
-	default:
-		writeJSON(writer, http.StatusBadRequest, map[string]string{"error": "unknown action"})
-		return
-	}
-	if err != nil {
-		writeJSON(writer, http.StatusConflict, map[string]string{"error": err.Error()})
-		return
-	}
-	entry, _ := s.manager.Status(id)
-	writeJSON(writer, http.StatusOK, entry)
-}
-
-func writeJSON(writer http.ResponseWriter, code int, value any) {
-	writer.Header().Set("Content-Type", "application/json")
-	writer.WriteHeader(code)
-	_ = json.NewEncoder(writer).Encode(value)
 }

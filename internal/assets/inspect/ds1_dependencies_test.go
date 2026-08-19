@@ -5,6 +5,8 @@ import (
 	"testing"
 )
 
+// TestResolveDS1TilePathsConvertsLegacyTG1Declarations protects the compatibility
+// normalization and first-declaration ordering expected by archive-backed callers.
 func TestResolveDS1TilePathsConvertsLegacyTG1Declarations(t *testing.T) {
 	t.Parallel()
 
@@ -17,6 +19,7 @@ func TestResolveDS1TilePathsConvertsLegacyTG1Declarations(t *testing.T) {
 		"Data/Global/Tiles/Act1/Barracks/basewall.dt1",
 		"data/global/tiles/act1/barracks/floor.dt1",
 	}
+
 	if !slices.Equal(got, want) {
 		t.Fatalf("resolved paths = %#v, want %#v", got, want)
 	}

@@ -9,19 +9,12 @@ import (
 	"io"
 	"io/fs"
 	"path/filepath"
-	"sort"
 	"strings"
-
-	"github.com/gravestench/dark-magic/internal/assets/decode"
-	dc6 "github.com/gravestench/dc6/pkg"
-	"github.com/gravestench/dcc"
-	"github.com/gravestench/ds1"
-	"github.com/gravestench/dt1"
-	tbl "github.com/gravestench/tbl_text"
 )
 
 // Report is a JSON-ready structural observation. Details contain decoder facts,
-// never proprietary source bytes or rendered pixels.
+// never proprietary source bytes or rendered pixels, so callers may safely
+// serialize the result without copying owned asset data.
 type Report struct {
 	Path    string `json:"path"`
 	Type    string `json:"type"`
@@ -31,23 +24,26 @@ type Report struct {
 }
 
 // Inspect reads one virtual content path and delegates to the matching headless
-// decoder. The caller retains ownership of the layered filesystem.
+// decoder. The caller retains ownership of the layered filesystem, while this
+// function confines ownership of the opened file to the duration of the call.
 func Inspect(source fs.FS, path string) (Report, error) {
 	file, err := source.Open(path)
 	if err != nil {
 		return Report{}, fmt.Errorf("opening asset %q: %w", path, err)
 	}
-	defer file.Close()
+	defer closeFileWithoutReporting(file)
 
 	data, err := io.ReadAll(file)
 	if err != nil {
 		return Report{}, fmt.Errorf("reading asset %q: %w", path, err)
 	}
+
 	return InspectData(path, data)
 }
 
-// InspectData describes already-loaded asset bytes. It is used by services
-// that expose assets through their own composite loader.
+// InspectData describes already-loaded asset bytes without retaining the input
+// slice. Services with composite loaders can therefore keep ownership and reuse
+// their buffers after the inspection completes.
 func InspectData(path string, data []byte) (Report, error) {
 	digest := sha256.Sum256(data)
 
@@ -67,99 +63,14 @@ func InspectData(path string, data []byte) (Report, error) {
 	if err != nil {
 		return Report{}, fmt.Errorf("decoding %s asset %q: %w", extension, path, err)
 	}
+
 	report.Details = details
+
 	return report, nil
 }
 
-func decodeDetails(extension string, data []byte) (any, error) {
-	switch extension {
-	case "bik":
-		return assetdecode.BIK(data)
-	case "dc6":
-		asset, err := dc6.FromBytes(data)
-		if err != nil {
-			return nil, err
-		}
-		frames := 0
-		for _, direction := range asset.Directions {
-			frames += len(direction.Frames)
-		}
-		return map[string]any{"version": asset.Version, "directions": len(asset.Directions), "frames": frames}, nil
-	case "dcc":
-		asset, err := dcc.FromBytes(data)
-		if err != nil {
-			return nil, err
-		}
-		return map[string]any{"version": asset.Version, "directions": len(asset.Directions()), "coded_bytes": asset.TotalSizeCoded}, nil
-	case "ds1":
-		asset, err := ds1.FromBytes(data)
-		if err != nil {
-			return nil, err
-		}
-		return map[string]any{"version": asset.Version, "width": asset.Width, "height": asset.Height, "act": asset.Act, "objects": len(asset.Objects)}, nil
-	case "dt1":
-		asset, err := dt1.FromBytes(data)
-		if err != nil {
-			return nil, err
-		}
-		types := make(map[int32]bool)
-		styles := make(map[int32]bool)
-		for _, tile := range asset.Tiles {
-			types[tile.Type] = true
-			styles[tile.Style] = true
-		}
-		return map[string]any{"tiles": len(asset.Tiles), "types": sortedInt32Keys(types), "styles": sortedInt32Keys(styles)}, nil
-	case "tbl":
-		if len(data) >= 5 && string(data[:5]) == "Woo!\x01" {
-			glyphs, err := assetdecode.FontTable(data)
-			if err != nil {
-				return nil, err
-			}
-			maxWidth, maxHeight := 0, 0
-			for _, glyph := range glyphs {
-				if glyph.Width > maxWidth {
-					maxWidth = glyph.Width
-				}
-				if glyph.Height > maxHeight {
-					maxHeight = glyph.Height
-				}
-			}
-			return map[string]any{"format": "font-table", "glyphs": len(glyphs), "max_width": maxWidth, "max_height": maxHeight}, nil
-		}
-		table, err := tbl.Unmarshal(data)
-		if err != nil {
-			return nil, err
-		}
-		keys := make([]string, 0, len(table))
-		for key := range table {
-			keys = append(keys, key)
-		}
-		sort.Strings(keys)
-		if len(keys) > 5 {
-			keys = keys[:5]
-		}
-		return map[string]any{"entries": len(table), "sample_keys": keys}, nil
-	case "txt", "tsv":
-		text := strings.TrimRight(string(data), "\x00\r\n")
-		if text == "" {
-			return map[string]any{"rows": 0, "columns": 0}, nil
-		}
-		lines := strings.Split(strings.ReplaceAll(text, "\r\n", "\n"), "\n")
-		headings := strings.Split(lines[0], "\t")
-		if len(headings) > 10 {
-			headings = headings[:10]
-		}
-		return map[string]any{"rows": len(lines) - 1, "columns": len(strings.Split(lines[0], "\t")), "sample_columns": headings}, nil
-	default:
-		return nil, nil
-	}
-}
-
-func sortedInt32Keys(values map[int32]bool) []int32 {
-	result := make([]int32, 0, len(values))
-	for value := range values {
-		result = append(result, value)
-	}
-	sort.Slice(result, func(i, j int) bool { return result[i] < result[j] })
-	return result
+// closeFileWithoutReporting preserves preview and inspection APIs that complete
+// before deferred close errors are known; callers still retain filesystem ownership.
+func closeFileWithoutReporting(file fs.File) {
+	_ = file.Close()
 }
