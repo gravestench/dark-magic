@@ -1,0 +1,96 @@
+package main
+
+const normalizationCaptureJSON = `{
+  "schema":"d2legacy.player_death_probe/v1",
+  "target":"diablo-ii-lod-1.14d-expansion",
+  "source":"owned-runtime",
+  "runtime":{
+    "patch":"1.14d","mode":"expansion","session":"single-player","character_mode":"softcore",
+    "character_origin":"probe-created",
+    "executable_sha256":"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+    "observation":"video-frame-log"
+  },
+  "cases":[{
+    "id":"hell-recovery","scenario":"single_recovery","difficulty":"hell",
+    "class":"amazon","level":80,"killer_kind":"monster",
+    "observations":[
+      {
+        "phase":"before_death","death_index":1,"frame":10,"area":"blood_moor","controlled":true,
+        "health":100,"max_health":100,"experience":10000,
+        "carried_gold":1000,"stashed_gold":5000,"ground_gold":0,"corpse_count":0,
+        "equipment":[{"slot":"head","id":"cap-1"}],"inventory":[{"slot":"0,0","id":"key-1"}]
+      },
+      {
+        "phase":"death_started","death_index":1,"frame":20,"area":"blood_moor","controlled":false,
+        "health":0,"max_health":100,"experience":10000,
+        "carried_gold":1000,"stashed_gold":5000,"ground_gold":0,"corpse_count":1,
+        "equipment":[{"slot":"head","id":"cap-1"}],"inventory":[{"slot":"0,0","id":"key-1"}]
+      },
+      {
+        "phase":"death_animation_complete","death_index":1,"frame":40,
+        "area":"blood_moor","controlled":false,"health":0,"max_health":100,"experience":10000,
+        "carried_gold":1000,"stashed_gold":5000,"ground_gold":0,"corpse_count":1,
+        "equipment":[{"slot":"head","id":"cap-1"}],"inventory":[{"slot":"0,0","id":"key-1"}]
+      },
+      {
+        "phase":"respawn_input","death_index":1,"frame":50,"area":"blood_moor","controlled":false,
+        "health":0,"max_health":100,"experience":10000,
+        "carried_gold":1000,"stashed_gold":5000,"ground_gold":0,"corpse_count":1,
+        "equipment":[{"slot":"head","id":"cap-1"}],"inventory":[{"slot":"0,0","id":"key-1"}]
+      },
+      {
+        "phase":"town_control","death_index":1,"frame":70,"area":"rogue_encampment","controlled":true,
+        "health":100,"max_health":100,"experience":9000,
+        "carried_gold":500,"stashed_gold":5000,"ground_gold":500,"corpse_count":1,
+        "equipment":[],"inventory":[{"slot":"0,0","id":"key-1"}]
+      },
+      {
+        "phase":"corpse_recovered","death_index":1,"frame":100,"area":"blood_moor","controlled":true,
+        "health":100,"max_health":100,"experience":9750,
+        "carried_gold":500,"stashed_gold":5000,"ground_gold":500,"corpse_count":0,
+        "equipment":[{"slot":"head","id":"cap-1"}],"inventory":[{"slot":"0,0","id":"key-1"}]
+      }
+    ]
+  }]
+}`
+
+const invalidContextCaptureJSON = `{
+  "schema":"d2legacy.player_death_probe/v1",
+  "target":"classic",
+  "source":"community-tool",
+  "runtime":{
+    "patch":"1.13c","mode":"classic","session":"vanilla-server","character_mode":"hardcore",
+    "character_origin":"imported-save","executable_sha256":"bad","observation":"memory-tool"
+  },
+  "cases":[]
+}`
+
+const contradictoryTimelineCaptureJSON = `{
+  "schema":"d2legacy.player_death_probe/v1",
+  "target":"diablo-ii-lod-1.14d-expansion",
+  "source":"owned-runtime",
+  "runtime":{
+    "patch":"1.14d","mode":"expansion","session":"single-player","character_mode":"softcore",
+    "character_origin":"probe-created",
+    "executable_sha256":"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+    "observation":"video-frame-log"
+  },
+  "cases":[{
+    "id":"bad","scenario":"single_no_recovery","difficulty":"normal",
+    "class":"amazon","level":1,"killer_kind":"monster",
+    "observations":[
+      {
+        "phase":"before_death","death_index":1,"frame":10,"area":"field","controlled":true,
+        "health":10,"max_health":10,"experience":0,
+        "carried_gold":0,"stashed_gold":1,"ground_gold":0,"corpse_count":0,
+        "equipment":[],"inventory":[]
+      },
+      {
+        "phase":"death_started","death_index":1,"frame":9,"area":"field","controlled":true,
+        "health":10,"max_health":10,"experience":0,
+        "carried_gold":0,"stashed_gold":2,"ground_gold":0,"corpse_count":0,
+        "equipment":[],"inventory":[]
+      }
+    ]
+  }]
+}`

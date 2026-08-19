@@ -15,12 +15,15 @@ func WriteReplayContainerFile(path string, container ReplayContainer) error {
 	if path == "" {
 		return fmt.Errorf("%w: path is required", ErrReplayContainer)
 	}
+
 	directory := filepath.Dir(path)
 	temporary, err := os.CreateTemp(directory, ".dark-magic-replay-*")
 	if err != nil {
 		return fmt.Errorf("%w: create temporary file: %v", ErrReplayContainer, err)
 	}
 	temporaryPath := temporary.Name()
+	// Rename removes this path on success; the deferred removal protects every
+	// failure path without risking the previously complete destination file.
 	defer os.Remove(temporaryPath)
 
 	if err := temporary.Chmod(0o600); err != nil {
@@ -38,6 +41,9 @@ func WriteReplayContainerFile(path string, container ReplayContainer) error {
 	if err := temporary.Close(); err != nil {
 		return fmt.Errorf("%w: close temporary file: %v", ErrReplayContainer, err)
 	}
+
+	// Preserve the write-then-rename-then-directory-sync ordering required for
+	// crash-safe replacement on filesystems that support these guarantees.
 	if err := os.Rename(temporaryPath, path); err != nil {
 		return fmt.Errorf("%w: replace file: %v", ErrReplayContainer, err)
 	}
@@ -47,16 +53,21 @@ func WriteReplayContainerFile(path string, container ReplayContainer) error {
 	return nil
 }
 
+// ReadReplayContainerFile opens one replay for bounded decoding and leaves
+// version migration policy with the caller; closing is guaranteed on every
+// decode outcome.
 func ReadReplayContainerFile(path string, limits ReplayContainerLimits,
 	migrations map[uint32]ReplayContainerMigration,
 ) (ReplayContainer, error) {
 	if path == "" {
 		return ReplayContainer{}, fmt.Errorf("%w: path is required", ErrReplayContainer)
 	}
+
 	file, err := os.Open(path)
 	if err != nil {
 		return ReplayContainer{}, fmt.Errorf("%w: open file: %v", ErrReplayContainer, err)
 	}
 	defer file.Close()
+
 	return DecodeReplayContainerWithMigrations(file, limits, migrations)
 }
