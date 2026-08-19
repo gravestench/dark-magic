@@ -7,6 +7,8 @@ import (
 	"time"
 )
 
+// TestControlPlaneAllocatesAndAdmitsEachSelectedRealmCharacter covers the full
+// create, join, capacity, departure, and idempotent cleanup lifecycle.
 func TestControlPlaneAllocatesAndAdmitsEachSelectedRealmCharacter(t *testing.T) {
 	allocator := newOrchestrationAllocator()
 	config := orchestratedControlConfig(nil)
@@ -61,7 +63,9 @@ func TestControlPlaneAllocatesAndAdmitsEachSelectedRealmCharacter(t *testing.T) 
 	}
 	for _, session := range []RealmSession{alice, bob} {
 		record, err := control.SelectedCharacter(t.Context(), session.Token)
-		if err != nil || emptyCompatibility(record.Compatibility) || record.Compatibility.IdentityHash != worker.description.IdentityHash {
+		if err != nil ||
+			emptyCompatibility(record.Compatibility) ||
+			record.Compatibility.IdentityHash != worker.description.IdentityHash {
 			t.Fatalf("bound character=%#v error=%v", record, err)
 		}
 	}
@@ -73,7 +77,13 @@ func TestControlPlaneAllocatesAndAdmitsEachSelectedRealmCharacter(t *testing.T) 
 	if err != nil {
 		t.Fatal(err)
 	}
-	_, lease, err := control.characters.Acquire(t.Context(), carol.Account.ID, carolRecord.Character.ID, "other", time.Minute)
+	_, lease, err := control.characters.Acquire(
+		t.Context(),
+		carol.Account.ID,
+		carolRecord.Character.ID,
+		"other",
+		time.Minute,
+	)
 	if err != nil {
 		t.Fatalf("failed capacity reservation leaked character lease: %v", err)
 	}
@@ -94,7 +104,13 @@ func TestControlPlaneAllocatesAndAdmitsEachSelectedRealmCharacter(t *testing.T) 
 	if status, err := worker.Status(t.Context()); err != nil || status.ActivePlayers != 1 {
 		t.Fatalf("worker status after leave = %#v, %v", status, err)
 	}
-	_, bobLease, err := control.characters.Acquire(t.Context(), bob.Account.ID, bobCommitted.Character.ID, "another", time.Minute)
+	_, bobLease, err := control.characters.Acquire(
+		t.Context(),
+		bob.Account.ID,
+		bobCommitted.Character.ID,
+		"another",
+		time.Minute,
+	)
 	if err != nil {
 		t.Fatalf("committed Bob character remained leased: %v", err)
 	}
@@ -114,6 +130,8 @@ func TestControlPlaneAllocatesAndAdmitsEachSelectedRealmCharacter(t *testing.T) 
 	}
 }
 
+// TestControlPlaneEnforcesCreateGameCharacterDifference verifies the configured
+// level boundary at both its inclusive edge and first rejected value.
 func TestControlPlaneEnforcesCreateGameCharacterDifference(t *testing.T) {
 	control, err := NewControlPlane(orchestratedControlConfig(nil))
 	if err != nil {
@@ -154,11 +172,18 @@ func TestControlPlaneEnforcesCreateGameCharacterDifference(t *testing.T) {
 		t.Fatalf("boundary level rejected: %v", err)
 	}
 	far := createPlayer("FarPlayer", "FarHero", 25)
-	if _, err := control.JoinGame(t.Context(), far.Token, created.Game.Entry.GameID, ""); !errors.Is(err, ErrGameLevelRange) {
+	if _, err := control.JoinGame(
+		t.Context(),
+		far.Token,
+		created.Game.Entry.GameID,
+		"",
+	); !errors.Is(err, ErrGameLevelRange) {
 		t.Fatalf("out-of-range level error = %v", err)
 	}
 }
 
+// TestControlPlaneRejectsDuplicateActiveCharacterSessionWithoutDisturbingOriginal
+// ensures a failed second admission leaves both existing games unchanged.
 func TestControlPlaneRejectsDuplicateActiveCharacterSessionWithoutDisturbingOriginal(t *testing.T) {
 	allocator := newOrchestrationAllocator()
 	config := orchestratedControlConfig(nil)
@@ -195,7 +220,12 @@ func TestControlPlaneRejectsDuplicateActiveCharacterSessionWithoutDisturbingOrig
 	if err != nil {
 		t.Fatal(err)
 	}
-	if _, err := control.JoinGame(t.Context(), first.Token, secondGame.Game.Entry.GameID, ""); !errors.Is(err, ErrCharacterLeased) {
+	if _, err := control.JoinGame(
+		t.Context(),
+		first.Token,
+		secondGame.Game.Entry.GameID,
+		"",
+	); !errors.Is(err, ErrCharacterLeased) {
 		t.Fatalf("duplicate active character session error = %v", err)
 	}
 	original, err := control.ReconnectGame(t.Context(), first.Token, firstGame.Game.Entry.GameID)
@@ -208,6 +238,8 @@ func TestControlPlaneRejectsDuplicateActiveCharacterSessionWithoutDisturbingOrig
 	}
 }
 
+// TestControlPlaneOperatorDrainCommitsCanonicalCharactersAndRetiresWorker
+// verifies the trusted drain path completes every durable lifecycle phase.
 func TestControlPlaneOperatorDrainCommitsCanonicalCharactersAndRetiresWorker(t *testing.T) {
 	allocator := newOrchestrationAllocator()
 	config := orchestratedControlConfig(nil)
@@ -252,6 +284,8 @@ func TestControlPlaneOperatorDrainCommitsCanonicalCharactersAndRetiresWorker(t *
 	}
 }
 
+// TestControlPlaneOperatorDrainRetriesCleanupAfterDurableCommit ensures retrying
+// worker cleanup cannot advance the character revision a second time.
 func TestControlPlaneOperatorDrainRetriesCleanupAfterDurableCommit(t *testing.T) {
 	allocator := newOrchestrationAllocator()
 	config := orchestratedControlConfig(nil)
@@ -301,6 +335,8 @@ func TestControlPlaneOperatorDrainRetriesCleanupAfterDurableCommit(t *testing.T)
 	}
 }
 
+// TestControlPlaneRollsBackDirectoryWorkerReservationAndLease checks that each
+// failed allocation phase releases all resources reserved by earlier phases.
 func TestControlPlaneRollsBackDirectoryWorkerReservationAndLease(t *testing.T) {
 	allocator := newOrchestrationAllocator()
 	config := orchestratedControlConfig(nil)
@@ -317,7 +353,11 @@ func TestControlPlaneRollsBackDirectoryWorkerReservationAndLease(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	record, err := control.CreateCharacter(t.Context(), session.Token, CreateCharacterRequest{Name: "Hero", Class: "Amazon"})
+	record, err := control.CreateCharacter(
+		t.Context(),
+		session.Token,
+		CreateCharacterRequest{Name: "Hero", Class: "Amazon"},
+	)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -339,7 +379,13 @@ func TestControlPlaneRollsBackDirectoryWorkerReservationAndLease(t *testing.T) {
 	if games, _ := control.ListGames(t.Context(), session.Token, GameFilter{}); len(games) != 0 {
 		t.Fatalf("failed admission left directory entry: %#v", games)
 	}
-	_, lease, err := control.characters.Acquire(context.Background(), account.ID, record.Character.ID, "other", time.Minute)
+	_, lease, err := control.characters.Acquire(
+		context.Background(),
+		account.ID,
+		record.Character.ID,
+		"other",
+		time.Minute,
+	)
 	if err != nil {
 		t.Fatalf("failed admission leaked character lease: %v", err)
 	}
@@ -348,6 +394,8 @@ func TestControlPlaneRollsBackDirectoryWorkerReservationAndLease(t *testing.T) {
 	}
 }
 
+// TestControlPlaneRetriesDepartureCleanupWithoutRecommittingCharacter verifies
+// a durable receipt resumes worker cleanup without duplicating its commit.
 func TestControlPlaneRetriesDepartureCleanupWithoutRecommittingCharacter(t *testing.T) {
 	allocator := newOrchestrationAllocator()
 	config := orchestratedControlConfig(nil)
@@ -363,7 +411,11 @@ func TestControlPlaneRetriesDepartureCleanupWithoutRecommittingCharacter(t *test
 	if err != nil {
 		t.Fatal(err)
 	}
-	if _, err := control.CreateCharacter(t.Context(), session.Token, CreateCharacterRequest{Name: "Hero", Class: "Amazon"}); err != nil {
+	if _, err := control.CreateCharacter(
+		t.Context(),
+		session.Token,
+		CreateCharacterRequest{Name: "Hero", Class: "Amazon"},
+	); err != nil {
 		t.Fatal(err)
 	}
 	created, err := control.CreateGame(t.Context(), session.Token, CreateGameRequest{Name: "Retry Leave",
@@ -387,6 +439,8 @@ func TestControlPlaneRetriesDepartureCleanupWithoutRecommittingCharacter(t *test
 	}
 }
 
+// TestControlPlaneCommitsWorkerReportedReconnectExpiry verifies trusted expiry
+// notifications follow the canonical departure and audit path.
 func TestControlPlaneCommitsWorkerReportedReconnectExpiry(t *testing.T) {
 	capture := &capturedAudit{}
 	allocator := newOrchestrationAllocator()
@@ -403,7 +457,11 @@ func TestControlPlaneCommitsWorkerReportedReconnectExpiry(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	createdCharacter, err := control.CreateCharacter(t.Context(), session.Token, CreateCharacterRequest{Name: "Hero", Class: "Amazon"})
+	createdCharacter, err := control.CreateCharacter(
+		t.Context(),
+		session.Token,
+		CreateCharacterRequest{Name: "Hero", Class: "Amazon"},
+	)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -425,12 +483,16 @@ func TestControlPlaneCommitsWorkerReportedReconnectExpiry(t *testing.T) {
 		t.Fatalf("releases=%d removals=%#v", allocator.releases, worker.removed)
 	}
 	events := capture.snapshot()
-	if len(events) == 0 || events[len(events)-1].Operation != AuditGameLeave || events[len(events)-1].Outcome != "success" ||
+	if len(events) == 0 ||
+		events[len(events)-1].Operation != AuditGameLeave ||
+		events[len(events)-1].Outcome != "success" ||
 		events[len(events)-1].CharacterID != createdCharacter.Character.ID {
 		t.Fatalf("last audit event = %#v", events)
 	}
 }
 
+// TestControlPlaneReconcilesWorkerOnlyAfterConsecutiveHealthFailures protects
+// healthy games from retirement after an isolated control-plane timeout.
 func TestControlPlaneReconcilesWorkerOnlyAfterConsecutiveHealthFailures(t *testing.T) {
 	allocator := newOrchestrationAllocator()
 	config := orchestratedControlConfig(nil)
@@ -447,7 +509,11 @@ func TestControlPlaneReconcilesWorkerOnlyAfterConsecutiveHealthFailures(t *testi
 	if err != nil {
 		t.Fatal(err)
 	}
-	record, err := control.CreateCharacter(t.Context(), session.Token, CreateCharacterRequest{Name: "Hero", Class: "Amazon"})
+	record, err := control.CreateCharacter(
+		t.Context(),
+		session.Token,
+		CreateCharacterRequest{Name: "Hero", Class: "Amazon"},
+	)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -506,11 +572,19 @@ type restoringOrchestrationAllocator struct {
 	fences   int
 }
 
-func (allocator *restoringOrchestrationAllocator) Restore(ctx context.Context, spec GameSpec, recovery GameRecovery) (WorkerAllocation, error) {
+// Restore captures the recovery payload before delegating replacement worker
+// construction to the ordinary allocation fixture.
+func (allocator *restoringOrchestrationAllocator) Restore(
+	ctx context.Context,
+	spec GameSpec,
+	recovery GameRecovery,
+) (WorkerAllocation, error) {
 	allocator.recovery = recovery
 	return allocator.Allocate(ctx, spec)
 }
 
+// Fence removes the exact fixture worker generation so startup restoration can
+// assert that replacement never overlaps surviving authority.
 func (allocator *restoringOrchestrationAllocator) Fence(_ context.Context, spec GameSpec) error {
 	allocator.mu.Lock()
 	defer allocator.mu.Unlock()
@@ -522,6 +596,8 @@ func (allocator *restoringOrchestrationAllocator) Fence(_ context.Context, spec 
 	return nil
 }
 
+// TestControlPlaneRestoresFailedWorkerAndKeepsGameMembership verifies live
+// recovery preserves directory, membership, and character revision state.
 func TestControlPlaneRestoresFailedWorkerAndKeepsGameMembership(t *testing.T) {
 	allocator := &restoringOrchestrationAllocator{orchestrationAllocator: newOrchestrationAllocator()}
 	config := orchestratedControlConfig(nil)
@@ -587,6 +663,8 @@ func TestControlPlaneRestoresFailedWorkerAndKeepsGameMembership(t *testing.T) {
 	}
 }
 
+// TestControlPlaneFencesAndRestoresInterruptedAllocationOnStartup ensures a
+// restart fences the surviving generation before installing its replacement.
 func TestControlPlaneFencesAndRestoresInterruptedAllocationOnStartup(t *testing.T) {
 	allocator := &restoringOrchestrationAllocator{orchestrationAllocator: newOrchestrationAllocator()}
 	accounts, err := NewAccounts(time.Hour)
@@ -603,7 +681,9 @@ func TestControlPlaneFencesAndRestoresInterruptedAllocationOnStartup(t *testing.
 	}
 	config := orchestratedControlConfig(nil)
 	config.Accounts, config.Characters, config.Games = accounts, characters, NewGameDirectory()
-	config.Allocations, config.Memberships, config.Checkpoints = NewMemoryAllocations(), memberships, NewMemoryCheckpoints()
+	config.Allocations = NewMemoryAllocations()
+	config.Memberships = memberships
+	config.Checkpoints = NewMemoryCheckpoints()
 	config.Allocator = allocator
 	first, err := NewControlPlane(config)
 	if err != nil {
@@ -639,7 +719,9 @@ func TestControlPlaneFencesAndRestoresInterruptedAllocationOnStartup(t *testing.
 	if allocator.fences != 1 || allocator.recovery.Version != GameRecoveryVersion {
 		t.Fatalf("fences=%d recovery=%#v", allocator.fences, allocator.recovery)
 	}
-	if active, err := config.Allocations.Active(t.Context()); err != nil || len(active) != 1 || active[0].GameID != handoff.Game.Entry.GameID {
+	if active, err := config.Allocations.Active(t.Context()); err != nil ||
+		len(active) != 1 ||
+		active[0].GameID != handoff.Game.Entry.GameID {
 		t.Fatalf("active allocations=%#v error=%v", active, err)
 	}
 	reconnect, err := restarted.ReconnectGame(t.Context(), session.Token, handoff.Game.Entry.GameID)
@@ -650,7 +732,12 @@ func TestControlPlaneFencesAndRestoresInterruptedAllocationOnStartup(t *testing.
 
 type tamperingCheckpointRepository struct{ CheckpointRepository }
 
-func (repository tamperingCheckpointRepository) Latest(ctx context.Context, gameID string) (GameCheckpoint, error) {
+// Latest corrupts a copied checkpoint payload so recovery validation can prove
+// tampered state never reaches the worker restorer.
+func (repository tamperingCheckpointRepository) Latest(
+	ctx context.Context,
+	gameID string,
+) (GameCheckpoint, error) {
 	record, err := repository.CheckpointRepository.Latest(ctx, gameID)
 	if err == nil {
 		record.Checkpoint.State.Snapshot.Entities = []uint64{99}
@@ -658,6 +745,8 @@ func (repository tamperingCheckpointRepository) Latest(ctx context.Context, game
 	return record, err
 }
 
+// TestControlPlaneStartupRejectsTamperedCheckpointAndReleasesCharacter verifies
+// fail-closed recovery cleans every durable resource after integrity failure.
 func TestControlPlaneStartupRejectsTamperedCheckpointAndReleasesCharacter(t *testing.T) {
 	allocator := &restoringOrchestrationAllocator{orchestrationAllocator: newOrchestrationAllocator()}
 	accounts, err := NewAccounts(time.Hour)
@@ -713,7 +802,11 @@ func TestControlPlaneStartupRejectsTamperedCheckpointAndReleasesCharacter(t *tes
 		t.Fatalf("tampered startup recovery processed=%d error=%v", processed, err)
 	}
 	if allocator.fences != 0 || allocator.recovery.Version != "" {
-		t.Fatalf("tampered checkpoint reached worker restoration: fences=%d recovery=%#v", allocator.fences, allocator.recovery)
+		t.Fatalf(
+			"tampered checkpoint reached worker restoration: fences=%d recovery=%#v",
+			allocator.fences,
+			allocator.recovery,
+		)
 	}
 	if active, err := config.Allocations.Active(t.Context()); err != nil || len(active) != 0 {
 		t.Fatalf("active allocation after tamper=%#v error=%v", active, err)
@@ -734,6 +827,8 @@ func TestControlPlaneStartupRejectsTamperedCheckpointAndReleasesCharacter(t *tes
 	}
 }
 
+// TestControlPlanePersistsHealthyCheckpointAndRemovesItAfterCleanCompletion
+// covers checkpoint cadence and clean-retirement deletion together.
 func TestControlPlanePersistsHealthyCheckpointAndRemovesItAfterCleanCompletion(t *testing.T) {
 	allocator := newOrchestrationAllocator()
 	checkpoints := NewMemoryCheckpoints()
@@ -780,6 +875,8 @@ func TestControlPlanePersistsHealthyCheckpointAndRemovesItAfterCleanCompletion(t
 	}
 }
 
+// TestControlPlaneFailsClosedInterruptedAllocationOnStartup verifies allocators
+// without fencing and restore support release leases instead of guessing state.
 func TestControlPlaneFailsClosedInterruptedAllocationOnStartup(t *testing.T) {
 	allocator := newOrchestrationAllocator()
 	accounts, err := NewAccounts(time.Hour)
@@ -832,7 +929,8 @@ func TestControlPlaneFailsClosedInterruptedAllocationOnStartup(t *testing.T) {
 	if active, err := allocations.Active(t.Context()); err != nil || len(active) != 0 {
 		t.Fatalf("active allocations = %#v, %v", active, err)
 	}
-	if record := allocations.records[handoff.Game.Entry.GameID]; record.State != AllocationFailed || record.LastError == "" {
+	if record := allocations.records[handoff.Game.Entry.GameID]; record.State != AllocationFailed ||
+		record.LastError == "" {
 		t.Fatalf("recovered allocation = %#v", record)
 	}
 	if games, err := restarted.ListGames(t.Context(), session.Token, GameFilter{}); err != nil || len(games) != 0 {

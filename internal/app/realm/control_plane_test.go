@@ -8,6 +8,8 @@ import (
 	d2save "github.com/gravestench/dark-magic/internal/mod/d2legacy/adapter/save"
 )
 
+// TestControlPlaneReauthorizesEveryLobbyOperation verifies ordinary traffic
+// observes session expiry and removes the corresponding channel presence.
 func TestControlPlaneReauthorizesEveryLobbyOperation(t *testing.T) {
 	config := orchestratedControlConfig(nil)
 	config.SessionLifetime, config.ChatHistory = time.Minute, 4
@@ -21,8 +23,17 @@ func TestControlPlaneReauthorizesEveryLobbyOperation(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if err := control.characters.Create(t.Context(), CharacterRecord{AccountID: account.ID, Revision: 1,
-		Character: d2save.Character{ID: "character:alice", Name: "Alyssa", Class: "Assassin", Level: 1, Expansion: true}}); err != nil {
+	if err := control.characters.Create(t.Context(), CharacterRecord{
+		AccountID: account.ID,
+		Revision:  1,
+		Character: d2save.Character{
+			ID:        "character:alice",
+			Name:      "Alyssa",
+			Class:     "Assassin",
+			Level:     1,
+			Expansion: true,
+		},
+	}); err != nil {
 		t.Fatal(err)
 	}
 	session, err := control.Authenticate(t.Context(), "Alice", "long enough password")
@@ -38,7 +49,11 @@ func TestControlPlaneReauthorizesEveryLobbyOperation(t *testing.T) {
 	if _, err := control.SendChannelMessage(t.Context(), session.Token, "hello"); err != nil {
 		t.Fatal(err)
 	}
-	game, err := control.CreateGame(t.Context(), session.Token, CreateGameRequest{Name: "Fresh Game", Difficulty: DifficultyNormal, Maximum: 8})
+	game, err := control.CreateGame(t.Context(), session.Token, CreateGameRequest{
+		Name:       "Fresh Game",
+		Difficulty: DifficultyNormal,
+		Maximum:    8,
+	})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -64,6 +79,8 @@ func TestControlPlaneReauthorizesEveryLobbyOperation(t *testing.T) {
 	}
 }
 
+// TestControlPlaneLogoutRemovesChannelPresence ensures presence disappears
+// before the session token becomes invalid.
 func TestControlPlaneLogoutRemovesChannelPresence(t *testing.T) {
 	control, err := NewControlPlane(ControlPlaneConfig{})
 	if err != nil {
@@ -102,6 +119,8 @@ func TestControlPlaneLogoutRemovesChannelPresence(t *testing.T) {
 	}
 }
 
+// TestControlPlaneCreatesAndSelectsRealmOwnedCharacter verifies the realm owns
+// defaults, identity, class normalization, and duplicate-name enforcement.
 func TestControlPlaneCreatesAndSelectsRealmOwnedCharacter(t *testing.T) {
 	control, err := NewControlPlane(ControlPlaneConfig{})
 	if err != nil {
@@ -133,11 +152,17 @@ func TestControlPlaneCreatesAndSelectsRealmOwnedCharacter(t *testing.T) {
 	if err != nil || len(listed) != 1 || listed[0].Character.ID != record.Character.ID {
 		t.Fatalf("listed=%#v error=%v", listed, err)
 	}
-	if _, err := control.CreateCharacter(t.Context(), session.Token, CreateCharacterRequest{Name: "realmhero", Class: "Amazon"}); !errors.Is(err, ErrCharacterExists) {
+	if _, err := control.CreateCharacter(
+		t.Context(),
+		session.Token,
+		CreateCharacterRequest{Name: "realmhero", Class: "Amazon"},
+	); !errors.Is(err, ErrCharacterExists) {
 		t.Fatalf("duplicate error = %v", err)
 	}
 }
 
+// TestControlPlaneRequiresSelectionBeforeChannelJoin prevents sessions from
+// publishing arbitrary presence before selecting an owned character.
 func TestControlPlaneRequiresSelectionBeforeChannelJoin(t *testing.T) {
 	control, err := NewControlPlane(ControlPlaneConfig{})
 	if err != nil {
