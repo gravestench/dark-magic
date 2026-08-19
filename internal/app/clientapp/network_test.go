@@ -18,6 +18,8 @@ import (
 	d2save "github.com/gravestench/dark-magic/internal/mod/d2legacy/adapter/save"
 )
 
+// TestNetworkControllerDefersHostUntilCharacterSelection verifies that host
+// construction cannot begin before the user chooses an offline character.
 func TestNetworkControllerDefersHostUntilCharacterSelection(t *testing.T) {
 	app := &application{ctx: context.Background(), saves: d2save.New()}
 	controller := newNetworkController(app)
@@ -34,9 +36,12 @@ func TestNetworkControllerDefersHostUntilCharacterSelection(t *testing.T) {
 	}
 }
 
+// TestNetworkControllerSamplesFixedInputClockIndependentlyOfCorrections checks
+// that renderer time, rather than correction arrival, drives input sampling.
 func TestNetworkControllerSamplesFixedInputClockIndependentlyOfCorrections(t *testing.T) {
 	controller := newNetworkController(&application{})
-	client := &clientsession.Session{Admission: gameserver.JoinResponse{Snapshot: gameserver.Snapshot{Tick: 10, StepNanos: int64(networkInputStep)}}}
+
+	client := networkTestClient(10)
 	if ticks := controller.inputTicks(client, 39*time.Millisecond, time.Now()); len(ticks) != 0 {
 		t.Fatalf("premature input ticks = %v", ticks)
 	}
@@ -46,11 +51,14 @@ func TestNetworkControllerSamplesFixedInputClockIndependentlyOfCorrections(t *te
 	}
 }
 
+// TestEmptyGeneralIntentMailboxDoesNotConsumeJoiningClientsMovementTick checks
+// that an empty generic mailbox cannot advance fixed-step movement sequencing.
 func TestEmptyGeneralIntentMailboxDoesNotConsumeJoiningClientsMovementTick(t *testing.T) {
 	now := time.Unix(700, 0)
 	app := &application{commandIntents: &gamesession.IntentController{}}
 	controller := newNetworkController(app)
-	client := &clientsession.Session{Admission: gameserver.JoinResponse{Snapshot: gameserver.Snapshot{Tick: 10, StepNanos: int64(networkInputStep)}}}
+
+	client := networkTestClient(10)
 	if err := controller.submitPendingIntents(client, now); err != nil {
 		t.Fatal(err)
 	}
@@ -63,6 +71,8 @@ func TestEmptyGeneralIntentMailboxDoesNotConsumeJoiningClientsMovementTick(t *te
 	}
 }
 
+// TestPendingMovementPredictionReplaysFromCanonicalPosition verifies that
+// prediction replays unacknowledged input from the latest authority position.
 func TestPendingMovementPredictionReplaysFromCanonicalPosition(t *testing.T) {
 	catalog, err := movement.LoadCatalog(predictionMovementRecords{})
 	if err != nil {
@@ -70,10 +80,20 @@ func TestPendingMovementPredictionReplaysFromCanonicalPosition(t *testing.T) {
 	}
 	payload, _ := json.Marshal(map[string]any{"x": 1, "y": 0, "running": true})
 	hud := playeradapter.HUD{
-		Tick: 10, Position: playeradapter.HUDPosition{X: 10, Y: 20},
+		Tick:     10,
+		Position: playeradapter.HUDPosition{X: 10, Y: 20},
 		Player:   playeradapter.HUDIdentity{Class: "Amazon"},
-		Vitals:   playeradapter.HUDVitals{Stamina: 84, MaxStamina: 84, StaminaRaw: 84 * 256, MaxStaminaRaw: 84 * 256},
-		Movement: playeradapter.HUDMovement{Bounds: playeradapter.HUDPosition{X: 100, Y: 100}, Radius: 1, RunDrain: 20},
+		Vitals: playeradapter.HUDVitals{
+			Stamina:       84,
+			MaxStamina:    84,
+			StaminaRaw:    84 * 256,
+			MaxStaminaRaw: 84 * 256,
+		},
+		Movement: playeradapter.HUDMovement{
+			Bounds:   playeradapter.HUDPosition{X: 100, Y: 100},
+			Radius:   1,
+			RunDrain: 20,
+		},
 	}
 	got := predictPosition(hud, []gameserver.CommandIntent{
 		{TargetTick: 11, Sequence: 1, Kind: "player.move", Payload: payload},
@@ -84,8 +104,10 @@ func TestPendingMovementPredictionReplaysFromCanonicalPosition(t *testing.T) {
 	}
 }
 
+// predictionMovementRecords supplies the minimal movement catalog used here.
 type predictionMovementRecords struct{}
 
+// Load returns one deterministic Amazon movement record.
 func (predictionMovementRecords) Load(string) ([]map[string]string, error) {
 	return []map[string]string{{
 		"class": "Amazon", "WalkVelocity": "6", "RunVelocity": "9",
@@ -93,6 +115,8 @@ func (predictionMovementRecords) Load(string) ([]map[string]string, error) {
 	}}, nil
 }
 
+// TestNetworkControllerActivatesLocalSessionOnlyAfterSelection verifies that
+// the frontend becomes local gameplay only after a selected save is accepted.
 func TestNetworkControllerActivatesLocalSessionOnlyAfterSelection(t *testing.T) {
 	character := d2save.Character{ID: "hero", Name: "Hero", Class: "Amazon"}
 	saves := d2save.New(character)
@@ -111,6 +135,8 @@ func TestNetworkControllerActivatesLocalSessionOnlyAfterSelection(t *testing.T) 
 	}
 }
 
+// TestNetworkControllerAcceptsAuthenticatedRealmCharacterForLoading verifies
+// that Realm admission, not offline saves, satisfies the loading dependency.
 func TestNetworkControllerAcceptsAuthenticatedRealmCharacterForLoading(t *testing.T) {
 	controller := newNetworkController(&application{})
 	controller.phase = "connected"
@@ -127,6 +153,8 @@ func TestNetworkControllerAcceptsAuthenticatedRealmCharacterForLoading(t *testin
 	}
 }
 
+// TestNetworkControllerRealmLoadingDoesNotDependOnTransientHUDProjection checks
+// that loading survives an admitted character's temporarily empty HUD view.
 func TestNetworkControllerRealmLoadingDoesNotDependOnTransientHUDProjection(t *testing.T) {
 	app := &application{saves: d2save.New()}
 	controller := newNetworkController(app)
@@ -155,6 +183,8 @@ func TestNetworkControllerRealmLoadingDoesNotDependOnTransientHUDProjection(t *t
 	}
 }
 
+// TestNetworkControllerKeepsStartFailuresAndNormalizesDirectJoin verifies both
+// frontend error visibility and default direct-server port selection.
 func TestNetworkControllerKeepsStartFailuresAndNormalizesDirectJoin(t *testing.T) {
 	app := &application{ctx: context.Background(), saves: d2save.New()}
 	controller := newNetworkController(app)
@@ -165,18 +195,28 @@ func TestNetworkControllerKeepsStartFailuresAndNormalizesDirectJoin(t *testing.T
 		t.Fatal("starting without selected character was accepted")
 	}
 	status := controller.Status()
-	if status["phase"] != "failed" || status["mode"] != "host" || !strings.Contains(status["error"].(string), "select") {
+
+	failedSelection := status["phase"] == "failed" &&
+		status["mode"] == "host" &&
+		strings.Contains(status["error"].(string), "select")
+	if !failedSelection {
 		t.Fatalf("start rejection status = %#v", status)
 	}
 	if err := controller.Join("127.0.0.1"); err != nil {
 		t.Fatalf("direct join: %v", err)
 	}
 	status = controller.Status()
-	if status["phase"] != "selecting" || status["mode"] != "join" || status["address"] != "127.0.0.1:6112" {
+
+	normalizedJoin := status["phase"] == "selecting" &&
+		status["mode"] == "join" &&
+		status["address"] == "127.0.0.1:6112"
+	if !normalizedJoin {
 		t.Fatalf("join selection status = %#v", status)
 	}
 }
 
+// TestNetworkControllerSamplesMovementOncePerAuthoritativeTick verifies that
+// repeated render frames cannot resample the same authority tick.
 func TestNetworkControllerSamplesMovementOncePerAuthoritativeTick(t *testing.T) {
 	controller := newNetworkController(&application{})
 	if !controller.sampleMovement(12) {
@@ -192,6 +232,8 @@ func TestNetworkControllerSamplesMovementOncePerAuthoritativeTick(t *testing.T) 
 	}
 }
 
+// TestNetworkControllerSendsOneStopAfterActiveMovement verifies that movement
+// emits one transition to idle without flooding repeated stop commands.
 func TestNetworkControllerSendsOneStopAfterActiveMovement(t *testing.T) {
 	controller := newNetworkController(&application{})
 	if controller.movementRequired(false) {
@@ -213,12 +255,53 @@ func TestNetworkControllerSendsOneStopAfterActiveMovement(t *testing.T) {
 	}
 }
 
+// TestMovementCommandActivityDistinguishesValidMovement verifies that malformed
+// or unrelated commands remain on the generic submission path.
+func TestMovementCommandActivityDistinguishesValidMovement(t *testing.T) {
+	payload, err := json.Marshal(movement.MovePayload{X: 1})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	active, movementCommand := movementCommandActivity(simulation.Command{
+		Kind:    movement.MoveCommand,
+		Payload: payload,
+	})
+	if !active || !movementCommand {
+		t.Fatal("valid active movement was not recognized")
+	}
+
+	_, movementCommand = movementCommandActivity(simulation.Command{
+		Kind:    movement.MoveCommand,
+		Payload: json.RawMessage(`{`),
+	})
+	if movementCommand {
+		t.Fatal("malformed movement was removed from the generic submission path")
+	}
+}
+
+// TestNetworkRecipeRejectsDifferentLocalAssetSet verifies that package identity
+// cannot hide incompatible external game assets.
 func TestNetworkRecipeRejectsDifferentLocalAssetSet(t *testing.T) {
 	recipe := simulation.RuntimeRecipe{AssetSetID: simulation.EmptyAssetSetID}
 	if err := validateLocalAssetSet(recipe, simulation.EmptyAssetSetID); err != nil {
 		t.Fatal(err)
 	}
-	if err := validateLocalAssetSet(recipe, "sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"); err == nil {
+
+	differentAssetSet := "sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+	if err := validateLocalAssetSet(recipe, differentAssetSet); err == nil {
 		t.Fatal("client accepted a server recipe for a different external asset set")
+	}
+}
+
+// networkTestClient returns a client with a deterministic authority clock.
+func networkTestClient(tick uint64) *clientsession.Session {
+	return &clientsession.Session{
+		Admission: gameserver.JoinResponse{
+			Snapshot: gameserver.Snapshot{
+				Tick:      tick,
+				StepNanos: int64(networkInputStep),
+			},
+		},
 	}
 }
