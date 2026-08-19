@@ -19,6 +19,7 @@ func runRealm(ctx context.Context, config realmConfig) error {
 	if err != nil {
 		return err
 	}
+
 	postgres, err := openRealmRepositories(ctx, config)
 	if err != nil {
 		return err
@@ -29,13 +30,16 @@ func runRealm(ctx context.Context, config realmConfig) error {
 	if err != nil {
 		return err
 	}
+
 	control, err := buildControlPlane(ctx, postgres, allocator, config)
 	if err != nil {
 		return err
 	}
+
 	if err := startMailWorker(ctx, postgres, control, config); err != nil {
 		return err
 	}
+
 	assets, closeAssets, err := preparePortalAssets(directory)
 	if err != nil {
 		return err
@@ -46,9 +50,11 @@ func runRealm(ctx context.Context, config realmConfig) error {
 	if err != nil {
 		return err
 	}
+
 	shellErrors := startAdminShell(ctx, config)
 	startMaintenance(ctx, control, processAllocator != nil, config.workerHealthInterval)
 	runErr := waitForRealmStop(ctx, servers, shellErrors)
+
 	return errors.Join(runErr, shutdownRealm(servers, processAllocator))
 }
 
@@ -57,7 +63,9 @@ func startAdminShell(ctx context.Context, config realmConfig) <-chan error {
 	if !config.adminShell {
 		return nil
 	}
+
 	errors := make(chan error, 1)
+
 	policy := shell.Policy{Name: "local-realm-admin", Mutable: true}
 	go func() {
 		errors <- headlessshell.Run(
@@ -69,6 +77,7 @@ func startAdminShell(ctx context.Context, config realmConfig) <-chan error {
 			os.Stdout,
 		)
 	}()
+
 	return errors
 }
 
@@ -93,6 +102,7 @@ func logMaintenanceResult(result realm.MaintenanceResult) {
 		slog.Warn("running Realm maintenance", append(attributes, "error", result.Err)...)
 		return
 	}
+
 	if result.PrunedSessions > 0 || result.PrunedPresence > 0 || result.ReconciledGames > 0 {
 		slog.Info("completed Realm maintenance", attributes...)
 	}
@@ -121,6 +131,7 @@ func normalizeServerError(err error) error {
 	if errors.Is(err, http.ErrServerClosed) {
 		return nil
 	}
+
 	return err
 }
 
@@ -131,12 +142,15 @@ func shutdownRealm(
 ) error {
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
+
 	err := servers.public.Shutdown(ctx)
 	if servers.operator != nil {
 		err = errors.Join(err, servers.operator.Shutdown(ctx))
 	}
+
 	if processAllocator != nil {
 		err = errors.Join(err, processAllocator.Close(ctx))
 	}
+
 	return err
 }

@@ -58,14 +58,18 @@ func parseServerConfig(defaultEnvironmentPath string) (serverConfig, error) {
 	if err != nil {
 		return serverConfig{}, err
 	}
+
 	config.logLevel = level
+
 	config.gameDifficulty, err = parseDifficulty(gameDifficulty)
 	if err != nil {
 		return serverConfig{}, err
 	}
+
 	if err := config.validate(); err != nil {
 		return serverConfig{}, err
 	}
+
 	return config, nil
 }
 
@@ -76,6 +80,7 @@ func registerServerFlags(
 	defaultEnvironmentPath string,
 ) {
 	_ = flag.String("env-file", defaultEnvironmentPath, "environment file")
+
 	registerSessionFlags(config)
 	registerProfileFlags(config)
 	registerWorkerFlags(config)
@@ -127,10 +132,12 @@ func registerGameRuleFlags(config *serverConfig, difficulty *string) {
 // parseDifficulty converts the public rule name into the legacy numeric value.
 func parseDifficulty(value string) (int, error) {
 	difficulties := map[string]int{"normal": 0, "nightmare": 1, "hell": 2}
+
 	difficulty, found := difficulties[strings.ToLower(strings.TrimSpace(value))]
 	if !found {
 		return 0, fmt.Errorf("invalid game difficulty %q", value)
 	}
+
 	return difficulty, nil
 }
 
@@ -139,15 +146,19 @@ func (config serverConfig) validate() error {
 	if config.gameMaximumPlayers < 1 || config.gameMaximumPlayers > 8 {
 		return errors.New("game-maximum-players must be from 1 through 8")
 	}
+
 	if config.workerConfigured() && !config.completeWorkerConfig() {
 		return errors.New("realm worker, control, readiness, QUIC, TLS, and admission flags must be set together")
 	}
+
 	if config.workerConfigured() && (config.playerProfile != "" || config.remoteProfileKey != "") {
 		return errors.New("realm workers cannot admit player-controlled profiles")
 	}
+
 	if config.restoreCheckpoint != "" && !config.realmWorker {
 		return errors.New("restore-checkpoint is valid only for Realm workers")
 	}
+
 	return nil
 }
 
@@ -170,5 +181,6 @@ func environmentDefault(name, fallback string) string {
 	if value := strings.TrimSpace(os.Getenv(name)); value != "" {
 		return value
 	}
+
 	return fallback
 }

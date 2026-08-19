@@ -20,12 +20,15 @@ func startMailWorker(
 	if config.accountMailMode == "disabled" {
 		return nil
 	}
+
 	mailer, err := buildMailer(control, config)
 	if err != nil {
 		return err
 	}
+
 	workerID := fmt.Sprintf("realm-%d", os.Getpid())
 	go realm.RunMailWorker(ctx, postgres.Mail, mailer, workerID, time.Second, logMailResult)
+
 	return nil
 }
 
@@ -47,11 +50,13 @@ func buildMailer(control *realm.ControlPlane, config realmConfig) (realm.MailSen
 				config.accountMailMode,
 			)
 		}
+
 		slog.Warn(
 			"development-only account mail mode enabled",
 			"mode", config.accountMailMode,
 			"links_may_be_logged", true,
 		)
+
 		return realm.NewDevelopmentMailSender(config.accountMailMode, control, nil)
 	default:
 		return nil, fmt.Errorf("configure Realm account mail mode %q: %w", config.accountMailMode, realm.ErrMailUnavailable)
@@ -67,7 +72,9 @@ func logMailResult(result realm.MailWorkerResult) {
 			"kind", result.Kind,
 			"error", result.Err,
 		)
+
 		return
 	}
+
 	slog.Info("delivered Realm account mail", "job_id", result.JobID, "kind", result.Kind)
 }

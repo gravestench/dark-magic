@@ -32,12 +32,15 @@ func TestBootstrapInstallsDefaultAndPreservesExportedAuthority(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+
 	if !result.Created || result.LoadedPath != filepath.Join(directory, "client.env") {
 		t.Fatalf("result = %#v", result)
 	}
+
 	if got := os.Getenv("DARK_MAGIC_LOG_LEVEL"); got != "trace" {
 		t.Fatalf("exported authority = %q", got)
 	}
+
 	assertPrivateFile(t, result.DefaultPath)
 }
 
@@ -48,6 +51,7 @@ func TestBootstrapExplicitFileOverridesDefaultSelection(t *testing.T) {
 	preserveEnvironment(t, key)
 	directory := t.TempDir()
 	t.Setenv("DARK_MAGIC_CONFIG_DIR", directory)
+
 	explicitPath := filepath.Join(t.TempDir(), "custom.env")
 	if err := os.WriteFile(explicitPath, []byte(key+"=loaded\n"), 0o600); err != nil {
 		t.Fatal(err)
@@ -57,9 +61,11 @@ func TestBootstrapExplicitFileOverridesDefaultSelection(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+
 	if result.LoadedPath != explicitPath || os.Getenv(key) != "loaded" {
 		t.Fatalf("result = %#v, value = %q", result, os.Getenv(key))
 	}
+
 	if _, err := os.Stat(filepath.Join(directory, "server.env")); err != nil {
 		t.Fatalf("default template was not installed: %v", err)
 	}
@@ -68,10 +74,12 @@ func TestBootstrapExplicitFileOverridesDefaultSelection(t *testing.T) {
 // assertPrivateFile verifies that an installed environment file is owner-only.
 func assertPrivateFile(t *testing.T, path string) {
 	t.Helper()
+
 	info, err := os.Stat(path)
 	if err != nil {
 		t.Fatal(err)
 	}
+
 	if permission := info.Mode().Perm(); permission != 0o600 {
 		t.Fatalf("default mode = %v", permission)
 	}

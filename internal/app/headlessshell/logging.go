@@ -24,7 +24,9 @@ func installLogCapture(level slog.Level) (*shell.LogBuffer, func()) {
 
 	// Preserve the process logger because Run only owns logging for its lifetime.
 	previous := slog.Default()
+
 	slog.SetDefault(slog.New(handler))
+
 	return logs, func() {
 		slog.SetDefault(previous)
 	}

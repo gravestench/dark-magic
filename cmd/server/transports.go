@@ -35,9 +35,11 @@ func startQUICTransport(
 	if err != nil {
 		return nil, fmt.Errorf("start QUIC game-session transport: %w", err)
 	}
+
 	if server != nil {
 		slog.Info("serving authenticated game sessions", "address", server.Addr())
 	}
+
 	return server, nil
 }
 
@@ -52,7 +54,9 @@ func startWorkerControl(
 	if !config.workerConfigured() {
 		return nil, nil, nil
 	}
+
 	drain := make(chan struct{}, 1)
+
 	control, err := serverapp.StartWorkerControl(serverapp.WorkerControlConfig{
 		Address:         config.workerControlListen,
 		CertificatePath: config.tlsCertificate,
@@ -66,6 +70,7 @@ func startWorkerControl(
 	if err != nil {
 		return nil, nil, fmt.Errorf("start Realm worker control: %w", err)
 	}
+
 	return control, drain, nil
 }
 
@@ -76,6 +81,7 @@ func drainWorker(drain chan<- struct{}, quicServer *sessionquic.Server) func() {
 		case drain <- struct{}{}:
 		default:
 		}
+
 		_ = quicServer.Close()
 	}
 }
@@ -90,6 +96,7 @@ func publishWorkerReadiness(
 	if err != nil {
 		return "", fmt.Errorf("expand Realm worker readiness path: %w", err)
 	}
+
 	ready := realm.WorkerProcessReady{
 		GameID:         config.sessionID,
 		AllocationID:   config.allocationID,
@@ -103,12 +110,14 @@ func publishWorkerReadiness(
 	if err := realm.WriteWorkerProcessReady(path, ready); err != nil {
 		return "", fmt.Errorf("write Realm worker readiness: %w", err)
 	}
+
 	slog.Info(
 		"Realm worker ready",
 		"control_address", control.Addr(),
 		"game_address", quicServer.Addr(),
 		"tls_fingerprint", control.TLSFingerprint(),
 	)
+
 	return path, nil
 }
 

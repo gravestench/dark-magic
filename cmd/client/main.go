@@ -37,11 +37,13 @@ func runMain() int {
 	}
 
 	logs := configureLogging(config.logLevel)
+
 	profile, err := startProfiler(config.profileDirectory, config.profileScenes)
 	if err != nil {
 		slog.Error("starting profiler", "error", err)
 		return 1
 	}
+
 	if profile != nil {
 		defer stopProfiler(profile)
 	}
@@ -57,6 +59,7 @@ func runMain() int {
 		config.captureDirectory,
 		config.captureScenes,
 	)
+
 	config.captureDirectory, err = darkpaths.ExpandHost(config.captureDirectory)
 	if err != nil {
 		slog.Error("expanding capture directory", "error", err)
@@ -67,5 +70,6 @@ func runMain() int {
 		slog.Error("running Dark Magic", "error", err)
 		return 1
 	}
+
 	return 0
 }

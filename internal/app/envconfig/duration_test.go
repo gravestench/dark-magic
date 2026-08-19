@@ -17,6 +17,7 @@ func TestDurationUsesFallbackAndRejectsInvalidValues(t *testing.T) {
 
 	for _, invalid := range []string{"invalid", "0s", "-1s"} {
 		t.Setenv(name, invalid)
+
 		if _, err := Duration(name, 15*time.Second); err == nil {
 			t.Fatalf("invalid duration %q was accepted", invalid)
 		}
@@ -33,6 +34,7 @@ func TestDurationRejectsBlankNames(t *testing.T) {
 // assertDuration verifies one successful Duration lookup.
 func assertDuration(t *testing.T, name string, fallback, expected time.Duration) {
 	t.Helper()
+
 	value, err := Duration(name, fallback)
 	if err != nil || value != expected {
 		t.Fatalf("duration = %s, want %s, error = %v", value, expected, err)

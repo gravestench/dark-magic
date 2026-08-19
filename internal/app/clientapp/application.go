@@ -1,8 +1,3 @@
-// Package clientapp assembles the interactive Dark Magic client.
-//
-// A composition root is the place where independent parts are plugged
-// together. It should describe the plugs; it should not hide game rules. This
-// package therefore contains small assembly steps and no reusable domain logic.
 package clientapp
 
 import (
@@ -17,7 +12,7 @@ import (
 	"github.com/gravestench/dark-magic/internal/app/networktrust"
 	"github.com/gravestench/dark-magic/internal/audio"
 	"github.com/gravestench/dark-magic/internal/content"
-	"github.com/gravestench/dark-magic/internal/game/data/store"
+	recordstore "github.com/gravestench/dark-magic/internal/game/data/store"
 	gameecs "github.com/gravestench/dark-magic/internal/game/ecs"
 	gamesession "github.com/gravestench/dark-magic/internal/game/session"
 	"github.com/gravestench/dark-magic/internal/game/simulation"
@@ -40,8 +35,7 @@ import (
 	"github.com/gravestench/dark-magic/internal/shell"
 )
 
-// Options are the few choices made outside the client composition root.
-// Everything else is created here so ownership stays obvious.
+// Options contains the choices made outside the client composition root.
 type Options struct {
 	Content               *content.FS
 	Mods                  *modcache.ResolvedSet
@@ -68,39 +62,40 @@ type Options struct {
 	Logs                  *shell.LogBuffer
 }
 
-// Profile is the tiny piece of the optional developer profiler the client uses.
-// An interface keeps developer tooling outside the production dependency tree.
+// Profile describes the optional developer profiler used by the client.
 type Profile interface {
 	CaptureSceneHeap(string) error
 	SetDiagnostics(func() any)
 }
 
-// Capture observes completed frames and writes the requested screenshots.
+// Capture observes completed frames and writes requested screenshots.
 type Capture interface {
 	Observe([]string, uint64, bool)
 	Complete() bool
 	Close() error
 }
 
-// Screenshotter is what a capture needs from the renderer.
+// Screenshotter describes the renderer operation required by a capture.
 type Screenshotter interface {
 	CaptureScreenshot(string) error
 }
 
-// CaptureFactory keeps optional developer capture construction outside the
-// production client package while making frame observation an explicit plug.
+// CaptureFactory constructs optional developer captures outside production code.
 type CaptureFactory func(string, string, int, Screenshotter) (Capture, error)
 
+// application owns the dependencies and mutable state of one client process.
 type application struct {
 	options Options
 	ctx     context.Context
 	stop    context.CancelFunc
 
+	// User configuration and presentation foundations.
 	shellSettings *shell.Settings
 	gameSettings  *preferences.Settings
 	profile       content.PresentationProfile
 	presentation  content.PresentationBootstrap
 
+	// Renderer-independent presentation services.
 	renderer         desktop.Renderer
 	renderWindow     image.Point
 	input            desktop.Input
@@ -113,6 +108,7 @@ type application struct {
 	scenes           *modruntime.Scenes
 	renderCapability *modruntime.RenderCapability
 
+	// Game data, authoritative simulation, and player state.
 	records              *recordstore.Store
 	questCatalog         *recovered.Catalog
 	worldObjectResolver  *worldobjects.Resolver
@@ -137,16 +133,19 @@ type application struct {
 	commandIntents       *gamesession.IntentController
 	commandIntentSource  *gamesession.IntentSource
 	commandSource        func(uint64) []simulation.Command
-	worldMu              sync.RWMutex
-	gameWorlds           map[int]*gameworld.Map
-	gameWorldZones       map[int]*worldgen.Zone
-	gameWorldSpawns      map[int][2]float64
-	activeWorldLevel     int
-	loading              *loadcore.Coordinator
-	pointerAcceptance    *pointerMovementAcceptance
-	network              *networkController
-	realm                *realmController
 
+	// World state shared by local and remote presentation paths.
+	worldMu           sync.RWMutex
+	gameWorlds        map[int]*gameworld.Map
+	gameWorldZones    map[int]*worldgen.Zone
+	gameWorldSpawns   map[int][2]float64
+	activeWorldLevel  int
+	loading           *loadcore.Coordinator
+	pointerAcceptance *pointerMovementAcceptance
+	network           *networkController
+	realm             *realmController
+
+	// Runtime composition and developer tooling.
 	components      *host.Manager
 	packageRegistry *modruntime.PackageRegistry
 	packageDigests  map[string]string
@@ -158,6 +157,7 @@ type application struct {
 	shellSession    *shell.Session
 	console         desktop.Console
 
+	// Frame-loop subscriptions and metrics.
 	sceneErrors  chan error
 	capture      Capture
 	stopScene    func()
@@ -168,4 +168,5 @@ type application struct {
 	frameMetrics frameMetrics
 }
 
+// noCleanup is the safe default for optional subscription cleanup callbacks.
 func noCleanup() {}

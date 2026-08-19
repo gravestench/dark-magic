@@ -43,5 +43,6 @@ func Run(
 	}()
 
 	slog.Info("administration shell ready", "target", target)
+
 	return runTerminal(ctx, session, input, output)
 }

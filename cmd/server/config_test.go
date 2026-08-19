@@ -5,6 +5,7 @@ import "testing"
 // TestParseDifficultyDocumentsSupportedNames verifies case and whitespace normalization.
 func TestParseDifficultyDocumentsSupportedNames(t *testing.T) {
 	t.Parallel()
+
 	tests := map[string]int{"normal": 0, " Nightmare ": 1, "HELL": 2}
 	for input, want := range tests {
 		got, err := parseDifficulty(input)
@@ -14,6 +15,7 @@ func TestParseDifficultyDocumentsSupportedNames(t *testing.T) {
 			t.Errorf("parseDifficulty(%q) = %d, want %d", input, got, want)
 		}
 	}
+
 	if _, err := parseDifficulty("torment"); err == nil {
 		t.Fatal("parseDifficulty accepted an unsupported value")
 	}
@@ -22,10 +24,12 @@ func TestParseDifficultyDocumentsSupportedNames(t *testing.T) {
 // TestServerConfigRequiresCompleteWorkerPolicy protects the all-or-nothing worker contract.
 func TestServerConfigRequiresCompleteWorkerPolicy(t *testing.T) {
 	t.Parallel()
+
 	config := serverConfig{realmWorker: true, gameMaximumPlayers: 8}
 	if err := config.validate(); err == nil {
 		t.Fatal("incomplete Realm worker configuration was accepted")
 	}
+
 	config.allocationID = "allocation"
 	config.workerControlListen = "127.0.0.1:0"
 	config.workerControlToken = "token"
@@ -33,6 +37,7 @@ func TestServerConfigRequiresCompleteWorkerPolicy(t *testing.T) {
 	config.quicListen = "127.0.0.1:0"
 	config.tlsCertificate = "certificate"
 	config.tlsKey = "key"
+
 	config.admissionKey = "admission"
 	if err := config.validate(); err != nil {
 		t.Fatalf("complete Realm worker configuration: %v", err)
@@ -42,6 +47,7 @@ func TestServerConfigRequiresCompleteWorkerPolicy(t *testing.T) {
 // TestServerConfigRejectsInvalidCapacity verifies immutable player-count bounds.
 func TestServerConfigRejectsInvalidCapacity(t *testing.T) {
 	t.Parallel()
+
 	for _, capacity := range []int{0, 9} {
 		config := serverConfig{gameMaximumPlayers: capacity}
 		if err := config.validate(); err == nil {

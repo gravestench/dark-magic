@@ -14,13 +14,16 @@ func preparePortalAssets(directory string) (*portalassets.Cache, func(), error) 
 	if os.Getenv("MPQ_DIRECTORY") == "" {
 		return nil, func() {}, nil
 	}
+
 	contentFS, err := content.FromEnvironment()
 	if err != nil {
 		return nil, nil, fmt.Errorf("open Realm portal game assets: %w", err)
 	}
+
 	closeContent := func() {
 		_ = contentFS.Close()
 	}
+
 	assets, err := portalassets.New(
 		contentFS,
 		filepath.Join(directory, "cache", "realm-portal"),
@@ -29,5 +32,6 @@ func preparePortalAssets(directory string) (*portalassets.Cache, func(), error) 
 		closeContent()
 		return nil, nil, fmt.Errorf("configure Realm portal asset cache: %w", err)
 	}
+
 	return assets, closeContent, nil
 }

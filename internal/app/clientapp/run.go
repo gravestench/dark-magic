@@ -3,25 +3,35 @@ package clientapp
 import (
 	"context"
 	"errors"
-	"fmt"
 	"os"
 	"os/signal"
 	"syscall"
-	"time"
 
 	"github.com/gravestench/dark-magic/internal/game/simulation"
-	d2save "github.com/gravestench/dark-magic/internal/mod/d2legacy/adapter/save"
 )
 
-// Run builds one client, lets it run, and then takes it apart in reverse.
-// Each helper below owns one small part of that story.
+// Run assembles one client, runs its window, and releases owned resources.
 func Run(options Options) error {
+	app := newApplication(options)
+	defer app.stop()
+
+	if err := app.assemble(); err != nil {
+		return errors.Join(err, app.shutdown())
+	}
+
+	return errors.Join(app.runWindow(), app.shutdown())
+}
+
+// newApplication applies defaults and installs process-signal cancellation.
+func newApplication(options Options) *application {
 	options = applyDevelopmentSceneDefaults(options)
 	if options.AssetSetID == "" {
 		options.AssetSetID = simulation.EmptyAssetSetID
 	}
+
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
-	app := &application{
+
+	return &application{
 		options:     options,
 		ctx:         ctx,
 		stop:        stop,
@@ -30,17 +40,30 @@ func Run(options Options) error {
 		stopOverlay: noCleanup,
 		stopCapture: noCleanup,
 	}
-	defer stop()
-
-	if err := app.assemble(); err != nil {
-		return errors.Join(err, app.shutdown())
-	}
-	runErr := app.runWindow()
-	return errors.Join(runErr, app.shutdown())
 }
 
-// assemble follows the order shown on a simple stack of blocks: foundations
-// first, things that use the foundations second.
+// runWindow runs the renderer and joins the first asynchronous scene failure.
+func (app *application) runWindow() error {
+	err := app.renderer.Run(app.ctx)
+	select {
+	case sceneErr := <-app.sceneErrors:
+		return errors.Join(err, sceneErr)
+	default:
+		return err
+	}
+}
+
+// reportSceneError records the first frame error and stops the window loop.
+func (app *application) reportSceneError(err error) {
+	select {
+	case app.sceneErrors <- err:
+		app.stop()
+	default:
+		// The first error identifies the earliest broken frame stage.
+	}
+}
+
+// assemble builds dependencies before the consumers that rely on them.
 func (app *application) assemble() error {
 	steps := []func() error{
 		app.loadSettings,
@@ -54,98 +77,11 @@ func (app *application) assemble() error {
 		app.loadScriptComponents,
 		app.startCapture,
 	}
+
 	for _, step := range steps {
 		if err := step(); err != nil {
 			return err
 		}
 	}
 	return nil
-}
-
-func (app *application) runWindow() error {
-	err := app.renderer.Run(app.ctx)
-	select {
-	case sceneErr := <-app.sceneErrors:
-		err = errors.Join(err, sceneErr)
-	default:
-	}
-	return err
-}
-
-// reportSceneError remembers the first frame error and asks the window loop to
-// stop. Later errors are ignored because the first broken block is the useful
-// one to report.
-func (app *application) reportSceneError(err error) {
-	select {
-	case app.sceneErrors <- err:
-		app.stop()
-	default:
-	}
-}
-
-func (app *application) shutdown() error {
-	// Subscriptions are little callbacks held by the renderer. Remove them before
-	// closing the objects they point at.
-	app.stopCapture()
-	app.stopScene()
-	app.stopOverlay()
-
-	var err error
-	if app.network != nil {
-		if app.network.Local() {
-			err = errors.Join(err, persistOfflineCharacter(app.saves, app.offlineSession, "local-player"))
-		}
-		err = errors.Join(err, app.network.Close())
-	}
-	if app.realm != nil {
-		ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
-		err = errors.Join(err, app.realm.Close(ctx))
-		cancel()
-	}
-	if app.saves != nil && app.playerProfilePath != "" {
-		err = errors.Join(err, d2save.WriteProfileFile(app.playerProfilePath, app.saves.Profile()))
-	}
-	if app.capture != nil {
-		err = errors.Join(err, app.capture.Close())
-	}
-	if app.console != nil {
-		app.console.Close()
-	}
-
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
-	defer cancel()
-	if app.scenes != nil {
-		err = errors.Join(err, app.scenes.Close(ctx))
-	}
-	if app.shellSession != nil {
-		err = errors.Join(err, app.shellSession.Close())
-	}
-	if app.components != nil {
-		err = errors.Join(err, app.components.ApplyDesired(ctx, map[string]bool{}))
-	}
-	if app.networkMounted != nil {
-		err = errors.Join(err, app.networkMounted.Close())
-		app.networkMounted = nil
-	}
-	if app.engineHost != nil && !app.hostStopped {
-		err = errors.Join(err, app.engineHost.Stop(ctx))
-		app.hostStopped = true
-	}
-	if app.loading != nil {
-		app.loading.Close()
-	}
-	if app.offlineSession != nil {
-		err = errors.Join(err, app.offlineSession.Close())
-	}
-	if app.clientSimulation != nil {
-		err = errors.Join(err, app.clientSimulation.Close())
-	}
-	return err
-}
-
-func wrap(stage string, err error) error {
-	if err == nil {
-		return nil
-	}
-	return fmt.Errorf("%s: %w", stage, err)
 }

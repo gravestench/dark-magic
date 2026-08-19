@@ -43,6 +43,7 @@ func parseRealmConfig(defaultEnvironmentPath string) (realmConfig, error) {
 	if err != nil {
 		return realmConfig{}, err
 	}
+
 	presenceTimeout, err := envconfig.Duration("DARK_MAGIC_REALM_PRESENCE_TIMEOUT", 30*time.Second)
 	if err != nil {
 		return realmConfig{}, err
@@ -63,12 +64,14 @@ func parseRealmConfig(defaultEnvironmentPath string) (realmConfig, error) {
 	flag.Parse()
 
 	config.logLevel, err = logging.ParseLevel(config.logLevelName)
+
 	return config, err
 }
 
 // registerRealmFlags groups related flag families behind descriptive helpers.
 func registerRealmFlags(config *realmConfig, defaultEnvironmentPath string) {
 	_ = flag.String("env-file", defaultEnvironmentPath, "environment file")
+
 	registerCoreFlags(config)
 	registerMailFlags(config)
 	registerWorkerFlags(config)
@@ -171,9 +174,11 @@ func defaultMailMode() string {
 	if configured := strings.TrimSpace(os.Getenv("DARK_MAGIC_REALM_ACCOUNT_MAIL_MODE")); configured != "" {
 		return configured
 	}
+
 	if os.Getenv("DARK_MAGIC_REALM_SMTP_ADDRESS") != "" {
 		return "smtp"
 	}
+
 	return "disabled"
 }
 
@@ -182,5 +187,6 @@ func environmentDefault(name, fallback string) string {
 	if value := strings.TrimSpace(os.Getenv(name)); value != "" {
 		return value
 	}
+
 	return fallback
 }

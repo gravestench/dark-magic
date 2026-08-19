@@ -26,14 +26,17 @@ func Duration(name string, fallback time.Duration) (time.Duration, error) {
 	if strings.TrimSpace(name) == "" || fallback <= 0 {
 		return 0, errors.New("environment duration requires a name and positive fallback")
 	}
+
 	value := environmentValue(name)
 	if value == "" {
 		return fallback, nil
 	}
+
 	parsed, err := time.ParseDuration(value)
 	if err != nil || parsed <= 0 {
 		return 0, fmt.Errorf("invalid %s duration %q", name, value)
 	}
+
 	return parsed, nil
 }
 
@@ -43,13 +46,16 @@ func Bootstrap(role string, arguments []string) (Result, error) {
 	if err != nil {
 		return Result{}, err
 	}
+
 	loadedPath, err := selectedEnvironmentPath(defaultPath, arguments)
 	if err != nil {
 		return Result{}, err
 	}
+
 	if err := Load(loadedPath); err != nil {
 		return Result{}, err
 	}
+
 	return Result{
 		Role:        role,
 		DefaultPath: defaultPath,
@@ -64,13 +70,16 @@ func selectedEnvironmentPath(defaultPath string, arguments []string) (string, er
 	if err != nil {
 		return "", err
 	}
+
 	if explicitPath == "" {
 		return defaultPath, nil
 	}
+
 	expandedPath, err := darkpaths.ExpandHost(explicitPath)
 	if err != nil {
 		return "", fmt.Errorf("environment file: %w", err)
 	}
+
 	return expandedPath, nil
 }
 

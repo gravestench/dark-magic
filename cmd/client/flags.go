@@ -33,7 +33,9 @@ type clientFlags struct {
 // parseClientConfig registers the public command-line interface and snapshots its values.
 func parseClientConfig(defaultEnvironmentPath string) (clientConfig, error) {
 	flags := registerClientFlags(defaultEnvironmentPath)
+
 	flag.Parse()
+
 	return flags.config()
 }
 
@@ -49,6 +51,7 @@ func registerClientFlags(defaultEnvironmentPath string) clientFlags {
 	registerCaptureFlags(&flags)
 	registerFixtureFlags(&flags)
 	registerDisplayFlags(&flags)
+
 	return flags
 }
 
@@ -157,6 +160,7 @@ func (flags clientFlags) config() (clientConfig, error) {
 	if err != nil {
 		return clientConfig{}, err
 	}
+
 	return clientConfig{
 		profileDirectory:      *flags.profileDirectory,
 		profileScenes:         *flags.profileScenes,
@@ -184,5 +188,6 @@ func environmentDefault(name, fallback string) string {
 	if value := strings.TrimSpace(os.Getenv(name)); value != "" {
 		return value
 	}
+
 	return fallback
 }

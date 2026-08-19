@@ -24,6 +24,7 @@ func runMain() int {
 		fmt.Fprintln(os.Stderr, err)
 		return 1
 	}
+
 	config, err := parseRealmConfig(environment.DefaultPath)
 	if err != nil {
 		fmt.Fprintln(os.Stderr, err)
@@ -32,9 +33,11 @@ func runMain() int {
 
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
+
 	if err := runRealm(ctx, config); err != nil {
 		slog.Error("running Realm", "error", err)
 		return 1
 	}
+
 	return 0
 }

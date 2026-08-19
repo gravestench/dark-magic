@@ -11,11 +11,14 @@ func startProfiler(directory, scenes string) (*profiling.Session, error) {
 	if directory == "" {
 		return nil, nil
 	}
+
 	profile, err := profiling.Start(directory, true)
 	if err != nil {
 		return nil, err
 	}
+
 	profile.ConfigureScenes(scenes)
+
 	return profile, nil
 }
 

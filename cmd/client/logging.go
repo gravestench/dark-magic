@@ -22,6 +22,7 @@ func configureLogging(level slog.Level) *shell.LogBuffer {
 		},
 	)
 	slog.SetDefault(slog.New(handler))
+
 	return logs
 }
 

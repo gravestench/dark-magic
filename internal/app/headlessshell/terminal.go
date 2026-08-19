@@ -16,5 +16,6 @@ func runTerminal(ctx context.Context, session *shell.Session, input io.Reader, o
 	if errors.Is(err, tea.ErrInterrupted) || errors.Is(err, tea.ErrProgramKilled) {
 		return nil
 	}
+
 	return err
 }

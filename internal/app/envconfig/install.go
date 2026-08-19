@@ -21,25 +21,32 @@ func Install(role string) (string, bool, error) {
 	if _, found := roles[role]; !found {
 		return "", false, fmt.Errorf("unknown environment role %q", role)
 	}
+
 	directory, err := ensureConfigDirectory()
 	if err != nil {
 		return "", false, err
 	}
+
 	path := filepath.Join(directory, role+".env")
+
 	exists, err := secureExistingFile(path)
 	if err != nil {
 		return "", false, err
 	}
+
 	if exists {
 		return path, false, nil
 	}
+
 	data, err := templates.ReadFile("templates/" + role + ".env")
 	if err != nil {
 		return "", false, err
 	}
+
 	if err := writePrivate(path, data); err != nil {
 		return "", false, fmt.Errorf("install environment file %q: %w", path, err)
 	}
+
 	return path, true, nil
 }
 
@@ -49,12 +56,15 @@ func ensureConfigDirectory() (string, error) {
 	if err != nil {
 		return "", err
 	}
+
 	if err := os.MkdirAll(directory, 0o700); err != nil {
 		return "", fmt.Errorf("create environment directory: %w", err)
 	}
+
 	if err := os.Chmod(directory, 0o700); err != nil {
 		return "", fmt.Errorf("secure environment directory: %w", err)
 	}
+
 	return directory, nil
 }
 
@@ -64,12 +74,15 @@ func secureExistingFile(path string) (bool, error) {
 	if errors.Is(err, fs.ErrNotExist) {
 		return false, nil
 	}
+
 	if err != nil {
 		return false, fmt.Errorf("inspect environment file %q: %w", path, err)
 	}
+
 	if err := os.Chmod(path, 0o600); err != nil {
 		return false, fmt.Errorf("secure environment file %q: %w", path, err)
 	}
+
 	return true, nil
 }
 
@@ -80,11 +93,14 @@ func configDirectory() (string, error) {
 		if err != nil {
 			return "", fmt.Errorf("environment directory: %w", err)
 		}
+
 		return expanded, nil
 	}
+
 	root, err := os.UserConfigDir()
 	if err != nil {
 		return "", fmt.Errorf("resolve environment directory: %w", err)
 	}
+
 	return filepath.Join(root, "dark-magic"), nil
 }

@@ -331,24 +331,48 @@ func TestD2LegacyContentRetiresShimIdentity(t *testing.T) {
 // becoming optional decorations over a second Go authority path.
 func TestClientDoesNotReinstallMigratedD2Policy(t *testing.T) {
 	root := repositoryRoot(t)
-	for _, name := range []string{"core.go", "runtime.go", "components.go"} {
-		path := filepath.Join(root, "internal", "app", "clientapp", name)
+	clientRoot := filepath.Join(root, "internal", "app", "clientapp")
+	forbidden := []string{
+		"RegisterPlayerBasicAttack",
+		"RegisterAI",
+		"RegisterDeath",
+		"game/loot\"",
+		"gamemonster.Register,",
+		"gameplayer.Register,",
+		"gametransition.Register(",
+		"gamestate.Register(",
+		"gameplayer.RegisterEquipmentProfile(",
+	}
+
+	err := filepath.WalkDir(clientRoot, func(path string, entry os.DirEntry, walkErr error) error {
+		if walkErr != nil || entry.IsDir() {
+			return walkErr
+		}
+
+		if filepath.Ext(path) != ".go" || strings.HasSuffix(path, "_test.go") {
+			return nil
+		}
 		data, err := os.ReadFile(path)
 		if err != nil {
-			t.Fatal(err)
+			return err
 		}
 		text := string(data)
-		for _, forbidden := range []string{
-			"RegisterPlayerBasicAttack", "RegisterAI", "RegisterDeath",
-			"game/loot\"", "gamemonster.Register,", "gameplayer.Register,",
-			"gametransition.Register(",
-			"gamestate.Register(",
-			"gameplayer.RegisterEquipmentProfile(",
-		} {
-			if strings.Contains(text, forbidden) {
-				t.Errorf("%s reinstalls migrated d2legacy policy through %q", name, forbidden)
+
+		relative, err := filepath.Rel(root, path)
+		if err != nil {
+			return err
+		}
+
+		for _, marker := range forbidden {
+			if strings.Contains(text, marker) {
+				t.Errorf("%s reinstalls migrated d2legacy policy through %q", relative, marker)
 			}
 		}
+
+		return nil
+	})
+	if err != nil {
+		t.Fatal(err)
 	}
 }
 

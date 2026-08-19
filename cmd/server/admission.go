@@ -29,14 +29,17 @@ func prepareAdmissions(
 	if err != nil {
 		return admissionState{}, err
 	}
+
 	remoteProfile, err := prepareRemoteProfile(profilePath, config)
 	if err != nil {
 		return admissionState{}, err
 	}
+
 	tickets, memberships, err := prepareWorkerAdmissions(restoredPlayerIDs, config)
 	if err != nil {
 		return admissionState{}, err
 	}
+
 	return admissionState{
 		localProfile:      localProfile,
 		remoteProfile:     remoteProfile,
@@ -54,13 +57,16 @@ func prepareLocalProfile(
 	if err != nil {
 		return serverapp.ProfileAdmission{}, "", fmt.Errorf("expand player profile path: %w", err)
 	}
+
 	if path == "" {
 		return serverapp.ProfileAdmission{}, "", nil
 	}
+
 	destination, err := profileDestination(config)
 	if err != nil {
 		return serverapp.ProfileAdmission{}, "", err
 	}
+
 	admission := serverapp.ProfileAdmission{
 		Path:        path,
 		PlayerID:    config.profilePlayer,
@@ -69,6 +75,7 @@ func prepareLocalProfile(
 	if err := serverapp.AdmitSelectedProfile(host, admission); err != nil {
 		return serverapp.ProfileAdmission{}, "", fmt.Errorf("admit selected player profile: %w", err)
 	}
+
 	return admission, path, nil
 }
 
@@ -80,17 +87,21 @@ func prepareRemoteProfile(
 	if config.remoteProfileKey == "" {
 		return nil, nil
 	}
+
 	if localProfilePath != "" {
 		return nil, fmt.Errorf("local and remote profile admission are mutually exclusive")
 	}
+
 	credential, err := serverapp.ReadAdmissionKey(config.remoteProfileKey)
 	if err != nil {
 		return nil, fmt.Errorf("read remote profile key: %w", err)
 	}
+
 	destination, err := profileDestination(config)
 	if err != nil {
 		return nil, err
 	}
+
 	return &serverapp.RemoteProfileConfig{
 		Credential:  string(credential),
 		PrincipalID: "self-host:remote-user",
@@ -113,6 +124,7 @@ func profileDestination(config serverConfig) (playeradapter.Destination, error) 
 	if err != nil {
 		return playeradapter.Destination{}, fmt.Errorf("validate player-profile destination: %w", err)
 	}
+
 	return destination, nil
 }
 
@@ -124,17 +136,21 @@ func prepareWorkerAdmissions(
 	if !config.workerConfigured() {
 		return nil, nil, nil
 	}
+
 	secret, err := serverapp.ReadAdmissionKey(config.admissionKey)
 	if err != nil {
 		return nil, nil, fmt.Errorf("read Realm worker admission key: %w", err)
 	}
+
 	tickets, err := gameserver.NewTicketAuthority(secret, config.sessionID)
 	if err != nil {
 		return nil, nil, fmt.Errorf("create Realm worker ticket authority: %w", err)
 	}
+
 	memberships := realm.NewWorkerMemberships()
 	for _, playerID := range restoredPlayerIDs {
 		memberships.Admit(playerID, time.Time{})
 	}
+
 	return tickets, memberships, nil
 }

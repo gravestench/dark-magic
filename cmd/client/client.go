@@ -28,12 +28,14 @@ func run(
 	if err != nil {
 		return fmt.Errorf("identify external game assets: %w", err)
 	}
+
 	slog.Debug("identified external game asset set", "asset_set_id", assetSetID)
 
 	playerProfilePath, err := resolvePlayerProfilePath()
 	if err != nil {
 		return err
 	}
+
 	options := clientapp.Options{
 		Content:               contentFS,
 		Mods:                  &mods.Resolved,
@@ -63,6 +65,7 @@ func run(
 	if profile != nil {
 		options.Profile = profile
 	}
+
 	return clientapp.Run(options)
 }
 
@@ -71,10 +74,12 @@ func resolvePlayerProfilePath() (string, error) {
 	if configured := strings.TrimSpace(os.Getenv("DARK_MAGIC_PLAYER_PROFILE")); configured != "" {
 		return configured, nil
 	}
+
 	configurationDirectory, err := os.UserConfigDir()
 	if err != nil {
 		return "", fmt.Errorf("resolve player profile directory: %w", err)
 	}
+
 	return filepath.Join(configurationDirectory, "dark-magic", "player-profile.json"), nil
 }
 

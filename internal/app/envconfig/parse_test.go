@@ -19,6 +19,7 @@ func TestParseReadableDotEnvSyntax(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+
 	want := map[string]string{
 		"ONE":   "plain",
 		"TWO":   "two words",

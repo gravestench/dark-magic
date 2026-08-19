@@ -34,18 +34,22 @@ func startRealmServers(
 	if err := validateOperatorConfig(config); err != nil {
 		return realmServers{}, err
 	}
+
 	handler, err := buildPublicHandler(control, assets)
 	if err != nil {
 		return realmServers{}, err
 	}
+
 	serverTLS, fingerprint, err := loadServerTLS(directory)
 	if err != nil {
 		return realmServers{}, err
 	}
+
 	servers, err := startPublicServer(handler, serverTLS, fingerprint, control, config.listenAddress)
 	if err != nil {
 		return realmServers{}, err
 	}
+
 	servers.operator, servers.operatorErrors, err = startOperatorServer(
 		control,
 		serverTLS,
@@ -56,6 +60,7 @@ func startRealmServers(
 		_ = servers.public.Close()
 		return realmServers{}, err
 	}
+
 	return servers, nil
 }
 
@@ -68,10 +73,12 @@ func buildPublicHandler(
 	if err != nil {
 		return nil, fmt.Errorf("build Realm API: %w", err)
 	}
+
 	handler, err := realmportal.NewHandler(control, apiHandler, assets)
 	if err != nil {
 		return nil, fmt.Errorf("build Realm portal: %w", err)
 	}
+
 	return handler, nil
 }
 
@@ -81,10 +88,12 @@ func loadServerTLS(directory string) (*tls.Config, string, error) {
 	if err != nil {
 		return nil, "", fmt.Errorf("load Realm network identity: %w", err)
 	}
+
 	serverTLS, _, fingerprint, err := trust.HostTLS()
 	if err != nil {
 		return nil, "", fmt.Errorf("load Realm TLS identity: %w", err)
 	}
+
 	return serverTLS, fingerprint, nil
 }
 
@@ -100,6 +109,7 @@ func startPublicServer(
 	if err != nil {
 		return realmServers{}, fmt.Errorf("listen for Realm clients: %w", err)
 	}
+
 	server := &http.Server{
 		Handler:           handler,
 		ReadHeaderTimeout: 5 * time.Second,
@@ -112,6 +122,7 @@ func startPublicServer(
 		"tls_fingerprint", fingerprint,
 		"version", control.Version(),
 	)
+
 	return realmServers{public: server, publicErrors: errors}, nil
 }
 
@@ -125,21 +136,26 @@ func startOperatorServer(
 	if config.operatorListen == "" {
 		return nil, nil, nil
 	}
+
 	if err := validateLoopbackAddress(config.operatorListen); err != nil {
 		return nil, nil, err
 	}
+
 	token, err := realm.LoadOrCreateOperatorToken(config.operatorTokenFile)
 	if err != nil {
 		return nil, nil, fmt.Errorf("load Realm operator credential: %w", err)
 	}
+
 	handler, err := realm.NewOperatorHTTPHandler(control, token)
 	if err != nil {
 		return nil, nil, fmt.Errorf("build Realm operator API: %w", err)
 	}
+
 	listener, err := net.Listen("tcp", config.operatorListen)
 	if err != nil {
 		return nil, nil, fmt.Errorf("listen for Realm operators: %w", err)
 	}
+
 	server := &http.Server{
 		Handler:           handler,
 		ReadHeaderTimeout: 5 * time.Second,
@@ -151,6 +167,7 @@ func startOperatorServer(
 		"address", listener.Addr(),
 		"tls_fingerprint", fingerprint,
 	)
+
 	return server, errors, nil
 }
 
@@ -160,6 +177,7 @@ func serveTLS(server *http.Server, listener net.Listener, config *tls.Config) <-
 	go func() {
 		errors <- server.Serve(tls.NewListener(listener, config))
 	}()
+
 	return errors
 }
 
@@ -168,15 +186,18 @@ func validateOperatorConfig(config realmConfig) error {
 	if (config.operatorTokenFile == "") != (config.operatorListen == "") {
 		return errors.New("operator-token-file and operator-listen must be set together")
 	}
+
 	return nil
 }
 
 // validateLoopbackAddress prevents the private operator API from binding publicly.
 func validateLoopbackAddress(address string) error {
 	host, port, err := net.SplitHostPort(address)
+
 	ip := net.ParseIP(host)
 	if err != nil || port == "" || ip == nil || !ip.IsLoopback() {
 		return errors.New("operator-listen must use an explicit loopback IP and port")
 	}
+
 	return nil
 }

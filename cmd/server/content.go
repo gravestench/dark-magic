@@ -30,11 +30,13 @@ func prepareServerContent(ctx context.Context, config serverConfig) (*serverCont
 	if err != nil {
 		return nil, fmt.Errorf("prepare mod profile: %w", err)
 	}
+
 	prepared, err := buildServerContent(ctx, mods, config.gameDifficulty)
 	if err != nil {
 		_ = mods.Close()
 		return nil, err
 	}
+
 	return prepared, nil
 }
 
@@ -48,20 +50,26 @@ func buildServerContent(
 	if err != nil {
 		return nil, fmt.Errorf("mount authoritative content: %w", err)
 	}
+
 	assetSetID, err := content.AssetSetIdentityFromEnvironment()
 	if err != nil {
 		return nil, fmt.Errorf("identify external game assets: %w", err)
 	}
+
 	slog.Info("validated external game asset set", "asset_set_id", assetSetID)
+
 	d2legacySource, err := fs.Sub(contentFS, "mods/d2legacy")
 	if err != nil {
 		return nil, fmt.Errorf("resolve d2legacy package: %w", err)
 	}
+
 	records := recordstore.New(contentFS)
+
 	entryWorld, err := prepareEntryWorld(ctx, contentFS, d2legacySource, records, difficulty)
 	if err != nil {
 		return nil, err
 	}
+
 	return &serverContent{
 		mods:           mods,
 		contentFS:      contentFS,
@@ -84,10 +92,12 @@ func prepareEntryWorld(
 	if err != nil {
 		return nil, fmt.Errorf("load recovered d2legacy records: %w", err)
 	}
+
 	resolver, err := worldobjects.New(recoveredData, records)
 	if err != nil {
 		return nil, fmt.Errorf("build d2legacy world-object resolver: %w", err)
 	}
+
 	world, err := entryworld.Build(
 		ctx,
 		contentFS,
@@ -100,6 +110,7 @@ func prepareEntryWorld(
 	if err != nil {
 		return nil, fmt.Errorf("prepare authoritative d2legacy entry world: %w", err)
 	}
+
 	return world, nil
 }
 

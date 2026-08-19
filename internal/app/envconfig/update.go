@@ -14,18 +14,23 @@ func Update(role string, updates map[string]string) (string, error) {
 	if err != nil {
 		return "", err
 	}
+
 	allowed, err := templateValues(role)
 	if err != nil {
 		return "", err
 	}
+
 	if err := validateUpdates(role, updates, allowed); err != nil {
 		return "", err
 	}
+
 	data, err := os.ReadFile(path)
 	if err != nil {
 		return "", err
 	}
+
 	updated := updateDocument(data, updates)
+
 	return path, writePrivate(path, updated)
 }
 
@@ -35,6 +40,7 @@ func templateValues(role string) (map[string]string, error) {
 	if err != nil {
 		return nil, err
 	}
+
 	return Parse(strings.NewReader(string(data)))
 }
 
@@ -45,35 +51,43 @@ func validateUpdates(role string, updates, allowed map[string]string) error {
 			return fmt.Errorf("environment variable %q is not part of the %s template", key, role)
 		}
 	}
+
 	return nil
 }
 
 // updateDocument applies replacements and appends missing keys deterministically.
 func updateDocument(data []byte, updates map[string]string) []byte {
 	remaining := copyValues(updates)
+
 	lines := strings.Split(strings.TrimSuffix(string(data), "\n"), "\n")
 	for index, line := range lines {
 		key := assignmentKey(line)
+
 		value, found := remaining[key]
 		if !found {
 			continue
 		}
+
 		lines[index] = key + "=" + strconv.Quote(value)
 		delete(remaining, key)
 	}
+
 	for _, key := range sortedKeys(remaining) {
 		lines = append(lines, key+"="+strconv.Quote(remaining[key]))
 	}
+
 	return []byte(strings.Join(lines, "\n") + "\n")
 }
 
 // assignmentKey extracts a normalized key from one environment-file line.
 func assignmentKey(line string) string {
 	trimmed := strings.TrimSpace(line)
+
 	separator := strings.IndexByte(trimmed, '=')
 	if separator <= 0 {
 		return ""
 	}
+
 	return strings.TrimSpace(trimmed[:separator])
 }
 
@@ -83,6 +97,7 @@ func copyValues(values map[string]string) map[string]string {
 	for key, value := range values {
 		result[key] = value
 	}
+
 	return result
 }
 
@@ -92,6 +107,8 @@ func sortedKeys(values map[string]string) []string {
 	for key := range values {
 		keys = append(keys, key)
 	}
+
 	sort.Strings(keys)
+
 	return keys
 }

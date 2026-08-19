@@ -18,6 +18,7 @@ func buildSession(
 	if err != nil {
 		return nil, err
 	}
+
 	session, err := shell.NewSession(target+"-local", target, policy, evaluator)
 	if err != nil {
 		return nil, err
@@ -26,5 +27,6 @@ func buildSession(
 	// The terminal reads these attachments while rendering its auxiliary views.
 	session.AttachLogs(logs)
 	session.AttachSettings(settings)
+
 	return session, nil
 }

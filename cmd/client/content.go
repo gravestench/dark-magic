@@ -14,14 +14,17 @@ func prepareContent(selection string) (*distribution.ModSet, *content.FS, error)
 	if err != nil {
 		return nil, nil, fmt.Errorf("prepare mod profile: %w", err)
 	}
+
 	contentFS, err := content.FromEnvironment(mods.Layers...)
 	if err == nil {
 		err = content.ValidateClientAssets(contentFS)
 	}
+
 	if err != nil {
 		_ = mods.Close()
 		return nil, nil, err
 	}
+
 	return mods, contentFS, nil
 }
 

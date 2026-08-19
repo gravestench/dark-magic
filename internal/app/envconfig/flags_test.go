@@ -16,6 +16,7 @@ func TestExplicitPathPreservesPathWhitespace(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+
 	if path != " path with spaces " {
 		t.Fatalf("path = %q", path)
 	}

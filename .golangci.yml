@@ -9,6 +9,7 @@ linters:
   default: standard
   enable:
     - lll
+    - wsl_v5
   settings:
     lll:
       line-length: 120

@@ -26,12 +26,15 @@ func buildRuntime(
 	if err != nil {
 		return nil, nil, policy, err
 	}
+
 	if err := registerShellModule(runtime, settings, &policy); err != nil {
 		return nil, nil, policy, err
 	}
+
 	if err := runtime.Start(ctx); err != nil {
 		return nil, nil, policy, err
 	}
+
 	return runtime, settings, policy, nil
 }
 
@@ -40,7 +43,9 @@ func registerModule(runtime *modruntime.Runtime, module modruntime.Module, polic
 	if err := runtime.RegisterModule(module); err != nil {
 		return err
 	}
+
 	policy.Capabilities = append(policy.Capabilities, module.Name)
+
 	return nil
 }
 
@@ -49,7 +54,9 @@ func registerShellModule(runtime *modruntime.Runtime, settings *shell.Settings, 
 	if err := runtime.RegisterModule(modruntime.ShellModule(settings)); err != nil {
 		return err
 	}
+
 	policy.Capabilities = append(policy.Capabilities, "engine.shell/v1")
+
 	return nil
 }
 
@@ -59,5 +66,6 @@ func loadSettings() (*shell.Settings, error) {
 	if err != nil {
 		return nil, err
 	}
+
 	return shell.NewSettings(path)
 }

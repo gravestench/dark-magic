@@ -19,10 +19,12 @@ func prepareWorkerAllocator(
 		slog.Warn("Realm game creation is disabled; configure --worker-executable")
 		return nil, nil, nil
 	}
+
 	assetSetID, err := content.AssetSetIdentityFromEnvironment()
 	if err != nil {
 		return nil, nil, fmt.Errorf("identify worker game assets: %w", err)
 	}
+
 	slog.Info("validated worker game asset set", "asset_set_id", assetSetID)
 
 	allocator, err := realm.NewProcessAllocator(realm.ProcessAllocatorConfig{
@@ -38,5 +40,6 @@ func prepareWorkerAllocator(
 	if err != nil {
 		return nil, nil, fmt.Errorf("configure Realm worker allocator: %w", err)
 	}
+
 	return allocator, allocator, nil
 }
