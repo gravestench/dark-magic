@@ -33,7 +33,7 @@ type Host struct {
 	started     []string
 }
 
-// New constructs an empty Host.
+// New constructs an empty host whose registration order breaks ties between otherwise independent components.
 func New() *Host {
 	return &Host{definitions: make(map[string]Definition)}
 }
@@ -47,21 +47,24 @@ func (h *Host) Register(def Definition) error {
 	if len(h.started) != 0 {
 		return errors.New("host: cannot register while components are running")
 	}
+
 	if def.ID == "" {
 		return errors.New("host: component ID is required")
 	}
+
 	if def.Component == nil {
 		return fmt.Errorf("host: component %q is nil", def.ID)
 	}
+
 	if _, exists := h.definitions[def.ID]; exists {
 		return fmt.Errorf("host: component %q is already registered", def.ID)
 	}
 
-	deps := make([]string, len(def.DependsOn))
-	copy(deps, def.DependsOn)
-	def.DependsOn = deps
+	// Callers often reuse option slices; lifecycle ordering must not change if they mutate one later.
+	def.DependsOn = append([]string(nil), def.DependsOn...)
 	h.definitions[def.ID] = def
 	h.order = append(h.order, def.ID)
+
 	return nil
 }
 
@@ -76,7 +79,7 @@ func (h *Host) Start(ctx context.Context) error {
 		return nil
 	}
 
-	order, err := h.startOrder()
+	order, err := h.dependencyStartOrder()
 	if err != nil {
 		return err
 	}
@@ -85,9 +88,11 @@ func (h *Host) Start(ctx context.Context) error {
 		if err := ctx.Err(); err != nil {
 			return h.rollback(ctx, fmt.Errorf("host: start %q: %w", id, err))
 		}
+
 		if err := h.definitions[id].Component.Start(ctx); err != nil {
 			return h.rollback(ctx, fmt.Errorf("host: start %q: %w", id, err))
 		}
+
 		h.started = append(h.started, id)
 	}
 
@@ -103,6 +108,7 @@ func (h *Host) Stop(ctx context.Context) error {
 
 	err := h.stopStarted(ctx)
 	h.started = nil
+
 	return err
 }
 
@@ -113,85 +119,32 @@ func (h *Host) Started() []string {
 
 	result := make([]string, len(h.started))
 	copy(result, h.started)
+
 	return result
 }
 
+// rollback attempts reverse cleanup and joins cleanup failure with the original startup cause.
 func (h *Host) rollback(ctx context.Context, cause error) error {
 	stopErr := h.stopStarted(ctx)
 	h.started = nil
+
 	if stopErr == nil {
 		return cause
 	}
+
 	return errors.Join(cause, fmt.Errorf("host: rollback: %w", stopErr))
 }
 
+// stopStarted attempts every reverse-order stop so one component cannot strand earlier dependencies.
 func (h *Host) stopStarted(ctx context.Context) error {
 	var errs []error
-	for i := len(h.started) - 1; i >= 0; i-- {
-		id := h.started[i]
+
+	for index := len(h.started) - 1; index >= 0; index-- {
+		id := h.started[index]
 		if err := h.definitions[id].Component.Stop(ctx); err != nil {
 			errs = append(errs, fmt.Errorf("host: stop %q: %w", id, err))
 		}
 	}
+
 	return errors.Join(errs...)
-}
-
-func (h *Host) startOrder() ([]string, error) {
-	const (
-		unvisited = iota
-		visiting
-		visited
-	)
-
-	states := make(map[string]int, len(h.definitions))
-	result := make([]string, 0, len(h.definitions))
-	stack := make([]string, 0, len(h.definitions))
-
-	var visit func(string) error
-	visit = func(id string) error {
-		switch states[id] {
-		case visited:
-			return nil
-		case visiting:
-			return fmt.Errorf("host: dependency cycle: %s -> %s", joinPath(stack), id)
-		}
-
-		def, exists := h.definitions[id]
-		if !exists {
-			return fmt.Errorf("host: component %q is not registered", id)
-		}
-
-		states[id] = visiting
-		stack = append(stack, id)
-		for _, dependency := range def.DependsOn {
-			if _, exists := h.definitions[dependency]; !exists {
-				return fmt.Errorf("host: component %q depends on unregistered component %q", id, dependency)
-			}
-			if err := visit(dependency); err != nil {
-				return err
-			}
-		}
-		stack = stack[:len(stack)-1]
-		states[id] = visited
-		result = append(result, id)
-		return nil
-	}
-
-	for _, id := range h.order {
-		if err := visit(id); err != nil {
-			return nil, err
-		}
-	}
-	return result, nil
-}
-
-func joinPath(ids []string) string {
-	if len(ids) == 0 {
-		return ""
-	}
-	result := ids[0]
-	for _, id := range ids[1:] {
-		result += " -> " + id
-	}
-	return result
 }

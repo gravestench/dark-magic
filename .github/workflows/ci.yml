@@ -49,6 +49,7 @@ jobs:
             ./internal/app/filewatch
             ./internal/app/gameserver/...
             ./internal/app/headlessshell
+            ./internal/app/host
 
   # Tests retain their own checkout and toolchain so neither job depends on
   # mutable artifacts produced by the other.

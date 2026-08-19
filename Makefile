@@ -54,7 +54,8 @@ lint:
 		./internal/app/envconfig \
 		./internal/app/filewatch \
 		./internal/app/gameserver/... \
-		./internal/app/headlessshell
+		./internal/app/headlessshell \
+		./internal/app/host
 
 # Vet remains a separate repository-wide semantic check; lint's focused style
 # rollout does not replace compiler-assisted diagnostics in untouched packages.
