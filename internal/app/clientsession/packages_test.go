@@ -117,18 +117,21 @@ func newExtensionRecipeFixture(
 	t.Helper()
 
 	baseManifest := packageManifest("d2legacy", "game")
+
 	base, err := modcache.DescribeBuiltin(packageSource(baseManifest, map[string]string{"boot.lua": "return {}"}))
 	if err != nil {
 		t.Fatal(err)
 	}
 
 	hostRoot := filepath.Join(t.TempDir(), "host")
+
 	hostStore, err := modcache.New(hostRoot)
 	if err != nil {
 		t.Fatal(err)
 	}
 
 	extensionManifest := packageManifest(extensionID, "extension")
+
 	extensionManifest.Dependencies = []modcache.Dependency{{ID: base.Manifest.ID, Version: base.Manifest.Version}}
 	if _, err := hostStore.ReconcileBundled([]modcache.Bundle{{
 		Source: packageSource(extensionManifest, files),
@@ -142,6 +145,7 @@ func newExtensionRecipeFixture(
 	if err != nil {
 		t.Fatal(err)
 	}
+
 	descriptor := resolved.Extensions.Packages[0].Descriptor
 	baseRuntime := runtimePackage(base)
 	extensionRuntime := runtimePackage(resolved.Extensions.Packages[0])
@@ -239,6 +243,7 @@ func assertInterruptedPackageQuarantined(
 	if present, err := clientStore.Has(descriptor); err != nil || present {
 		t.Fatalf("partial package present=%t error=%v", present, err)
 	}
+
 	quarantine, err := os.ReadDir(filepath.Join(clientRoot, "quarantine"))
 	if err != nil || len(quarantine) != 0 {
 		t.Fatalf("quarantine after interruption=%#v error=%v", quarantine, err)
@@ -265,13 +270,16 @@ func (transport *fixtureExtensionTransport) PackageChunk(
 	if transport.failAfter > 0 && request.Offset >= transport.failAfter {
 		return sessionquic.PackageChunk{}, errors.New("fixture transport interrupted")
 	}
+
 	if request.Offset < 0 || request.Offset >= int64(len(transport.archive)) {
 		return sessionquic.PackageChunk{}, errors.New("fixture transport offset out of range")
 	}
+
 	limit := request.Limit
 	if limit > 16 {
 		limit = 16
 	}
+
 	end := request.Offset + int64(limit)
 	if end > int64(len(transport.archive)) {
 		end = int64(len(transport.archive))
@@ -301,9 +309,11 @@ func packageManifest(id, kind string) modcache.Manifest {
 // packageSource serializes a manifest and its files into the bundle layout consumed by modcache.
 func packageSource(manifest modcache.Manifest, files map[string]string) fs.FS {
 	encoded, _ := json.Marshal(manifest)
+
 	result := fstest.MapFS{"mod.json": &fstest.MapFile{Data: encoded}}
 	for name, value := range files {
 		result[name] = &fstest.MapFile{Data: []byte(value)}
 	}
+
 	return result
 }

@@ -41,7 +41,14 @@ jobs:
           # Pinning prevents a hosted image update from silently changing the
           # repository's accepted style or formatter behavior.
           version: v2.12.2
-          args: ./cmd/... ./internal/app/envconfig ./internal/app/headlessshell
+          args: >-
+            ./cmd/...
+            ./internal/app/clientapp
+            ./internal/app/clientsession
+            ./internal/app/envconfig
+            ./internal/app/filewatch
+            ./internal/app/gameserver
+            ./internal/app/headlessshell
 
   # Tests retain their own checkout and toolchain so neither job depends on
   # mutable artifacts produced by the other.

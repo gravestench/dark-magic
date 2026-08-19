@@ -13,14 +13,18 @@ import (
 // update the game, draw the game, then draw the developer console on top.
 func (app *application) attachFramePipeline() error {
 	app.lastFrame = time.Now()
+
 	app.stopScene = app.renderer.SubscribeFrame(app.updateFrame)
 	if err := app.renderer.AttachAudio(app.mixer); err != nil {
 		return wrap("attach audio mixer", err)
 	}
+
 	if err := app.renderer.AttachComposer(app.composer); err != nil {
 		return wrap("attach render composer", err)
 	}
+
 	app.stopOverlay = app.renderer.SubscribeOverlay(app.drawConsole)
+
 	return nil
 }
 
@@ -28,12 +32,14 @@ func (app *application) attachFramePipeline() error {
 // state belongs to the current authority tick.
 func (app *application) updateFrame() {
 	started := time.Now()
+
 	var simulationWork, luaWork time.Duration
 
 	scene, ok := app.navigator.Focused()
 	if !ok {
 		scene = "none"
 	}
+
 	frameContext := app.scenes.FrameContext(context.Background())
 	pprof.SetGoroutineLabels(frameContext)
 	app.publishInput(frameContext)
@@ -42,14 +48,17 @@ func (app *application) updateFrame() {
 	// scheduler/render pacing while the second identifies work owned by this callback.
 	now := time.Now()
 	elapsed := now.Sub(app.lastFrame)
+
 	app.lastFrame = now
 	defer func() { app.frameMetrics.Record(scene, elapsed, time.Since(started), simulationWork, luaWork) }()
 
 	simulationStarted := time.Now()
+
 	if err := app.advanceGame(elapsed); err != nil {
 		app.reportSceneError(err)
 		return
 	}
+
 	simulationWork = time.Since(simulationStarted)
 
 	luaStarted := time.Now()
@@ -124,6 +133,7 @@ func (app *application) focusOwner() inputstate.FocusOwner {
 	if focused, ok := app.navigator.Focused(); ok {
 		return inputstate.FocusOwner{Domain: inputstate.FocusScene, ID: focused}
 	}
+
 	return inputstate.FocusOwner{Domain: inputstate.FocusNone}
 }
 
@@ -134,6 +144,7 @@ func (app *application) advanceGame(elapsed time.Duration) error {
 		if err := app.network.Advance(app.ctx, elapsed); err != nil {
 			return fmt.Errorf("updating remote game session: %w", err)
 		}
+
 		app.syncActiveWorldFromPlayer()
 
 		return nil
@@ -146,6 +157,7 @@ func (app *application) advanceGame(elapsed time.Duration) error {
 	if _, err := app.offlineSession.AdvanceWithSource(elapsed, app.commandSource); err != nil {
 		return fmt.Errorf("updating offline game session: %w", err)
 	}
+
 	app.syncActiveWorldFromPlayer()
 
 	return nil

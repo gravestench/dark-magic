@@ -42,6 +42,7 @@ func TestComponentDiscoveryKeepsEachResolvedPackageRoot(t *testing.T) {
 		},
 	}
 	app := &application{options: Options{Content: contentFS, Mods: resolved}, scripts: runtime}
+
 	definitions, err := app.discoverScriptDefinitions()
 	if err != nil {
 		t.Fatal(err)

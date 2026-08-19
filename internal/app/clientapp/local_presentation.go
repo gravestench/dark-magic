@@ -95,6 +95,7 @@ func mergeInputHistory(previous, current []gameserver.CommandIntent) []gameserve
 	for _, intent := range current {
 		bySequence[intent.Sequence] = intent
 	}
+
 	result := make([]gameserver.CommandIntent, 0, len(bySequence))
 	for _, intent := range bySequence {
 		result = append(result, intent)

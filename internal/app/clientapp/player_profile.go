@@ -17,6 +17,7 @@ func loadPlayerProfile(path string, fixtures []d2save.Character) (*d2save.Store,
 	if len(fixtures) > 0 {
 		return d2save.New(fixtures...), "", nil
 	}
+
 	if path == "" {
 		return d2save.New(), "", nil
 	}
@@ -25,6 +26,7 @@ func loadPlayerProfile(path string, fixtures []d2save.Character) (*d2save.Store,
 	if errors.Is(err, os.ErrNotExist) {
 		return d2save.New(), path, nil
 	}
+
 	if err != nil {
 		return nil, "", fmt.Errorf("load player profile: %w", err)
 	}
@@ -43,6 +45,7 @@ func persistOfflineCharacter(saves *d2save.Store, session *gamesession.Session, 
 	if saves == nil || session == nil {
 		return nil
 	}
+
 	baseline, selected := saves.Selected()
 	if !selected {
 		return nil
@@ -57,6 +60,7 @@ func persistOfflineCharacter(saves *d2save.Store, session *gamesession.Session, 
 	if err != nil {
 		return fmt.Errorf("persist single-player character: %w", err)
 	}
+
 	if err := saves.UpdateSelected(updated); err != nil {
 		return fmt.Errorf("persist single-player character: %w", err)
 	}

@@ -15,19 +15,24 @@ import (
 // creation and durable selection recovery.
 func TestLoadPlayerProfileStartsEmptyAndRestoresPersistedSelection(t *testing.T) {
 	path := filepath.Join(t.TempDir(), "profile.json")
+
 	store, writablePath, err := loadPlayerProfile(path, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
+
 	if writablePath != path || len(store.Characters()) != 0 {
 		t.Fatalf("new profile store/path = %#v %q", store.Characters(), writablePath)
 	}
+
 	if err := store.Create(d2save.Character{ID: "hero", Name: "Hero"}); err != nil {
 		t.Fatal(err)
 	}
+
 	if err := store.Select("hero"); err != nil {
 		t.Fatal(err)
 	}
+
 	if err := d2save.WriteProfileFile(path, store.Profile()); err != nil {
 		t.Fatal(err)
 	}
@@ -36,6 +41,7 @@ func TestLoadPlayerProfileStartsEmptyAndRestoresPersistedSelection(t *testing.T)
 	if err != nil {
 		t.Fatal(err)
 	}
+
 	selected, ok := restored.Selected()
 	if !ok || selected.Name != "Hero" {
 		t.Fatalf("restored selection = %#v", selected)
@@ -45,10 +51,12 @@ func TestLoadPlayerProfileStartsEmptyAndRestoresPersistedSelection(t *testing.T)
 // TestDevelopmentFixturesCannotOverwritePlayerProfile ensures disposable lab characters disable persistence ownership.
 func TestDevelopmentFixturesCannotOverwritePlayerProfile(t *testing.T) {
 	path := filepath.Join(t.TempDir(), "profile.json")
+
 	store, writablePath, err := loadPlayerProfile(path, []d2save.Character{{ID: "fixture"}})
 	if err != nil {
 		t.Fatal(err)
 	}
+
 	if writablePath != "" || store.Characters()[0].ID != "fixture" {
 		t.Fatalf("fixture store/path = %#v %q", store.Characters(), writablePath)
 	}
@@ -62,6 +70,7 @@ func TestSelfHostedCanonicalCharacterRoundTripsThroughPlayerProfile(t *testing.T
 		Appearance: &d2save.Appearance{COF: "hero.cof", Components: map[string]string{"HD": "head.dcc"}},
 		Stats:      &d2save.Stats{Strength: 25, Health: 10, MaxHealth: 20},
 	}
+
 	store := d2save.New(baseline)
 	if err := store.Select(baseline.ID); err != nil {
 		t.Fatal(err)
@@ -77,6 +86,7 @@ func TestSelfHostedCanonicalCharacterRoundTripsThroughPlayerProfile(t *testing.T
 	if err := updateSelectedCharacter(store, hud); err != nil {
 		t.Fatal(err)
 	}
+
 	if err := d2save.WriteProfileFile(path, store.Profile()); err != nil {
 		t.Fatal(err)
 	}
@@ -85,6 +95,7 @@ func TestSelfHostedCanonicalCharacterRoundTripsThroughPlayerProfile(t *testing.T
 	if err != nil {
 		t.Fatal(err)
 	}
+
 	character, selected := restored.Selected()
 	if !selected || character.Name != "After" || character.Level != 4 ||
 		character.Stats.Health != 18 || character.Stats.Defense != 7 {
@@ -103,6 +114,7 @@ func TestSelfHostedProjectionCannotReplaceSelectedIdentity(t *testing.T) {
 	if err := store.Select("hero"); err != nil {
 		t.Fatal(err)
 	}
+
 	err := updateSelectedCharacter(store, playeradapter.HUD{
 		Version: playeradapter.HUDVersion,
 		Player:  playeradapter.HUDIdentity{CharacterID: "attacker"},
@@ -110,6 +122,7 @@ func TestSelfHostedProjectionCannotReplaceSelectedIdentity(t *testing.T) {
 	if err == nil {
 		t.Fatal("network projection replaced selected profile identity")
 	}
+
 	selected, _ := store.Selected()
 	if selected.ID != "hero" {
 		t.Fatalf("selected identity changed to %q", selected.ID)
@@ -119,13 +132,16 @@ func TestSelfHostedProjectionCannotReplaceSelectedIdentity(t *testing.T) {
 // TestSinglePlayerCanonicalCharacterUpdatesSelectedProfile persists authority facts without dropping baseline stats.
 func TestSinglePlayerCanonicalCharacterUpdatesSelectedProfile(t *testing.T) {
 	engine := gameecs.New()
+
 	session, err := gamesession.New(engine, gamesession.Config{})
 	if err != nil {
 		t.Fatal(err)
 	}
+
 	t.Cleanup(func() { _ = session.Close(); _ = engine.Close() })
 
 	installOfflineCharacterCheckpoint(t, engine)
+
 	store := d2save.New(d2save.Character{
 		ID: "hero", Name: "Before", Class: "Amazon", Level: 1,
 		Stats: &d2save.Stats{Strength: 20, Health: 10, MaxHealth: 10},
@@ -133,6 +149,7 @@ func TestSinglePlayerCanonicalCharacterUpdatesSelectedProfile(t *testing.T) {
 	if err := store.Select("hero"); err != nil {
 		t.Fatal(err)
 	}
+
 	if err := persistOfflineCharacter(store, session, "local-player"); err != nil {
 		t.Fatal(err)
 	}

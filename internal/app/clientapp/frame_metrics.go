@@ -44,12 +44,14 @@ func (m *frameMetrics) Record(scene string, interval, work, simulation, luaWork 
 	if scene == "" {
 		scene = "none"
 	}
+
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
 	if m.scenes == nil {
 		m.scenes = make(map[string]*sceneFrameSamples)
 	}
+
 	samples := m.scenes[scene]
 	if samples == nil {
 		samples = &sceneFrameSamples{}
@@ -60,6 +62,7 @@ func (m *frameMetrics) Record(scene string, interval, work, simulation, luaWork 
 	samples.work[samples.next] = work
 	samples.simulation[samples.next] = simulation
 	samples.lua[samples.next] = luaWork
+
 	samples.next = (samples.next + 1) % frameMetricWindow
 	if samples.count < frameMetricWindow {
 		samples.count++

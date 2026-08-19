@@ -136,6 +136,7 @@ func TestConnectedMissilesUsePresentationOnlyECSLifecycle(t *testing.T) {
 // removes living collision, and emits a cue without leaking reward or loot facts.
 func TestConnectedMonsterBecomesANonSelectableCorpseAndDeathCue(t *testing.T) {
 	engine := gameecs.New()
+
 	t.Cleanup(func() { _ = engine.Close() })
 
 	registerRemoteViewSchemas(t, engine)
@@ -192,6 +193,7 @@ func assertLivingRemoteMonster(t *testing.T, engine *gameecs.Engine, entity akar
 
 	appearances, _ := akara.GetDynamicStore(engine.World(), "d2legacy.monster.appearance")
 	appearance, _ := appearances.Get(entity)
+
 	mode, _ := appearance.Get("mode")
 	if mode != "A1" {
 		t.Fatalf("living monster presentation mode=%v, want A1", mode)
@@ -213,10 +215,12 @@ func assertRemoteMonsterCorpse(
 	}
 
 	selectables, _ := akara.GetDynamicStore(engine.World(), "d2legacy.world.selectable")
+
 	deadSelectable, found := selectables.Get(entity)
 	if !found {
 		t.Fatal("corpse lost the selectable needed by corpse-target skills")
 	}
+
 	deadKind, _ := deadSelectable.Get("kind")
 	if deadKind != "corpse" {
 		t.Fatalf("corpse selectable kind=%v, want corpse", deadKind)
@@ -230,6 +234,7 @@ func assertRemoteMonsterCorpse(
 	appearances, _ := akara.GetDynamicStore(engine.World(), "d2legacy.monster.appearance")
 	appearance, _ := appearances.Get(entity)
 	mode, _ := appearance.Get("mode")
+
 	sound, _ := appearance.Get("death_sound")
 	if mode != "DT" || sound != "fallen_death" {
 		t.Fatalf("corpse appearance mode=%v death_sound=%v", mode, sound)
@@ -378,6 +383,7 @@ func assertConnectedCastMirror(
 	t.Helper()
 
 	entity := casts.Entities()[0]
+
 	position := currentPosition(engine.World(), entity)
 	if position != current.Position {
 		t.Fatalf("semantic anchor = %+v, want %+v", position, current.Position)
@@ -385,6 +391,7 @@ func assertConnectedCastMirror(
 
 	anchors, _ := akara.GetDynamicStore(engine.World(), "d2legacy.presentation.overlay_anchor")
 	anchor, _ := anchors.Get(entity)
+
 	height, _ := anchor.Get("height")
 	if height != int64(3) {
 		t.Fatalf("semantic overlay height = %v, want 3", height)
@@ -392,6 +399,7 @@ func assertConnectedCastMirror(
 
 	cast, _ := casts.Get(entity)
 	skillID, _ := cast.Get("skill_id")
+
 	caster, _ := cast.Get("caster")
 	if skillID != int64(47) || caster != entity {
 		t.Fatalf("cast mirror skill=%v caster=%v entity=%v", skillID, caster, entity)

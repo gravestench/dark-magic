@@ -60,7 +60,7 @@ func PrepareExtensions(
 		return simulation.RuntimeRecipe{}, err
 	}
 
-	defer transport.Close()
+	defer func() { _ = transport.Close() }()
 
 	return AcquireExtensions(ctx, transport, store, localBase)
 }
@@ -199,7 +199,7 @@ func downloadExtension(
 	destination *io.PipeWriter,
 	pkg simulation.RuntimePackage,
 ) error {
-	defer destination.Close()
+	defer func() { _ = destination.Close() }()
 
 	retryDelay := 10 * time.Millisecond
 

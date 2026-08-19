@@ -8,6 +8,7 @@ func (app *application) startCapture() error {
 	if app.options.CaptureDirectory == "" {
 		return nil
 	}
+
 	if app.options.NewCapture == nil {
 		return wrap("start scene capture", errors.New("capture factory is not configured"))
 	}
@@ -30,6 +31,7 @@ func (app *application) startCapture() error {
 			app.composer.Diagnostics().StructuralRevision,
 			app.captureWorkPending(),
 		)
+
 		if app.capture.Complete() {
 			app.stop()
 		}

@@ -82,12 +82,14 @@ func assertConnectedPlayerClasses(t *testing.T, engine *gameecs.Engine) {
 
 	identities, _ := akara.GetDynamicStore(engine.World(), "d2legacy.player.identity")
 	appearances, _ := akara.GetDynamicStore(engine.World(), "d2legacy.player.appearance")
+
 	if identities.Len() != 2 {
 		t.Fatalf("connected player entities = %d, want 2", identities.Len())
 	}
 
 	classes := map[string]string{}
 	tokens := map[string]string{}
+
 	for _, entity := range identities.Entities() {
 		identity, _ := identities.Get(entity)
 		appearance, _ := appearances.Get(entity)
@@ -117,6 +119,7 @@ func assertConnectedOwnerPartyView(t *testing.T, engine *gameecs.Engine) {
 		view, _ := partyViews.Get(entity)
 		partyID, _ := view.Get("party_id")
 		peer, _ := view.Get("player_2")
+
 		relationship, _ := view.Get("relationship_2")
 		if partyID != "party:1" || peer != "player-1" || relationship != "party" {
 			t.Fatalf("installed party view party=%v peer=%v relationship=%v", partyID, peer, relationship)

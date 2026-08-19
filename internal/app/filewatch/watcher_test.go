@@ -14,12 +14,14 @@ import (
 // TestScanReportsCreateChangeAndRemoval proves baseline files stay silent while later edits and removals are ordered.
 func TestScanReportsCreateChangeAndRemoval(t *testing.T) {
 	root := t.TempDir()
+
 	name := filepath.Join(root, "boot.lua")
 	if err := os.WriteFile(name, []byte("one"), 0o600); err != nil {
 		t.Fatal(err)
 	}
 
 	var changed []string
+
 	watcher := New(root, time.Hour, func(_ context.Context, name string) error {
 		changed = append(changed, name)
 		return nil
@@ -33,6 +35,7 @@ func TestScanReportsCreateChangeAndRemoval(t *testing.T) {
 	if err := os.WriteFile(name, []byte("two-longer"), 0o600); err != nil {
 		t.Fatal(err)
 	}
+
 	if err := watcher.Scan(context.Background()); err != nil {
 		t.Fatal(err)
 	}
@@ -40,9 +43,11 @@ func TestScanReportsCreateChangeAndRemoval(t *testing.T) {
 	if err := os.Remove(name); err != nil {
 		t.Fatal(err)
 	}
+
 	if err := watcher.Scan(context.Background()); err != nil {
 		t.Fatal(err)
 	}
+
 	if err := watcher.Stop(context.Background()); err != nil {
 		t.Fatal(err)
 	}

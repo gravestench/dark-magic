@@ -87,6 +87,7 @@ func newLiveGameworldFixture(t *testing.T, ctx context.Context) liveGameworldFix
 	if err != nil {
 		t.Fatal(err)
 	}
+
 	t.Cleanup(func() { _ = host.Close(context.Background()) })
 
 	population, err := json.Marshal(map[string]any{
@@ -99,11 +100,14 @@ func newLiveGameworldFixture(t *testing.T, ctx context.Context) liveGameworldFix
 	if err != nil {
 		t.Fatal(err)
 	}
+
 	if err := host.Session.Submit(simulation.Command{Tick: 1, Player: "population", Authority: simulation.AuthoritySystem,
 		Sequence: 1, Kind: "system.population.bootstrap", Payload: population}); err != nil {
 		t.Fatal(err)
 	}
+
 	runContext, stopRun := context.WithCancel(ctx)
+
 	runErrors := make(chan error, 1)
 	go func() { runErrors <- host.Session.Run(runContext) }()
 
@@ -111,21 +115,28 @@ func newLiveGameworldFixture(t *testing.T, ctx context.Context) liveGameworldFix
 	if err != nil {
 		t.Fatal(err)
 	}
+
 	endpoint, err := gameserver.NewEndpoint(host, tickets, playeradapter.ProjectClientView)
 	if err != nil {
 		t.Fatal(err)
 	}
+
 	endpoint.SetSnapshotPending(func(err error) bool { return errors.Is(err, playeradapter.ErrHUDPlayer) })
+
 	serverTLS, clientTLS, fingerprint := connectTLS(t)
+
 	server, err := sessionquic.Listen("127.0.0.1:0", serverTLS, endpoint)
 	if err != nil {
 		t.Fatal(err)
 	}
+
 	t.Cleanup(func() { _ = server.Close() })
+
 	destination, err := playeradapter.NewDestination(10, 10, 100, 100, 1, 2)
 	if err != nil {
 		t.Fatal(err)
 	}
+
 	profiles, err := serverapp.NewRemoteProfileAdmissions(host, tickets, serverapp.RemoteProfileConfig{
 		Credential: "profile-secret", PrincipalID: "local-account", PlayerID: "alice",
 		Destination: destination, Lifetime: time.Minute,
@@ -133,8 +144,11 @@ func newLiveGameworldFixture(t *testing.T, ctx context.Context) liveGameworldFix
 	if err != nil {
 		t.Fatal(err)
 	}
+
 	server.SetProfileAdmissions(profiles)
+
 	serveContext, stopServe := context.WithCancel(ctx)
+
 	serveErrors := make(chan error, 1)
 	go func() { serveErrors <- server.Serve(serveContext) }()
 
@@ -163,6 +177,7 @@ func connectLiveCharacter(
 	if err := profile.Select(character.ID); err != nil {
 		t.Fatal(err)
 	}
+
 	connected, err := ConnectSelfHosted(ctx, SelfHostedAssignment{
 		GameID: "live-gameworld", Endpoint: fixture.endpoint,
 		Runtime: fixture.host.Authority.Identity, ProfileCredential: "profile-secret",
@@ -190,6 +205,7 @@ func assertInitialLiveProjection(t *testing.T, connected *Session) {
 		connected.HUD.Player.Name != "Hero" || connected.World.Tick == 0 {
 		t.Fatalf("live initial view = HUD %#v world tick %d", connected.HUD.Player, connected.World.Tick)
 	}
+
 	if !containsWorldEntity(connected.World.Entities, "monster:level:2:room:blood-moor-network:monster:1", "hostile") {
 		t.Fatalf("live generated hostile missing from world view: %#v", connected.World.Entities)
 	}
@@ -221,6 +237,7 @@ func joinLiveParty(
 	// the newly entered target before deriving its command tick; otherwise a
 	// stale client timeline can legally replay the invite before target entry.
 	waitForProjectedPlayer(t, ctx, connected, "player:alice-2")
+
 	invitePayload, _ := json.Marshal(map[string]any{"target": "alice-2"})
 	if err := connected.Submit(ctx, gameserver.CommandIntent{TargetTick: connected.NextInputTick(time.Now()), Sequence: 1,
 		Kind: "party.invite", Payload: invitePayload}); err != nil {
@@ -264,21 +281,26 @@ func assertLivePeerProjections(t *testing.T, ctx context.Context, connected, sec
 		hostPeer.Token != "AM" || hostPeer.Position.X != 10 || hostPeer.Position.Y != 10 {
 		t.Fatalf("host player projection = %#v", hostPeer)
 	}
+
 	for attempt := 0; attempt < 4; attempt++ {
 		if _, err := connected.Refresh(ctx); err != nil {
 			t.Fatal(err)
 		}
+
 		_, firstWorld := connected.View()
 		if peer, found := findWorldEntity(firstWorld.Entities, "player:alice-2", "player"); found {
 			if peer.Owner != "alice-2" || peer.Class != "Barbarian" ||
 				peer.Token != "BA" || peer.Position.X != 18 || peer.Position.Y != 10 {
 				t.Fatalf("second player projection = %#v", peer)
 			}
+
 			break
 		}
+
 		if attempt == 3 {
 			t.Fatalf("second player absent from first client's projection: %#v", firstWorld.Entities)
 		}
+
 		time.Sleep(550 * time.Millisecond)
 	}
 }
@@ -312,10 +334,12 @@ func assertIndependentLiveMovement(
 	if _, err := connected.Refresh(ctx); err != nil {
 		t.Fatal(err)
 	}
+
 	firstMovePayload, err := json.Marshal(movement.MovePayload{Target: &movement.MoveTarget{X: 16, Y: 10}})
 	if err != nil {
 		t.Fatal(err)
 	}
+
 	commandTick := connected.NextInputTick(time.Now())
 	moveIntent := gameserver.CommandIntent{
 		ObservedServerTick: commandTick - 2, TargetTick: commandTick, Sequence: 2,
@@ -385,26 +409,32 @@ type livePartyState struct {
 // readLivePartyState decodes authoritative party state with immediate fixture diagnostics.
 func readLivePartyState(t *testing.T, store *simulation.StateStore) livePartyState {
 	t.Helper()
+
 	registered, found := store.Read("d2legacy.party")
 	if !found {
 		t.Fatal("live party authority state is missing")
 	}
+
 	var state livePartyState
 	if err := json.Unmarshal(registered.Data, &state); err != nil {
 		t.Fatal(err)
 	}
+
 	return state
 }
 
 // waitForPartyInvite advances until authority records the requested pending relationship.
 func waitForPartyInvite(t *testing.T, ctx context.Context, store *simulation.StateStore, inviter, target string) {
 	t.Helper()
+
 	ticker := time.NewTicker(time.Millisecond)
 	defer ticker.Stop()
+
 	for {
 		if state := readLivePartyState(t, store); state.Invites[target][inviter] != nil {
 			return
 		}
+
 		select {
 		case <-ticker.C:
 		case <-ctx.Done():
@@ -416,16 +446,20 @@ func waitForPartyInvite(t *testing.T, ctx context.Context, store *simulation.Sta
 // waitForProjectedPlayer waits for reliable lifecycle projection rather than assuming join ordering.
 func waitForProjectedPlayer(t *testing.T, ctx context.Context, session *Session, selectableID string) {
 	t.Helper()
+
 	ticker := time.NewTicker(time.Millisecond)
 	defer ticker.Stop()
+
 	for {
 		if _, err := session.Refresh(ctx); err != nil {
 			t.Fatal(err)
 		}
+
 		_, world := session.View()
 		if _, found := findWorldEntity(world.Entities, selectableID, "player"); found {
 			return
 		}
+
 		select {
 		case <-ticker.C:
 		case <-ctx.Done():
@@ -443,13 +477,16 @@ func waitForPartyMembership(
 	second string,
 ) string {
 	t.Helper()
+
 	ticker := time.NewTicker(time.Millisecond)
 	defer ticker.Stop()
+
 	for {
 		state := readLivePartyState(t, store)
 		if partyID := state.Membership[first]; partyID != "" && state.Membership[second] == partyID {
 			return partyID
 		}
+
 		select {
 		case <-ticker.C:
 		case <-ctx.Done():
@@ -461,13 +498,16 @@ func waitForPartyMembership(
 // waitForTransformDatagram proves the lossy stream advances beyond the latest reliable world tick.
 func waitForTransformDatagram(t *testing.T, ctx context.Context, session *Session) {
 	t.Helper()
+
 	ticker := time.NewTicker(time.Millisecond)
 	defer ticker.Stop()
+
 	for {
 		stats := session.transport.NetworkStats()
 		if stats.TransformsReceived > 0 {
 			return
 		}
+
 		select {
 		case <-ticker.C:
 		case <-ctx.Done():
@@ -479,6 +519,7 @@ func waitForTransformDatagram(t *testing.T, ctx context.Context, session *Sessio
 // assertCanceledLoop distinguishes expected context shutdown from a leaked or failed service goroutine.
 func assertCanceledLoop(t *testing.T, ctx context.Context, result <-chan error, name string) {
 	t.Helper()
+
 	select {
 	case err := <-result:
 		if err != nil && !errors.Is(err, context.Canceled) {
@@ -500,6 +541,7 @@ func findWorldEntity(
 			return entity, true
 		}
 	}
+
 	return playeradapter.WorldEntity{}, false
 }
 

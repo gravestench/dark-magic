@@ -68,6 +68,7 @@ func (app *application) newConnectedReplica() (*gameecs.Engine, error) {
 	}
 
 	snapshot.Tick = 0
+
 	snapshot.Entities = nil
 	for index := range snapshot.Components {
 		snapshot.Components[index].Instances = nil
@@ -93,6 +94,7 @@ func (app *application) installConnectedReplica(ctx context.Context, replica *ga
 	if app.movementSource != nil {
 		app.movementSource.SetEngine(replica)
 	}
+
 	if previous != nil {
 		_ = previous.Close()
 	}

@@ -88,5 +88,6 @@ func (app *application) assemble() error {
 			return err
 		}
 	}
+
 	return nil
 }

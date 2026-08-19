@@ -22,6 +22,7 @@ func TestEntryWorldSpawnsKeepGameplayAndSeamCaptureDistinct(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+
 	if entry[1] != [2]float64{1, 2} || entry[2] != [2]float64{21, 22} {
 		t.Fatalf("ordinary entry spawns = %#v", entry)
 	}
@@ -30,6 +31,7 @@ func TestEntryWorldSpawnsKeepGameplayAndSeamCaptureDistinct(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+
 	if capture[1] != [2]float64{11, 12} || capture[2] != [2]float64{21, 22} {
 		t.Fatalf("seam capture spawns = %#v", capture)
 	}
@@ -49,6 +51,7 @@ func TestActivateCurrentConnectedWorldKeepsClickRoute(t *testing.T) {
 	})
 
 	controller := &d2movement.MovementController{}
+
 	source, err := d2movement.NewMovementSource(engine, &inputstate.Store{}, "realm-player", "game_world", controller)
 	if err != nil {
 		t.Fatal(err)
@@ -62,6 +65,7 @@ func TestActivateCurrentConnectedWorldKeepsClickRoute(t *testing.T) {
 	}
 
 	app.activateWorld(2)
+
 	if err := controller.SetMoveTarget(30, 20); err != nil {
 		t.Fatal(err)
 	}

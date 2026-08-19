@@ -41,6 +41,7 @@ func applyDevelopmentSceneDefaults(options Options) Options {
 		if options.FixtureCharacters == 0 {
 			options.FixtureCharacters = defaults.characters
 		}
+
 		if options.FixtureWorldLevel == 0 {
 			options.FixtureWorldLevel = defaults.worldLevel
 		}
@@ -62,6 +63,7 @@ func developmentGameplayScene(scene string) bool {
 func developmentCharactersForScene(scene string, count int) []d2save.Character {
 	characters := DevelopmentCharacters(count)
 	defaults := developmentScenes[scene]
+
 	if len(characters) == 0 {
 		return characters
 	}
@@ -69,9 +71,11 @@ func developmentCharactersForScene(scene string, count int) []d2save.Character {
 	if defaults.characterClass != "" {
 		characters[0].Class = defaults.characterClass
 	}
+
 	if defaults.characterLevel > 0 {
 		characters[0].Level = defaults.characterLevel
 	}
+
 	if defaults.mana > 0 {
 		characters[0].Stats.Mana = defaults.mana
 		characters[0].Stats.MaxMana = defaults.mana
@@ -91,6 +95,7 @@ func (app *application) developmentSkillsBootstrapData() map[string]any {
 	if app.options.StartScene != "spell_lab" {
 		return map[string]any{"enabled": false}
 	}
+
 	return map[string]any{
 		"enabled":         true,
 		"replace":         true,

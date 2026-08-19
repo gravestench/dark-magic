@@ -12,11 +12,14 @@ func DevelopmentCharacters(count int) []d2save.Character {
 	if count <= 0 {
 		return nil
 	}
+
 	classes := []string{"Amazon", "Sorceress", "Necromancer", "Paladin", "Barbarian", "Assassin", "Druid"}
+
 	characters := make([]d2save.Character, 0, count)
 	for index := 0; index < count; index++ {
 		characters = append(characters, developmentCharacter(index, classes[index%len(classes)]))
 	}
+
 	return characters
 }
 

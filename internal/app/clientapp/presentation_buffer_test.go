@@ -17,9 +17,11 @@ func TestPresentationBufferInterpolatesBetweenKnownSnapshots(t *testing.T) {
 	if !found {
 		t.Fatal("expected a presentation sample")
 	}
+
 	if sample.discreteTick != 10 || len(sample.entities) != 1 {
 		t.Fatalf("sample = %+v", sample)
 	}
+
 	if got := sample.entities[0].Position; got.X != 3 || got.Y != 7 {
 		t.Fatalf("interpolated position = %+v, want {3 7}", got)
 	}
@@ -46,10 +48,12 @@ func TestPresentationBufferAppliesEntityLifecycleAtSnapshotBoundary(t *testing.T
 func TestPresentationBufferUpsertsReliableMetadataAtNewestTransformTick(t *testing.T) {
 	buffer := newPresentationBuffer()
 	buffer.Push(worldView(10, worldEntity("old", 1, 2)))
+
 	revision := buffer.snapshots[0].revision
 	if !buffer.Upsert(worldView(10, worldEntity("new", 3, 4))) {
 		t.Fatal("same-tick metadata upsert was rejected")
 	}
+
 	if len(buffer.snapshots) != 1 || buffer.snapshots[0].revision <= revision {
 		t.Fatalf("upserted snapshots = %#v", buffer.snapshots)
 	}
@@ -70,6 +74,7 @@ func TestPresentationBufferBoundsExtrapolation(t *testing.T) {
 	if !sample.extrapolated {
 		t.Fatal("expected bounded extrapolation")
 	}
+
 	if got := sample.entities[0].Position.X; got != 9 {
 		t.Fatalf("extrapolated x = %v, want 9", got)
 	}
@@ -80,20 +85,26 @@ func TestPresentationBufferIsBoundedAndOrdered(t *testing.T) {
 	buffer := newPresentationBuffer()
 	health := int64(10)
 	first := worldEntity("peer", 1, 2)
+
 	first.Health = &health
 	if !buffer.Push(worldView(1, first)) {
 		t.Fatal("initial snapshot was rejected")
 	}
+
 	health = 99
+
 	if buffer.Push(worldView(1, worldEntity("duplicate", 0, 0))) {
 		t.Fatal("duplicate tick was accepted")
 	}
+
 	for tick := uint64(2); tick <= presentationSnapshotCapacity+4; tick++ {
 		buffer.Push(worldView(tick, worldEntity("peer", float64(tick), 0)))
 	}
+
 	if len(buffer.snapshots) != presentationSnapshotCapacity {
 		t.Fatalf("snapshot count = %d, want %d", len(buffer.snapshots), presentationSnapshotCapacity)
 	}
+
 	if buffer.snapshots[0].tick != 5 {
 		t.Fatalf("oldest retained tick = %d, want 5", buffer.snapshots[0].tick)
 	}
@@ -106,13 +117,16 @@ func TestPresentationBufferReturnsImmutableSamples(t *testing.T) {
 	immutableEntity := worldEntity("peer", 1, 2)
 	immutableEntity.Health = &immutableHealth
 	immutable.Push(worldView(1, immutableEntity))
+
 	immutableHealth = 99
+
 	sample, _ := immutable.Sample(networkclock.Moment{Tick: 1})
 	if sample.entities[0].Health == nil || *sample.entities[0].Health != 42 {
 		t.Fatalf("copied health = %v, want 42", sample.entities[0].Health)
 	}
 
 	*sample.entities[0].Health = 7
+
 	again, _ := immutable.Sample(networkclock.Moment{Tick: 1})
 	if *again.entities[0].Health != 42 {
 		t.Fatalf("sample mutation leaked into history: %d", *again.entities[0].Health)

@@ -25,15 +25,18 @@ func TestSpellLabSuppliesProductionSpellFixture(t *testing.T) {
 	if !shouldActivateDevelopmentSession(options) || !developmentGameplayScene("spell_lab") {
 		t.Fatal("Spell Lab must activate the production gameplay session")
 	}
+
 	characters := developmentCharactersForScene("spell_lab", options.FixtureCharacters)
 	if len(characters) != 1 || characters[0].Class != "Sorceress" || characters[0].Level != 30 {
 		t.Fatalf("Spell Lab character = %+v", characters)
 	}
+
 	if characters[0].Stats.Mana != 4096 || characters[0].Stats.MaxMana != 4096 {
 		t.Fatalf("Spell Lab mana = %+v", characters[0].Stats)
 	}
 
 	app := &application{options: options}
+
 	skills := app.developmentSkillsBootstrapData()
 	if skills["all_implemented"] != true || skills["skill_ids"] != nil {
 		t.Fatalf("Spell Lab skill source = %#v, want the target-locked implementation manifest", skills)
@@ -48,9 +51,11 @@ func TestWarpLabSuppliesProductionTransitionState(t *testing.T) {
 	if options.FixtureCharacters != 1 || options.FixtureWorldLevel != 1 || options.FixtureWorldSpawn != "entry" {
 		t.Fatalf("Warp Lab defaults = %+v, want one player at the town-side warp fixture", options)
 	}
+
 	if !shouldActivateDevelopmentSession(options) {
 		t.Fatal("Warp Lab must activate its direct-start offline session")
 	}
+
 	if !developmentGameplayScene("warp_lab") {
 		t.Fatal("Warp Lab must receive routed gameplay input")
 	}
@@ -63,6 +68,7 @@ func TestDirectGameplayFixtureActivatesOfflineSession(t *testing.T) {
 	if !shouldActivateDevelopmentSession(Options{StartScene: "game_world", FixtureCharacters: 1}) {
 		t.Fatal("direct game-world fixture did not request local-session activation")
 	}
+
 	if shouldActivateDevelopmentSession(Options{StartScene: "main_menu", FixtureCharacters: 1}) {
 		t.Fatal("frontend fixture must not activate a local gameplay session")
 	}
@@ -85,6 +91,7 @@ func TestCombatLabSuppliesItsOwnDevelopmentState(t *testing.T) {
 	if options.FixtureCharacters != 1 {
 		t.Fatalf("FixtureCharacters = %d, want 1", options.FixtureCharacters)
 	}
+
 	if options.FixtureWorldLevel != 2 {
 		t.Fatalf("FixtureWorldLevel = %d, want Blood Moor level 2", options.FixtureWorldLevel)
 	}

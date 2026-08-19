@@ -115,6 +115,7 @@ func (fixture *pointerMovementAcceptance) pressPointer(
 // pause cannot complete the capture early.
 func (fixture *pointerMovementAcceptance) observeMovement(x, y float64) {
 	distance := math.Hypot(x-fixture.originX, y-fixture.originY)
+
 	fixture.moved = fixture.moved || distance > 0.75
 	if fixture.moved && math.Hypot(x-fixture.lastX, y-fixture.lastY) < 0.01 {
 		fixture.stableFrames++
@@ -146,6 +147,7 @@ func (app *application) controlledPlayerPosition() (float64, float64, bool) {
 	if engine == nil {
 		return 0, 0, false
 	}
+
 	controls, found := akara.GetDynamicStore(engine.World(), "d2legacy.world.player_control")
 	if !found {
 		return 0, 0, false
@@ -157,6 +159,7 @@ func (app *application) controlledPlayerPosition() (float64, float64, bool) {
 	}
 
 	wanted := "local-player"
+
 	if app.network != nil {
 		if player, ok := app.network.Status()["player_id"].(string); ok && player != "" {
 			wanted = player
@@ -168,6 +171,7 @@ func (app *application) controlledPlayerPosition() (float64, float64, bool) {
 		if !present {
 			continue
 		}
+
 		player, _ := control.Get("player")
 		if player != wanted {
 			continue
@@ -177,6 +181,7 @@ func (app *application) controlledPlayerPosition() (float64, float64, bool) {
 		if !present {
 			return 0, 0, false
 		}
+
 		x, _ := position.Get("x")
 		y, _ := position.Get("y")
 

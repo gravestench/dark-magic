@@ -48,7 +48,13 @@ GOLANGCI_LINT ?= golangci-lint
 # Keep local lint scope identical to CI so contributors can reproduce the gate
 # before pushing without learning a second command or rule set.
 lint:
-	$(GOLANGCI_LINT) run ./cmd/... ./internal/app/envconfig ./internal/app/headlessshell
+	$(GOLANGCI_LINT) run ./cmd/... \
+		./internal/app/clientapp \
+		./internal/app/clientsession \
+		./internal/app/envconfig \
+		./internal/app/filewatch \
+		./internal/app/gameserver \
+		./internal/app/headlessshell
 
 # Vet remains a separate repository-wide semantic check; lint's focused style
 # rollout does not replace compiler-assisted diagnostics in untouched packages.

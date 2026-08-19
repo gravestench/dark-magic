@@ -81,6 +81,7 @@ func (buffer *presentationBuffer) Upsert(view playeradapter.WorldView) bool {
 // append retains only the newest bounded window while preserving chronological storage for binary search.
 func (buffer *presentationBuffer) append(view playeradapter.WorldView) bool {
 	buffer.revision++
+
 	buffer.snapshots = append(buffer.snapshots, buffer.snapshot(view))
 	if len(buffer.snapshots) > buffer.capacity {
 		copy(buffer.snapshots, buffer.snapshots[len(buffer.snapshots)-buffer.capacity:])
@@ -105,6 +106,7 @@ func (buffer *presentationBuffer) Sample(moment networkclock.Moment) (sampledWor
 	if buffer == nil || len(buffer.snapshots) == 0 {
 		return sampledWorldView{}, false
 	}
+
 	renderTick := float64(moment.Tick) + moment.Fraction
 	upper := sort.Search(len(buffer.snapshots), func(index int) bool {
 		return float64(buffer.snapshots[index].tick) > renderTick
@@ -118,6 +120,7 @@ func (buffer *presentationBuffer) Sample(moment networkclock.Moment) (sampledWor
 		lower := buffer.snapshots[upper-1]
 		next := buffer.snapshots[upper]
 		alpha := (renderTick - float64(lower.tick)) / float64(next.tick-lower.tick)
+
 		return sampleBetween(moment, lower, next, alpha), true
 	}
 
@@ -152,6 +155,7 @@ func sampleBetween(moment networkclock.Moment, lower, upper bufferedWorldView, a
 			value.Position.X += (next.Position.X - value.Position.X) * alpha
 			value.Position.Y += (next.Position.Y - value.Position.Y) * alpha
 		}
+
 		entities[id] = value
 	}
 
@@ -172,6 +176,7 @@ func extrapolateSnapshot(
 	ahead float64,
 ) sampledWorldView {
 	span := float64(latest.tick - previous.tick)
+
 	entities := make(map[string]playeradapter.WorldEntity, len(latest.entities))
 	for id, entity := range latest.entities {
 		value := cloneWorldEntity(entity)
@@ -179,6 +184,7 @@ func extrapolateSnapshot(
 			value.Position.X += (value.Position.X - before.Position.X) * ahead / span
 			value.Position.Y += (value.Position.Y - before.Position.Y) * ahead / span
 		}
+
 		entities[id] = value
 	}
 

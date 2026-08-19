@@ -27,6 +27,7 @@ func TestFrameMetricsReportsScenePercentiles(t *testing.T) {
 	if got.UpdateP95 != 47*time.Millisecond || got.MaxUpdate != 50*time.Millisecond {
 		t.Fatalf("update timing = %#v", got)
 	}
+
 	if got.SimulationP95 != 23*time.Millisecond || got.LuaP95 != 19*time.Millisecond {
 		t.Fatalf("stage timing = %#v", got)
 	}

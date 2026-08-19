@@ -39,6 +39,7 @@ func New(root string, interval time.Duration, handler Handler) *Watcher {
 	if interval <= 0 {
 		interval = 250 * time.Millisecond
 	}
+
 	return &Watcher{root: root, interval: interval, handler: handler}
 }
 
@@ -54,6 +55,7 @@ func (w *Watcher) Start(ctx context.Context) error {
 		w.mu.Unlock()
 		return nil
 	}
+
 	known, err := w.snapshot()
 	if err != nil {
 		w.mu.Unlock()
@@ -109,6 +111,7 @@ func (w *Watcher) Stop(ctx context.Context) error {
 	}
 
 	cancel()
+
 	select {
 	case <-done:
 	case <-ctx.Done():
@@ -151,6 +154,7 @@ func (w *Watcher) replaceKnown(current map[string]fingerprint) map[string]finger
 // changedPaths reports creations, content-metadata changes, and removals in deterministic lexical order.
 func changedPaths(previous, current map[string]fingerprint) []string {
 	var changed []string
+
 	for name, value := range current {
 		if old, exists := previous[name]; !exists || old != value {
 			changed = append(changed, name)
@@ -171,6 +175,7 @@ func changedPaths(previous, current map[string]fingerprint) []string {
 // notifyChanges attempts every changed path and joins failures so one bad file cannot hide later edits.
 func (w *Watcher) notifyChanges(ctx context.Context, changed []string) error {
 	var errs []error
+
 	for _, name := range changed {
 		if err := w.handler(ctx, filepath.ToSlash(name)); err != nil {
 			errs = append(errs, fmt.Errorf("filewatch: handle %q: %w", name, err))
@@ -183,10 +188,12 @@ func (w *Watcher) notifyChanges(ctx context.Context, changed []string) error {
 // snapshot captures only size and modification time because polling must remain cheap for development trees.
 func (w *Watcher) snapshot() (map[string]fingerprint, error) {
 	result := make(map[string]fingerprint)
+
 	err := filepath.WalkDir(w.root, func(name string, entry fs.DirEntry, err error) error {
 		if err != nil {
 			return err
 		}
+
 		if entry.IsDir() {
 			return nil
 		}

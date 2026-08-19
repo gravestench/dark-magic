@@ -11,21 +11,26 @@ import (
 // TestDecodeViewRejectsUnknownFieldsAndOversizedCollections protects strict schema and memory bounds.
 func TestDecodeViewRejectsUnknownFieldsAndOversizedCollections(t *testing.T) {
 	view := validNetworkView(9)
+
 	payload, err := json.Marshal(view)
 	if err != nil {
 		t.Fatal(err)
 	}
+
 	var object map[string]any
 	if err := json.Unmarshal(payload, &object); err != nil {
 		t.Fatal(err)
 	}
+
 	object["future_unreviewed_state"] = true
+
 	unknown, _ := json.Marshal(object)
 	if _, err := decodeView(gameserver.Snapshot{Tick: 9, Payload: unknown}); err == nil {
 		t.Fatal("unknown projection field was accepted")
 	}
 
 	view.World.Entities = make([]playeradapter.WorldEntity, playeradapter.MaxWorldViewEntities+1)
+
 	oversized, _ := json.Marshal(view)
 	if _, err := decodeView(gameserver.Snapshot{Tick: 9, Payload: oversized}); err == nil {
 		t.Fatal("oversized world projection was accepted")
@@ -43,6 +48,7 @@ func FuzzDecodeClientView(f *testing.F) {
 		if err != nil {
 			return
 		}
+
 		if err := playeradapter.ValidateClientView(view, tick); err != nil {
 			t.Fatalf("decoder accepted invalid projection: %v", err)
 		}

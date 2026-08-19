@@ -22,15 +22,19 @@ import (
 // boundary: requesting host alone cannot create authority or a connected client.
 func TestNetworkControllerDefersHostUntilCharacterSelection(t *testing.T) {
 	app := &application{ctx: context.Background(), saves: d2save.New()}
+
 	controller := newNetworkController(app)
 	if err := controller.Host(); err != nil {
 		t.Fatalf("begin host: %v", err)
 	}
+
 	status := controller.Status()
 	if status["phase"] != "selecting" || status["mode"] != "host" {
 		t.Fatalf("pending host status = %#v", status)
 	}
+
 	controller.Cancel()
+
 	if status = controller.Status(); status["phase"] != "frontend" || status["mode"] != "" {
 		t.Fatalf("cancelled host status = %#v", status)
 	}
@@ -45,6 +49,7 @@ func TestNetworkControllerSamplesFixedInputClockIndependentlyOfCorrections(t *te
 	if ticks := controller.inputTicks(client, 39*time.Millisecond, time.Now()); len(ticks) != 0 {
 		t.Fatalf("premature input ticks = %v", ticks)
 	}
+
 	ticks := controller.inputTicks(client, 81*time.Millisecond, time.Now())
 	if len(ticks) != 1 || ticks[0] != 12 {
 		t.Fatalf("fixed input ticks = %v", ticks)
@@ -62,9 +67,11 @@ func TestEmptyGeneralIntentMailboxDoesNotConsumeJoiningClientsMovementTick(t *te
 	if err := controller.submitPendingIntents(client, now); err != nil {
 		t.Fatal(err)
 	}
+
 	if controller.lastMovementTick != 0 {
 		t.Fatalf("empty intent mailbox consumed movement tick %d", controller.lastMovementTick)
 	}
+
 	ticks := controller.inputTicks(client, networkInputStep, now)
 	if len(ticks) != 1 || ticks[0] != 12 {
 		t.Fatalf("joining-client movement ticks = %v, want [12]", ticks)
@@ -78,6 +85,7 @@ func TestPendingMovementPredictionReplaysFromCanonicalPosition(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+
 	payload, _ := json.Marshal(map[string]any{"x": 1, "y": 0, "running": true})
 	hud := playeradapter.HUD{
 		Tick:     10,
@@ -95,6 +103,7 @@ func TestPendingMovementPredictionReplaysFromCanonicalPosition(t *testing.T) {
 			RunDrain: 20,
 		},
 	}
+
 	got := predictPosition(hud, []gameserver.CommandIntent{
 		{TargetTick: 11, Sequence: 1, Kind: "player.move", Payload: payload},
 		{TargetTick: 12, Sequence: 2, Kind: "player.move", Payload: payload},
@@ -120,17 +129,21 @@ func (predictionMovementRecords) Load(string) ([]map[string]string, error) {
 // implicitly grant local authority before a durable save is selected.
 func TestNetworkControllerActivatesLocalSessionOnlyAfterSelection(t *testing.T) {
 	character := d2save.Character{ID: "hero", Name: "Hero", Class: "Amazon"}
+
 	saves := d2save.New(character)
 	if err := saves.Select(character.ID); err != nil {
 		t.Fatal(err)
 	}
+
 	controller := newNetworkController(&application{ctx: context.Background(), saves: saves})
 	if controller.Local() {
 		t.Fatal("frontend was treated as an active local session")
 	}
+
 	if err := controller.StartSelected(); err != nil {
 		t.Fatal(err)
 	}
+
 	if !controller.Local() || controller.Status()["phase"] != "local" {
 		t.Fatalf("local session status = %#v", controller.Status())
 	}
@@ -142,12 +155,14 @@ func TestNetworkControllerAcceptsAuthenticatedRealmCharacterForLoading(t *testin
 	controller := newNetworkController(&application{})
 	controller.phase = "connected"
 	controller.mode = "realm"
+
 	controller.client = &clientsession.Session{Admission: gameserver.JoinResponse{
 		Admission: gamesession.AdmissionToken{CharacterID: "realm-hero"},
 	}}
 	if !controller.hasSelectedCharacter() {
 		t.Fatal("authenticated Realm character was not available to loading")
 	}
+
 	controller.client.Admission.Admission.CharacterID = ""
 	if controller.hasSelectedCharacter() {
 		t.Fatal("Realm connection without an admitted character passed loading")
@@ -162,23 +177,29 @@ func TestNetworkControllerRealmLoadingDoesNotDependOnTransientHUDProjection(t *t
 	app.network = controller
 	controller.phase = "connected"
 	controller.mode = "realm"
+
 	controller.client = &clientsession.Session{Admission: gameserver.JoinResponse{
 		Admission: gamesession.AdmissionToken{CharacterID: "realm-hero"},
 	}}
 	if !controller.hasSelectedCharacter() {
 		t.Fatal("authenticated admission was hidden by an empty projected HUD")
 	}
+
 	if err := app.buildLoadingCoordinator(); err != nil {
 		t.Fatal(err)
 	}
+
 	t.Cleanup(app.loading.Close)
+
 	if err := app.loading.Begin(t.Context(), []string{"selected_character"}); err != nil {
 		t.Fatal(err)
 	}
+
 	deadline := time.Now().Add(time.Second)
 	for app.loading.Snapshot().State == "running" && time.Now().Before(deadline) {
 		time.Sleep(time.Millisecond)
 	}
+
 	if status := app.loading.Snapshot(); status.State != "complete" {
 		t.Fatalf("Realm loading selection = %#v", status)
 	}
@@ -188,13 +209,16 @@ func TestNetworkControllerRealmLoadingDoesNotDependOnTransientHUDProjection(t *t
 // visible to the frontend and every later join stage receives a canonical endpoint.
 func TestNetworkControllerKeepsStartFailuresAndNormalizesDirectJoin(t *testing.T) {
 	app := &application{ctx: context.Background(), saves: d2save.New()}
+
 	controller := newNetworkController(app)
 	if err := controller.Host(); err != nil {
 		t.Fatal(err)
 	}
+
 	if err := controller.StartSelected(); err == nil {
 		t.Fatal("starting without selected character was accepted")
 	}
+
 	status := controller.Status()
 
 	failedSelection := status["phase"] == "failed" &&
@@ -203,9 +227,11 @@ func TestNetworkControllerKeepsStartFailuresAndNormalizesDirectJoin(t *testing.T
 	if !failedSelection {
 		t.Fatalf("start rejection status = %#v", status)
 	}
+
 	if err := controller.Join("127.0.0.1"); err != nil {
 		t.Fatalf("direct join: %v", err)
 	}
+
 	status = controller.Status()
 
 	normalizedJoin := status["phase"] == "selecting" &&
@@ -223,11 +249,13 @@ func TestNetworkControllerSamplesMovementOncePerAuthoritativeTick(t *testing.T) 
 	if !controller.sampleMovement(12) {
 		t.Fatal("first tick was not sampled")
 	}
+
 	for range 120 {
 		if controller.sampleMovement(12) {
 			t.Fatal("render frames resampled one authoritative tick")
 		}
 	}
+
 	if !controller.sampleMovement(13) {
 		t.Fatal("next authoritative tick was not sampled")
 	}
@@ -240,17 +268,23 @@ func TestNetworkControllerSendsOneStopAfterActiveMovement(t *testing.T) {
 	if controller.movementRequired(false) {
 		t.Fatal("initial idle state emitted a command")
 	}
+
 	if !controller.movementRequired(true) {
 		t.Fatal("active movement was suppressed")
 	}
+
 	controller.markMovement(true)
+
 	if !controller.movementRequired(true) {
 		t.Fatal("active movement samples were suppressed")
 	}
+
 	if !controller.movementRequired(false) {
 		t.Fatal("first idle sample did not stop authoritative velocity")
 	}
+
 	controller.markMovement(false)
+
 	if controller.movementRequired(false) {
 		t.Fatal("settled idle state emitted repeated stop commands")
 	}
