@@ -136,77 +136,115 @@ func TestConnectedMissilesUsePresentationOnlyECSLifecycle(t *testing.T) {
 // removes living collision, and emits a cue without leaking reward or loot facts.
 func TestConnectedMonsterBecomesANonSelectableCorpseAndDeathCue(t *testing.T) {
 	engine := gameecs.New()
-
 	t.Cleanup(func() { _ = engine.Close() })
+
 	registerRemoteViewSchemas(t, engine)
 	app := &application{clientSimulation: engine}
 	client := newClientWorld()
 	location := playeradapter.HUDLocation{Act: 1, LevelID: 2}
-	health, maximum := int64(8), int64(10)
+	alive := connectedLivingMonster()
 
-	alive := playeradapter.WorldEntity{
-		ID: "monster:fallen-a", Kind: "monster", Label: "Fallen", SpawnID: "fallen-a", DefinitionID: "fallen1",
-		Position: playeradapter.HUDPosition{X: 10, Y: 20}, Radius: .75, Health: &health, MaxHealth: &maximum,
-		Token: "FA", Mode: "A1", WeaponClass: "HTH", Components: "HD=LIT", DeathSound: "fallen_death",
-		OverlayHeight: 3, Act: 1, LevelID: 2,
-	}
 	if err := app.syncRemoteMirrors([]playeradapter.WorldEntity{alive}, location); err != nil {
 		t.Fatal(err)
 	}
 
 	entity := app.remoteMirrors[alive.ID]
-	selectables, _ := akara.GetDynamicStore(engine.World(), "d2legacy.world.selectable")
-	colliders, _ := akara.GetDynamicStore(engine.World(), "d2legacy.world.collider")
+	assertLivingRemoteMonster(t, engine, entity)
 
+	dead := alive
+	health := int64(0)
+	dead.Kind, dead.Mode = "corpse", "DT"
+	dead.Health, dead.Radius = &health, 0
+
+	if err := app.syncRemoteMirrors([]playeradapter.WorldEntity{dead}, location); err != nil {
+		t.Fatal(err)
+	}
+
+	assertRemoteMonsterCorpse(t, engine, app, alive.ID, entity)
+	assertRemoteMonsterDeathCue(t, engine, client, app, dead)
+}
+
+// connectedLivingMonster supplies both collision facts and public presentation metadata for the corpse transition.
+func connectedLivingMonster() playeradapter.WorldEntity {
+	health, maximum := int64(8), int64(10)
+
+	return playeradapter.WorldEntity{
+		ID: "monster:fallen-a", Kind: "monster", Label: "Fallen", SpawnID: "fallen-a", DefinitionID: "fallen1",
+		Position: playeradapter.HUDPosition{X: 10, Y: 20}, Radius: .75, Health: &health, MaxHealth: &maximum,
+		Token: "FA", Mode: "A1", WeaponClass: "HTH", Components: "HD=LIT", DeathSound: "fallen_death",
+		OverlayHeight: 3, Act: 1, LevelID: 2,
+	}
+}
+
+// assertLivingRemoteMonster proves the public mirror is selectable and collidable before the death transition.
+func assertLivingRemoteMonster(t *testing.T, engine *gameecs.Engine, entity akara.Entity) {
+	t.Helper()
+
+	selectables, _ := akara.GetDynamicStore(engine.World(), "d2legacy.world.selectable")
 	if _, found := selectables.Get(entity); !found {
 		t.Fatal("living monster mirror is not selectable")
 	}
 
+	colliders, _ := akara.GetDynamicStore(engine.World(), "d2legacy.world.collider")
 	if _, found := colliders.Get(entity); !found {
 		t.Fatal("living monster mirror has no collider")
 	}
 
 	appearances, _ := akara.GetDynamicStore(engine.World(), "d2legacy.monster.appearance")
 	appearance, _ := appearances.Get(entity)
-
 	mode, _ := appearance.Get("mode")
 	if mode != "A1" {
 		t.Fatalf("living monster presentation mode=%v, want A1", mode)
 	}
+}
 
-	dead := alive
-	dead.Kind, dead.Mode, health = "corpse", "DT", 0
+// assertRemoteMonsterCorpse checks the structural implications of death without consulting private authority state.
+func assertRemoteMonsterCorpse(
+	t *testing.T,
+	engine *gameecs.Engine,
+	app *application,
+	publicID string,
+	entity akara.Entity,
+) {
+	t.Helper()
 
-	dead.Health, dead.Radius = &health, 0
-	if err := app.syncRemoteMirrors([]playeradapter.WorldEntity{dead}, location); err != nil {
-		t.Fatal(err)
-	}
-
-	if app.remoteMirrors[alive.ID] != entity {
+	if app.remoteMirrors[publicID] != entity {
 		t.Fatal("living monster and corpse did not retain one presentation identity")
 	}
 
+	selectables, _ := akara.GetDynamicStore(engine.World(), "d2legacy.world.selectable")
 	deadSelectable, found := selectables.Get(entity)
 	if !found {
 		t.Fatal("corpse lost the selectable needed by corpse-target skills")
 	}
-
 	deadKind, _ := deadSelectable.Get("kind")
 	if deadKind != "corpse" {
 		t.Fatalf("corpse selectable kind=%v, want corpse", deadKind)
 	}
 
+	colliders, _ := akara.GetDynamicStore(engine.World(), "d2legacy.world.collider")
 	if _, found := colliders.Get(entity); found {
 		t.Fatal("corpse remained a locomotion obstacle in the disposable client ECS")
 	}
 
-	appearance, _ = appearances.Get(entity)
-	mode, _ = appearance.Get("mode")
-
+	appearances, _ := akara.GetDynamicStore(engine.World(), "d2legacy.monster.appearance")
+	appearance, _ := appearances.Get(entity)
+	mode, _ := appearance.Get("mode")
 	sound, _ := appearance.Get("death_sound")
 	if mode != "DT" || sound != "fallen_death" {
 		t.Fatalf("corpse appearance mode=%v death_sound=%v", mode, sound)
 	}
+}
+
+// assertRemoteMonsterDeathCue proves reliable presentation emits identity but no private reward or loot facts.
+func assertRemoteMonsterDeathCue(
+	t *testing.T,
+	engine *gameecs.Engine,
+	client *clientWorld,
+	app *application,
+	dead playeradapter.WorldEntity,
+) {
+	t.Helper()
 
 	baseline := playeradapter.EventView{Version: playeradapter.EventViewVersion, Tick: 10, FromTick: 0}
 	if err := client.reconcileSemanticEvents(app, baseline, 1); err != nil {
@@ -241,23 +279,13 @@ func TestConnectedMonsterBecomesANonSelectableCorpseAndDeathCue(t *testing.T) {
 // and presents only later reliable cues once, even across overlapping corrections.
 func TestConnectedSemanticEventsBaselineHistoryAndMirrorOnlyNewCues(t *testing.T) {
 	engine := gameecs.New()
+
+	t.Cleanup(func() { _ = engine.Close() })
+
 	registerRemoteViewSchemas(t, engine)
 	app := &application{clientSimulation: engine}
 	client := newClientWorld()
-	historical := playeradapter.SemanticEvent{
-		ID:       20,
-		Type:     "cast",
-		Tick:     98,
-		Position: playeradapter.HUDPosition{X: 4, Y: 5},
-		Act:      1,
-		LevelID:  2,
-		Cast: &playeradapter.SemanticCastCue{
-			Kind:       "cast_started",
-			EffectTick: 100,
-			Player:     "alice",
-			SkillID:    47,
-		},
-	}
+	historical := connectedHistoricalCast()
 
 	baseline := playeradapter.EventView{
 		Version:  playeradapter.EventViewVersion,
@@ -274,7 +302,54 @@ func TestConnectedSemanticEventsBaselineHistoryAndMirrorOnlyNewCues(t *testing.T
 		t.Fatalf("baseline replayed %d historical cues", casts.Len())
 	}
 
-	current := playeradapter.SemanticEvent{
+	current := connectedCurrentCast()
+
+	view := playeradapter.EventView{
+		Version:  playeradapter.EventViewVersion,
+		Tick:     101,
+		FromTick: 38,
+		Events:   []playeradapter.SemanticEvent{historical, current},
+	}
+	if err := client.reconcileSemanticEvents(app, view, 1); err != nil {
+		t.Fatal(err)
+	}
+
+	if casts.Len() != 1 {
+		t.Fatalf("new connected cues = %d, want 1", casts.Len())
+	}
+
+	assertConnectedCastMirror(t, engine, casts, current)
+
+	if err := client.reconcileSemanticEvents(app, view, 1); err != nil {
+		t.Fatal(err)
+	}
+
+	if casts.Len() != 1 {
+		t.Fatalf("same correction duplicated cue count=%d", casts.Len())
+	}
+}
+
+// connectedHistoricalCast represents durable pre-join history that must establish a cursor without replaying a cue.
+func connectedHistoricalCast() playeradapter.SemanticEvent {
+	return playeradapter.SemanticEvent{
+		ID:       20,
+		Type:     "cast",
+		Tick:     98,
+		Position: playeradapter.HUDPosition{X: 4, Y: 5},
+		Act:      1,
+		LevelID:  2,
+		Cast: &playeradapter.SemanticCastCue{
+			Kind:       "cast_started",
+			EffectTick: 100,
+			Player:     "alice",
+			SkillID:    47,
+		},
+	}
+}
+
+// connectedCurrentCast supplies the first post-baseline cue and every allowlisted presentation field it should mirror.
+func connectedCurrentCast() playeradapter.SemanticEvent {
+	return playeradapter.SemanticEvent{
 		ID:            21,
 		Type:          "cast",
 		Tick:          101,
@@ -291,23 +366,18 @@ func TestConnectedSemanticEventsBaselineHistoryAndMirrorOnlyNewCues(t *testing.T
 			Target:     playeradapter.HUDPosition{X: 20, Y: 21},
 		},
 	}
+}
 
-	view := playeradapter.EventView{
-		Version:  playeradapter.EventViewVersion,
-		Tick:     101,
-		FromTick: 38,
-		Events:   []playeradapter.SemanticEvent{historical, current},
-	}
-	if err := client.reconcileSemanticEvents(app, view, 1); err != nil {
-		t.Fatal(err)
-	}
-
-	if casts.Len() != 1 {
-		t.Fatalf("new connected cues = %d, want 1", casts.Len())
-	}
+// assertConnectedCastMirror checks spatial anchoring and owner mapping without depending on private skill state.
+func assertConnectedCastMirror(
+	t *testing.T,
+	engine *gameecs.Engine,
+	casts *akara.DynamicStore,
+	current playeradapter.SemanticEvent,
+) {
+	t.Helper()
 
 	entity := casts.Entities()[0]
-
 	position := currentPosition(engine.World(), entity)
 	if position != current.Position {
 		t.Fatalf("semantic anchor = %+v, want %+v", position, current.Position)
@@ -315,7 +385,6 @@ func TestConnectedSemanticEventsBaselineHistoryAndMirrorOnlyNewCues(t *testing.T
 
 	anchors, _ := akara.GetDynamicStore(engine.World(), "d2legacy.presentation.overlay_anchor")
 	anchor, _ := anchors.Get(entity)
-
 	height, _ := anchor.Get("height")
 	if height != int64(3) {
 		t.Fatalf("semantic overlay height = %v, want 3", height)
@@ -323,18 +392,9 @@ func TestConnectedSemanticEventsBaselineHistoryAndMirrorOnlyNewCues(t *testing.T
 
 	cast, _ := casts.Get(entity)
 	skillID, _ := cast.Get("skill_id")
-
 	caster, _ := cast.Get("caster")
 	if skillID != int64(47) || caster != entity {
 		t.Fatalf("cast mirror skill=%v caster=%v entity=%v", skillID, caster, entity)
-	}
-
-	if err := client.reconcileSemanticEvents(app, view, 1); err != nil {
-		t.Fatal(err)
-	}
-
-	if casts.Len() != 1 {
-		t.Fatalf("same correction duplicated cue count=%d", casts.Len())
 	}
 }
 

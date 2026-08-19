@@ -15,10 +15,28 @@ import (
 // attaches only to the authenticated hero while public peers retain separate entities.
 func TestConnectedProjectionCreatesDistinctAuthenticatedAndPeerPlayers(t *testing.T) {
 	engine := gameecs.New()
+
+	t.Cleanup(func() { _ = engine.Close() })
+
 	registerRemoteViewSchemas(t, engine)
 	app := &application{clientSimulation: engine}
+	connected := connectedProjectionFixture()
 
-	connected := &clientsession.Session{
+	if err := app.installRemoteView(connected, true); err != nil {
+		t.Fatal(err)
+	}
+
+	if err := app.syncRemoteMirrors(connected.World.Entities, connected.HUD.Location); err != nil {
+		t.Fatal(err)
+	}
+
+	assertConnectedPlayerClasses(t, engine)
+	assertConnectedOwnerPartyView(t, engine)
+}
+
+// connectedProjectionFixture keeps owner-private HUD facts separate from the peer's public world projection.
+func connectedProjectionFixture() *clientsession.Session {
+	return &clientsession.Session{
 		HUD: playeradapter.HUD{
 			Version: playeradapter.HUDVersion, Tick: 9,
 			Player: playeradapter.HUDIdentity{
@@ -48,30 +66,28 @@ func TestConnectedProjectionCreatesDistinctAuthenticatedAndPeerPlayers(t *testin
 			}},
 		},
 		Private: playeradapter.PrivateView{Version: playeradapter.PrivateViewVersion, Tick: 9},
-		Party: playeradapter.PartyView{Version: playeradapter.PartyViewVersion, Tick: 9, Revision: 3, PartyID: "party:1",
+		Party: playeradapter.PartyView{
+			Version: playeradapter.PartyViewVersion, Tick: 9, Revision: 3, PartyID: "party:1",
 			Roster: []playeradapter.PartyRosterEntry{
 				{PlayerID: "player-2", Name: "Conan", Class: "Barbarian", Level: 1, Relationship: "self"},
 				{PlayerID: "player-1", Name: "Natalya", Class: "Assassin", Level: 2, Relationship: "party"},
-			}},
+			},
+		},
 	}
-	if err := app.installRemoteView(connected, true); err != nil {
-		t.Fatal(err)
-	}
+}
 
-	if err := app.syncRemoteMirrors(connected.World.Entities, connected.HUD.Location); err != nil {
-		t.Fatal(err)
-	}
+// assertConnectedPlayerClasses proves owner and peer retain independent class-token presentation identities.
+func assertConnectedPlayerClasses(t *testing.T, engine *gameecs.Engine) {
+	t.Helper()
 
 	identities, _ := akara.GetDynamicStore(engine.World(), "d2legacy.player.identity")
 	appearances, _ := akara.GetDynamicStore(engine.World(), "d2legacy.player.appearance")
-
 	if identities.Len() != 2 {
 		t.Fatalf("connected player entities = %d, want 2", identities.Len())
 	}
 
 	classes := map[string]string{}
 	tokens := map[string]string{}
-
 	for _, entity := range identities.Entities() {
 		identity, _ := identities.Get(entity)
 		appearance, _ := appearances.Get(entity)
@@ -86,6 +102,11 @@ func TestConnectedProjectionCreatesDistinctAuthenticatedAndPeerPlayers(t *testin
 		classes["player-2"] != "Barbarian" || tokens["player-2"] != "BA" {
 		t.Fatalf("connected roster classes=%v tokens=%v", classes, tokens)
 	}
+}
+
+// assertConnectedOwnerPartyView ensures party-private projection attaches once to the authenticated player only.
+func assertConnectedOwnerPartyView(t *testing.T, engine *gameecs.Engine) {
+	t.Helper()
 
 	partyViews, _ := akara.GetDynamicStore(engine.World(), "d2legacy.player.party_view")
 	if partyViews.Len() != 1 {
@@ -96,7 +117,6 @@ func TestConnectedProjectionCreatesDistinctAuthenticatedAndPeerPlayers(t *testin
 		view, _ := partyViews.Get(entity)
 		partyID, _ := view.Get("party_id")
 		peer, _ := view.Get("player_2")
-
 		relationship, _ := view.Get("relationship_2")
 		if partyID != "party:1" || peer != "player-1" || relationship != "party" {
 			t.Fatalf("installed party view party=%v peer=%v relationship=%v", partyID, peer, relationship)

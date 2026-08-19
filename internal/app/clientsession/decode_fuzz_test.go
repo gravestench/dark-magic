@@ -8,6 +8,7 @@ import (
 	playeradapter "github.com/gravestench/dark-magic/internal/mod/d2legacy/adapter/player"
 )
 
+// TestDecodeViewRejectsUnknownFieldsAndOversizedCollections protects strict schema and memory bounds.
 func TestDecodeViewRejectsUnknownFieldsAndOversizedCollections(t *testing.T) {
 	view := validNetworkView(9)
 	payload, err := json.Marshal(view)
@@ -31,6 +32,7 @@ func TestDecodeViewRejectsUnknownFieldsAndOversizedCollections(t *testing.T) {
 	}
 }
 
+// FuzzDecodeClientView requires arbitrary payloads to fail safely or produce a validated bounded view.
 func FuzzDecodeClientView(f *testing.F) {
 	valid, _ := json.Marshal(validNetworkView(3))
 	f.Add(uint64(3), valid)
@@ -47,6 +49,7 @@ func FuzzDecodeClientView(f *testing.F) {
 	})
 }
 
+// validNetworkView supplies the smallest complete wire projection used by decode seeds.
 func validNetworkView(tick uint64) playeradapter.ClientView {
 	return playeradapter.ClientView{
 		Version: playeradapter.ClientViewVersion,
@@ -77,6 +80,9 @@ func validNetworkView(tick uint64) playeradapter.ClientView {
 				PlayerID: "player", Name: "Hero", Class: "Amazon", Level: 1, Relationship: "self",
 			}},
 		},
-		Events: playeradapter.EventView{Version: playeradapter.EventViewVersion, Tick: tick, Events: []playeradapter.SemanticEvent{}},
+		Events: playeradapter.EventView{
+			Version: playeradapter.EventViewVersion, Tick: tick,
+			Events: []playeradapter.SemanticEvent{},
+		},
 	}
 }

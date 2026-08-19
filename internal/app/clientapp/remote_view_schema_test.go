@@ -24,6 +24,16 @@ func registerRemoteViewSchemas(t *testing.T, engine *gameecs.Engine) {
 // remoteViewTestSchemas declares projection schemas explicitly so tests fail when production writes a
 // field that was not intentionally exposed.
 func remoteViewTestSchemas() []akara.Schema {
+	schemas := remoteIdentityAndMonsterTestSchemas()
+	schemas = append(schemas, remotePlayerAndPresentationTestSchemas()...)
+	schemas = append(schemas, remoteItemAndInteractionTestSchemas()...)
+	schemas = append(schemas, remoteWorldTestSchemas()...)
+
+	return schemas
+}
+
+// remoteIdentityAndMonsterTestSchemas defines public identity, appearance, combat, and death-cue boundaries.
+func remoteIdentityAndMonsterTestSchemas() []akara.Schema {
 	return []akara.Schema{
 		remoteTestSchema("d2legacy.player.identity",
 			remoteTestFields(akara.FieldString, "character_id", "player", "name", "class")),
@@ -55,6 +65,12 @@ func remoteViewTestSchemas() []akara.Schema {
 				"tick", "xp", "game_player_count", "effective_player_count",
 				"nearby_party_member_count", "monster_player_count", "no_drop_player_count",
 			)),
+	}
+}
+
+// remotePlayerAndPresentationTestSchemas covers owner-private data and the read-only render components it may create.
+func remotePlayerAndPresentationTestSchemas() []akara.Schema {
+	return []akara.Schema{
 		remoteTestSchema("d2legacy.player.vitals",
 			remoteTestFields(
 				akara.FieldInt64,
@@ -100,6 +116,12 @@ func remoteViewTestSchemas() []akara.Schema {
 		remoteTestSchema("d2legacy.player.belt",
 			remoteTestFields(akara.FieldInt64, "capacity")),
 		remoteTestSchema("d2legacy.player.party_view", remotePartyTestFields()),
+	}
+}
+
+// remoteItemAndInteractionTestSchemas keeps inventory and interaction mirrors separate from gameplay authority schemas.
+func remoteItemAndInteractionTestSchemas() []akara.Schema {
+	return []akara.Schema{
 		remoteTestSchema("d2legacy.items.layout", remoteItemLayoutTestFields()),
 		remoteTestSchema("d2legacy.item.identity", remoteItemIdentityTestFields()),
 		remoteTestSchema("d2legacy.item.placement", remoteItemPlacementTestFields()),
@@ -111,6 +133,12 @@ func remoteViewTestSchemas() []akara.Schema {
 		remoteTestSchema("d2legacy.interaction.null_target"),
 		remoteTestSchema("d2legacy.skill.cast_cue", remoteCastCueTestFields()),
 		remoteTestSchema("d2legacy.state.event", remoteStateEventTestFields()),
+	}
+}
+
+// remoteWorldTestSchemas supplies only spatial and selection facts required to render connected entities.
+func remoteWorldTestSchemas() []akara.Schema {
+	return []akara.Schema{
 		remoteTestSchema("d2legacy.world.position",
 			remoteTestFields(akara.FieldFloat64, "x", "y")),
 		remoteTestSchema("d2legacy.world.velocity",

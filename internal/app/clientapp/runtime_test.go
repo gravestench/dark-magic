@@ -9,6 +9,7 @@ import (
 	"github.com/gravestench/dark-magic/internal/video"
 )
 
+// TestProductionVideoBackendNeverLaunchesExternalPlayer keeps diagnostics from escaping the composed client window.
 func TestProductionVideoBackendNeverLaunchesExternalPlayer(t *testing.T) {
 	backend := newClientVideoBackend(&render.Composer{}, &audio.Mixer{}, image.Pt(800, 600))
 	if _, external := backend.(video.FFplay); external {

@@ -33,6 +33,8 @@ var developmentScenes = map[string]developmentSceneDefaults{
 	"warp_lab": {characters: 1, worldLevel: 1, gameplay: true},
 }
 
+// applyDevelopmentSceneDefaults fills only omitted fixture settings so explicit
+// command-line choices remain authoritative.
 func applyDevelopmentSceneDefaults(options Options) Options {
 	defaults, ok := developmentScenes[options.StartScene]
 	if ok {
@@ -43,22 +45,27 @@ func applyDevelopmentSceneDefaults(options Options) Options {
 			options.FixtureWorldLevel = defaults.worldLevel
 		}
 	}
+
 	if options.FixtureWorldSpawn == "" {
 		options.FixtureWorldSpawn = "entry"
 	}
+
 	return options
 }
 
+// developmentGameplayScene reports whether a laboratory uses the production gameplay input and session paths.
 func developmentGameplayScene(scene string) bool {
 	return developmentScenes[scene].gameplay
 }
 
+// developmentCharactersForScene applies disposable lab requirements without mutating persisted player profiles.
 func developmentCharactersForScene(scene string, count int) []d2save.Character {
 	characters := DevelopmentCharacters(count)
 	defaults := developmentScenes[scene]
 	if len(characters) == 0 {
 		return characters
 	}
+
 	if defaults.characterClass != "" {
 		characters[0].Class = defaults.characterClass
 	}
@@ -69,14 +76,17 @@ func developmentCharactersForScene(scene string, count int) []d2save.Character {
 		characters[0].Stats.Mana = defaults.mana
 		characters[0].Stats.MaxMana = defaults.mana
 	}
+
 	return characters
 }
 
+// shouldActivateDevelopmentSession limits automatic admission to scenes that explicitly require a playable fixture.
 func shouldActivateDevelopmentSession(options Options) bool {
 	return options.StartScene != "" && options.FixtureCharacters > 0 &&
 		(fixtureNeedsSelection(options.StartScene) || developmentGameplayScene(options.StartScene))
 }
 
+// developmentSkillsBootstrapData gives Spell Lab broad ephemeral skills while leaving ordinary sessions untouched.
 func (app *application) developmentSkillsBootstrapData() map[string]any {
 	if app.options.StartScene != "spell_lab" {
 		return map[string]any{"enabled": false}

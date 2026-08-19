@@ -28,7 +28,42 @@ import (
 	d2save "github.com/gravestench/dark-magic/internal/mod/d2legacy/adapter/save"
 )
 
+// TestConnectVerifiesAssignmentTLSRuntimeAndHUD exercises the complete trust handshake and proves the
+// resulting public, private, party, and event projections come from the authenticated authority.
 func TestConnectVerifiesAssignmentTLSRuntimeAndHUD(t *testing.T) {
+	fixture := newConnectionFixture(t)
+
+	ctx, stop := context.WithTimeout(context.Background(), 5*time.Second)
+	defer stop()
+
+	assertFingerprintMismatchRejected(t, ctx, fixture)
+	connected := connectFixtureSession(t, ctx, fixture)
+	assertInitialConnectionState(t, ctx, connected, fixture.allocation)
+	assertReconnectPaths(t, ctx, connected)
+	assertReassignmentPreservesIdentity(t, ctx, connected, fixture)
+
+	if err := connected.Close(ctx); err != nil {
+		t.Fatal(err)
+	}
+
+	assertSelfHostedConnection(t, ctx, fixture)
+}
+
+// connectionFixture keeps the authority, network endpoint, and expected runtime identity together.
+// Tests can therefore exercise trust transitions without repeating setup or accidentally varying an invariant.
+type connectionFixture struct {
+	allocation gamesession.Allocation
+	assignment realm.JoinAssignment
+	authority  *gameserver.TicketAuthority
+	clientTLS  *tls.Config
+	identity   simulation.RuntimeIdentity
+}
+
+// newConnectionFixture builds one real QUIC authority whose public projections are deterministic.
+// Cleanup remains owned by the test so helpers cannot outlive the engine or its listening socket.
+func newConnectionFixture(t *testing.T) connectionFixture {
+	t.Helper()
+
 	identity := clientSessionIdentity()
 	allocation, err := gamesession.Allocate("game", identity, gamesession.PredictionLimited)
 	if err != nil {
@@ -41,8 +76,9 @@ func TestConnectVerifiesAssignmentTLSRuntimeAndHUD(t *testing.T) {
 	}
 	t.Cleanup(func() { _ = session.Close(); _ = engine.Close() })
 	if err := session.Register(playeradapter.EnterCommand, gamesession.CommandHandler{
-		Validate: func(simulation.Command) error { return nil }, Apply: func(*gameecs.Engine, simulation.Command) error { return nil },
-		Allowed: []simulation.Authority{simulation.AuthoritySystem},
+		Validate: func(simulation.Command) error { return nil },
+		Apply:    func(*gameecs.Engine, simulation.Command) error { return nil },
+		Allowed:  []simulation.Authority{simulation.AuthoritySystem},
 	}); err != nil {
 		t.Fatal(err)
 	}
@@ -50,18 +86,41 @@ func TestConnectVerifiesAssignmentTLSRuntimeAndHUD(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	ticket, err := authority.Issue(gameserver.Principal{ID: "account", CharacterID: "character", PlayerID: "player", CharacterRevision: 2, RuntimeIdentityHash: allocation.IdentityHash}, time.Minute)
+
+	principal := gameserver.Principal{
+		ID:                  "account",
+		CharacterID:         "character",
+		PlayerID:            "player",
+		CharacterRevision:   2,
+		RuntimeIdentityHash: allocation.IdentityHash,
+	}
+
+	ticket, err := authority.Issue(principal, time.Minute)
 	if err != nil {
 		t.Fatal(err)
 	}
-	hud := playeradapter.HUD{Version: playeradapter.HUDVersion, Tick: 0, Player: playeradapter.HUDIdentity{PlayerID: "player", CharacterID: "character", Name: "Hero", Class: "Amazon"}}
+
+	hud := playeradapter.HUD{
+		Version: playeradapter.HUDVersion,
+		Player: playeradapter.HUDIdentity{
+			PlayerID: "player", CharacterID: "character", Name: "Hero", Class: "Amazon",
+		},
+	}
 	view := playeradapter.ClientView{Version: playeradapter.ClientViewVersion, Tick: 0, HUD: hud,
-		World:   playeradapter.WorldView{Version: playeradapter.WorldViewVersion, Tick: 0, Entities: []playeradapter.WorldEntity{}},
+		World: playeradapter.WorldView{
+			Version: playeradapter.WorldViewVersion, Entities: []playeradapter.WorldEntity{},
+		},
 		Private: playeradapter.PrivateView{Version: playeradapter.PrivateViewVersion, Tick: 0},
 		Party: playeradapter.PartyView{Version: playeradapter.PartyViewVersion, Tick: 0,
-			Roster: []playeradapter.PartyRosterEntry{{PlayerID: "player", Name: "Hero", Class: "Amazon", Level: 1, Relationship: "self"}}},
-		Events: playeradapter.EventView{Version: playeradapter.EventViewVersion, Tick: 0, Events: []playeradapter.SemanticEvent{}}}
-	endpoint, err := gameserver.NewEndpoint(&gameserver.Host{Engine: engine, Session: session, Allocation: allocation}, authority,
+			Roster: []playeradapter.PartyRosterEntry{{
+				PlayerID: "player", Name: "Hero", Class: "Amazon", Level: 1, Relationship: "self",
+			}}},
+		Events: playeradapter.EventView{
+			Version: playeradapter.EventViewVersion, Events: []playeradapter.SemanticEvent{},
+		}}
+	host := &gameserver.Host{Engine: engine, Session: session, Allocation: allocation}
+
+	endpoint, err := gameserver.NewEndpoint(host, authority,
 		func(string, simulation.Checkpoint) (json.RawMessage, error) { return json.Marshal(view) })
 	if err != nil {
 		t.Fatal(err)
@@ -72,8 +131,15 @@ func TestConnectVerifiesAssignmentTLSRuntimeAndHUD(t *testing.T) {
 		t.Fatal(err)
 	}
 	destination, _ := playeradapter.NewDestination(10, 20, 100, 100, 1, 40)
-	profiles, err := serverapp.NewRemoteProfileAdmissions(&gameserver.Host{Mode: gameserver.ModeStandalone, Engine: engine, Session: session, Allocation: allocation}, authority,
-		serverapp.RemoteProfileConfig{Credential: "profile-secret", PrincipalID: "self-host-user", PlayerID: "player", Destination: destination, Lifetime: time.Minute})
+	profileHost := &gameserver.Host{
+		Mode: gameserver.ModeStandalone, Engine: engine, Session: session, Allocation: allocation,
+	}
+	profileConfig := serverapp.RemoteProfileConfig{
+		Credential: "profile-secret", PrincipalID: "self-host-user", PlayerID: "player",
+		Destination: destination, Lifetime: time.Minute,
+	}
+
+	profiles, err := serverapp.NewRemoteProfileAdmissions(profileHost, authority, profileConfig)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -82,19 +148,58 @@ func TestConnectVerifiesAssignmentTLSRuntimeAndHUD(t *testing.T) {
 	serveContext, cancel := context.WithCancel(context.Background())
 	t.Cleanup(cancel)
 	go func() { _ = server.Serve(serveContext) }()
-	assignment := realm.JoinAssignment{GameID: "game", Endpoint: realm.GameEndpoint{Address: server.Addr(), TLSFingerprint: fingerprint}, Ticket: ticket, Runtime: identity}
 
-	wrong := assignment
+	assignment := realm.JoinAssignment{
+		GameID: "game", Ticket: ticket, Runtime: identity,
+		Endpoint: realm.GameEndpoint{Address: server.Addr(), TLSFingerprint: fingerprint},
+	}
+
+	return connectionFixture{
+		allocation: allocation,
+		assignment: assignment,
+		authority:  authority,
+		clientTLS:  clientTLS,
+		identity:   identity,
+	}
+}
+
+// assertFingerprintMismatchRejected proves endpoint discovery cannot override certificate pinning.
+func assertFingerprintMismatchRejected(
+	t *testing.T,
+	ctx context.Context,
+	fixture connectionFixture,
+) {
+	t.Helper()
+
+	wrong := fixture.assignment
 	wrong.Endpoint.TLSFingerprint = "sha256:" + strings.Repeat("0", 64)
-	ctx, stop := context.WithTimeout(context.Background(), 5*time.Second)
-	defer stop()
-	if _, err := Connect(ctx, wrong, clientTLS); err == nil {
+	if _, err := Connect(ctx, wrong, fixture.clientTLS); err == nil {
 		t.Fatal("wrong TLS fingerprint was accepted")
 	}
-	connected, err := Connect(ctx, assignment, clientTLS)
+}
+
+// connectFixtureSession establishes the trusted baseline used by subsequent lifecycle assertions.
+func connectFixtureSession(t *testing.T, ctx context.Context, fixture connectionFixture) *Session {
+	t.Helper()
+
+	connected, err := Connect(ctx, fixture.assignment, fixture.clientTLS)
 	if err != nil {
 		t.Fatal(err)
 	}
+
+	return connected
+}
+
+// assertInitialConnectionState verifies authenticated projections and both correction entry points.
+// An unchanged refresh must still be a valid observation while producing no world mutations.
+func assertInitialConnectionState(
+	t *testing.T,
+	ctx context.Context,
+	connected *Session,
+	allocation gamesession.Allocation,
+) {
+	t.Helper()
+
 	if connected.HUD.Player.Name != "Hero" || connected.Admission.Admission.IdentityHash != allocation.IdentityHash {
 		t.Fatalf("session = %#v", connected)
 	}
@@ -124,6 +229,13 @@ func TestConnectVerifiesAssignmentTLSRuntimeAndHUD(t *testing.T) {
 		t.Fatal(ctx.Err())
 	}
 	cancelWatch()
+}
+
+// assertReconnectPaths exercises transport reuse and pinned redial separately.
+// Both paths must rotate credentials and publish a fresh semantic-event epoch.
+func assertReconnectPaths(t *testing.T, ctx context.Context, connected *Session) {
+	t.Helper()
+
 	firstCredential := connected.credential
 	if err := connected.Reconnect(ctx); err != nil {
 		t.Fatal(err)
@@ -147,14 +259,38 @@ func TestConnectVerifiesAssignmentTLSRuntimeAndHUD(t *testing.T) {
 	if connected.PresentationSnapshot().EventEpoch != 3 {
 		t.Fatalf("redial semantic event epoch = %d, want 3", connected.PresentationSnapshot().EventEpoch)
 	}
-	replacementTicket, err := authority.Issue(gameserver.Principal{ID: "account", CharacterID: "character",
-		PlayerID: "player", CharacterRevision: 2, RuntimeIdentityHash: allocation.IdentityHash}, time.Minute)
+}
+
+// assertReassignmentPreservesIdentity verifies that a replacement ticket may rotate transport authority
+// without changing the admitted character, player, runtime, or presentation epoch ordering.
+func assertReassignmentPreservesIdentity(
+	t *testing.T,
+	ctx context.Context,
+	connected *Session,
+	fixture connectionFixture,
+) {
+	t.Helper()
+
+	replacementTicket, err := fixture.authority.Issue(gameserver.Principal{
+		ID:                  "account",
+		CharacterID:         "character",
+		PlayerID:            "player",
+		CharacterRevision:   2,
+		RuntimeIdentityHash: fixture.allocation.IdentityHash,
+	}, time.Minute)
 	if err != nil {
 		t.Fatal(err)
 	}
+
 	beforeReassignment := connected.credential
-	if err := connected.Reassign(ctx, realm.JoinAssignment{GameID: "game", Endpoint: assignment.Endpoint,
-		Ticket: replacementTicket, Runtime: identity}, clientTLS); err != nil {
+
+	replacement := realm.JoinAssignment{
+		GameID:   "game",
+		Endpoint: fixture.assignment.Endpoint,
+		Ticket:   replacementTicket,
+		Runtime:  fixture.identity,
+	}
+	if err := connected.Reassign(ctx, replacement, fixture.clientTLS); err != nil {
 		t.Fatal(err)
 	}
 	if connected.credential == beforeReassignment || connected.HUD.Player.PlayerID != "player" ||
@@ -164,15 +300,26 @@ func TestConnectVerifiesAssignmentTLSRuntimeAndHUD(t *testing.T) {
 	if connected.PresentationSnapshot().EventEpoch != 4 {
 		t.Fatalf("reassignment semantic event epoch = %d, want 4", connected.PresentationSnapshot().EventEpoch)
 	}
-	if err := connected.Close(ctx); err != nil {
-		t.Fatal(err)
-	}
+}
+
+// assertSelfHostedConnection proves profile admission reaches the same authenticated session model
+// without consuming a realm-issued ticket supplied by the caller.
+func assertSelfHostedConnection(t *testing.T, ctx context.Context, fixture connectionFixture) {
+	t.Helper()
+
 	profile := d2save.New(d2save.Character{ID: "character", Name: "Hero", Class: "Amazon"})
 	if err := profile.Select("character"); err != nil {
 		t.Fatal(err)
 	}
-	selfHosted, err := ConnectSelfHosted(ctx, SelfHostedAssignment{GameID: "game", Endpoint: assignment.Endpoint,
-		Runtime: identity, ProfileCredential: "profile-secret"}, clientTLS, profile)
+
+	assignment := SelfHostedAssignment{
+		GameID:            "game",
+		Endpoint:          fixture.assignment.Endpoint,
+		Runtime:           fixture.identity,
+		ProfileCredential: "profile-secret",
+	}
+
+	selfHosted, err := ConnectSelfHosted(ctx, assignment, fixture.clientTLS, profile)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -184,19 +331,27 @@ func TestConnectVerifiesAssignmentTLSRuntimeAndHUD(t *testing.T) {
 	}
 }
 
+// clientSessionIdentity returns the deterministic runtime identity shared by connection fixtures.
 func clientSessionIdentity() simulation.RuntimeIdentity {
 	const packageDigest = "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
 	return simulation.RuntimeIdentity{Recipe: simulation.RuntimeRecipe{
-		Schema: simulation.RuntimeRecipeSchema, EngineAPI: "v1", NetworkProtocol: "test/v1", AssetSetID: simulation.EmptyAssetSetID,
+		Schema: simulation.RuntimeRecipeSchema, EngineAPI: "v1", NetworkProtocol: "test/v1",
+		AssetSetID:           simulation.EmptyAssetSetID,
 		GameDataGenerationID: simulation.GameDataGenerationIDForAssetSet(simulation.EmptyAssetSetID),
-		Packages:             simulation.RuntimePackageSet{Base: simulation.RuntimePackage{ID: "d2legacy", Version: "1.0.0", Digest: packageDigest, Size: 1, Redistributable: true}},
-		AuthoritativeHash:    "rules", ConfigurationHash: "config",
+		Packages: simulation.RuntimePackageSet{Base: simulation.RuntimePackage{
+			ID: "d2legacy", Version: "1.0.0", Digest: packageDigest, Size: 1, Redistributable: true,
+		}},
+		AuthoritativeHash: "rules", ConfigurationHash: "config",
 	}}
 }
 
+// TestSessionExposesDistinctNetworkTimelines keeps low-latency owner prediction separate from delayed
+// peer interpolation while deriving both from one authority clock.
 func TestSessionExposesDistinctNetworkTimelines(t *testing.T) {
 	now := time.Unix(600, 0)
-	session := &Session{Admission: gameserver.JoinResponse{Snapshot: gameserver.Snapshot{Tick: 20, StepNanos: int64(40 * time.Millisecond)}}}
+	session := &Session{Admission: gameserver.JoinResponse{Snapshot: gameserver.Snapshot{
+		Tick: 20, StepNanos: int64(40 * time.Millisecond),
+	}}}
 	timeline := session.NetworkTimeline(now)
 	if !timeline.Ready || timeline.Prediction.Tick != 20 || timeline.Interpolation.Tick != 18 {
 		t.Fatalf("network timeline = %#v", timeline)
@@ -209,12 +364,18 @@ func TestSessionExposesDistinctNetworkTimelines(t *testing.T) {
 	}
 }
 
+// TestConnectRejectsMalformedDiscoveryBeforeDial proves malformed endpoint trust data fails before I/O.
 func TestConnectRejectsMalformedDiscoveryBeforeDial(t *testing.T) {
-	if _, err := Connect(context.Background(), realm.JoinAssignment{GameID: "game", Ticket: "ticket", Endpoint: realm.GameEndpoint{Address: "https://example", TLSFingerprint: "bad"}}, &tls.Config{}); err == nil {
+	assignment := realm.JoinAssignment{
+		GameID: "game", Ticket: "ticket",
+		Endpoint: realm.GameEndpoint{Address: "https://example", TLSFingerprint: "bad"},
+	}
+	if _, err := Connect(context.Background(), assignment, &tls.Config{}); err == nil {
 		t.Fatal("malformed discovery was accepted")
 	}
 }
 
+// TestCorrectionRejectsStaleAndConflictingSnapshots permits idempotence but rejects rewritten history.
 func TestCorrectionRejectsStaleAndConflictingSnapshots(t *testing.T) {
 	current := gameserver.Snapshot{Tick: 8, Checksum: "current"}
 	if err := validateCorrection(current, gameserver.Snapshot{Tick: 7, Checksum: "old"}); err != ErrStaleCorrection {
@@ -228,6 +389,7 @@ func TestCorrectionRejectsStaleAndConflictingSnapshots(t *testing.T) {
 	}
 }
 
+// TestCorrectionCannotReplaceAuthenticatedOwnerIdentity protects the admission identity after join.
 func TestCorrectionCannotReplaceAuthenticatedOwnerIdentity(t *testing.T) {
 	owner := playeradapter.HUDIdentity{PlayerID: "player", CharacterID: "hero"}
 	session := &Session{
@@ -240,7 +402,9 @@ func TestCorrectionCannotReplaceAuthenticatedOwnerIdentity(t *testing.T) {
 	}
 	view := validNetworkView(2)
 	view.HUD.Player = playeradapter.HUDIdentity{PlayerID: "attacker", CharacterID: "hero"}
-	if _, err := session.applyDecodedCorrection(gameserver.Snapshot{Tick: 2, Checksum: "after"}, view); err != ErrAssignment {
+
+	snapshot := gameserver.Snapshot{Tick: 2, Checksum: "after"}
+	if _, err := session.applyDecodedCorrection(snapshot, view); err != ErrAssignment {
 		t.Fatalf("owner replacement error = %v", err)
 	}
 	if session.reliableHUD.Player != owner {
@@ -248,6 +412,7 @@ func TestCorrectionCannotReplaceAuthenticatedOwnerIdentity(t *testing.T) {
 	}
 }
 
+// TestViewReturnsDefensiveWorldEntityState proves callers cannot mutate retained correction storage.
 func TestViewReturnsDefensiveWorldEntityState(t *testing.T) {
 	health, maximum := int64(3), int64(5)
 	session := &Session{HUD: playeradapter.HUD{Tick: 7}, World: playeradapter.WorldView{Tick: 7,
@@ -258,11 +423,13 @@ func TestViewReturnsDefensiveWorldEntityState(t *testing.T) {
 	*view.Entities[0].Health = 0
 	view.States[0].StateID = "changed"
 	_, unchanged := session.View()
-	if unchanged.Entities[0].ID != "hostile" || *unchanged.Entities[0].Health != 3 || unchanged.States[0].StateID != "might" {
+	if unchanged.Entities[0].ID != "hostile" ||
+		*unchanged.Entities[0].Health != 3 || unchanged.States[0].StateID != "might" {
 		t.Fatalf("session view was mutated through returned copy: %#v", unchanged)
 	}
 }
 
+// TestCorrectionAcknowledgesOnlyContiguousInputHistory retains every sequence newer than authority's ack.
 func TestCorrectionAcknowledgesOnlyContiguousInputHistory(t *testing.T) {
 	session := &Session{pending: map[uint64]gameserver.CommandIntent{
 		1: {Sequence: 1, Payload: json.RawMessage(`{"x":1}`)},
@@ -280,6 +447,7 @@ func TestCorrectionAcknowledgesOnlyContiguousInputHistory(t *testing.T) {
 	}
 }
 
+// TestStagedInputIsImmediatelyPredictableAndDefensive checks pre-send replay and payload ownership.
 func TestStagedInputIsImmediatelyPredictableAndDefensive(t *testing.T) {
 	session := &Session{pending: make(map[uint64]gameserver.CommandIntent)}
 	payload := json.RawMessage(`{"x":1}`)
@@ -303,6 +471,8 @@ func TestStagedInputIsImmediatelyPredictableAndDefensive(t *testing.T) {
 	}
 }
 
+// TestTransformFrameUpdatesKnownEntitiesWithoutInventingLifecycle ensures datagrams move retained public
+// identities but cannot create entities absent from reliable corrections.
 func TestTransformFrameUpdatesKnownEntitiesWithoutInventingLifecycle(t *testing.T) {
 	session := &Session{
 		HUD: playeradapter.HUD{Version: playeradapter.HUDVersion, Tick: 10},
@@ -327,10 +497,14 @@ func TestTransformFrameUpdatesKnownEntitiesWithoutInventingLifecycle(t *testing.
 		session.World.Entities[0].Direction != 3 || session.World.Entities[0].Mode != "WL" {
 		t.Fatalf("transformed world = %#v", session.World)
 	}
-	if len(session.World.Missiles) != 1 || session.World.Missiles[0].Position != (playeradapter.HUDPosition{X: 10, Y: 11}) {
+
+	if len(session.World.Missiles) != 1 ||
+		session.World.Missiles[0].Position != (playeradapter.HUDPosition{X: 10, Y: 11}) {
 		t.Fatalf("transformed missiles = %#v", session.World.Missiles)
 	}
-	if session.HUD.Position != (playeradapter.HUDPosition{X: 4, Y: 5}) || session.HUD.Movement.Velocity != (playeradapter.HUDPosition{X: 6, Y: 7}) {
+
+	if session.HUD.Position != (playeradapter.HUDPosition{X: 4, Y: 5}) ||
+		session.HUD.Movement.Velocity != (playeradapter.HUDPosition{X: 6, Y: 7}) {
 		t.Fatalf("transformed HUD = %#v", session.HUD)
 	}
 	if len(delta.Upserts) != 1 || delta.Upserts[0].ID != "known" {
@@ -338,6 +512,8 @@ func TestTransformFrameUpdatesKnownEntitiesWithoutInventingLifecycle(t *testing.
 	}
 }
 
+// TestPresentationSnapshotsAreImmutableAtomicRevisions proves retained readers observe complete old or
+// new revisions, never mutable storage shared with the network worker.
 func TestPresentationSnapshotsAreImmutableAtomicRevisions(t *testing.T) {
 	session := &Session{
 		HUD: playeradapter.HUD{Version: playeradapter.HUDVersion, Tick: 10},
@@ -346,7 +522,13 @@ func TestPresentationSnapshotsAreImmutableAtomicRevisions(t *testing.T) {
 			Entities: []playeradapter.WorldEntity{{ID: "known", Position: playeradapter.HUDPosition{X: 1}}},
 			States:   []playeradapter.WorldState{{TargetID: "known", StateID: "might", PeriodTicks: 50}},
 		},
-		Events:    playeradapter.EventView{Version: playeradapter.EventViewVersion, Tick: 10, Events: []playeradapter.SemanticEvent{{ID: 1, Type: "cast", Tick: 10, Cast: &playeradapter.SemanticCastCue{Kind: "cast_started", Player: "alice"}}}},
+		Events: playeradapter.EventView{
+			Version: playeradapter.EventViewVersion, Tick: 10,
+			Events: []playeradapter.SemanticEvent{{
+				ID: 1, Type: "cast", Tick: 10,
+				Cast: &playeradapter.SemanticCastCue{Kind: "cast_started", Player: "alice"},
+			}},
+		},
 		Admission: gameserver.JoinResponse{Snapshot: gameserver.Snapshot{Tick: 10, StepNanos: int64(40 * time.Millisecond)}},
 	}
 	before := session.PresentationSnapshot()
@@ -357,18 +539,26 @@ func TestPresentationSnapshotsAreImmutableAtomicRevisions(t *testing.T) {
 	if before.Events.Events[0].Cast.Kind != "cast_started" {
 		t.Fatal("published semantic event aliases mutable session state")
 	}
-	if _, err := session.applyTransform(sessionquic.TransformFrame{Tick: 11, Entities: []sessionquic.TransformEntity{{IDHash: sessionquic.PublicIDHash("known"), X: 2}}}); err != nil {
+
+	frame := sessionquic.TransformFrame{Tick: 11, Entities: []sessionquic.TransformEntity{{
+		IDHash: sessionquic.PublicIDHash("known"), X: 2,
+	}}}
+	if _, err := session.applyTransform(frame); err != nil {
 		t.Fatal(err)
 	}
 	after := session.PresentationSnapshot()
 	if after == before || after.Revision <= before.Revision {
 		t.Fatalf("presentation revisions before=%p/%d after=%p/%d", before, before.Revision, after, after.Revision)
 	}
-	if before.World.Tick != 10 || before.World.Entities[0].Position.X != 1 || after.World.Tick != 11 || after.World.Entities[0].Position.X != 2 {
+
+	if before.World.Tick != 10 || before.World.Entities[0].Position.X != 1 ||
+		after.World.Tick != 11 || after.World.Entities[0].Position.X != 2 {
 		t.Fatalf("immutable snapshots before=%#v after=%#v", before.World, after.World)
 	}
 }
 
+// TestReliableMergePreservesCanonicalInputAndNewerTransforms keeps reliable gameplay facts while
+// retaining a newer datagram position and animation timeline.
 func TestReliableMergePreservesCanonicalInputAndNewerTransforms(t *testing.T) {
 	reliable := playeradapter.WorldView{Tick: 10,
 		Entities: []playeradapter.WorldEntity{{ID: "known", Position: playeradapter.HUDPosition{X: 1}}},
@@ -385,6 +575,7 @@ func TestReliableMergePreservesCanonicalInputAndNewerTransforms(t *testing.T) {
 	}
 }
 
+// TestLatestDeltaPublicationDropsObsoleteNotification proves slow consumers receive the newest state.
 func TestLatestDeltaPublicationDropsObsoleteNotification(t *testing.T) {
 	deltas := make(chan playeradapter.WorldDelta, 1)
 	publishLatestDelta(context.Background(), deltas, playeradapter.WorldDelta{Tick: 1})
@@ -394,13 +585,21 @@ func TestLatestDeltaPublicationDropsObsoleteNotification(t *testing.T) {
 	}
 }
 
+// connectTLS creates a locally trusted certificate and its assignment fingerprint for handshake tests.
 func connectTLS(t *testing.T) (*tls.Config, *tls.Config, string) {
 	t.Helper()
 	key, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
 	if err != nil {
 		t.Fatal(err)
 	}
-	template := x509.Certificate{SerialNumber: big.NewInt(1), Subject: pkix.Name{CommonName: "localhost"}, NotBefore: time.Now().Add(-time.Hour), NotAfter: time.Now().Add(time.Hour), KeyUsage: x509.KeyUsageDigitalSignature, ExtKeyUsage: []x509.ExtKeyUsage{x509.ExtKeyUsageServerAuth}, IPAddresses: []net.IP{net.ParseIP("127.0.0.1")}}
+
+	template := x509.Certificate{
+		SerialNumber: big.NewInt(1), Subject: pkix.Name{CommonName: "localhost"},
+		NotBefore: time.Now().Add(-time.Hour), NotAfter: time.Now().Add(time.Hour),
+		KeyUsage:    x509.KeyUsageDigitalSignature,
+		ExtKeyUsage: []x509.ExtKeyUsage{x509.ExtKeyUsageServerAuth},
+		IPAddresses: []net.IP{net.ParseIP("127.0.0.1")},
+	}
 	der, err := x509.CreateCertificate(rand.Reader, &template, &template, &key.PublicKey, key)
 	if err != nil {
 		t.Fatal(err)
@@ -412,5 +611,10 @@ func connectTLS(t *testing.T) (*tls.Config, *tls.Config, string) {
 	pool := x509.NewCertPool()
 	pool.AddCert(certificate)
 	sum := sha256.Sum256(der)
-	return &tls.Config{Certificates: []tls.Certificate{{Certificate: [][]byte{der}, PrivateKey: key}}}, &tls.Config{RootCAs: pool, ServerName: "127.0.0.1"}, "sha256:" + hex.EncodeToString(sum[:])
+	serverTLS := &tls.Config{Certificates: []tls.Certificate{{
+		Certificate: [][]byte{der}, PrivateKey: key,
+	}}}
+	clientTLS := &tls.Config{RootCAs: pool, ServerName: "127.0.0.1"}
+
+	return serverTLS, clientTLS, "sha256:" + hex.EncodeToString(sum[:])
 }

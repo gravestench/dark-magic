@@ -2,6 +2,7 @@ package clientapp
 
 import "testing"
 
+// TestFixtureNeedsSelectionForPlayableScenes ensures direct gameplay cannot start without an admitted fixture player.
 func TestFixtureNeedsSelectionForPlayableScenes(t *testing.T) {
 	t.Parallel()
 
@@ -12,6 +13,7 @@ func TestFixtureNeedsSelectionForPlayableScenes(t *testing.T) {
 	}
 }
 
+// TestSpellLabSuppliesProductionSpellFixture proves the lab changes disposable admission data, not gameplay systems.
 func TestSpellLabSuppliesProductionSpellFixture(t *testing.T) {
 	t.Parallel()
 
@@ -19,6 +21,7 @@ func TestSpellLabSuppliesProductionSpellFixture(t *testing.T) {
 	if options.FixtureCharacters != 1 || options.FixtureWorldLevel != 2 {
 		t.Fatalf("Spell Lab defaults = %+v, want one player in Blood Moor", options)
 	}
+
 	if !shouldActivateDevelopmentSession(options) || !developmentGameplayScene("spell_lab") {
 		t.Fatal("Spell Lab must activate the production gameplay session")
 	}
@@ -29,6 +32,7 @@ func TestSpellLabSuppliesProductionSpellFixture(t *testing.T) {
 	if characters[0].Stats.Mana != 4096 || characters[0].Stats.MaxMana != 4096 {
 		t.Fatalf("Spell Lab mana = %+v", characters[0].Stats)
 	}
+
 	app := &application{options: options}
 	skills := app.developmentSkillsBootstrapData()
 	if skills["all_implemented"] != true || skills["skill_ids"] != nil {
@@ -36,6 +40,7 @@ func TestSpellLabSuppliesProductionSpellFixture(t *testing.T) {
 	}
 }
 
+// TestWarpLabSuppliesProductionTransitionState keeps the lab on production transition and gameplay-input paths.
 func TestWarpLabSuppliesProductionTransitionState(t *testing.T) {
 	t.Parallel()
 
@@ -51,6 +56,7 @@ func TestWarpLabSuppliesProductionTransitionState(t *testing.T) {
 	}
 }
 
+// TestDirectGameplayFixtureActivatesOfflineSession distinguishes playable fixtures from frontend-only scenes.
 func TestDirectGameplayFixtureActivatesOfflineSession(t *testing.T) {
 	t.Parallel()
 
@@ -62,6 +68,7 @@ func TestDirectGameplayFixtureActivatesOfflineSession(t *testing.T) {
 	}
 }
 
+// TestFixtureDoesNotSelectCharacterForFrontendLab prevents visual labs from acquiring gameplay save ownership.
 func TestFixtureDoesNotSelectCharacterForFrontendLab(t *testing.T) {
 	t.Parallel()
 
@@ -70,6 +77,7 @@ func TestFixtureDoesNotSelectCharacterForFrontendLab(t *testing.T) {
 	}
 }
 
+// TestCombatLabSuppliesItsOwnDevelopmentState ensures direct launch reaches the intended production wilderness setup.
 func TestCombatLabSuppliesItsOwnDevelopmentState(t *testing.T) {
 	t.Parallel()
 
@@ -82,6 +90,7 @@ func TestCombatLabSuppliesItsOwnDevelopmentState(t *testing.T) {
 	}
 }
 
+// TestCombatLabDoesNotReplaceExplicitDevelopmentState preserves caller intent over convenience defaults.
 func TestCombatLabDoesNotReplaceExplicitDevelopmentState(t *testing.T) {
 	t.Parallel()
 
@@ -95,6 +104,7 @@ func TestCombatLabDoesNotReplaceExplicitDevelopmentState(t *testing.T) {
 	}
 }
 
+// TestOrdinarySceneKeepsNormalWorldDefault prevents laboratory policy from leaking into regular client startup.
 func TestOrdinarySceneKeepsNormalWorldDefault(t *testing.T) {
 	t.Parallel()
 

@@ -6,6 +6,7 @@ import (
 	"github.com/gravestench/dark-magic/internal/inputstate"
 )
 
+// TestPointerMovementAcceptanceUsesOneClickAndWaitsForSettledAuthority verifies the probe observes production input.
 func TestPointerMovementAcceptanceUsesOneClickAndWaitsForSettledAuthority(t *testing.T) {
 	fixture := &pointerMovementAcceptance{cursorX: 500, cursorY: 250}
 	original := inputstate.Frame{Actions: map[string]inputstate.ActionState{"inventory": {Pressed: true}}}
@@ -22,17 +23,20 @@ func TestPointerMovementAcceptanceUsesOneClickAndWaitsForSettledAuthority(t *tes
 	if !fixture.moved || !fixture.Busy() {
 		t.Fatal("authoritative displacement did not begin acceptance")
 	}
+
 	for range pointerAcceptanceStableFrames {
 		frame := fixture.Frame(inputstate.Frame{}, 12, 20, true)
 		if frame.Actions["pointer_primary"].Pressed {
 			t.Fatal("fixture injected more than one click")
 		}
 	}
+
 	if fixture.Busy() {
 		t.Fatal("settled authoritative movement did not complete acceptance")
 	}
 }
 
+// TestPointerMovementAcceptanceWaitsForPlayerAdmission prevents a synthetic click before authority exposes the player.
 func TestPointerMovementAcceptanceWaitsForPlayerAdmission(t *testing.T) {
 	fixture := &pointerMovementAcceptance{cursorX: 500, cursorY: 250}
 	frame := fixture.Frame(inputstate.Frame{}, 0, 0, false)
