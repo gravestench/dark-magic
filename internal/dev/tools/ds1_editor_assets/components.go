@@ -236,9 +236,7 @@ func drawProductionComponent(references compositionReferences, spec componentSpe
 func captureControlComponent(reference image.Image, spec componentSpec, variant int) *image.NRGBA {
 	plate := image.Rect(34, 469, 212, 641)
 	switch {
-	case strings.Contains(spec.Name, "hover"):
-		plate = image.Rect(239, 469, 434, 641)
-	case strings.Contains(spec.Name, "pressed"), strings.HasPrefix(spec.Name, "well_"):
+	case strings.HasPrefix(spec.Name, "well_"):
 		plate = image.Rect(443, 469, 631, 641)
 	case strings.HasPrefix(spec.Name, "tab_"):
 		plate = image.Rect(651, 469, 856, 641)
@@ -258,6 +256,7 @@ func captureControlComponent(reference image.Image, spec componentSpec, variant 
 
 	target := image.NewNRGBA(image.Rect(0, 0, spec.Width, spec.Height))
 	xdraw.CatmullRom.Scale(target, target.Bounds(), reference, sourceBounds, xdraw.Src, nil)
+	styleControlState(target, spec.Name)
 	stabilizeComponentEdges(target, spec.RepeatAxis)
 
 	if strings.HasPrefix(spec.Name, "dropdown_") && strings.HasSuffix(spec.Name, "_right") {
@@ -304,18 +303,70 @@ func capturePanelComponent(reference image.Image, spec componentSpec, variant in
 
 func captureIconComponent(reference image.Image, spec componentSpec) *image.NRGBA {
 	sourceBounds := image.Rect(34, 469, 212, 641)
-	switch spec.Name {
-	case "icon_hover", "icon_selected":
-		sourceBounds = image.Rect(239, 469, 434, 641)
-	case "icon_pressed":
-		sourceBounds = image.Rect(443, 469, 631, 641)
-	case "icon_disabled":
-		sourceBounds = image.Rect(864, 469, 1060, 641)
-	}
-
 	target := image.NewNRGBA(image.Rect(0, 0, spec.Width, spec.Height))
 	xdraw.CatmullRom.Scale(target, target.Bounds(), reference, sourceBounds, xdraw.Src, nil)
+	styleControlState(target, spec.Name)
 	return target
+}
+
+// State sprites intentionally share one silhouette and one content box. The
+// composition reference contains independently drawn state examples with
+// different outer dimensions; cropping each example made controls appear to
+// grow and shrink while hovering. State is expressed through palette and
+// lighting instead of geometry.
+func styleControlState(target *image.NRGBA, name string) {
+	switch {
+	case strings.Contains(name, "hover"), strings.Contains(name, "selected"):
+		remapWarmAccent(target, true)
+	case strings.Contains(name, "pressed"):
+		adjustBrightness(target, 82)
+	case strings.Contains(name, "disabled"):
+		desaturate(target, 58)
+	}
+}
+
+func remapWarmAccent(target *image.NRGBA, brighten bool) {
+	for y := target.Bounds().Min.Y; y < target.Bounds().Max.Y; y++ {
+		for x := target.Bounds().Min.X; x < target.Bounds().Max.X; x++ {
+			pixel := target.NRGBAAt(x, y)
+			if pixel.R < 45 || pixel.R < pixel.G+12 || pixel.G < pixel.B+8 {
+				continue
+			}
+			strength := int(pixel.R)
+			pixel.R = uint8(strength / 8)
+			pixel.G = uint8(min(255, strength+28))
+			pixel.B = uint8(min(255, strength+42))
+			if brighten {
+				pixel.G = uint8(min(255, int(pixel.G)+12))
+				pixel.B = uint8(min(255, int(pixel.B)+12))
+			}
+			target.SetNRGBA(x, y, pixel)
+		}
+	}
+}
+
+func adjustBrightness(target *image.NRGBA, percent int) {
+	for y := target.Bounds().Min.Y; y < target.Bounds().Max.Y; y++ {
+		for x := target.Bounds().Min.X; x < target.Bounds().Max.X; x++ {
+			pixel := target.NRGBAAt(x, y)
+			pixel.R = uint8(int(pixel.R) * percent / 100)
+			pixel.G = uint8(int(pixel.G) * percent / 100)
+			pixel.B = uint8(int(pixel.B) * percent / 100)
+			target.SetNRGBA(x, y, pixel)
+		}
+	}
+}
+
+func desaturate(target *image.NRGBA, percent int) {
+	for y := target.Bounds().Min.Y; y < target.Bounds().Max.Y; y++ {
+		for x := target.Bounds().Min.X; x < target.Bounds().Max.X; x++ {
+			pixel := target.NRGBAAt(x, y)
+			gray := (int(pixel.R)*30 + int(pixel.G)*59 + int(pixel.B)*11) / 100
+			gray = gray * percent / 100
+			pixel.R, pixel.G, pixel.B = uint8(gray), uint8(gray), uint8(gray)
+			target.SetNRGBA(x, y, pixel)
+		}
+	}
 }
 
 // captureGrandComponent uses quiet, source-native samples from the approved
@@ -329,19 +380,37 @@ func captureGrandComponent(reference image.Image, spec componentSpec, variant in
 	target := image.NewNRGBA(image.Rect(0, 0, spec.Width, spec.Height))
 	name := spec.Name
 	referenceBounds := reference.Bounds()
+	const cornerSourceSize = 80
 
 	switch name {
 	case "grand_top_left":
-		draw.Draw(target, target.Bounds(), reference, referenceBounds.Min, draw.Src)
+		fitGrandCorner(target, reference, image.Rect(
+			referenceBounds.Min.X,
+			referenceBounds.Min.Y,
+			referenceBounds.Min.X+cornerSourceSize,
+			referenceBounds.Min.Y+cornerSourceSize,
+		))
 	case "grand_top_right":
-		draw.Draw(target, target.Bounds(), reference,
-			image.Pt(referenceBounds.Max.X-spec.Width, referenceBounds.Min.Y), draw.Src)
+		fitGrandCorner(target, reference, image.Rect(
+			referenceBounds.Max.X-cornerSourceSize,
+			referenceBounds.Min.Y,
+			referenceBounds.Max.X,
+			referenceBounds.Min.Y+cornerSourceSize,
+		))
 	case "grand_bottom_left":
-		draw.Draw(target, target.Bounds(), reference,
-			image.Pt(referenceBounds.Min.X, referenceBounds.Max.Y-spec.Height), draw.Src)
+		fitGrandCorner(target, reference, image.Rect(
+			referenceBounds.Min.X,
+			referenceBounds.Max.Y-cornerSourceSize,
+			referenceBounds.Min.X+cornerSourceSize,
+			referenceBounds.Max.Y,
+		))
 	case "grand_bottom_right":
-		draw.Draw(target, target.Bounds(), reference,
-			image.Pt(referenceBounds.Max.X-spec.Width, referenceBounds.Max.Y-spec.Height), draw.Src)
+		fitGrandCorner(target, reference, image.Rect(
+			referenceBounds.Max.X-cornerSourceSize,
+			referenceBounds.Max.Y-cornerSourceSize,
+			referenceBounds.Max.X,
+			referenceBounds.Max.Y,
+		))
 	case "grand_top", "grand_bottom":
 		left := 300 + (variant%5)*128
 		top := 0
@@ -360,6 +429,14 @@ func captureGrandComponent(reference image.Image, spec componentSpec, variant in
 
 	stabilizeComponentEdges(target, spec.RepeatAxis)
 	return target
+}
+
+// fitGrandCorner reduces the complete reference ornament into its authored
+// native DC6 footprint. The runtime always draws this resulting 64px sprite at
+// scale 1; retaining only a 64px crop made the larger reference motif look as
+// though it had been zoomed in.
+func fitGrandCorner(target *image.NRGBA, reference image.Image, sourceBounds image.Rectangle) {
+	xdraw.CatmullRom.Scale(target, target.Bounds(), reference, sourceBounds, xdraw.Src, nil)
 }
 
 func copyMirrored(target *image.NRGBA, source image.Image, sourceBounds image.Rectangle, mirrorX, mirrorY bool) {

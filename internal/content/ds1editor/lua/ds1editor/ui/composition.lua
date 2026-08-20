@@ -59,6 +59,7 @@ end
 
 local function fixed(node, name, variant)
     local path, palette, frame = assets.definition("composition", name, variant)
+    node:set_scale(1, 1)
     return node:set_dc6(path, palette, 0, frame)
 end
 
@@ -211,7 +212,7 @@ end
 local strip_skins = {
     button={idle="button_idle", hover="button_hover", pressed="button_pressed",
         selected="button_hover", tab="tab"},
-    tab={idle="tab", hover="tab", pressed="button_pressed", selected="button_hover", tab="tab"},
+    tab={idle="tab", hover="tab", pressed="tab", selected="tab", tab="tab"},
     dropdown={idle="dropdown_idle", hover="dropdown_hover", pressed="dropdown_hover",
         selected="dropdown_hover"},
     section={idle="section"},
@@ -270,6 +271,15 @@ function composition.strip(parent, options)
     function strip:set_state(state)
         self.state = state or "idle"
         self:render_skin()
+        local red, green, blue = 255, 255, 255
+        if self.state == "hover" then
+            red, green, blue = 205, 245, 255
+        elseif self.state == "selected" then
+            red, green, blue = 150, 230, 255
+        elseif self.state == "pressed" then
+            red, green, blue = 205, 205, 205
+        end
+        for _, node in ipairs(self.nodes) do node:set_tint(red, green, blue) end
     end
     strip:set_bounds(strip.left, strip.top, strip.width)
     return strip
