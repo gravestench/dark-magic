@@ -31,6 +31,9 @@ type TileDraw struct {
 	Bounds  image.Rectangle
 	Layer   world.TileLayer
 	Depth   int
+	TileX   int
+	TileY   int
+	Ordinal int
 }
 
 // TileBucket is one deterministic cell in the placement spatial index. Draws
@@ -81,6 +84,7 @@ func Place(source fs.FS, mapData *world.Map, palettePath string) (*TileSet, erro
 		palette:    palette,
 	}
 	graphicIndexes := make(map[tileSourceKey]int)
+	cellOrdinals := make(map[[3]int]int)
 	canvas := image.Rect(0, 0, result.Width, result.Height)
 
 	for _, placement := range mapData.Tiles {
@@ -97,11 +101,17 @@ func Place(source fs.FS, mapData *world.Map, palettePath string) (*TileSet, erro
 			continue
 		}
 
+		ordinalKey := [3]int{placement.X, placement.Y, int(placement.Layer)}
+		ordinal := cellOrdinals[ordinalKey]
+		cellOrdinals[ordinalKey]++
 		result.Draws = append(result.Draws, TileDraw{
 			Graphic: graphic,
 			Bounds:  bounds,
 			Layer:   placement.Layer,
 			Depth:   world.TileDepth(placement.Layer, placement.X, placement.Y),
+			TileX:   placement.X,
+			TileY:   placement.Y,
+			Ordinal: ordinal,
 		})
 	}
 

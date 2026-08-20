@@ -1,0 +1,630 @@
+{
+  "schema": "ds1editor.ui/v1",
+  "version": 1,
+  "palette": "darkmagic/ds1-editor/ui/palette.dat",
+  "sheets": {
+    "authoring": {
+      "path": "darkmagic/ds1-editor/ui/authoring.dc6",
+      "tile_size": 32,
+      "frames": {
+        "erase": 2,
+        "fill": 6,
+        "floor": 8,
+        "lasso_select": 5,
+        "mirror": 15,
+        "object": 11,
+        "paint": 0,
+        "pan": 3,
+        "path": 12,
+        "pick": 1,
+        "rectangle_select": 4,
+        "rotate": 14,
+        "shadow": 10,
+        "stamp": 7,
+        "wall": 9,
+        "warp": 13
+      }
+    },
+    "chrome": {
+      "path": "darkmagic/ds1-editor/ui/chrome.dc6",
+      "tile_size": 16,
+      "frames": {
+        "button_hover": 10,
+        "button_idle": 9,
+        "button_pressed": 11,
+        "divider": 14,
+        "panel_bottom": 7,
+        "panel_bottom_left": 6,
+        "panel_bottom_right": 8,
+        "panel_fill": 4,
+        "panel_left": 3,
+        "panel_right": 5,
+        "panel_top": 1,
+        "panel_top_left": 0,
+        "panel_top_right": 2,
+        "scroll_thumb": 15,
+        "tab_idle": 12,
+        "tab_selected": 13
+      }
+    },
+    "composition": {
+      "path": "darkmagic/ds1-editor/ui/composition.dc6",
+      "tile_size": 0,
+      "frames": {
+        "button_hover_center": [
+          75,
+          76,
+          77,
+          78
+        ],
+        "button_hover_left": [
+          72,
+          73,
+          74
+        ],
+        "button_hover_right": [
+          79,
+          80,
+          81
+        ],
+        "button_idle_center": [
+          65,
+          66,
+          67,
+          68
+        ],
+        "button_idle_left": [
+          62,
+          63,
+          64
+        ],
+        "button_idle_right": [
+          69,
+          70,
+          71
+        ],
+        "button_pressed_center": [
+          85,
+          86,
+          87,
+          88
+        ],
+        "button_pressed_left": [
+          82,
+          83,
+          84
+        ],
+        "button_pressed_right": [
+          89,
+          90,
+          91
+        ],
+        "checkbox_hover": [
+          179,
+          180,
+          181
+        ],
+        "checkbox_off": [
+          173,
+          174,
+          175
+        ],
+        "checkbox_on": [
+          176,
+          177,
+          178
+        ],
+        "divider": [
+          113,
+          114,
+          115
+        ],
+        "dropdown_hover_center": [
+          166,
+          167,
+          168,
+          169
+        ],
+        "dropdown_hover_left": [
+          163,
+          164,
+          165
+        ],
+        "dropdown_hover_right": [
+          170,
+          171,
+          172
+        ],
+        "dropdown_idle_center": [
+          156,
+          157,
+          158,
+          159
+        ],
+        "dropdown_idle_left": [
+          153,
+          154,
+          155
+        ],
+        "dropdown_idle_right": [
+          160,
+          161,
+          162
+        ],
+        "icon_disabled": [
+          56,
+          57,
+          58
+        ],
+        "icon_hover": [
+          47,
+          48,
+          49
+        ],
+        "icon_idle": [
+          44,
+          45,
+          46
+        ],
+        "icon_pressed": [
+          50,
+          51,
+          52
+        ],
+        "icon_selected": [
+          53,
+          54,
+          55
+        ],
+        "ornament": [
+          116,
+          117,
+          118
+        ],
+        "panel_bottom": [
+          27,
+          28,
+          29,
+          30
+        ],
+        "panel_bottom_left": [
+          24,
+          25,
+          26
+        ],
+        "panel_bottom_right": [
+          31,
+          32,
+          33
+        ],
+        "panel_fill": [
+          14,
+          15,
+          16,
+          17,
+          18,
+          19
+        ],
+        "panel_left": [
+          10,
+          11,
+          12,
+          13
+        ],
+        "panel_right": [
+          20,
+          21,
+          22,
+          23
+        ],
+        "panel_top": [
+          3,
+          4,
+          5,
+          6
+        ],
+        "panel_top_left": [
+          0,
+          1,
+          2
+        ],
+        "panel_top_right": [
+          7,
+          8,
+          9
+        ],
+        "radio_hover": [
+          188,
+          189,
+          190
+        ],
+        "radio_off": [
+          182,
+          183,
+          184
+        ],
+        "radio_on": [
+          185,
+          186,
+          187
+        ],
+        "recess_bottom": [
+          146,
+          147,
+          148,
+          149
+        ],
+        "recess_bottom_left": [
+          143,
+          144,
+          145
+        ],
+        "recess_bottom_right": [
+          150,
+          151,
+          152
+        ],
+        "recess_fill": [
+          133,
+          134,
+          135,
+          136,
+          137,
+          138
+        ],
+        "recess_left": [
+          129,
+          130,
+          131,
+          132
+        ],
+        "recess_right": [
+          139,
+          140,
+          141,
+          142
+        ],
+        "recess_top": [
+          122,
+          123,
+          124,
+          125
+        ],
+        "recess_top_left": [
+          119,
+          120,
+          121
+        ],
+        "recess_top_right": [
+          126,
+          127,
+          128
+        ],
+        "section_center": [
+          37,
+          38,
+          39,
+          40
+        ],
+        "section_left": [
+          34,
+          35,
+          36
+        ],
+        "section_right": [
+          41,
+          42,
+          43
+        ],
+        "tab_center": [
+          95,
+          96,
+          97,
+          98
+        ],
+        "tab_left": [
+          92,
+          93,
+          94
+        ],
+        "tab_right": [
+          99,
+          100,
+          101
+        ],
+        "tool_idle": [
+          59,
+          60,
+          61
+        ],
+        "well_center": [
+          105,
+          106,
+          107,
+          108,
+          109
+        ],
+        "well_left": [
+          102,
+          103,
+          104
+        ],
+        "well_right": [
+          110,
+          111,
+          112
+        ]
+      },
+      "sizes": {
+        "button_hover_center": [
+          16,
+          40
+        ],
+        "button_hover_left": [
+          24,
+          40
+        ],
+        "button_hover_right": [
+          24,
+          40
+        ],
+        "button_idle_center": [
+          16,
+          40
+        ],
+        "button_idle_left": [
+          24,
+          40
+        ],
+        "button_idle_right": [
+          24,
+          40
+        ],
+        "button_pressed_center": [
+          16,
+          40
+        ],
+        "button_pressed_left": [
+          24,
+          40
+        ],
+        "button_pressed_right": [
+          24,
+          40
+        ],
+        "checkbox_hover": [
+          24,
+          24
+        ],
+        "checkbox_off": [
+          24,
+          24
+        ],
+        "checkbox_on": [
+          24,
+          24
+        ],
+        "divider": [
+          12,
+          32
+        ],
+        "dropdown_hover_center": [
+          16,
+          40
+        ],
+        "dropdown_hover_left": [
+          24,
+          40
+        ],
+        "dropdown_hover_right": [
+          32,
+          40
+        ],
+        "dropdown_idle_center": [
+          16,
+          40
+        ],
+        "dropdown_idle_left": [
+          24,
+          40
+        ],
+        "dropdown_idle_right": [
+          32,
+          40
+        ],
+        "icon_disabled": [
+          48,
+          48
+        ],
+        "icon_hover": [
+          48,
+          48
+        ],
+        "icon_idle": [
+          48,
+          48
+        ],
+        "icon_pressed": [
+          48,
+          48
+        ],
+        "icon_selected": [
+          48,
+          48
+        ],
+        "ornament": [
+          48,
+          16
+        ],
+        "panel_bottom": [
+          32,
+          16
+        ],
+        "panel_bottom_left": [
+          32,
+          32
+        ],
+        "panel_bottom_right": [
+          32,
+          32
+        ],
+        "panel_fill": [
+          32,
+          32
+        ],
+        "panel_left": [
+          16,
+          32
+        ],
+        "panel_right": [
+          16,
+          32
+        ],
+        "panel_top": [
+          32,
+          16
+        ],
+        "panel_top_left": [
+          32,
+          32
+        ],
+        "panel_top_right": [
+          32,
+          32
+        ],
+        "radio_hover": [
+          24,
+          24
+        ],
+        "radio_off": [
+          24,
+          24
+        ],
+        "radio_on": [
+          24,
+          24
+        ],
+        "recess_bottom": [
+          16,
+          16
+        ],
+        "recess_bottom_left": [
+          16,
+          16
+        ],
+        "recess_bottom_right": [
+          16,
+          16
+        ],
+        "recess_fill": [
+          16,
+          16
+        ],
+        "recess_left": [
+          16,
+          16
+        ],
+        "recess_right": [
+          16,
+          16
+        ],
+        "recess_top": [
+          16,
+          16
+        ],
+        "recess_top_left": [
+          16,
+          16
+        ],
+        "recess_top_right": [
+          16,
+          16
+        ],
+        "section_center": [
+          16,
+          32
+        ],
+        "section_left": [
+          24,
+          32
+        ],
+        "section_right": [
+          24,
+          32
+        ],
+        "tab_center": [
+          16,
+          36
+        ],
+        "tab_left": [
+          24,
+          36
+        ],
+        "tab_right": [
+          24,
+          36
+        ],
+        "tool_idle": [
+          44,
+          44
+        ],
+        "well_center": [
+          16,
+          28
+        ],
+        "well_left": [
+          16,
+          28
+        ],
+        "well_right": [
+          16,
+          28
+        ]
+      }
+    },
+    "cursors-markers": {
+      "path": "darkmagic/ds1-editor/ui/cursors-markers.dc6",
+      "tile_size": 32,
+      "frames": {
+        "collision_warning": 14,
+        "cursor_closed_hand": 3,
+        "cursor_erase": 6,
+        "cursor_forbidden": 7,
+        "cursor_open_hand": 2,
+        "cursor_paint": 4,
+        "cursor_pick": 5,
+        "cursor_pointer": 0,
+        "cursor_pressed": 1,
+        "empty_tile": 15,
+        "hover_tile": 9,
+        "object_anchor": 10,
+        "path_arrow": 12,
+        "path_node": 11,
+        "selected_tile": 8,
+        "warp_marker": 13
+      }
+    },
+    "utility": {
+      "path": "darkmagic/ds1-editor/ui/utility.dc6",
+      "tile_size": 32,
+      "frames": {
+        "auto_draw": 8,
+        "collision": 10,
+        "fit": 6,
+        "grid": 7,
+        "hidden": 13,
+        "inspector": 9,
+        "lock": 14,
+        "open": 0,
+        "redo": 3,
+        "save": 1,
+        "undo": 2,
+        "unlock": 15,
+        "visible": 12,
+        "warning": 11,
+        "zoom_in": 4,
+        "zoom_out": 5
+      }
+    }
+  }
+}

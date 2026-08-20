@@ -18,13 +18,17 @@ import (
 
 // Options contains backend-independent window and logical-surface policy.
 type Options struct {
-	Content              fs.FS
-	PalettePath          string
-	WindowTitle          string
-	WindowWidth          int
-	WindowHeight         int
-	LogicalWidth         int
-	LogicalHeight        int
+	Content       fs.FS
+	PalettePath   string
+	WindowTitle   string
+	WindowWidth   int
+	WindowHeight  int
+	LogicalWidth  int
+	LogicalHeight int
+	// NativeResolution renders directly at the current drawable window size.
+	// It avoids the logical render target's final upscale and is intended for
+	// tools such as the map editor that need a large, responsive workspace.
+	NativeResolution     bool
 	ViewportFit          string
 	BorderlessFullscreen bool
 	ShowSystemCursor     bool

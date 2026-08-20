@@ -1,6 +1,10 @@
 package raylibRenderer
 
-import "fmt"
+import (
+	"fmt"
+
+	rl "github.com/gen2brain/raylib-go/raylib"
+)
 
 // Viewport describes where the logical game surface is presented in window
 // pixels. Console and other overlays deliberately do not use this transform.
@@ -38,6 +42,13 @@ func gameViewport(windowWidth, windowHeight, gameWidth, gameHeight int, fit stri
 // on decorative margins cannot affect the world.
 func (s *Service) ScreenToGame(x, y int) (gameX, gameY int, inside bool) {
 	windowWidth, windowHeight := s.WindowSize()
+	if s.config != nil && s.config.Resolution.Native {
+		return mapNativeScreenToGame(
+			windowWidth, windowHeight,
+			rl.GetScreenWidth(), rl.GetScreenHeight(),
+			x, y,
+		)
+	}
 
 	viewport, err := gameViewport(
 		windowWidth,
@@ -51,6 +62,18 @@ func (s *Service) ScreenToGame(x, y int) (gameX, gameY int, inside bool) {
 	}
 
 	return mapScreenToGame(viewport, s.config.Resolution.Width, s.config.Resolution.Height, x, y)
+}
+
+// mapNativeScreenToGame bridges Raylib's window-point mouse coordinates to
+// the drawable-pixel render surface. High-DPI displays commonly have a 2×
+// drawable size; treating points as pixels makes software cursors and hit
+// tests appear frozen in a corner.
+func mapNativeScreenToGame(renderWidth, renderHeight, screenWidth, screenHeight, x, y int) (int, int, bool) {
+	if renderWidth <= 0 || renderHeight <= 0 || screenWidth <= 0 || screenHeight <= 0 ||
+		x < 0 || y < 0 || x >= screenWidth || y >= screenHeight {
+		return 0, 0, false
+	}
+	return x * renderWidth / screenWidth, y * renderHeight / screenHeight, true
 }
 
 // mapScreenToGame applies one precomputed viewport using half-open bounds. The right and bottom edges remain outside,

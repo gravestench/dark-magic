@@ -1,0 +1,17 @@
+{
+  "schema": "dark-magic.mod/v1",
+  "id": "ds1editor",
+  "name": "Dark Magic DS1 Editor",
+  "version": "0.1.0",
+  "kind": "extension",
+  "engine_api": "v1",
+  "redistributable": true,
+  "content_roots": ["darkmagic"],
+  "entrypoints": {
+    "client_components": [],
+    "authority_components": []
+  },
+  "dependencies": [
+    {"id": "d2legacy", "version": "0.1.0"}
+  ]
+}

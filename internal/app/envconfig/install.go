@@ -14,7 +14,7 @@ import (
 //go:embed templates/*.env
 var templates embed.FS
 
-var roles = map[string]struct{}{"client": {}, "server": {}, "realm": {}}
+var roles = map[string]struct{}{"client": {}, "server": {}, "realm": {}, "ds1-editor": {}}
 
 // Install materializes a documented role template with owner-only permissions.
 // Existing files are never overwritten because they may contain operator secrets.

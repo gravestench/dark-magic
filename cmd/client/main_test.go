@@ -7,6 +7,21 @@ import (
 	"github.com/gravestench/dark-magic/internal/logging"
 )
 
+// TestParseWindowSize covers explicit, omitted, and malformed native workspace dimensions.
+func TestParseWindowSize(t *testing.T) {
+	t.Parallel()
+	width, height, err := parseWindowSize("1600x1000")
+	if err != nil || width != 1600 || height != 1000 {
+		t.Fatalf("parseWindowSize = %d×%d, %v", width, height, err)
+	}
+	if width, height, err := parseWindowSize(""); err != nil || width != 0 || height != 0 {
+		t.Fatalf("empty parseWindowSize = %d×%d, %v", width, height, err)
+	}
+	if _, _, err := parseWindowSize("wide"); err == nil {
+		t.Fatal("parseWindowSize accepted malformed dimensions")
+	}
+}
+
 // TestParseLogLevel protects the CLI vocabulary so configuration examples do
 // not silently diverge from the typed logging levels accepted at startup.
 func TestParseLogLevel(t *testing.T) {

@@ -64,6 +64,7 @@ func New(options Options) (*Bundle, error) {
 	config.Resolution.Width = options.LogicalWidth
 	config.Resolution.Height = options.LogicalHeight
 	config.Resolution.Fit = options.ViewportFit
+	config.Resolution.Native = options.NativeResolution
 	service.Configure(config)
 
 	if options.PalettePath != "" {

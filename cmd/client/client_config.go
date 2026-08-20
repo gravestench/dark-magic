@@ -19,9 +19,12 @@ type clientConfig struct {
 	fixturePointerMove    bool
 	outputPalette         string
 	viewportFit           string
+	nativeResolution      bool
+	windowSize            string
 	fullscreen            bool
 	nativeAudio           bool
 	presentationProfileID string
+	mapEditorOutput       string
 	mods                  string
 	logLevel              slog.Level
 }

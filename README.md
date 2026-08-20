@@ -135,6 +135,7 @@ can already do.
 | Composite Lab | Player composite animation assembly | `go run ./cmd/client --start-scene=composite_lab` |
 | DT1 Lab | Tileset decoding and inspection | `go run ./cmd/client --start-scene=dt1_lab` |
 | DS1 Lab | Map stamps, authored tiles, objects, and collision | `go run ./cmd/client --start-scene=ds1_lab` |
+| [Map Editor](docs/DS1_MAP_EDITOR.md) | Standalone DS1 authoring tool; edit, preview, and atomically save tile layers | `go run ./tools/ds1-editor --output=/path/to/mod` |
 | Mapgen Lab | Deterministic level-generation topology and decisions | `go run ./cmd/client --start-scene=mapgen_lab` |
 
 Most visual scenes can also be captured locally through the Makefile capture

@@ -25,9 +25,12 @@ type clientFlags struct {
 	fixturePointerMove  *bool
 	outputPalette       *string
 	viewportFit         *string
+	nativeResolution    *bool
+	windowSize          *string
 	fullscreen          *bool
 	nativeAudio         *bool
 	presentationProfile *string
+	mapEditorOutput     *string
 	mods                *string
 }
 
@@ -81,6 +84,11 @@ func registerRuntimeFlags(flags *clientFlags) {
 		"mods",
 		os.Getenv("DARK_MAGIC_MODS"),
 		"temporary comma-separated extension IDs, or 'none' for vanilla d2legacy",
+	)
+	flags.mapEditorOutput = flag.String(
+		"map-editor-output",
+		os.Getenv("DARK_MAGIC_MAP_EDITOR_OUTPUT"),
+		"directory where the map editor may atomically write DS1 files",
 	)
 }
 
@@ -152,6 +160,17 @@ func registerDisplayFlags(flags *clientFlags) {
 		environmentDefault("DARK_MAGIC_VIEWPORT_FIT", "contain"),
 		"game viewport fit: contain or stretch",
 	)
+	nativeResolutionDefault, _ := strconv.ParseBool(environmentDefault("DARK_MAGIC_NATIVE_RESOLUTION", "false"))
+	flags.nativeResolution = flag.Bool(
+		"native-resolution",
+		nativeResolutionDefault,
+		"render at the current native window resolution without scaling a logical surface",
+	)
+	flags.windowSize = flag.String(
+		"window-size",
+		os.Getenv("DARK_MAGIC_WINDOW_SIZE"),
+		"initial native window size as WIDTHxHEIGHT (for example 1600x1000)",
+	)
 	fullscreenDefault, _ := strconv.ParseBool(environmentDefault("DARK_MAGIC_FULLSCREEN", "false"))
 	flags.fullscreen = flag.Bool("fullscreen", fullscreenDefault, "use a maximized borderless window")
 	flags.nativeAudio = flag.Bool("native-audio", true, "enable the selected backend's native audio adapter")
@@ -184,9 +203,12 @@ func (flags clientFlags) config() (clientConfig, error) {
 		fixturePointerMove:    *flags.fixturePointerMove,
 		outputPalette:         *flags.outputPalette,
 		viewportFit:           *flags.viewportFit,
+		nativeResolution:      *flags.nativeResolution,
+		windowSize:            *flags.windowSize,
 		fullscreen:            *flags.fullscreen,
 		nativeAudio:           *flags.nativeAudio,
 		presentationProfileID: *flags.presentationProfile,
+		mapEditorOutput:       *flags.mapEditorOutput,
 		mods:                  *flags.mods,
 		logLevel:              logLevel,
 	}, nil

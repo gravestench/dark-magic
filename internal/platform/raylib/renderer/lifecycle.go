@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"log/slog"
+	"math"
 	"runtime"
 	"strings"
 
@@ -91,6 +92,8 @@ func (s *Service) openWindow() {
 		// Desktop fullscreen remains an ordinary window: it loses its frame and
 		// fills the monitor without requesting an exclusive video mode.
 		rl.MaximizeWindow()
+	} else if !s.config.Window.Fullscreen {
+		s.fitAndCenterWindow()
 	}
 
 	installWindowIcon(s.logger)
@@ -98,6 +101,95 @@ func (s *Service) openWindow() {
 	// Escape belongs to scene and shell focus routing. WindowShouldClose still observes the native close control after
 	// raylib's default Escape binding is disabled.
 	rl.SetExitKey(rl.KeyNull)
+}
+
+// fitAndCenterWindow keeps an explicit development/tool window wholly visible
+// on its selected monitor. Raylib/GLFW otherwise accepts oversized dimensions
+// and may place the lower-right portion off screen on laptop displays.
+func (s *Service) fitAndCenterWindow() {
+	monitor := rl.GetCurrentMonitor()
+	monitorWidth, monitorHeight := logicalMonitorSize(
+		rl.GetMonitorWidth(monitor),
+		rl.GetMonitorHeight(monitor),
+		rl.GetWindowScaleDPI().X,
+		rl.GetWindowScaleDPI().Y,
+	)
+	if monitorWidth <= 0 || monitorHeight <= 0 {
+		return
+	}
+	position := rl.GetMonitorPosition(monitor)
+	monitorX, monitorY := int(position.X), int(position.Y)
+	if runtime.GOOS == "darwin" {
+		monitorX, monitorY, monitorWidth, monitorHeight = macOSWindowWorkArea(
+			monitorX,
+			monitorY,
+			monitorWidth,
+			monitorHeight,
+		)
+	}
+	width, height, x, y := fitWindowToMonitor(
+		s.config.Window.Width,
+		s.config.Window.Height,
+		monitorWidth,
+		monitorHeight,
+		monitorX,
+		monitorY,
+	)
+	if width <= 0 || height <= 0 {
+		return
+	}
+	if width != s.config.Window.Width || height != s.config.Window.Height {
+		rl.SetWindowSize(width, height)
+		s.config.Window.Width, s.config.Window.Height = width, height
+	}
+	rl.SetWindowPosition(x, y)
+}
+
+// macOSWindowWorkArea reserves logical points for the menu bar, native title
+// bar, and Dock because Raylib exposes the full monitor mode but not Cocoa's
+// visible frame. Renderer coordinates still begin at the client area's origin;
+// these insets affect only initial outer-window sizing and placement.
+func macOSWindowWorkArea(x, y, width, height int) (int, int, int, int) {
+	const (
+		topInset    = 24
+		bottomInset = 92
+	)
+
+	usableHeight := max(480, height-topInset-bottomInset)
+	return x, y + topInset, width, usableHeight
+}
+
+// logicalMonitorSize converts a monitor video mode into the same logical-unit
+// coordinate space used by GLFW window placement. On Retina displays, the
+// monitor mode is commonly expressed in framebuffer pixels while window sizes
+// and positions are expressed in points.
+func logicalMonitorSize(width, height int, scaleX, scaleY float32) (int, int) {
+	if scaleX > 1 {
+		width = int(math.Round(float64(width) / float64(scaleX)))
+	}
+	if scaleY > 1 {
+		height = int(math.Round(float64(height) / float64(scaleY)))
+	}
+	return width, height
+}
+
+// fitWindowToMonitor constrains a requested logical window size to its monitor
+// and returns a centered global desktop position. Monitor origins matter on
+// displays arranged to the left, right, above, or below the primary display.
+func fitWindowToMonitor(
+	requestedWidth int,
+	requestedHeight int,
+	monitorWidth int,
+	monitorHeight int,
+	monitorX int,
+	monitorY int,
+) (width, height, x, y int) {
+	if requestedWidth <= 0 || requestedHeight <= 0 || monitorWidth <= 0 || monitorHeight <= 0 {
+		return 0, 0, 0, 0
+	}
+	width = min(requestedWidth, monitorWidth)
+	height = min(requestedHeight, monitorHeight)
+	return width, height, monitorX + (monitorWidth-width)/2, monitorY + (monitorHeight-height)/2
 }
 
 // installWindowIcon decodes the embedded icon only on platforms where GLFW supports regular-window icons. Cocoa uses
@@ -186,6 +278,9 @@ func (s *Service) Run(ctx context.Context) error {
 		case <-ctx.Done():
 			return nil
 		default:
+		}
+		if err := s.resizeGameTargetForWindow(); err != nil {
+			return err
 		}
 
 		if s.paletteQuantizer != nil {

@@ -21,27 +21,52 @@ func Load(source fs.FS, stampPath string, tilePaths []string, resolvers ...Objec
 		return nil, err
 	}
 
+	return loadStamp(source, stampPath, catalog, resolvers...)
+}
+
+// LoadDocument materializes an in-memory DS1 source model using an explicit
+// DT1 dependency set. Editor documents use this path so previewing an unsaved
+// stroke never requires writing a temporary DS1 into the mounted asset VFS.
+func LoadDocument(source fs.FS, stamp *ds1.DS1, tilePaths []string, resolvers ...ObjectResolver) (*Map, error) {
+	if stamp == nil {
+		return nil, fmt.Errorf("world: DS1 document is required")
+	}
+	catalog, err := LoadTileCatalog(source, tilePaths)
+	if err != nil {
+		return nil, err
+	}
+	return Materialize(stamp, catalog, resolvers...)
+}
+
+// loadStamp owns DS1 file lifetime and turns the decoded stamp into gameplay facts using an already-loaded tile
+// catalog. Reusing a catalog is essential when a generated zone contains many rooms with the same DT1 dependencies.
+func loadStamp(source fs.FS, stampPath string, catalog *TileCatalog, resolvers ...ObjectResolver) (*Map, error) {
+	stamp, err := decodeStamp(source, stampPath)
+	if err != nil {
+		return nil, err
+	}
+	return Materialize(stamp, catalog, resolvers...)
+}
+
+// Materialize converts a decoded DS1 source model into immutable gameplay and
+// presentation facts with a pre-indexed DT1 catalog. Keeping this public inside
+// the world package lets editors reuse the exact runtime mapping without making
+// world.Map the mutable editing authority.
+func Materialize(stamp *ds1.DS1, catalog *TileCatalog, resolvers ...ObjectResolver) (*Map, error) {
+	if stamp == nil {
+		return nil, fmt.Errorf("world: DS1 stamp is required")
+	}
+	if catalog == nil {
+		return nil, fmt.Errorf("world: tile catalog is required")
+	}
 	var resolver ObjectResolver
 	if len(resolvers) > 0 {
 		// The variadic shape preserves the public API; only the first resolver has historically participated in loading.
 		resolver = resolvers[0]
 	}
-
-	return loadStamp(source, stampPath, catalog, resolver)
-}
-
-// loadStamp owns DS1 file lifetime and turns the decoded stamp into gameplay facts using an already-loaded tile
-// catalog. Reusing a catalog is essential when a generated zone contains many rooms with the same DT1 dependencies.
-func loadStamp(source fs.FS, stampPath string, catalog *TileCatalog, resolver ObjectResolver) (*Map, error) {
-	stamp, err := decodeStamp(source, stampPath)
-	if err != nil {
-		return nil, err
-	}
-
 	result := newMapForStamp(stamp)
 	appendStampObjects(result, stamp, resolver)
 	appendStampTiles(result, stamp, catalog)
-
 	return result, nil
 }
 

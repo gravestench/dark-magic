@@ -24,8 +24,8 @@ func (f *BitmapFont) Render(
 	maxWidth int,
 	align string,
 ) (*image.RGBA, error) {
-	if f == nil || len(f.Glyphs) == 0 || len(f.Frames) == 0 || f.LineHeight <= 0 {
-		return nil, fmt.Errorf("bitmap font: empty font")
+	if err := f.validateForLayout(); err != nil {
+		return nil, err
 	}
 
 	if align != "left" && align != "center" && align != "right" {
@@ -45,6 +45,31 @@ func (f *BitmapFont) Render(
 	}
 
 	return output, nil
+}
+
+// Measure returns the exact texture dimensions Render would allocate without rasterizing any glyphs.
+// UI layout can therefore size controls before creating or mutating retained presentation nodes.
+func (f *BitmapFont) Measure(text string, maxWidth int) (image.Point, error) {
+	if err := f.validateForLayout(); err != nil {
+		return image.Point{}, err
+	}
+	if maxWidth < 0 {
+		return image.Point{}, fmt.Errorf("bitmap font: max width cannot be negative")
+	}
+
+	visibleText, _ := parseColorTokens(text)
+	lines := f.wrap(visibleText, maxWidth)
+
+	return image.Pt(f.renderWidth(lines, maxWidth), maxInt(1, len(lines)*f.LineHeight)), nil
+}
+
+// validateForLayout centralizes the minimum invariants shared by measuring and rendering.
+func (f *BitmapFont) validateForLayout() error {
+	if f == nil || len(f.Glyphs) == 0 || len(f.Frames) == 0 || f.LineHeight <= 0 {
+		return fmt.Errorf("bitmap font: empty font")
+	}
+
+	return nil
 }
 
 // renderWidth preserves the caller's explicit width when supplied; otherwise

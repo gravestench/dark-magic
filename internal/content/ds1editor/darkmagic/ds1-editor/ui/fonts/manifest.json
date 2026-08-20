@@ -1,0 +1,38 @@
+{
+  "schema": "ds1editor.fonts/v1",
+  "version": 1,
+  "fonts": [
+    {
+      "name": "large",
+      "table": "darkmagic/ds1-editor/ui/fonts/large.tbl",
+      "sheet": "darkmagic/ds1-editor/ui/fonts/large.dc6",
+      "palette": "darkmagic/ds1-editor/ui/palette.dat",
+      "line_height": 32,
+      "glyphs": 199
+    },
+    {
+      "name": "medium",
+      "table": "darkmagic/ds1-editor/ui/fonts/medium.tbl",
+      "sheet": "darkmagic/ds1-editor/ui/fonts/medium.dc6",
+      "palette": "darkmagic/ds1-editor/ui/palette.dat",
+      "line_height": 23,
+      "glyphs": 199
+    },
+    {
+      "name": "small",
+      "table": "darkmagic/ds1-editor/ui/fonts/small.tbl",
+      "sheet": "darkmagic/ds1-editor/ui/fonts/small.dc6",
+      "palette": "darkmagic/ds1-editor/ui/palette.dat",
+      "line_height": 16,
+      "glyphs": 199
+    },
+    {
+      "name": "very_small",
+      "table": "darkmagic/ds1-editor/ui/fonts/very_small.tbl",
+      "sheet": "darkmagic/ds1-editor/ui/fonts/very_small.dc6",
+      "palette": "darkmagic/ds1-editor/ui/palette.dat",
+      "line_height": 12,
+      "glyphs": 199
+    }
+  ]
+}

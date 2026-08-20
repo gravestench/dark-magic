@@ -176,7 +176,8 @@ func (s *Service) startPaletteQuantizer() error {
 	location := rl.GetShaderLocation(quantizer.shader, "paletteLUT")
 
 	quantizer.textureLocation = location
-	if err := s.resizePaletteTarget(s.config.Resolution.Width, s.config.Resolution.Height); err != nil {
+	width, height := s.frameResolution()
+	if err := s.resizePaletteTarget(width, height); err != nil {
 		rl.UnloadShader(quantizer.shader)
 		rl.UnloadTexture(quantizer.texture)
 

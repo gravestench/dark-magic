@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/gravestench/dark-magic/internal/audio"
+	"github.com/gravestench/dark-magic/internal/mapeditor"
 	d2catalog "github.com/gravestench/dark-magic/internal/mod/d2legacy/adapter/catalog"
 	d2presentation "github.com/gravestench/dark-magic/internal/mod/d2legacy/adapter/presentation"
 	d2save "github.com/gravestench/dark-magic/internal/mod/d2legacy/adapter/save"
@@ -49,7 +50,15 @@ func (app *application) registerHostOverrideModules() error {
 // registerBaseLuaModules exposes narrow engine capabilities rather than the
 // application object, limiting script authority to explicitly reviewed doors.
 func (app *application) registerBaseLuaModules() error {
-	for _, module := range app.baseLuaModules() {
+	var storage *mapeditor.Storage
+	if app.options.MapEditorOutput != "" {
+		var err error
+		storage, err = mapeditor.NewStorage(app.options.MapEditorOutput, app.options.MapEditorReadOnlyRoots...)
+		if err != nil {
+			return fmt.Errorf("configure map editor output: %w", err)
+		}
+	}
+	for _, module := range app.baseLuaModules(storage) {
 		if err := app.scripts.RegisterModule(module); err != nil {
 			return fmt.Errorf("register Lua module %s: %w", module.Name, err)
 		}
@@ -73,12 +82,14 @@ func (app *application) hostOverrideLuaModules() []modruntime.Module {
 
 // baseLuaModules declares the stable script-facing capability surface. Ordering
 // here is registration order, not an invitation for modules to depend implicitly.
-func (app *application) baseLuaModules() []modruntime.Module {
+func (app *application) baseLuaModules(mapEditorStorage *mapeditor.Storage) []modruntime.Module {
 	return []modruntime.Module{
 		// Process and content services.
 		modruntime.AppModule(BuildVersion(), app.stop),
+		modruntime.DisplayModule(app.renderer.Resolution),
 		modruntime.ShellModule(app.shellSettings),
 		modruntime.VFSModule(app.options.Content),
+		modruntime.MapEditorModule(app.options.Content, mapEditorStorage, app.worldObjectResolver),
 		modruntime.SessionWorldModule(
 			app.options.Content,
 			app.currentWorld,

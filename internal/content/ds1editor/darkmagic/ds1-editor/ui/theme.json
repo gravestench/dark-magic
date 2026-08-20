@@ -1,0 +1,56 @@
+{
+  "version": 1,
+  "palettes": {
+    "editor": "darkmagic/ds1-editor/ui/palette.dat",
+    "units": "data/global/Palette/units/pal.dat"
+  },
+  "palette_transforms": {
+    "sky": "data/global/Palette/Sky/Pal.pl2"
+  },
+  "composition": {
+    "panel_corner": 32,
+    "button_height": 40,
+    "button_inset_left": 18,
+    "button_inset_right": 18,
+    "button_inset_top": 10,
+    "button_inset_bottom": 9,
+    "button_min_width": 64,
+    "content_gap": 8,
+    "icon_plate_size": 48,
+    "icon_content_size": 32,
+    "icon_inset": 8,
+    "row_height": 28,
+    "section_height": 32
+  },
+  "fonts": {
+    "large": {
+      "table": "darkmagic/ds1-editor/ui/fonts/large.tbl",
+      "sheet": "darkmagic/ds1-editor/ui/fonts/large.dc6",
+      "palette": "editor"
+    },
+    "medium": {
+      "table": "darkmagic/ds1-editor/ui/fonts/medium.tbl",
+      "sheet": "darkmagic/ds1-editor/ui/fonts/medium.dc6",
+      "palette": "editor"
+    },
+    "small": {
+      "table": "darkmagic/ds1-editor/ui/fonts/small.tbl",
+      "sheet": "darkmagic/ds1-editor/ui/fonts/small.dc6",
+      "palette": "editor"
+    },
+    "very_small": {
+      "table": "darkmagic/ds1-editor/ui/fonts/very_small.tbl",
+      "sheet": "darkmagic/ds1-editor/ui/fonts/very_small.dc6",
+      "palette": "editor"
+    }
+  },
+  "text_styles": {
+    "font_lab_heading": {"font": "large", "text_color": "white"},
+    "font_lab_caption": {"font": "small", "text_color": "white"},
+    "font_lab_color": {"font": "medium", "text_color": "white"},
+    "editor_large": {"font": "large", "text_color": "white"},
+    "editor_medium": {"font": "medium", "text_color": "white"},
+    "editor_small": {"font": "small", "text_color": "white"},
+    "editor_very_small": {"font": "very_small", "text_color": "white"}
+  }
+}

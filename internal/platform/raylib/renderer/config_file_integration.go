@@ -21,6 +21,7 @@ type Config struct {
 	Resolution struct {
 		Width, Height int
 		Fit           string
+		Native        bool
 	}
 	Cache struct {
 		BudgetMB int

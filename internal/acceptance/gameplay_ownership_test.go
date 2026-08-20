@@ -349,6 +349,10 @@ func TestLuaNamespacesDescribeOwnership(t *testing.T) {
 			}
 
 			text := string(data)
+			// The standalone authoring product owns one explicit VFS export. It is
+			// a content path, not a Lua/API namespace, and must remain segment-
+			// scoped beneath the editor package.
+			text = strings.ReplaceAll(text, "darkmagic/ds1-editor/", "")
 			retiredShort := "d" + "m."
 			retiredModShort := "d" + "2."
 			retiredLong := "dark" + "magic"

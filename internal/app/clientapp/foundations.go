@@ -121,6 +121,11 @@ func (app *application) desktopOptions() desktop.Options {
 	options.LogicalWidth = app.profile.Width
 	options.LogicalHeight = app.profile.Height
 	options.ViewportFit = app.options.ViewportFit
+	options.NativeResolution = app.options.NativeResolution
+	if app.options.WindowWidth > 0 && app.options.WindowHeight > 0 {
+		options.WindowWidth = app.options.WindowWidth
+		options.WindowHeight = app.options.WindowHeight
+	}
 	options.BorderlessFullscreen = app.options.BorderlessFullscreen
 	options.NativeAudio = !app.options.DisableNativeAudio
 	options.Logger = slog.Default().With("component", "renderer")

@@ -1000,6 +1000,148 @@ func (c *renderAssetCache) loadDC6Frame(
 	return value.(preparedDC6Frame), nil
 }
 
+// loadDC6Tiled repeats one decoded frame at native pixels and crops only the final repetitions.
+// Caching the composed result keeps responsive nine-slice panels to one retained texture per region.
+func (c *renderAssetCache) loadDC6Tiled(
+	assets fs.FS,
+	name string,
+	palette string,
+	direction int,
+	frameIndex int,
+	width int,
+	height int,
+) (image.Image, error) {
+	key := fmt.Sprintf(
+		"dc6-tiled\x00%s\x00%s\x00%d\x00%d\x00%d\x00%d",
+		name,
+		palette,
+		direction,
+		frameIndex,
+		width,
+		height,
+	)
+	value, err := c.load(assets, key, func() (any, int, error) {
+		prepared, loadErr := c.loadDC6Frame(assets, name, palette, direction, frameIndex)
+		if loadErr != nil {
+			return nil, 0, loadErr
+		}
+		result, repeatErr := repeatImage(prepared.image, width, height)
+		if repeatErr != nil {
+			return nil, 0, repeatErr
+		}
+
+		return result, imageWeight(result), nil
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	return value.(image.Image), nil
+}
+
+// loadDC6TiledVariants composes a stable native-pixel field from compatible
+// frames. The seed changes authored detail placement without introducing
+// frame-to-frame animation or invalidating unrelated component textures.
+func (c *renderAssetCache) loadDC6TiledVariants(
+	assets fs.FS,
+	name string,
+	palette string,
+	direction int,
+	frameIndexes []int,
+	width int,
+	height int,
+	seed int,
+) (image.Image, error) {
+	key := fmt.Sprintf(
+		"dc6-tiled-variants\x00%s\x00%s\x00%d\x00%v\x00%d\x00%d\x00%d",
+		name, palette, direction, frameIndexes, width, height, seed,
+	)
+	value, err := c.load(assets, key, func() (any, int, error) {
+		frames := make([]image.Image, 0, len(frameIndexes))
+		for _, frameIndex := range frameIndexes {
+			prepared, loadErr := c.loadDC6Frame(assets, name, palette, direction, frameIndex)
+			if loadErr != nil {
+				return nil, 0, loadErr
+			}
+			frames = append(frames, prepared.image)
+		}
+		result, repeatErr := repeatImageVariants(frames, width, height, seed)
+		if repeatErr != nil {
+			return nil, 0, repeatErr
+		}
+		return result, imageWeight(result), nil
+	})
+	if err != nil {
+		return nil, err
+	}
+	return value.(image.Image), nil
+}
+
+// repeatImage fills an exact output rectangle with unscaled source pixels. draw.Draw
+// clips the final row and column, so incomplete repetitions never introduce scaling.
+func repeatImage(source image.Image, width, height int) (*image.RGBA, error) {
+	if width <= 0 || height <= 0 {
+		return nil, fmt.Errorf("tiled DC6 dimensions must be positive")
+	}
+
+	bounds := source.Bounds()
+	if bounds.Dx() <= 0 || bounds.Dy() <= 0 {
+		return nil, fmt.Errorf("tiled DC6 source frame is empty")
+	}
+
+	result := image.NewRGBA(image.Rect(0, 0, width, height))
+	for y := 0; y < height; y += bounds.Dy() {
+		for x := 0; x < width; x += bounds.Dx() {
+			destination := bounds.Add(image.Pt(x-bounds.Min.X, y-bounds.Min.Y))
+			draw.Draw(result, destination, source, bounds.Min, draw.Src)
+		}
+	}
+
+	return result, nil
+}
+
+// repeatImageVariants chooses one same-sized source per tile coordinate. The
+// integer mix is deterministic and deliberately decorrelates adjacent rows.
+func repeatImageVariants(sources []image.Image, width, height, seed int) (*image.RGBA, error) {
+	if len(sources) == 0 {
+		return nil, fmt.Errorf("at least one tiled DC6 variant is required")
+	}
+	if width <= 0 || height <= 0 {
+		return nil, fmt.Errorf("tiled DC6 dimensions must be positive")
+	}
+	bounds := sources[0].Bounds()
+	if bounds.Dx() <= 0 || bounds.Dy() <= 0 {
+		return nil, fmt.Errorf("tiled DC6 source frame is empty")
+	}
+	for _, source := range sources[1:] {
+		if source.Bounds().Size() != bounds.Size() {
+			return nil, fmt.Errorf("tiled DC6 variants must have matching dimensions")
+		}
+	}
+
+	result := image.NewRGBA(image.Rect(0, 0, width, height))
+	for row, y := 0, 0; y < height; row, y = row+1, y+bounds.Dy() {
+		for column, x := 0, 0; x < width; column, x = column+1, x+bounds.Dx() {
+			variant := tileVariant(seed, column, row, len(sources))
+			source := sources[variant]
+			destination := bounds.Add(image.Pt(x-bounds.Min.X, y-bounds.Min.Y))
+			draw.Draw(result, destination, source, bounds.Min, draw.Src)
+		}
+	}
+	return result, nil
+}
+
+func tileVariant(seed, column, row, count int) int {
+	if count <= 1 {
+		return 0
+	}
+	value := uint32(seed) ^ uint32(column+1)*0x9e3779b1 ^ uint32(row+1)*0x85ebca6b
+	value ^= value >> 16
+	value *= 0x7feb352d
+	value ^= value >> 15
+	return int(value % uint32(count))
+}
+
 // loadDC6Combined loads dc6 combined before publication so malformed content cannot become observable runtime
 // state.
 func (c *renderAssetCache) loadDC6Combined(
@@ -1368,6 +1510,8 @@ func pushChunkSet(state *lua.LState, chunks *maprender.Set) {
 	for index, chunk := range chunks.Chunks {
 		entry := state.NewTable()
 		entry.RawSetString("index", lua.LNumber(index))
+		entry.RawSetString("column", lua.LNumber(chunk.Column))
+		entry.RawSetString("row", lua.LNumber(chunk.Row))
 		entry.RawSetString("x", lua.LNumber(chunk.X))
 		entry.RawSetString("y", lua.LNumber(chunk.Y))
 		entry.RawSetString("width", lua.LNumber(chunk.Width))
@@ -1403,6 +1547,9 @@ func pushTileSet(state *lua.LState, set *maprender.TileSet) {
 		entry.RawSetString("layer", lua.LNumber(draw.Layer))
 		entry.RawSetString("layer_name", lua.LString(draw.Layer.String()))
 		entry.RawSetString("depth", lua.LNumber(draw.Depth))
+		entry.RawSetString("tile_x", lua.LNumber(draw.TileX))
+		entry.RawSetString("tile_y", lua.LNumber(draw.TileY))
+		entry.RawSetString("ordinal", lua.LNumber(draw.Ordinal))
 		entries.RawSetInt(index+1, entry)
 	}
 
@@ -2176,6 +2323,10 @@ func (r *RenderCapability) Module() Module {
 					"engine.render.asset_exists(path)",
 					"Report whether a render asset exists.",
 				),
+				"measure_text": commandHelp(
+					"engine.render.measure_text(table, sheet, palette, text [, options])",
+					"Return bitmap-font texture width and height without creating a render node.",
+				),
 				"dc6_animation_bounds": commandHelp(
 					"engine.render.dc6_animation_bounds(path)",
 					"Inspect the normalized bounds of a DC6 animation.",
@@ -2278,6 +2429,14 @@ func (r *RenderCapability) Module() Module {
 						"set_dc6": commandHelp(
 							"node:set_dc6(path, frame [, options])",
 							"Render one DC6 frame.",
+						),
+						"set_dc6_tiled": commandHelp(
+							"node:set_dc6_tiled(path, palette, direction, frame, width, height)",
+							"Repeat one DC6 frame at native pixels and crop the final repetitions.",
+						),
+						"set_dc6_tiled_variants": commandHelp(
+							"node:set_dc6_tiled_variants(path, palette, direction, frames, width, height[, seed])",
+							"Repeat deterministic compatible DC6 variants at native pixels.",
 						),
 						"set_dc6_combined": commandHelp(
 							"node:set_dc6_combined(path [, options])",
@@ -2597,6 +2756,9 @@ func (r *RenderCapability) Module() Module {
 
 					return 1
 				},
+				"measure_text": func(state *lua.LState) int {
+					return measureBitmapText(state, assets, cache)
+				},
 				"dc6_animation_bounds": func(state *lua.LState) int {
 					if assets == nil {
 						state.RaiseError("render asset filesystem is unavailable")
@@ -2782,6 +2944,51 @@ func (r *RenderCapability) Module() Module {
 			return 1
 		},
 	}
+}
+
+// measureBitmapText loads one bitmap font and returns its exact prospective texture size.
+// It shares the production font cache but creates neither a retained node nor a GPU upload.
+func measureBitmapText(state *lua.LState, assets fs.FS, cache *renderAssetCache) int {
+	if assets == nil {
+		state.RaiseError("render asset filesystem is unavailable")
+		return 0
+	}
+
+	tableName := state.CheckString(1)
+	sheetName := state.CheckString(2)
+	paletteName := state.OptString(3, "")
+	text := state.CheckString(4)
+	transform := ""
+	maxWidth := 0
+	if state.GetTop() >= 5 && state.Get(5) != lua.LNil {
+		options := state.CheckTable(5)
+		if value := options.RawGetString("transform"); value != lua.LNil {
+			transform = lua.LVAsString(value)
+		}
+		if value := options.RawGetString("max_width"); value != lua.LNil {
+			maxWidth = int(lua.LVAsNumber(value))
+		}
+	}
+	if maxWidth < 0 {
+		state.ArgError(5, "max_width cannot be negative")
+		return 0
+	}
+
+	font, err := cache.loadFont(assets, tableName, sheetName, paletteName, transform)
+	if err != nil {
+		state.RaiseError("loading bitmap font: %v", err)
+		return 0
+	}
+	size, err := font.Measure(text, maxWidth)
+	if err != nil {
+		state.RaiseError("measuring bitmap text: %v", err)
+		return 0
+	}
+
+	state.Push(lua.LNumber(size.X))
+	state.Push(lua.LNumber(size.Y))
+
+	return 2
 }
 
 // registerRenderNodeType registers register render node type before use so Lua cannot observe a partially
@@ -3202,7 +3409,10 @@ func registerRenderNodeType(state *lua.LState) {
 				return 0
 			}
 
-			key := fmt.Sprintf("world-dt1:%p:%s:%s:%d", world, palette, graphic.Path, graphic.Index)
+			// A presentation snapshot changes identity after every edit, but an
+			// unchanged DT1 record does not. Key shared textures by authored graphic
+			// identity so retained per-tile nodes survive incremental editor updates.
+			key := fmt.Sprintf("world-dt1:%s:%s:%d", palette, graphic.Path, graphic.Index)
 			if err := node.setSharedImage(key, pixels); err != nil {
 				state.RaiseError("updating shared world tile node: %v", err)
 				return 0
@@ -3383,6 +3593,81 @@ func registerRenderNodeType(state *lua.LState) {
 			state.Push(lua.LNumber(dc6FrameTop(prepared.frame)))
 
 			return 4
+		},
+		"set_dc6_tiled": func(state *lua.LState) int {
+			node := checkRenderNode(state, 1)
+			if node.assets == nil {
+				state.RaiseError("render asset filesystem is unavailable")
+				return 0
+			}
+
+			width, height := state.CheckInt(6), state.CheckInt(7)
+			if width <= 0 || height <= 0 {
+				state.ArgError(6, "positive tiled width and height required")
+				return 0
+			}
+			pixels, err := node.cache.loadDC6Tiled(
+				node.assets,
+				state.CheckString(2),
+				state.OptString(3, ""),
+				state.OptInt(4, 0),
+				state.OptInt(5, 0),
+				width,
+				height,
+			)
+			if err != nil {
+				state.RaiseError("tiling DC6 frame: %v", err)
+				return 0
+			}
+			if err := node.setImage(pixels); err != nil {
+				state.RaiseError("updating tiled render node: %v", err)
+				return 0
+			}
+
+			state.Push(lua.LNumber(width))
+			state.Push(lua.LNumber(height))
+
+			return 2
+		},
+		"set_dc6_tiled_variants": func(state *lua.LState) int {
+			node := checkRenderNode(state, 1)
+			if node.assets == nil {
+				state.RaiseError("render asset filesystem is unavailable")
+				return 0
+			}
+
+			frameTable := state.CheckTable(5)
+			frames := make([]int, 0, frameTable.Len())
+			for index := 1; index <= frameTable.Len(); index++ {
+				value, ok := frameTable.RawGetInt(index).(lua.LNumber)
+				if !ok {
+					state.ArgError(5, "variant frames must be an integer sequence")
+					return 0
+				}
+				frames = append(frames, int(value))
+			}
+			width, height := state.CheckInt(6), state.CheckInt(7)
+			pixels, err := node.cache.loadDC6TiledVariants(
+				node.assets,
+				state.CheckString(2),
+				state.OptString(3, ""),
+				state.OptInt(4, 0),
+				frames,
+				width,
+				height,
+				state.OptInt(8, 0),
+			)
+			if err != nil {
+				state.RaiseError("tiling DC6 variants: %v", err)
+				return 0
+			}
+			if err := node.setImage(pixels); err != nil {
+				state.RaiseError("updating tiled render node: %v", err)
+				return 0
+			}
+			state.Push(lua.LNumber(width))
+			state.Push(lua.LNumber(height))
+			return 2
 		},
 		"set_dc6_combined": func(state *lua.LState) int {
 			node := checkRenderNode(state, 1)

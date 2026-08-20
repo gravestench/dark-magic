@@ -181,8 +181,8 @@ func (r *ebitRenderer) SubscribePostFrame(callback func()) func() { return r.pos
 // SubscribeOverlay registers drawing between retained composition and post-frame work, preserving overlay layering.
 func (r *ebitRenderer) SubscribeOverlay(callback func()) func() { return r.overlay.subscribe(callback) }
 
-// SubscribeViewport publishes the logical resolution on the first frame and only after later changes, avoiding
-// redundant layout work for a stable surface.
+// SubscribeViewport publishes the active render resolution on the first frame and only after later changes.
+// Native-resolution mode consequently gives responsive scenes real resize events instead of a scaled virtual surface.
 func (r *ebitRenderer) SubscribeViewport(callback func(width, height int)) func() {
 	lastWidth, lastHeight := -1, -1
 
@@ -291,8 +291,12 @@ func (r *ebitRenderer) WindowSize() (int, int) {
 	return ebiten.WindowSize()
 }
 
-// Resolution returns the fixed logical surface independently of native window resizing and letterboxing.
+// Resolution returns the fixed logical surface, unless native rendering was requested. In native mode every
+// drawable-window pixel is a render pixel, so no final screen scaling occurs.
 func (r *ebitRenderer) Resolution() (int, int) {
+	if r.options.NativeResolution {
+		return r.WindowSize()
+	}
 	return r.options.LogicalWidth, r.options.LogicalHeight
 }
 
@@ -300,6 +304,12 @@ func (r *ebitRenderer) Resolution() (int, int) {
 // surface, preventing edge clicks from becoming game actions.
 func (r *ebitRenderer) ScreenToGame(x, y int) (int, int, bool) {
 	windowWidth, windowHeight := r.WindowSize()
+	if r.options.NativeResolution {
+		if x < 0 || y < 0 || x >= windowWidth || y >= windowHeight {
+			return 0, 0, false
+		}
+		return x, y, true
+	}
 
 	viewport, err := calculateViewport(
 		windowWidth,
@@ -399,8 +409,12 @@ func (g *ebitGame) Draw(screen *ebiten.Image) {
 	r.currentScreen = nil
 }
 
-// Layout keeps Ebitengine's offscreen surface at the configured logical resolution regardless of native window size.
-func (g *ebitGame) Layout(_, _ int) (int, int) {
+// Layout keeps the fixed logical surface for game profiles, while native mode keeps the offscreen surface exactly
+// matched to the drawable window. This is Ebitengine's no-scale path.
+func (g *ebitGame) Layout(outsideWidth, outsideHeight int) (int, int) {
+	if g.renderer.options.NativeResolution {
+		return outsideWidth, outsideHeight
+	}
 	return g.renderer.Resolution()
 }
 
@@ -411,6 +425,13 @@ func (g *ebitGame) DrawFinalScreen(
 	offscreen *ebiten.Image,
 	geoM ebiten.GeoM,
 ) {
+	if g.renderer.options.NativeResolution {
+		// The offscreen surface already is the final native resolution. Preserve
+		// Ebitengine's identity transform instead of applying any fit policy.
+		options := &ebiten.DrawImageOptions{Filter: ebiten.FilterNearest, DisableMipmaps: true}
+		screen.DrawImage(offscreen, options)
+		return
+	}
 	if g.renderer.options.ViewportFit == "stretch" {
 		width, height := screen.Bounds().Dx(), screen.Bounds().Dy()
 

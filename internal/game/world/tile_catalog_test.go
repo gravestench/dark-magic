@@ -18,6 +18,48 @@ func TestTileCatalogGroupsCandidatesAndReturnsCopies(t *testing.T) {
 	}
 }
 
+// TestTileCatalogGroupsPhysicalRecordsBySourcePath verifies the editor can display each declared DT1 independently.
+func TestTileCatalogGroupsPhysicalRecordsBySourcePath(t *testing.T) {
+	first := TileIdentity{MainIndex: 1}
+	second := TileIdentity{MainIndex: 2}
+	catalog := NewTileCatalog([]TileReference{
+		{Identity: first, Path: "floor.dt1", Index: 0},
+		{Identity: second, Path: "wall.dt1", Index: 1},
+		{Identity: second, Path: "floor.dt1", Index: 2},
+	})
+	references := catalog.References("floor.dt1")
+	if len(references) != 2 || references[0].Index != 0 || references[1].Index != 2 {
+		t.Fatalf("path references = %#v", references)
+	}
+	references[0].Index = 99
+	if got := catalog.References("floor.dt1")[0].Index; got != 0 {
+		t.Fatalf("mutated catalog through path copy: %d", got)
+	}
+}
+
+// TestTileCatalogIdentitiesAreSorted keeps logical tile pickers deterministic across catalog construction order.
+func TestTileCatalogIdentitiesAreSorted(t *testing.T) {
+	catalog := NewTileCatalog([]TileReference{
+		{Identity: TileIdentity{Orientation: 13, MainIndex: 2, SubIndex: 1}},
+		{Identity: TileIdentity{Orientation: 1, MainIndex: 8, SubIndex: 2}},
+		{Identity: TileIdentity{Orientation: 1, MainIndex: 8, SubIndex: 1}},
+	})
+	got := catalog.Identities()
+	want := []TileIdentity{
+		{Orientation: 1, MainIndex: 8, SubIndex: 1},
+		{Orientation: 1, MainIndex: 8, SubIndex: 2},
+		{Orientation: 13, MainIndex: 2, SubIndex: 1},
+	}
+	if len(got) != len(want) {
+		t.Fatalf("identities = %#v", got)
+	}
+	for index := range want {
+		if got[index] != want[index] {
+			t.Fatalf("identity %d = %#v, want %#v", index, got[index], want[index])
+		}
+	}
+}
+
 // TestTileCatalogSelectionIsDeterministicAndSkipsZeroRarity pins weighted selection for repeatable map materialization.
 func TestTileCatalogSelectionIsDeterministicAndSkipsZeroRarity(t *testing.T) {
 	identity := TileIdentity{Orientation: 1, MainIndex: 2, SubIndex: 3}

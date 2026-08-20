@@ -1,4 +1,4 @@
-.PHONY: test test-lua test-lua-hardening test-lua-format test-lua-syntax test-network-hardening test-network-soak test-network-fuzz architecture test-race fmt lint vet build-client-backends d2legacy bik-view presentation-coverage skill-behavior-coverage skill-evidence profile profile-acceptance profile-render-backends profile-check realm-up realm-down realm-fresh-install realm-drain-game realm-mailpit-up realm-mailpit-down realm-test-production capture capture-all capture-game-world capture-game-world-movement capture-game-world-panels capture-blood-moor capture-act1-seam capture-monster-lab capture-missile-lab capture-combat-lab capture-spell-lab capture-warp-lab play-game-world play-monster-lab play-missile-lab play-combat-lab play-spell-lab play-warp-lab
+.PHONY: test test-lua test-lua-hardening test-lua-format test-lua-syntax test-network-hardening test-network-soak test-network-fuzz architecture test-race fmt lint vet build-client-backends d2legacy ds1-editor-assets bik-view presentation-coverage skill-behavior-coverage skill-evidence profile profile-acceptance profile-render-backends profile-check realm-up realm-down realm-fresh-install realm-drain-game realm-mailpit-up realm-mailpit-down realm-test-production capture capture-all capture-game-world capture-game-world-movement capture-game-world-panels capture-blood-moor capture-act1-seam capture-monster-lab capture-missile-lab capture-combat-lab capture-spell-lab capture-warp-lab play-game-world play-monster-lab play-missile-lab play-combat-lab play-spell-lab play-warp-lab
 
 test:
 	go test ./...
@@ -16,6 +16,7 @@ test-lua-format:
 
 test-lua-syntax:
 	find internal/content/d2legacy/lua -name '*.lua' -print0 | xargs -0 -n 100 luac -p
+	find internal/content/ds1editor/lua -name '*.lua' -print0 | xargs -0 -n 100 luac -p
 
 architecture:
 	go test ./internal/acceptance -run 'Test(Retired|LegacyRenderer|NoAccidental|DependencyDirection|CommandRemains|GameplayOwnership)'
@@ -93,6 +94,9 @@ realm-test-production:
 
 d2legacy:
 	go run ./internal/dev/tools/d2legacy_pack -output ./dist/d2legacy.zip
+
+ds1-editor-assets:
+	go run ./internal/dev/tools/ds1_editor_assets
 
 bik-view:
 	go run ./internal/dev/tools/bik_view -source "$${MPQ_DIRECTORY}" -asset "$${BIK_ASSET}"

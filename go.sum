@@ -57,10 +57,14 @@ github.com/gravestench/cof v0.2.1 h1:zpqGQ+QQ++gHZ6WmCinGSCBosDuZK1cbkvbfowYaGko
 github.com/gravestench/cof v0.2.1/go.mod h1:PKxpczoqAXuwGwWVfLuHqwq99yMXNTgf9jDHnxU3qMY=
 github.com/gravestench/dc6 v0.2.0 h1:RPcFTeT3rxBvYok/PUYtTxOrCyUmsI4Bh8A82uZJKSA=
 github.com/gravestench/dc6 v0.2.0/go.mod h1:FSBaEhaZUrnjdUMDWkDrXyTzxZYl0KlJRZc1h4OpOfI=
+github.com/gravestench/dc6 v0.2.1-0.20260818200931-243152efbc82 h1:Eat/bXAOCUYIhmrHwwHGMW22PrAk5QybTDVFwDlQ3kw=
+github.com/gravestench/dc6 v0.2.1-0.20260818200931-243152efbc82/go.mod h1:FSBaEhaZUrnjdUMDWkDrXyTzxZYl0KlJRZc1h4OpOfI=
 github.com/gravestench/dcc v0.3.2 h1:7jYLv6Dcop8sXdkFP1SvPBhPUNllejwRODzpveNabvc=
 github.com/gravestench/dcc v0.3.2/go.mod h1:5z+uaRNj0mTP3NYkIfIkzwE3rGePljNQXweJMebM+gc=
 github.com/gravestench/ds1 v0.2.0 h1:FMzVN8PjStepDdOx7SXRI/lFxPaPxPxJvevv8ERAhZw=
 github.com/gravestench/ds1 v0.2.0/go.mod h1:j0tDvRX8EaO4guHCzq/9F10DOJif2IB2Xvz1mEWnxPc=
+github.com/gravestench/ds1 v0.2.1-0.20260819204140-c25fae6ef7a8 h1:1rBt1Az67P898qgAxMj0E5o3O6CYtuX9QLQ7+bjJEEY=
+github.com/gravestench/ds1 v0.2.1-0.20260819204140-c25fae6ef7a8/go.mod h1:j0tDvRX8EaO4guHCzq/9F10DOJif2IB2Xvz1mEWnxPc=
 github.com/gravestench/dt1 v0.3.2-0.20260811213836-e413758e7628 h1:bXVS/DEWFQZUVMlCSBSeBpN/x1dPm6TRIvOlapHXBM8=
 github.com/gravestench/dt1 v0.3.2-0.20260811213836-e413758e7628/go.mod h1:vqmYuxN/bKmA39MDuS1E32JXK7rTQY1nQswto0d4G5o=
 github.com/gravestench/mathlib v0.0.0-20210913201844-54cd9b7a1e9e h1:/vTh+8tKvHy2lNPPgAjlNNBFOPlOM8ObOSI8mgIgbSA=

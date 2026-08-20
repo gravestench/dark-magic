@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"io"
 	"io/fs"
+	"sort"
 
 	"github.com/gravestench/dt1"
 )
@@ -37,18 +38,34 @@ type TileReference struct {
 // a DS1 cell. A key can have several rarity-weighted graphical alternatives.
 type TileCatalog struct {
 	entries map[TileIdentity][]TileReference
+	paths   map[string][]TileReference
 }
 
 // NewTileCatalog constructs an immutable lookup from already-decoded metadata.
 // It is public within the internal package so generators and synthetic tests
 // use exactly the same selection contract as file-backed maps.
 func NewTileCatalog(references []TileReference) *TileCatalog {
-	catalog := &TileCatalog{entries: make(map[TileIdentity][]TileReference)}
+	catalog := &TileCatalog{
+		entries: make(map[TileIdentity][]TileReference),
+		paths:   make(map[string][]TileReference),
+	}
 	for _, reference := range references {
 		catalog.entries[reference.Identity] = append(catalog.entries[reference.Identity], reference)
+		catalog.paths[reference.Path] = append(catalog.paths[reference.Path], reference)
 	}
 
 	return catalog
+}
+
+// References returns the physical DT1 records contributed by one source file
+// in authored index order. Editors use this view to present the actual
+// tilesets declared by a DS1 rather than flattening them into logical keys.
+func (c *TileCatalog) References(path string) []TileReference {
+	if c == nil {
+		return nil
+	}
+
+	return append([]TileReference(nil), c.paths[path]...)
 }
 
 // LoadTileCatalog indexes DT1 headers only. Pixel blocks remain compressed and
@@ -122,6 +139,29 @@ func (c *TileCatalog) Candidates(identity TileIdentity) []TileReference {
 	}
 
 	return append([]TileReference(nil), c.entries[identity]...)
+}
+
+// Identities returns every logical DT1 key in deterministic order. Editors use
+// this small metadata view for searchable tile pickers without exposing the
+// catalog's mutable map or eagerly decoding physical tile graphics.
+func (c *TileCatalog) Identities() []TileIdentity {
+	if c == nil {
+		return nil
+	}
+	result := make([]TileIdentity, 0, len(c.entries))
+	for identity := range c.entries {
+		result = append(result, identity)
+	}
+	sort.Slice(result, func(left, right int) bool {
+		if result[left].Orientation != result[right].Orientation {
+			return result[left].Orientation < result[right].Orientation
+		}
+		if result[left].MainIndex != result[right].MainIndex {
+			return result[left].MainIndex < result[right].MainIndex
+		}
+		return result[left].SubIndex < result[right].SubIndex
+	})
+	return result
 }
 
 // Select deterministically chooses one physical record using positive rarity

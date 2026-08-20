@@ -13,9 +13,9 @@ require (
 	github.com/google/uuid v1.1.5
 	github.com/gravestench/akara v0.1.4
 	github.com/gravestench/cof v0.2.1
-	github.com/gravestench/dc6 v0.2.0
+	github.com/gravestench/dc6 v0.2.1-0.20260818200931-243152efbc82
 	github.com/gravestench/dcc v0.3.2
-	github.com/gravestench/ds1 v0.2.0
+	github.com/gravestench/ds1 v0.2.1-0.20260819204140-c25fae6ef7a8
 	github.com/gravestench/dt1 v0.3.2-0.20260811213836-e413758e7628
 	github.com/gravestench/mpq v0.2.0
 	github.com/gravestench/pl2 v0.2.0

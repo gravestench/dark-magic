@@ -233,3 +233,28 @@ func TestBitmapFontWhiteKeepsPaletteAuthoredGlyph(t *testing.T) {
 		t.Fatalf("white run = %#v, want palette-authored glyph", got)
 	}
 }
+
+// TestBitmapFontMeasureMatchesRenderedTexture protects pre-layout UI sizing from renderer drift.
+func TestBitmapFontMeasureMatchesRenderedTexture(t *testing.T) {
+	font := &BitmapFont{
+		Glyphs: map[rune]Glyph{
+			'A': {Width: 3, Height: 4, Frame: 0},
+			' ': {Width: 2, Height: 4, Frame: 1},
+			'?': {Width: 2, Height: 4, Frame: 1},
+		},
+		Frames:     []image.Image{opaqueTestFrame(3, 4), opaqueTestFrame(2, 4)},
+		LineHeight: 4,
+	}
+
+	measured, err := font.Measure("[gold]A A[/]", 5)
+	if err != nil {
+		t.Fatal(err)
+	}
+	rendered, err := font.Render("[gold]A A[/]", color.White, 5, "center")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if measured != rendered.Bounds().Size() {
+		t.Fatalf("measured %v, rendered %v", measured, rendered.Bounds().Size())
+	}
+}

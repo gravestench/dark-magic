@@ -6,6 +6,7 @@ import (
 	"encoding/binary"
 	"image"
 	"image/color"
+	"image/draw"
 	"testing"
 	"testing/fstest"
 	"time"
@@ -168,6 +169,69 @@ func TestHorizontalDC6StripPreservesExplicitRightCap(t *testing.T) {
 
 	if got := color.RGBAModel.Convert(strip.At(2, 0)).(color.RGBA); got.G != 255 {
 		t.Fatalf("right cap pixel = %#v", got)
+	}
+}
+
+// TestRepeatImageUsesNativePixelsAndClipsFinalTiles protects nine-slice chrome
+// from scaling or leaving gaps when a panel is not a multiple of its tile size.
+func TestRepeatImageUsesNativePixelsAndClipsFinalTiles(t *testing.T) {
+	source := image.NewRGBA(image.Rect(4, 7, 6, 9))
+	source.Set(4, 7, color.RGBA{R: 255, A: 255})
+	source.Set(5, 7, color.RGBA{G: 255, A: 255})
+	source.Set(4, 8, color.RGBA{B: 255, A: 255})
+	source.Set(5, 8, color.RGBA{R: 255, G: 255, A: 255})
+
+	result, err := repeatImage(source, 5, 3)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if result.Bounds() != image.Rect(0, 0, 5, 3) {
+		t.Fatalf("repeated bounds = %v", result.Bounds())
+	}
+
+	want := [][]color.RGBA{
+		{{R: 255, A: 255}, {G: 255, A: 255}, {R: 255, A: 255}, {G: 255, A: 255}, {R: 255, A: 255}},
+		{{B: 255, A: 255}, {R: 255, G: 255, A: 255}, {B: 255, A: 255}, {R: 255, G: 255, A: 255}, {B: 255, A: 255}},
+		{{R: 255, A: 255}, {G: 255, A: 255}, {R: 255, A: 255}, {G: 255, A: 255}, {R: 255, A: 255}},
+	}
+	for y := range want {
+		for x := range want[y] {
+			if got := color.RGBAModel.Convert(result.At(x, y)).(color.RGBA); got != want[y][x] {
+				t.Fatalf("pixel %d,%d = %#v, want %#v", x, y, got, want[y][x])
+			}
+		}
+	}
+}
+
+// TestRepeatImageVariantsIsStableAndActuallyVaries protects ornamental chrome
+// from either changing between frames or collapsing back to one boring tile.
+func TestRepeatImageVariantsIsStableAndActuallyVaries(t *testing.T) {
+	red := image.NewRGBA(image.Rect(0, 0, 2, 2))
+	green := image.NewRGBA(image.Rect(0, 0, 2, 2))
+	blue := image.NewRGBA(image.Rect(0, 0, 2, 2))
+	draw.Draw(red, red.Bounds(), &image.Uniform{C: color.RGBA{R: 255, A: 255}}, image.Point{}, draw.Src)
+	draw.Draw(green, green.Bounds(), &image.Uniform{C: color.RGBA{G: 255, A: 255}}, image.Point{}, draw.Src)
+	draw.Draw(blue, blue.Bounds(), &image.Uniform{C: color.RGBA{B: 255, A: 255}}, image.Point{}, draw.Src)
+
+	first, err := repeatImageVariants([]image.Image{red, green, blue}, 12, 8, 47)
+	if err != nil {
+		t.Fatal(err)
+	}
+	second, err := repeatImageVariants([]image.Image{red, green, blue}, 12, 8, 47)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !bytes.Equal(first.Pix, second.Pix) {
+		t.Fatal("variant field changed for the same seed")
+	}
+	seen := make(map[color.RGBA]bool)
+	for y := 0; y < first.Bounds().Dy(); y += 2 {
+		for x := 0; x < first.Bounds().Dx(); x += 2 {
+			seen[color.RGBAModel.Convert(first.At(x, y)).(color.RGBA)] = true
+		}
+	}
+	if len(seen) < 2 {
+		t.Fatalf("variant field used %d distinct tiles, want at least 2", len(seen))
 	}
 }
 

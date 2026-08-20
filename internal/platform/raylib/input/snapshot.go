@@ -16,6 +16,14 @@ func (s *Service) Snapshot() inputstate.Frame {
 	confirm := actionState(s.KeyState(rl.KeyEnter))
 	cancel := actionState(s.KeyState(rl.KeyEscape))
 	space := actionState(s.KeyState(rl.KeySpace))
+	control := mergeActionStates(
+		actionState(s.ModifierKeyState(rl.KeyLeftControl)),
+		actionState(s.ModifierKeyState(rl.KeyRightControl)),
+	)
+	shift := mergeActionStates(
+		actionState(s.ModifierKeyState(rl.KeyLeftShift)),
+		actionState(s.ModifierKeyState(rl.KeyRightShift)),
+	)
 	var text []rune
 	for character := rl.GetCharPressed(); character > 0; character = rl.GetCharPressed() {
 		text = append(text, rune(character))
@@ -30,6 +38,9 @@ func (s *Service) Snapshot() inputstate.Frame {
 			"shell_toggle":      actionState(s.KeyState(rl.KeyGrave)),
 			"shell_lua":         actionState(s.KeyState(rl.KeyF1)),
 			"shell_logs":        actionState(s.KeyState(rl.KeyF2)),
+			"save":              shortcutAction(s.KeyState(rl.KeyS), control),
+			"undo":              shortcutAction(s.KeyState(rl.KeyZ), control),
+			"redo":              shortcutAction(s.KeyState(rl.KeyY), control),
 			"debug_collision":   actionState(s.KeyState(rl.KeyF3)),
 			"debug_map_tiles":   actionState(s.KeyState(rl.KeyF4)),
 			"debug_origins":     actionState(s.KeyState(rl.KeyF5)),
@@ -63,14 +74,20 @@ func (s *Service) Snapshot() inputstate.Frame {
 			"page_down":         actionState(s.KeyState(rl.KeyPageDown)),
 			"home":              actionState(s.KeyState(rl.KeyHome)),
 			"end":               actionState(s.KeyState(rl.KeyEnd)),
-			"shift": mergeActionStates(
-				actionState(s.ModifierKeyState(rl.KeyLeftShift)),
-				actionState(s.ModifierKeyState(rl.KeyRightShift)),
-			),
+			"shift":             shift,
 		},
 	}
 }
 
+// shortcutAction exposes a key transition only while its required modifier is active.
+func shortcutAction(key InputState, modifier inputstate.ActionState) inputstate.ActionState {
+	if !modifier.Down && !modifier.Pressed {
+		return inputstate.ActionState{}
+	}
+	return actionState(key)
+}
+
+// mergeActionStates combines equivalent modifier keys without losing edge transitions.
 func mergeActionStates(states ...inputstate.ActionState) inputstate.ActionState {
 	var result inputstate.ActionState
 	for _, state := range states {
@@ -81,6 +98,7 @@ func mergeActionStates(states ...inputstate.ActionState) inputstate.ActionState 
 	return result
 }
 
+// actionState translates Raylib's raw key snapshot into the engine's held/pressed/released contract.
 func actionState(state InputState) inputstate.ActionState {
 	return inputstate.ActionState{
 		Down:     state == StateDown,

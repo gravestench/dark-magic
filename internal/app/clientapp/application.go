@@ -39,29 +39,34 @@ import (
 // Resource-owning command code retains cleanup responsibility unless an option's
 // contract explicitly transfers it to application.
 type Options struct {
-	Content               *content.FS
-	Mods                  *modcache.ResolvedSet
-	Packages              simulation.RuntimePackageSet
-	AssetSetID            string
-	ModCache              *modcache.Store
-	Profile               Profile
-	NewCapture            CaptureFactory
-	CaptureDirectory      string
-	CaptureScenes         string
-	CaptureSettle         int
-	StartScene            string
-	StartOverlays         string
-	FixtureCharacters     int
-	PlayerProfilePath     string
-	FixtureWorldLevel     int
-	FixtureWorldSpawn     string
-	FixturePointerMove    bool
-	OutputPalette         string
-	ViewportFit           string
-	BorderlessFullscreen  bool
-	DisableNativeAudio    bool
-	PresentationProfileID string
-	Logs                  *shell.LogBuffer
+	Content                *content.FS
+	Mods                   *modcache.ResolvedSet
+	Packages               simulation.RuntimePackageSet
+	AssetSetID             string
+	ModCache               *modcache.Store
+	Profile                Profile
+	NewCapture             CaptureFactory
+	CaptureDirectory       string
+	CaptureScenes          string
+	CaptureSettle          int
+	StartScene             string
+	StartOverlays          string
+	FixtureCharacters      int
+	PlayerProfilePath      string
+	FixtureWorldLevel      int
+	FixtureWorldSpawn      string
+	FixturePointerMove     bool
+	OutputPalette          string
+	ViewportFit            string
+	NativeResolution       bool
+	WindowWidth            int
+	WindowHeight           int
+	BorderlessFullscreen   bool
+	DisableNativeAudio     bool
+	PresentationProfileID  string
+	MapEditorOutput        string
+	MapEditorReadOnlyRoots []string
+	Logs                   *shell.LogBuffer
 }
 
 // Profile is the narrow diagnostic surface clientapp needs from an optional

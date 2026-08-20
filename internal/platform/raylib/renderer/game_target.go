@@ -6,10 +6,10 @@ import (
 	rl "github.com/gen2brain/raylib-go/raylib"
 )
 
-// startGameTarget validates presentation geometry before allocating the logical render texture. This target keeps game
-// rendering resolution-independent while overlays remain native-window sharp.
+// startGameTarget validates presentation geometry before allocating the render texture. In native mode this target is
+// matched to the drawable window; otherwise it remains the manifest-owned logical resolution.
 func (s *Service) startGameTarget() error {
-	width, height := s.config.Resolution.Width, s.config.Resolution.Height
+	width, height := s.frameResolution()
 	if width <= 0 || height <= 0 {
 		return fmt.Errorf("renderer: logical resolution requires positive dimensions, got %dx%d", width, height)
 	}
@@ -33,6 +33,40 @@ func (s *Service) startGameTarget() error {
 	rl.SetTextureFilter(s.gameTarget.Texture, rl.FilterPoint)
 
 	return nil
+}
+
+// resizeGameTargetForWindow replaces the offscreen target only in native mode and only after a real drawable-size
+// change. It runs on the renderer owner thread before a frame begins, so no composition sees a half-resized target.
+func (s *Service) resizeGameTargetForWindow() error {
+	if s.config == nil || !s.config.Resolution.Native {
+		return nil
+	}
+
+	width, height := s.frameResolution()
+	if width <= 0 || height <= 0 {
+		return fmt.Errorf("renderer: native resolution requires positive dimensions, got %dx%d", width, height)
+	}
+
+	if s.paletteQuantizer != nil {
+		return s.resizePaletteTarget(width, height)
+	}
+	if int(s.gameTarget.Texture.Width) == width && int(s.gameTarget.Texture.Height) == height {
+		return nil
+	}
+	s.stopGameTarget()
+	return s.startGameTarget()
+}
+
+// frameResolution is safe both during startup (after the native window exists but before isInit is published) and
+// during steady-state resize handling.
+func (s *Service) frameResolution() (width, height int) {
+	if s.config != nil && s.config.Resolution.Native {
+		width, height = s.WindowSize()
+		if width > 0 && height > 0 {
+			return width, height
+		}
+	}
+	return s.Resolution()
 }
 
 // stopGameTarget releases the logical render texture once and clears its handle so repeated shutdown remains safe.
