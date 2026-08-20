@@ -55,6 +55,9 @@ const (
 	Default = Linear
 )
 
+// EaseMap preserves the animation vocabulary consumed by authored content.
+// Several aliases intentionally share providers for compatibility with common
+// tween-library names; changing these keys would break data rather than Go APIs.
 var EaseMap = map[string]EaseFunctionProvider{
 	Linear:  &LinearEaseProvider{},
 	Bounce:  &BounceOutEaseProvider{},

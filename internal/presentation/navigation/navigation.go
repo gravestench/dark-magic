@@ -57,6 +57,7 @@ type WorldViewer interface{ WorldView() string }
 // Factory creates a fresh scene instance.
 type Factory func(context.Context) (Scene, error)
 
+// entry keeps a registered ID, live instance, and optional spatial slot together while stack operations reorder them.
 type entry struct {
 	id    string
 	slot  string
@@ -86,13 +87,17 @@ func New() *Manager { return &Manager{factories: make(map[string]Factory)} }
 func (m *Manager) Register(id string, factory Factory) error {
 	m.mu.Lock()
 	defer m.mu.Unlock()
+
 	if id == "" || factory == nil {
 		return errors.New("navigation: scene ID and factory are required")
 	}
+
 	if _, exists := m.factories[id]; exists {
 		return fmt.Errorf("navigation: scene %q is already registered", id)
 	}
+
 	m.factories[id] = factory
+
 	return nil
 }
 
@@ -100,15 +105,19 @@ func (m *Manager) Register(id string, factory Factory) error {
 func (m *Manager) Unregister(id string) error {
 	m.mu.Lock()
 	defer m.mu.Unlock()
+
 	if _, exists := m.factories[id]; !exists {
 		return fmt.Errorf("navigation: scene %q is not registered", id)
 	}
+
 	for _, current := range m.stack {
 		if current.id == id {
 			return fmt.Errorf("navigation: scene %q is active", id)
 		}
 	}
+
 	delete(m.factories, id)
+
 	return nil
 }
 
@@ -117,15 +126,21 @@ func (m *Manager) Unregister(id string) error {
 func (m *Manager) Replace(ctx context.Context, id string) error {
 	m.mu.Lock()
 	defer m.mu.Unlock()
+
+	// Entering the replacement first makes failure transactional: callers keep
+	// the prior stack when the new scene cannot initialize.
 	next, err := m.createAndEnter(ctx, id)
 	if err != nil {
 		return err
 	}
+
 	old := m.stack
 	m.stack = []entry{next}
+
 	if err := closeEntries(ctx, old); err != nil {
 		return fmt.Errorf("navigation: replace with %q: %w", id, err)
 	}
+
 	return nil
 }
 
@@ -133,62 +148,105 @@ func (m *Manager) Replace(ctx context.Context, id string) error {
 func (m *Manager) Push(ctx context.Context, id string) error {
 	m.mu.Lock()
 	defer m.mu.Unlock()
+
 	next, err := m.createAndEnter(ctx, id)
 	if err != nil {
 		return err
 	}
+
 	m.stack = append(m.stack, next)
+
 	return nil
 }
 
-// ToggleOverlay opens an overlay in a spatial slot, closes it when already
-// active, and atomically replaces conflicting overlays. Left and right slots
-// may coexist; a full overlay excludes both side slots.
+// ToggleOverlay opens an overlay in a spatial slot, closes it when already active, and publishes replacements before
+// cleaning up conflicting overlays. Left and right slots may coexist; a full overlay excludes both side slots.
 func (m *Manager) ToggleOverlay(ctx context.Context, id, slot string) error {
 	m.mu.Lock()
 	defer m.mu.Unlock()
-	if slot != OverlayLeft && slot != OverlayRight && slot != OverlayFull {
+
+	if !validOverlaySlot(slot) {
 		return fmt.Errorf("navigation: invalid overlay slot %q", slot)
 	}
-	for index := len(m.stack) - 1; index >= 0; index-- {
-		if m.stack[index].id == id && m.stack[index].slot == slot {
-			current := m.stack[index]
-			m.stack = append(m.stack[:index], m.stack[index+1:]...)
-			return closeEntries(ctx, []entry{current})
-		}
+
+	if index, ok := activeOverlayIndex(m.stack, id, slot); ok {
+		current := m.stack[index]
+		m.stack = append(m.stack[:index], m.stack[index+1:]...)
+
+		return closeEntries(ctx, []entry{current})
 	}
+
 	next, err := m.createAndEnter(ctx, id)
 	if err != nil {
 		return err
 	}
+
 	next.slot = slot
+
 	retained := make([]entry, 0, len(m.stack)+1)
 	removed := make([]entry, 0, 2)
+
 	for _, current := range m.stack {
-		conflicts := current.slot == slot || slot == OverlayFull && (current.slot == OverlayLeft || current.slot == OverlayRight) || current.slot == OverlayFull
-		if conflicts {
+		if overlaySlotsConflict(current.slot, slot) {
 			removed = append(removed, current)
-		} else {
-			retained = append(retained, current)
+			continue
 		}
+
+		retained = append(retained, current)
 	}
+
+	// Publish the new stack before cleanup, matching Replace: navigation state
+	// moves forward even if an outgoing scene reports an Exit or Destroy error.
 	m.stack = append(retained, next)
+
 	if err := closeEntries(ctx, removed); err != nil {
 		return fmt.Errorf("navigation: replace %s overlay with %q: %w", slot, id, err)
 	}
+
 	return nil
+}
+
+// validOverlaySlot limits spatial policy to the three layouts understood by
+// world framing and input routing.
+func validOverlaySlot(slot string) bool {
+	return slot == OverlayLeft || slot == OverlayRight || slot == OverlayFull
+}
+
+// activeOverlayIndex searches from the top so toggling duplicate historical
+// entries, if any exist, closes the one users can currently see.
+func activeOverlayIndex(stack []entry, id, slot string) (int, bool) {
+	for index := len(stack) - 1; index >= 0; index-- {
+		if stack[index].id == id && stack[index].slot == slot {
+			return index, true
+		}
+	}
+
+	return 0, false
+}
+
+// overlaySlotsConflict encodes the layout invariant: matching side slots
+// exclude each other, and a full overlay excludes either side.
+func overlaySlotsConflict(current, requested string) bool {
+	if current == requested || current == OverlayFull {
+		return true
+	}
+
+	return requested == OverlayFull && (current == OverlayLeft || current == OverlayRight)
 }
 
 // Pop exits and destroys the top scene.
 func (m *Manager) Pop(ctx context.Context) error {
 	m.mu.Lock()
 	defer m.mu.Unlock()
+
 	if len(m.stack) == 0 {
 		return errors.New("navigation: scene stack is empty")
 	}
+
 	index := len(m.stack) - 1
 	current := m.stack[index]
 	m.stack = m.stack[:index]
+
 	return closeEntries(ctx, []entry{current})
 }
 
@@ -197,61 +255,107 @@ func (m *Manager) Pop(ctx context.Context) error {
 func (m *Manager) Update(ctx context.Context, elapsed time.Duration) error {
 	m.mu.Lock()
 	defer m.mu.Unlock()
-	start := 0
-	for index := len(m.stack) - 1; index >= 0; index-- {
-		if blocker, ok := m.stack[index].scene.(UpdateBlocker); ok && blocker.BlocksUpdateBelow() {
-			start = index
-			break
-		}
-	}
+
+	start := firstUpdatedEntry(m.stack)
+
 	view := worldView(m.stack)
 	for index := start; index < len(m.stack); index++ {
-		var err error
-		inputAllowed := index == len(m.stack)-1 || passesInputFrom(m.stack, index+1)
-		mode := "none"
-		if index == len(m.stack)-1 {
-			mode = "focused"
-		} else if inputAllowed && m.stack[index].slot != "" {
-			mode = "pointer"
-		} else if inputAllowed && index == 0 {
-			mode = "gameplay_pointer"
-		} else if inputAllowed {
-			mode = "gameplay"
-		}
-		if updater, ok := m.stack[index].scene.(RoutedInputUpdater); ok {
-			err = updater.UpdateRoutedInput(ctx, elapsed, index == len(m.stack)-1, mode, view)
-		} else if updater, ok := m.stack[index].scene.(InputAwareUpdater); ok {
-			err = updater.UpdateInputFocused(ctx, elapsed, index == len(m.stack)-1, inputAllowed, view)
-		} else if updater, ok := m.stack[index].scene.(FocusedUpdater); ok {
-			err = updater.UpdateFocused(ctx, elapsed, index == len(m.stack)-1)
-		} else {
-			err = m.stack[index].scene.Update(ctx, elapsed)
-		}
-		if err != nil {
+		focused := index == len(m.stack)-1
+		inputAllowed := focused || passesInputFrom(m.stack, index+1)
+		mode := routedInputMode(m.stack[index], index, focused, inputAllowed)
+
+		if err := updateEntry(ctx, elapsed, m.stack[index], focused, inputAllowed, mode, view); err != nil {
 			return fmt.Errorf("navigation: update %q: %w", m.stack[index].id, err)
 		}
 	}
+
 	return nil
 }
 
-// InputPolicy reports whether the named active scene may receive gameplay
-// actions through every scene above it and the unobscured world region.
+// firstUpdatedEntry finds the highest blocking scene. Starting there pauses
+// lower simulations while still updating overlays stacked above the blocker.
+func firstUpdatedEntry(stack []entry) int {
+	for index := len(stack) - 1; index >= 0; index-- {
+		blocker, ok := stack[index].scene.(UpdateBlocker)
+		if ok && blocker.BlocksUpdateBelow() {
+			return index
+		}
+	}
+
+	return 0
+}
+
+// routedInputMode translates focus, passthrough, and placement into the stable strings consumed by RoutedInputUpdater.
+func routedInputMode(current entry, index int, focused, inputAllowed bool) string {
+	if focused {
+		return "focused"
+	}
+
+	if !inputAllowed {
+		return "none"
+	}
+
+	if current.slot != "" {
+		return "pointer"
+	}
+
+	if index == 0 {
+		return "gameplay_pointer"
+	}
+
+	return "gameplay"
+}
+
+// updateEntry selects the richest update contract a scene implements. The
+// assertion order is part of the API: a scene implementing several contracts
+// receives exactly one callback with the most detailed routing information.
+func updateEntry(
+	ctx context.Context,
+	elapsed time.Duration,
+	current entry,
+	focused bool,
+	inputAllowed bool,
+	mode string,
+	view string,
+) error {
+	if updater, ok := current.scene.(RoutedInputUpdater); ok {
+		return updater.UpdateRoutedInput(ctx, elapsed, focused, mode, view)
+	}
+
+	if updater, ok := current.scene.(InputAwareUpdater); ok {
+		return updater.UpdateInputFocused(ctx, elapsed, focused, inputAllowed, view)
+	}
+
+	if updater, ok := current.scene.(FocusedUpdater); ok {
+		return updater.UpdateFocused(ctx, elapsed, focused)
+	}
+
+	return current.scene.Update(ctx, elapsed)
+}
+
+// InputPolicy reports whether input passes through every higher scene and returns the current unobscured world region.
 func (m *Manager) InputPolicy(id string) (bool, string) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
+
 	for index := len(m.stack) - 1; index >= 0; index-- {
 		if m.stack[index].id == id {
 			return index == len(m.stack)-1 || passesInputFrom(m.stack, index+1), worldView(m.stack)
 		}
 	}
+
 	return false, "center"
 }
 
+// worldView reduces all active overlay slots to the remaining world region.
+// Explicit side slots take precedence over a custom view on the top scene.
 func worldView(stack []entry) string {
 	if len(stack) == 0 {
 		return "center"
 	}
+
 	left, right := false, false
+
 	for _, current := range stack {
 		switch current.slot {
 		case OverlayFull:
@@ -262,21 +366,28 @@ func worldView(stack []entry) string {
 			right = true
 		}
 	}
+
 	if left && right {
 		return "none"
 	}
+
 	if left {
 		return "right"
 	}
+
 	if right {
 		return "left"
 	}
+
 	if viewer, ok := stack[len(stack)-1].scene.(WorldViewer); ok {
 		return viewer.WorldView()
 	}
+
 	return "center"
 }
 
+// passesInputFrom requires every scene above start to opt into passthrough;
+// one modal scene therefore closes the gameplay route for all lower scenes.
 func passesInputFrom(stack []entry, start int) bool {
 	for index := start; index < len(stack); index++ {
 		passthrough, ok := stack[index].scene.(InputPassthrough)
@@ -284,6 +395,7 @@ func passesInputFrom(stack []entry, start int) bool {
 			return false
 		}
 	}
+
 	return true
 }
 
@@ -291,11 +403,13 @@ func passesInputFrom(stack []entry, start int) bool {
 func (m *Manager) Render(ctx context.Context) error {
 	m.mu.Lock()
 	defer m.mu.Unlock()
+
 	for _, current := range m.stack {
 		if err := current.scene.Render(ctx); err != nil {
 			return fmt.Errorf("navigation: render %q: %w", current.id, err)
 		}
 	}
+
 	return nil
 }
 
@@ -303,8 +417,12 @@ func (m *Manager) Render(ctx context.Context) error {
 func (m *Manager) Close(ctx context.Context) error {
 	m.mu.Lock()
 	defer m.mu.Unlock()
+
 	old := m.stack
+	// Detach the stack before lifecycle callbacks so the manager remains closed
+	// even when cleanup returns one or more errors.
 	m.stack = nil
+
 	return closeEntries(ctx, old)
 }
 
@@ -312,10 +430,12 @@ func (m *Manager) Close(ctx context.Context) error {
 func (m *Manager) Stack() []string {
 	m.mu.Lock()
 	defer m.mu.Unlock()
+
 	result := make([]string, len(m.stack))
 	for index, current := range m.stack {
 		result[index] = current.id
 	}
+
 	return result
 }
 
@@ -324,43 +444,59 @@ func (m *Manager) Stack() []string {
 func (m *Manager) Focused() (string, bool) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
+
 	if len(m.stack) == 0 {
 		return "", false
 	}
+
 	return m.stack[len(m.stack)-1].id, true
 }
 
+// createAndEnter completes both startup phases before returning an entry. Any
+// partial scene is destroyed so callers never publish an unusable stack item.
 func (m *Manager) createAndEnter(ctx context.Context, id string) (entry, error) {
 	factory, exists := m.factories[id]
 	if !exists {
 		return entry{}, fmt.Errorf("navigation: scene %q is not registered", id)
 	}
+
 	scene, err := factory(ctx)
 	if err != nil {
 		return entry{}, fmt.Errorf("navigation: create %q: %w", id, err)
 	}
+
 	if scene == nil {
 		return entry{}, fmt.Errorf("navigation: create %q: factory returned nil", id)
 	}
+
 	if err := scene.Create(ctx); err != nil {
+		// Join preserves both the primary lifecycle error and a cleanup failure.
 		return entry{}, errors.Join(fmt.Errorf("navigation: initialize %q: %w", id, err), scene.Destroy(ctx))
 	}
+
 	if err := scene.Enter(ctx); err != nil {
 		return entry{}, errors.Join(fmt.Errorf("navigation: enter %q: %w", id, err), scene.Destroy(ctx))
 	}
+
 	return entry{id: id, scene: scene}, nil
 }
 
+// closeEntries unwinds the stack from top to bottom and attempts both cleanup
+// phases for every scene, joining failures so one bad callback cannot leak the
+// remaining scenes.
 func closeEntries(ctx context.Context, entries []entry) error {
 	var errs []error
+
 	for index := len(entries) - 1; index >= 0; index-- {
 		current := entries[index]
 		if err := current.scene.Exit(ctx); err != nil {
 			errs = append(errs, fmt.Errorf("navigation: exit %q: %w", current.id, err))
 		}
+
 		if err := current.scene.Destroy(ctx); err != nil {
 			errs = append(errs, fmt.Errorf("navigation: destroy %q: %w", current.id, err))
 		}
 	}
+
 	return errors.Join(errs...)
 }

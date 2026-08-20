@@ -3,7 +3,6 @@ package tui
 
 import (
 	"context"
-	"fmt"
 	"io"
 	"strings"
 	"time"
@@ -11,17 +10,7 @@ import (
 	"charm.land/bubbles/v2/textarea"
 	"charm.land/bubbles/v2/viewport"
 	tea "charm.land/bubbletea/v2"
-	"charm.land/lipgloss/v2"
 	"github.com/gravestench/dark-magic/internal/shell"
-)
-
-var (
-	accentStyle  = lipgloss.NewStyle().Foreground(lipgloss.Color("#D69A2D")).Bold(true)
-	dimStyle     = lipgloss.NewStyle().Foreground(lipgloss.Color("#817A6D"))
-	errorStyle   = lipgloss.NewStyle().Foreground(lipgloss.Color("#FF6B5E"))
-	valueStyle   = lipgloss.NewStyle().Foreground(lipgloss.Color("#7DD3A7"))
-	warningStyle = lipgloss.NewStyle().Foreground(lipgloss.Color("#E8B84A"))
-	panelStyle   = lipgloss.NewStyle().Border(lipgloss.RoundedBorder()).BorderForeground(lipgloss.Color("#6E5228"))
 )
 
 type evaluationMsg shell.Entry
@@ -33,7 +22,7 @@ const (
 	viewLogs
 )
 
-// Model is the Charmbracelet adapter for a renderer-independent shell Session.
+// Model is the Bubble Tea adapter for a renderer-independent shell Session.
 type Model struct {
 	ctx              context.Context
 	session          *shell.Session
@@ -50,11 +39,14 @@ type Model struct {
 	view             viewMode
 }
 
-// NewModel prepares an interactive terminal model without starting a terminal.
+// NewModel prepares an interactive terminal model without starting or taking
+// ownership of a terminal lifecycle.
 func NewModel(session *shell.Session) Model {
 	return newModel(context.Background(), session)
 }
 
+// newModel binds the program context used by asynchronous submissions and
+// initializes editor and viewport state before the first Bubble Tea frame.
 func newModel(ctx context.Context, session *shell.Session) Model {
 	input := textarea.New()
 	input.Placeholder = "Lua expression or statement"
@@ -66,53 +58,40 @@ func newModel(ctx context.Context, session *shell.Session) Model {
 	output := viewport.New(viewport.WithWidth(76), viewport.WithHeight(12))
 	output.SoftWrap = true
 	output.FillHeight = true
-	model := Model{ctx: ctx, session: session, input: input, output: output, history: len(session.History())}
+
+	model := Model{
+		ctx:     ctx,
+		session: session,
+		input:   input,
+		output:  output,
+		history: len(session.History()),
+	}
 	model.refreshTranscript()
+
 	return model
 }
 
-func (m Model) Init() tea.Cmd { return tea.Batch(textarea.Blink, refreshLogs()) }
+// Init starts textarea blinking and periodic log refresh without performing any
+// terminal I/O before Bubble Tea owns the program.
+func (m Model) Init() tea.Cmd {
+	return tea.Batch(textarea.Blink, refreshLogs())
+}
 
+// Update applies terminal events in priority order: window/view lifecycle,
+// submission/completion, transcript refresh, then focused component updates.
 func (m Model) Update(message tea.Msg) (tea.Model, tea.Cmd) {
 	switch message := message.(type) {
 	case tea.WindowSizeMsg:
 		m.width, m.height = message.Width, message.Height
 		m.resize()
 	case tea.KeyPressMsg:
-		switch message.String() {
-		case "ctrl+c", "ctrl+q":
-			return m, tea.Quit
-		case "f1":
-			m.view = viewLua
-			m.input.Focus()
-			m.resize()
-			return m, nil
-		case "f2":
-			m.view = viewLogs
-			m.input.Blur()
-			m.resize()
-			return m, nil
-		case "ctrl+s", "alt+enter":
-			if m.view != viewLua || m.busy || strings.TrimSpace(m.input.Value()) == "" {
-				return m, nil
-			}
-			source := m.input.Value()
-			m.busy, m.status = true, "evaluating"
-			m.candidates = nil
-			return m, func() tea.Msg { return evaluationMsg(m.session.Submit(m.ctx, source)) }
-		case "tab", "shift+tab":
-			if m.view != viewLua {
-				break
-			}
-			m.complete(message.String() == "shift+tab")
-			return m, nil
-		case "alt+up":
-			m.moveHistory(-1)
-			return m, nil
-		case "alt+down":
-			m.moveHistory(1)
-			return m, nil
+		updated, command, handled := m.handleKey(message)
+
+		m = updated
+		if handled {
+			return m, command
 		}
+
 		m.candidates = nil
 	case evaluationMsg:
 		m.busy = false
@@ -120,210 +99,126 @@ func (m Model) Update(message tea.Msg) (tea.Model, tea.Cmd) {
 		m.input.Reset()
 		m.history = len(m.session.History())
 		m.refreshTranscript()
+
 		return m, nil
 	case refreshMsg:
 		if m.session.TimelineRevision() != m.timelineRevision {
 			m.refreshTranscript()
 		}
+
 		return m, refreshLogs()
 	}
 
+	return m.updateComponents(message)
+}
+
+// handleKey processes modal commands before textarea/viewport components see
+// the key, preventing shortcuts from also editing or scrolling the wrong view.
+func (m Model) handleKey(message tea.KeyPressMsg) (Model, tea.Cmd, bool) {
+	switch message.String() {
+	case "ctrl+c", "ctrl+q":
+		return m, tea.Quit, true
+	case "f1":
+		m.view = viewLua
+		m.input.Focus()
+		m.resize()
+
+		return m, nil, true
+	case "f2":
+		m.view = viewLogs
+		m.input.Blur()
+		m.resize()
+
+		return m, nil, true
+	case "ctrl+s", "alt+enter":
+		if m.view != viewLua || m.busy || strings.TrimSpace(m.input.Value()) == "" {
+			return m, nil, true
+		}
+
+		source := m.input.Value()
+		m.busy = true
+		m.status = "evaluating"
+		m.candidates = nil
+
+		return m, func() tea.Msg {
+			return evaluationMsg(m.session.Submit(m.ctx, source))
+		}, true
+	case "tab", "shift+tab":
+		if m.view != viewLua {
+			return m, nil, false
+		}
+
+		m.complete(message.String() == "shift+tab")
+
+		return m, nil, true
+	case "alt+up":
+		m.moveHistory(-1)
+
+		return m, nil, true
+	case "alt+down":
+		m.moveHistory(1)
+
+		return m, nil, true
+	default:
+		return m, nil, false
+	}
+}
+
+// updateComponents forwards ordinary messages only to the active editor and to
+// the always-visible output viewport, batching their asynchronous commands.
+func (m Model) updateComponents(message tea.Msg) (tea.Model, tea.Cmd) {
 	var commands []tea.Cmd
-	var command tea.Cmd
+
 	if m.view == viewLua {
+		var command tea.Cmd
+
 		m.input, command = m.input.Update(message)
 		commands = append(commands, command)
 	}
+
+	var command tea.Cmd
+
 	m.output, command = m.output.Update(message)
 	commands = append(commands, command)
+
 	return m, tea.Batch(commands...)
 }
 
-func (m Model) View() tea.View {
-	policy := m.session.Policy()
-	mode := "read-only"
-	if policy.Mutable {
-		mode = "mutable"
-	}
-	header := accentStyle.Render("DARK MAGIC SHELL") + "  " +
-		dimStyle.Render(fmt.Sprintf("target %s  session %s  policy %s (%s)", m.session.Target(), m.session.ID(), policy.Name, mode))
-	capabilities := dimStyle.Render("capabilities: " + strings.Join(policy.Capabilities, ", "))
-	statusText := "F1 Lua  F2 Logs  Ctrl-S run  Enter newline  Tab complete  arrows/PgUp/PgDn scroll  Ctrl-Q quit"
-	if m.view == viewLogs {
-		statusText = "F1 Lua  F2 Logs  arrows/PgUp/PgDn scroll  Ctrl-Q quit"
-	}
-	status := dimStyle.Render(statusText)
-	if m.status != "" {
-		status += "  " + accentStyle.Render(m.status)
-	}
-	sections := []string{header, capabilities, renderTabs(m.view), panelStyle.Width(max(1, m.width-2)).Render(m.output.View())}
-	if m.view == viewLua {
-		if candidates := m.renderCandidates(); candidates != "" {
-			sections = append(sections, panelStyle.Width(max(1, m.width-2)).Render(candidates))
-		}
-		sections = append(sections, panelStyle.Width(max(1, m.width-2)).Render(m.input.View()))
-	}
-	sections = append(sections, status)
-	content := lipgloss.JoinVertical(lipgloss.Left, sections...)
-	return tea.NewView(content)
-}
-
-func (m Model) renderCandidates() string {
-	if len(m.candidates) == 0 {
-		return ""
-	}
-	limit := min(5, len(m.candidates))
-	lines := make([]string, 0, limit)
-	for index, candidate := range m.candidates[:limit] {
-		line := fmt.Sprintf("  %-28s %s", candidate.Value, candidate.Detail)
-		if index == m.candidateAt {
-			line = accentStyle.Render("› " + strings.TrimSpace(line))
-		} else {
-			line = dimStyle.Render(line)
-		}
-		lines = append(lines, line)
-	}
-	return strings.Join(lines, "\n")
-}
-
-func renderTabs(view viewMode) string {
-	lua, logs := dimStyle.Render("[F1 LUA]"), dimStyle.Render("[F2 LOGS]")
-	if view == viewLua {
-		lua = accentStyle.Render("[F1 LUA]")
-	} else {
-		logs = accentStyle.Render("[F2 LOGS]")
-	}
-	return lua + "  " + logs
-}
-
-// Run owns the terminal lifecycle but not the supplied shell session.
+// Run owns the Bubble Tea terminal lifecycle but not the supplied shell session,
+// allowing callers to close shared evaluator resources in their own order.
 func Run(ctx context.Context, session *shell.Session, input io.Reader, output io.Writer) error {
-	_, err := tea.NewProgram(newModel(ctx, session), tea.WithContext(ctx), tea.WithInput(input), tea.WithOutput(output)).Run()
+	program := tea.NewProgram(
+		newModel(ctx, session),
+		tea.WithContext(ctx),
+		tea.WithInput(input),
+		tea.WithOutput(output),
+	)
+
+	_, err := program.Run()
+
 	return err
 }
 
+// resize allocates terminal rows differently for Lua editing and log-only views,
+// then rebuilds wrapping against the new viewport width.
 func (m *Model) resize() {
 	width := max(20, m.width-6)
 	m.output.SetWidth(width)
+
 	reserved := 20
 	if m.view == viewLogs {
 		reserved = 8
 	}
+
 	m.output.SetHeight(max(4, m.height-reserved))
 	m.input.SetWidth(width)
 	m.refreshTranscript()
 }
 
-func (m *Model) refreshTranscript() {
-	events := m.session.TranscriptTimeline()
-	if m.view == viewLogs {
-		events = m.session.LogTimeline()
-	}
-	m.timelineRevision = m.session.TimelineRevision()
-	lines := make([]string, 0, len(events)+1)
-	if len(events) == 0 {
-		empty := "No commands have been evaluated in this scope."
-		if m.view == viewLogs {
-			empty = "No application logs have been captured."
-		}
-		lines = append(lines, dimStyle.Render(empty))
-	}
-	for _, event := range events {
-		event.Text = strings.ReplaceAll(event.Text, "\t", "    ")
-		switch event.Kind {
-		case "motd":
-			lines = append(lines, accentStyle.Render(event.Text))
-		case "command":
-			lines = append(lines, accentStyle.Render("❯ ")+event.Text)
-		case "value":
-			for _, line := range strings.Split(event.Text, "\n") {
-				trimmed := strings.TrimSpace(line)
-				switch {
-				case strings.HasPrefix(trimmed, "#"):
-					lines = append(lines, accentStyle.Render(line))
-				case strings.HasPrefix(trimmed, "```") || strings.HasPrefix(line, "  "):
-					lines = append(lines, dimStyle.Render(line))
-				default:
-					lines = append(lines, valueStyle.Render(line))
-				}
-			}
-		case "error", "log-error":
-			lines = append(lines, errorStyle.Render(event.Text))
-		case "log-warn":
-			lines = append(lines, warningStyle.Render(event.Text))
-		case "log-debug":
-			lines = append(lines, dimStyle.Render(event.Text))
-		default:
-			lines = append(lines, event.Text)
-		}
-	}
-	if limit := m.session.Settings().Values().TranscriptLimit; len(lines) > limit {
-		lines = lines[len(lines)-limit:]
-	}
-	m.output.SetContent(strings.Join(lines, "\n"))
-	m.output.GotoBottom()
-}
-
+// refreshLogs schedules periodic revision checks instead of rebuilding content
+// every frame when neither transcript nor process logs changed.
 func refreshLogs() tea.Cmd {
-	return tea.Tick(100*time.Millisecond, func(time.Time) tea.Msg { return refreshMsg{} })
-}
-
-func (m *Model) complete(reverse bool) {
-	if len(m.candidates) == 0 {
-		originalToken := completionToken(m.input.Value())
-		candidates, err := m.session.Complete(m.ctx, m.input.Value())
-		if err != nil {
-			m.status = err.Error()
-			return
-		}
-		m.candidates = candidates
-		m.candidateAt = -1
-		prefix := shell.SharedPrefix(candidates)
-		if prefix != "" {
-			m.replaceToken(prefix)
-		}
-		if len(candidates) > 1 && prefix != originalToken {
-			m.status = fmt.Sprintf("%d candidates", len(candidates))
-			return
-		}
-	}
-	if len(m.candidates) == 0 {
-		m.status = "no completions"
-		return
-	}
-	if reverse {
-		m.candidateAt = (m.candidateAt - 1 + len(m.candidates)) % len(m.candidates)
-	} else {
-		m.candidateAt = (m.candidateAt + 1) % len(m.candidates)
-	}
-	candidate := m.candidates[m.candidateAt]
-	m.replaceToken(candidate.Value)
-	m.status = fmt.Sprintf("%d/%d %s", m.candidateAt+1, len(m.candidates), candidate.Detail)
-}
-
-func (m *Model) replaceToken(value string) {
-	source := m.input.Value()
-	token := completionToken(source)
-	m.input.SetValue(strings.TrimSuffix(source, token) + value)
-}
-
-func (m *Model) moveHistory(delta int) {
-	history := m.session.History()
-	if len(history) == 0 {
-		return
-	}
-	m.history = max(0, min(len(history), m.history+delta))
-	if m.history == len(history) {
-		m.input.Reset()
-	} else {
-		m.input.SetValue(history[m.history])
-	}
-	m.candidates = nil
-}
-
-func completionToken(source string) string {
-	index := strings.LastIndexFunc(source, func(current rune) bool {
-		return !(current == '_' || current == '.' || current >= 'a' && current <= 'z' || current >= 'A' && current <= 'Z' || current >= '0' && current <= '9')
+	return tea.Tick(100*time.Millisecond, func(time.Time) tea.Msg {
+		return refreshMsg{}
 	})
-	return source[index+1:]
 }
