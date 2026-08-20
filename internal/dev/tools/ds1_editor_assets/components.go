@@ -275,6 +275,10 @@ func captureControlComponent(reference image.Image, spec componentSpec, variant 
 }
 
 func capturePanelComponent(reference image.Image, spec componentSpec, variant int) *image.NRGBA {
+	if spec.Name == "panel_fill" {
+		return drawNativeComponent(spec, variant)
+	}
+
 	target := image.NewNRGBA(image.Rect(0, 0, spec.Width, spec.Height))
 	switch spec.Name {
 	case "panel_top_left", "panel_top_right", "panel_bottom_left", "panel_bottom_right":
@@ -292,10 +296,6 @@ func capturePanelComponent(reference image.Image, spec componentSpec, variant in
 		if spec.Name == "panel_right" {
 			left = 1174
 		}
-		draw.Draw(target, target.Bounds(), reference, image.Pt(left, top), draw.Src)
-	case "panel_fill":
-		left := 900 + (variant%3)*48
-		top := 78 + (variant/3)*36
 		draw.Draw(target, target.Bounds(), reference, image.Pt(left, top), draw.Src)
 	}
 	stabilizeComponentEdges(target, spec.RepeatAxis)
@@ -322,6 +322,10 @@ func captureIconComponent(reference image.Image, spec componentSpec) *image.NRGB
 // composition sheet. Mirroring the one authored corner keeps joints coherent;
 // rail variants sample distinct stretches of the braid and stonework.
 func captureGrandComponent(reference image.Image, spec componentSpec, variant int) *image.NRGBA {
+	if spec.Name == "grand_fill" {
+		return drawNativeComponent(spec, variant)
+	}
+
 	target := image.NewNRGBA(image.Rect(0, 0, spec.Width, spec.Height))
 	name := spec.Name
 
@@ -347,10 +351,6 @@ func captureGrandComponent(reference image.Image, spec componentSpec, variant in
 		if name == "grand_right" {
 			left = 1608
 		}
-		draw.Draw(target, target.Bounds(), reference, image.Pt(left, top), draw.Src)
-	case "grand_fill":
-		left := 900 + (variant%3)*36
-		top := 70 + (variant/3)*36
 		draw.Draw(target, target.Bounds(), reference, image.Pt(left, top), draw.Src)
 	}
 

@@ -160,7 +160,7 @@ function map_editor:set_message(value, kind)
         self.status,
         "font_lab_caption",
         "[" .. self.message_kind .. "]" .. self.message .. "[/]",
-        math.max(240, self.surface_width - 660),
+        math.max(240, self.surface_width - 820),
         "left"
     )
 end
@@ -181,19 +181,9 @@ end
 
 -- Synchronize visible control state with the authoritative editor session.
 function map_editor:refresh_chrome()
-    local summary = self.summary
-    local name = self.path ~= "" and file_name(self.path) or "No map open"
-    local dirty = summary and summary.dirty and "  [gold]● UNSAVED[/]" or "  [green]● SAVED[/]"
     text.set(self.title, "font_lab_color", "DS1 MAP EDITOR", self.surface_width - 32, "center")
-    text.set(self.subtitle, "font_lab_caption", "[blue]" .. name .. "[/]" .. dirty, 260, "right")
-    if summary then
-        text.set(self.document_meta, "font_lab_caption", string.format(
-            "[gold]%d × %d[/]   ACT %d   %dF / %dW",
-            summary.width, summary.height, summary.act, summary.floor_layers, summary.wall_layers
-        ), math.max(1, self.surface_width - 876), "left")
-    else
-        text.set(self.document_meta, "font_lab_caption", "", 1, "left")
-    end
+    text.set(self.subtitle, "font_lab_caption", "", 1, "right")
+    text.set(self.document_meta, "font_lab_caption", "", 1, "left")
 
     for index, tool in ipairs(tools) do
         local selected = self.tool == tool.id
@@ -1327,9 +1317,9 @@ function map_editor:create()
     self.status = label(
         self.root,
         "",
-        72,
+        120,
         self.surface_height - 49,
-        math.max(240, self.surface_width - 660),
+        math.max(240, self.surface_width - 820),
         "left",
         "font_lab_caption",
         20
@@ -1337,7 +1327,7 @@ function map_editor:create()
     self.status_detail = label(
         self.root,
         "",
-        self.surface_width - 600,
+        self.surface_width - 680,
         self.surface_height - 49,
         560,
         "right",
@@ -1631,10 +1621,7 @@ function map_editor:create()
     self.selection_nodes, self.selected_preview_nodes, self.collision_nodes = {}, {}, {}
     self.dragging, self.panning, self.stroke_active = false, false, false
     self:position_map()
-    self:set_message(
-        "Open a DS1 with F or the OPEN button. Ctrl+S saves a copy; Ctrl+Z / Ctrl+Y undo and redo.",
-        "white"
-    )
+    self:set_message("Ready", "white")
     self:set_inspector_mode("library")
     self:refresh_selected_view()
     self:refresh_chrome()
