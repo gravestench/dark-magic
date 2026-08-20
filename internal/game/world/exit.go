@@ -16,19 +16,30 @@ func (m *Map) AuthoredExitAnchors() []ExitAnchor {
 	if m == nil {
 		return nil
 	}
+
 	result := make([]ExitAnchor, 0)
+
 	for _, tile := range m.SpecialTiles {
 		if tile.Orientation != 10 && tile.Orientation != 11 {
 			continue
 		}
-		result = append(result, ExitAnchor{X: float64(tile.X*SubtilesPerTile) + 2.5, Y: float64(tile.Y*SubtilesPerTile) + 2.5, Orientation: tile.Orientation})
+
+		result = append(result, ExitAnchor{
+			X:           float64(tile.X*SubtilesPerTile) + 2.5,
+			Y:           float64(tile.Y*SubtilesPerTile) + 2.5,
+			Orientation: tile.Orientation,
+		})
 	}
+
+	// Stable row-major ordering decouples exit choice from DS1 wall-layer traversal order.
 	sort.Slice(result, func(i, j int) bool {
 		if result[i].Y == result[j].Y {
 			return result[i].X < result[j].X
 		}
+
 		return result[i].Y < result[j].Y
 	})
+
 	return result
 }
 

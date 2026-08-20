@@ -8,34 +8,44 @@ import (
 
 type testObjectResolver struct{ calls int }
 
+// ResolveStaticObject records the lookup and returns a fixture mapping, letting tests distinguish static resolution.
 func (resolver *testObjectResolver) ResolveStaticObject(act, id int) (int, string, bool) {
 	resolver.calls++
+
 	if act == 1 && id == 7 {
 		return 108, "Malus", true
 	}
+
 	return 0, "", false
 }
 
+// ResolveDynamicObject records the lookup and returns a class fixture without sharing the static mapping path.
 func (resolver *testObjectResolver) ResolveDynamicObject(act, id int) (string, bool) {
 	resolver.calls++
+
 	if act == 1 && id == 7 {
 		return "fallen", true
 	}
+
 	return "", false
 }
 
+// TestResolveObjectUsesRecoveredMappingOnlyForStaticRecords protects type-specific catalog joins for overlapping IDs.
 func TestResolveObjectUsesRecoveredMappingOnlyForStaticRecords(t *testing.T) {
 	resolver := &testObjectResolver{}
+
 	static := resolveObject(1, ObjectTypeStatic, 7, 10, 20, 3, resolver)
 	if !static.Resolved || static.ObjectID != 108 || static.Description != "Malus" {
 		t.Fatalf("static object = %#v", static)
 	}
+
 	dynamic := resolveObject(1, ObjectTypeDynamic, 7, 10, 20, 3, resolver)
 	if !dynamic.Resolved || dynamic.Class != "fallen" || resolver.calls != 2 {
 		t.Fatalf("dynamic object = %#v, resolver calls = %d", dynamic, resolver.calls)
 	}
 }
 
+// TestApplyCombinesSubtileFlags ensures later tile layers can add blockers but cannot erase earlier collision facts.
 func TestApplyCombinesSubtileFlags(t *testing.T) {
 	m := &Map{WidthSubtiles: 10, HeightSubtiles: 5, flags: make([]Flags, 50)}
 	first := &dt1.Tile{}
@@ -51,25 +61,31 @@ func TestApplyCombinesSubtileFlags(t *testing.T) {
 	if !ok || !got.BlockLOS || !got.BlockPlayerWalk || !got.Blocked() {
 		t.Fatalf("FlagsAt(5, 4) = %#v, %v", got, ok)
 	}
+
 	got, ok = m.FlagsAt(9, 0)
 	if !ok || !got.BlockWalk || !got.Blocked() {
 		t.Fatalf("FlagsAt(9, 0) = %#v, %v", got, ok)
 	}
 }
 
+// TestApplyUsesLegacyBottomToTopDT1SubtileRows pins the vertical inversion between DT1 storage and world coordinates.
 func TestApplyUsesLegacyBottomToTopDT1SubtileRows(t *testing.T) {
 	m := &Map{WidthSubtiles: 5, HeightSubtiles: 5, flags: make([]Flags, 25)}
+
 	tile := &dt1.Tile{}
 	for index := range tile.SubTileFlags {
 		tile.SubTileFlags[index].BlockWalk = index == 0 || index == 24
 	}
+
 	m.apply(0, 0, TileReference{SubTileFlags: tile.SubTileFlags})
+
 	for _, point := range [][2]int{{0, 4}, {4, 0}} {
 		flags, ok := m.FlagsAt(point[0], point[1])
 		if !ok || !flags.BlockWalk {
 			t.Fatalf("legacy subtile %v = %#v, %v", point, flags, ok)
 		}
 	}
+
 	for _, point := range [][2]int{{0, 0}, {4, 4}} {
 		flags, _ := m.FlagsAt(point[0], point[1])
 		if flags.BlockWalk {
@@ -78,6 +94,7 @@ func TestApplyUsesLegacyBottomToTopDT1SubtileRows(t *testing.T) {
 	}
 }
 
+// TestFlagsAtRejectsOutsideMap verifies malformed and out-of-bounds reads fail without indexing the backing slice.
 func TestFlagsAtRejectsOutsideMap(t *testing.T) {
 	m := &Map{WidthSubtiles: 5, HeightSubtiles: 5, flags: make([]Flags, 25)}
 	for _, point := range [][2]int{{-1, 0}, {0, -1}, {5, 0}, {0, 5}} {
@@ -87,14 +104,18 @@ func TestFlagsAtRejectsOutsideMap(t *testing.T) {
 	}
 }
 
+// TestSubtilePixelProjectionMatchesRendererAndRoundTrips protects alignment between gameplay and presentation spaces.
 func TestSubtilePixelProjectionMatchesRendererAndRoundTrips(t *testing.T) {
 	m := &Map{WidthTiles: 10, HeightTiles: 8}
+
 	x, y := m.SubtileToPixel(5, 10)
 	if x != 720 || y != 288 {
 		t.Fatalf("projected = %v,%v", x, y)
 	}
+
 	for _, point := range [][2]float64{{0, 0}, {5, 10}, {13.25, 7.5}} {
 		px, py := m.SubtileToPixel(point[0], point[1])
+
 		sx, sy := m.PixelToSubtile(px, py)
 		if sx != point[0] || sy != point[1] {
 			t.Fatalf("round trip %v = %v,%v", point, sx, sy)
@@ -102,6 +123,7 @@ func TestSubtilePixelProjectionMatchesRendererAndRoundTrips(t *testing.T) {
 	}
 }
 
+// TestApplyIgnoresTileOutsideMap ensures clipped terminal cells cannot write beyond assembled collision geometry.
 func TestApplyIgnoresTileOutsideMap(t *testing.T) {
 	m := &Map{WidthSubtiles: 5, HeightSubtiles: 5, flags: make([]Flags, 25)}
 	tile := &dt1.Tile{}
@@ -111,6 +133,7 @@ func TestApplyIgnoresTileOutsideMap(t *testing.T) {
 	m.apply(1, 0, reference)
 }
 
+// TestTileLayerNamesAreStablePresentationFacts pins adapter-facing names independently from numeric enum values.
 func TestTileLayerNamesAreStablePresentationFacts(t *testing.T) {
 	want := []string{"floor", "lower-wall", "shadow", "upper-wall", "roof"}
 	for layer, name := range want {
@@ -118,27 +141,33 @@ func TestTileLayerNamesAreStablePresentationFacts(t *testing.T) {
 			t.Fatalf("layer %d = %q, want %q", layer, got, name)
 		}
 	}
+
 	if got := TileLayer(255).String(); got != "unknown" {
 		t.Fatalf("unknown layer = %q", got)
 	}
 }
 
+// TestOpenPointNearCenterSkipsBlockedCenterDeterministically protects row-major perimeter selection for spawn points.
 func TestOpenPointNearCenterSkipsBlockedCenterDeterministically(t *testing.T) {
 	m := &Map{WidthSubtiles: 5, HeightSubtiles: 5, flags: make([]Flags, 25)}
 	m.flags[2*5+2].BlockWalk = true
+
 	x, y, found := m.OpenPointNearCenter()
 	if !found || x != 1 || y != 1 {
 		t.Fatalf("open point = %v,%v,%v; want first perimeter point 1,1", x, y, found)
 	}
 }
 
+// TestOpenPointNearSubtileForRadiusRejectsBlockedFootprint ensures relocation validates the entire entity footprint.
 func TestOpenPointNearSubtileForRadiusRejectsBlockedFootprint(t *testing.T) {
 	m := &Map{WidthSubtiles: 7, HeightSubtiles: 7, flags: make([]Flags, 49)}
 	m.flags[3*7+4].BlockPlayerWalk = true
+
 	x, y, found := m.OpenPointNearSubtileForRadius(3, 3, 1)
 	if !found || x != 2 || y != 2 {
 		t.Fatalf("footprint-safe point = %v,%v,%v; want 2,2,true", x, y, found)
 	}
+
 	if _, _, found := m.OpenPointNearSubtileForRadius(3, 3, -1); found {
 		t.Fatal("negative footprint radius was accepted")
 	}

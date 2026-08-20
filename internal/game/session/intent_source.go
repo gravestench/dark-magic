@@ -25,34 +25,42 @@ type CommandIntent struct {
 	Payload any
 }
 
-// Submit copies a serializable request into the mailbox.
+// Submit JSON-round-trips a request before enqueueing it so later caller mutation cannot change future commands.
 func (controller *IntentController) Submit(kind string, payload any) error {
 	kind = strings.TrimSpace(kind)
 	if kind == "" {
 		return fmt.Errorf("command intent: kind is required")
 	}
+
 	encoded, err := json.Marshal(payload)
 	if err != nil {
 		return fmt.Errorf("command intent %q payload: %w", kind, err)
 	}
+
 	var copied any
 	if err := json.Unmarshal(encoded, &copied); err != nil {
 		return fmt.Errorf("command intent %q copy: %w", kind, err)
 	}
+
+	// Publish only after the defensive copy is complete, keeping the critical section short and failure-free.
 	controller.mu.Lock()
 	controller.requests = append(controller.requests, CommandIntent{
 		Kind:    kind,
 		Payload: copied,
 	})
 	controller.mu.Unlock()
+
 	return nil
 }
 
+// drain transfers mailbox ownership to one consumer; clearing the stored slice guarantees exactly-once consumption.
 func (controller *IntentController) drain() []CommandIntent {
 	controller.mu.Lock()
 	defer controller.mu.Unlock()
+
 	requests := controller.requests
 	controller.requests = nil
+
 	return requests
 }
 
@@ -67,22 +75,28 @@ type IntentSource struct {
 	player     string
 }
 
+// NewIntentSource binds a mailbox to one authenticated player before it can mint deterministic command sequences.
 func NewIntentSource(controller *IntentController, player string) (*IntentSource, error) {
 	player = strings.TrimSpace(player)
 	if controller == nil || player == "" {
 		return nil, fmt.Errorf("command intent source requires controller and player")
 	}
+
 	return &IntentSource{controller: controller, player: player}, nil
 }
 
+// Commands consumes current intents for one tick and assigns monotonically increasing player sequence numbers.
 func (source *IntentSource) Commands(tick uint64) []simulation.Command {
 	requests := source.controller.drain()
+
 	commands := make([]simulation.Command, 0, len(requests))
 	for _, request := range requests {
 		payload, err := json.Marshal(request.Payload)
 		if err != nil {
+			// Submit already proved serializability, but skip corrupt internal data rather than emit an invalid command.
 			continue
 		}
+
 		source.controller.sequence++
 		commands = append(commands, simulation.Command{
 			Tick:      tick,
@@ -93,5 +107,6 @@ func (source *IntentSource) Commands(tick uint64) []simulation.Command {
 			Payload:   payload,
 		})
 	}
+
 	return commands
 }

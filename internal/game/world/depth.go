@@ -32,10 +32,12 @@ func EntityDepth(subtileX, subtileY float64) float64 {
 	tileX, tileY := cellX/SubtilesPerTile, cellY/SubtilesPerTile
 	localX, localY := cellX%SubtilesPerTile, cellY%SubtilesPerTile
 	baseline := (tileX + tileY + 1) * depthTileStride
+
 	localOrder := (localX + localY) * 2
 	if localX == 0 || localY == 0 {
 		return float64(baseline - 20 + localOrder)
 	}
+
 	return float64(baseline + 1 + localOrder)
 }
 

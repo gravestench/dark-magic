@@ -27,90 +27,121 @@ func validDefinition() Definition {
 	}
 }
 
+// TestZoneCanonicalizesAndCopiesDefinition verifies admission severs input and output aliases.
+// It also locks canonical stamp, asset, and undirected-link ordering used by checksums.
 func TestZoneCanonicalizesAndCopiesDefinition(t *testing.T) {
 	definition := validDefinition()
+
 	zone, err := NewZone(definition)
 	if err != nil {
 		t.Fatal(err)
 	}
+
 	definition.Stamps[0].DS1Path = "mutated.stamp"
 	definition.Stamps[0].TilePaths[0] = "mutated.tiles"
+
 	stamps := zone.Stamps()
-	if stamps[0].ID != 1 || stamps[1].DS1Path != "second.stamp" || !slices.Equal(stamps[1].TilePaths, []string{"a.tiles", "b.tiles"}) {
+	if stamps[0].ID != 1 || stamps[1].DS1Path != "second.stamp" ||
+		!slices.Equal(stamps[1].TilePaths, []string{"a.tiles", "b.tiles"}) {
 		t.Fatalf("canonical stamps = %#v", stamps)
 	}
+
 	stamps[1].TilePaths[0] = "consumer-mutated.tiles"
 	if zone.Stamps()[1].TilePaths[0] != "a.tiles" {
 		t.Fatal("stamp accessor leaked mutable storage")
 	}
+
 	if got := zone.Links()[0]; got != (Link{From: 1, To: 2}) {
 		t.Fatalf("canonical link = %#v", got)
 	}
 }
 
+// TestEquivalentZonesHaveSameChecksum proves caller-provided ordering cannot change authoritative recipe identity.
 func TestEquivalentZonesHaveSameChecksum(t *testing.T) {
 	left, err := NewZone(validDefinition())
 	if err != nil {
 		t.Fatal(err)
 	}
+
 	rightDefinition := validDefinition()
 	slices.Reverse(rightDefinition.Stamps)
 	slices.Reverse(rightDefinition.Rooms)
 	rightDefinition.Links[0] = Link{From: 1, To: 2}
+
 	right, err := NewZone(rightDefinition)
 	if err != nil {
 		t.Fatal(err)
 	}
-	leftSum, _ := left.Checksum()
-	rightSum, _ := right.Checksum()
+
+	leftSum, err := left.Checksum()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	rightSum, err := right.Checksum()
+	if err != nil {
+		t.Fatal(err)
+	}
+
 	if leftSum != rightSum {
 		t.Fatalf("equivalent zones differ: %s != %s", leftSum, rightSum)
 	}
 }
 
+// TestZoneRejectsDanglingRoomStamp ensures topology cannot retain a reference to absent authored geometry.
 func TestZoneRejectsDanglingRoomStamp(t *testing.T) {
 	definition := validDefinition()
 	definition.Rooms[0].StampID = 99
+
 	_, err := NewZone(definition)
 	if !errors.Is(err, ErrZone) {
 		t.Fatalf("error = %v", err)
 	}
 }
 
+// TestZoneCopiesAndValidatesPathTiles protects both path immutability and the authoritative bounds boundary.
 func TestZoneCopiesAndValidatesPathTiles(t *testing.T) {
 	definition := validDefinition()
 	definition.Paths = []PathTile{{X: 1, Y: 2}}
+
 	zone, err := NewZone(definition)
 	if err != nil {
 		t.Fatal(err)
 	}
+
 	paths := zone.Paths()
+
 	paths[0].X = 99
 	if zone.Paths()[0].X != 1 {
 		t.Fatal("path accessor leaked mutable state")
 	}
+
 	definition.Paths = []PathTile{{X: -1, Y: 0}}
 	if _, err := NewZone(definition); err == nil {
 		t.Fatal("accepted out-of-bounds path tile")
 	}
 }
 
+// TestZoneAcceptsOpaqueModStructureKinds keeps engine validation independent from mod-specific semantics.
 func TestZoneAcceptsOpaqueModStructureKinds(t *testing.T) {
 	definition := validDefinition()
 	definition.Structures = []StructureTile{
 		{X: 1, Y: 2, Kind: "force-field", Passable: true},
 		{X: 1, Y: 3, Kind: "lava", Passable: false},
 	}
+
 	zone, err := NewZone(definition)
 	if err != nil {
 		t.Fatal(err)
 	}
+
 	definition.Structures[0].Kind = "mutated"
 	if got := zone.Structures()[0].Kind; got != "force-field" {
 		t.Fatalf("immutable structure kind = %q", got)
 	}
 }
 
+// TestRequestValidatesOnlyGenericReplayIdentity rejects ambiguous requests without imposing Diablo-specific policy.
 func TestRequestValidatesOnlyGenericReplayIdentity(t *testing.T) {
 	for _, request := range []Request{
 		{Act: 1, LevelID: 1},
@@ -120,6 +151,7 @@ func TestRequestValidatesOnlyGenericReplayIdentity(t *testing.T) {
 			t.Fatalf("request %#v was accepted", request)
 		}
 	}
+
 	if err := (Request{Version: ContractVersion, Act: 0, LevelID: 1, Difficulty: 255}).Validate(); err != nil {
 		t.Fatalf("engine rejected opaque mod dimensions: %v", err)
 	}

@@ -12,8 +12,9 @@ type ItemHighQualityModifiers struct {
 	Mod2Min   int    `csv:"mod2min"`   // Second item property min value.
 	Mod2Max   int    `csv:"mod2max"`   // Second item property max value.
 
-	Armor   bool `csv:"armor"`   // If true, the modifier can be applied to torso armor and helmet item types.
-	Weapon  bool `csv:"weapon"`  // If true, the modifier can be applied to melee weapon item types (except scepters, wands, and staves).
+	Armor bool `csv:"armor"` // If true, the modifier can be applied to torso armor and helmet item types.
+	// If true, the modifier can be applied to melee weapon item types (except scepters, wands, and staves).
+	Weapon  bool `csv:"weapon"`
 	Shield  bool `csv:"shield"`  // If true, the modifier can be applied to shield item types.
 	Scepter bool `csv:"scepter"` // If true, the modifier can be applied to scepter item types.
 	Wand    bool `csv:"wand"`    // If true, the modifier can be applied to wand item types.

@@ -1,18 +1,17 @@
 package models
 
-// LevelType represents the data from LvlTypes.txt.
-// This file controls which files containing tile graphics are used for creating maps.
-// It looks at dt1 files, which contain tile images of the environments found in the game.
-// Each line in this file defines a Level ItemSuperType and what files it uses.
+// LevelType represents the data from LvlTypes.txt. This file controls which files containing tile graphics are used for
+// creating maps. It looks at dt1 files, which contain tile images of the environments found in the game. Each line in
+// this file defines a Level ItemSuperType and what files it uses.
 //
-// The order of each Level ItemSuperType defined in this file conveys its ID value,
-// which is referenced by the following files: Levels.txt, LvlPrest.txt
-// The order of these Level Types should not be changed.
+// The order of each Level ItemSuperType defined in this file conveys its ID value, which is referenced by the following
+// files: Levels.txt, LvlPrest.txt The order of these Level Types should not be changed.
 type LevelType struct {
 	// Name is a reference field to define the Level ItemSuperType.
 	Name string `csv:"Name"`
 
-	// File1 (to File32) specifies the name of which dt1 file to use. The dt1 files contain the images for each area tile found in each Act. If this value equals 0, then this field will be ignored.
+	// File1 (to File32) specifies the name of which dt1 file to use. The dt1 files contain the images for each area tile
+	// found in each Act. If this value equals 0, then this field will be ignored.
 	File1  string `csv:"File 1"`
 	File2  string `csv:"File 2"`
 	File3  string `csv:"File 3"`
@@ -46,6 +45,8 @@ type LevelType struct {
 	File31 string `csv:"File 31"`
 	File32 string `csv:"File 32"`
 
-	// Act defines which Act is related to the Level ItemSuperType. When loading an Act, the game will only use the Level Types associated with that Act number. Uses a decimal number to convey each Act number (Ex: A value of 3 means Act 3).
+	// Act defines which Act is related to the Level ItemSuperType. When loading an Act, the game will only use the Level
+	// Types associated with that Act number. Uses a decimal number to convey each Act number (Ex: A value of 3 means Act
+	// 3).
 	Act uint `csv:"Act"`
 }

@@ -2,10 +2,17 @@ package models
 
 // RuneWordData represents the data fields for Rune Words and their modifiers.
 type RuneWordData struct {
-	Name              string `csv:"Name"`              // Controls the string key used to display the name of the item when the Rune Word is complete
-	Complete          int    `csv:"complete"`          // Boolean field. If equals 1, then the Rune Word can be crafted in-game. If equals 0, then the Rune Word cannot be crafted in-game.
-	FirstLadderSeason int    `csv:"firstLadderSeason"` // Integer field. The first ladder season the Rune Word can be made on (inclusive). If blank or 0 then it is available in non-ladder.
-	LastLadderSeason  int    `csv:"lastLadderSeason"`  // Integer field. The last ladder season the Rune Word is ladder-only (inclusive). Must be used in conjunction with firstLadderSeason.
+	// Controls the string key used to display the name of the item when the Rune Word is complete
+	Name string `csv:"Name"`
+	// Boolean field. If equals 1, then the Rune Word can be crafted in-game. If equals 0, then the Rune Word cannot be
+	// crafted in-game.
+	Complete int `csv:"complete"`
+	// Integer field. The first ladder season the Rune Word can be made on (inclusive). If blank or 0 then it is available
+	// in non-ladder.
+	FirstLadderSeason int `csv:"firstLadderSeason"`
+	// Integer field. The last ladder season the Rune Word is ladder-only (inclusive). Must be used in conjunction with
+	// firstLadderSeason.
+	LastLadderSeason int `csv:"lastLadderSeason"`
 
 	// Controls what item types are allowed for this Rune Word (Uses the ID field from ItemTypes.txt)
 	ItemType1 string `csv:"itype1"`
@@ -20,7 +27,8 @@ type RuneWordData struct {
 	ExcludedType2 string `csv:"etype2"`
 	ExcludedType3 string `csv:"etype3"`
 
-	// Controls what runes are required to make the Rune Word. The order of each of these fields matters. (Uses the ID field from misc.txt)
+	// Controls what runes are required to make the Rune Word. The order of each of these fields matters. (Uses the ID
+	// field from misc.txt)
 	Rune1 string `csv:"Rune1"`
 	Rune2 string `csv:"Rune2"`
 	Rune3 string `csv:"Rune3"`
@@ -37,7 +45,8 @@ type RuneWordData struct {
 	T1Code6 string `csv:"T1Code6"`
 	T1Code7 string `csv:"T1Code7"`
 
-	// The stat's "parameter" value associated with the related property (T1Code). Usage depends on the property function (See the "func" field on Properties.txt)
+	// The stat's "parameter" value associated with the related property (T1Code). Usage depends on the property function
+	// (See the "func" field on Properties.txt)
 	T1Param1 string `csv:"T1Param1"`
 	T1Param2 string `csv:"T1Param2"`
 	T1Param3 string `csv:"T1Param3"`
@@ -46,7 +55,8 @@ type RuneWordData struct {
 	T1Param6 string `csv:"T1Param6"`
 	T1Param7 string `csv:"T1Param7"`
 
-	// The stat's "min" value to assign to the related property (T1Code). Usage depends on the property function (See the "func" field on Properties.txt)
+	// The stat's "min" value to assign to the related property (T1Code). Usage depends on the property function (See the
+	// "func" field on Properties.txt)
 	T1Min1 int `csv:"T1Min1"`
 	T1Min2 int `csv:"T1Min2"`
 	T1Min3 int `csv:"T1Min3"`
@@ -55,7 +65,8 @@ type RuneWordData struct {
 	T1Min6 int `csv:"T1Min6"`
 	T1Min7 int `csv:"T1Min7"`
 
-	// The stat's "max" value to assign to the related property (T1Code). Usage depends on the property function (See the "func" field on Properties.txt)
+	// The stat's "max" value to assign to the related property (T1Code). Usage depends on the property function (See the
+	// "func" field on Properties.txt)
 	T1Max1 int `csv:"T1Max1"`
 	T1Max2 int `csv:"T1Max2"`
 	T1Max3 int `csv:"T1Max3"`

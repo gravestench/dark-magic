@@ -1,8 +1,10 @@
 package models
 
 type SoundEntry struct {
-	Sound          string `csv:"Sound"`          // Defines the unique name ID for the sound, which is how other files can reference the sound
-	Redirect       string `csv:"Redirect"`       // Points the sound to the index of another sound in the data file for new graphics mode
+	// Defines the unique name ID for the sound, which is how other files can reference the sound
+	Sound string `csv:"Sound"`
+	// Points the sound to the index of another sound in the data file for new graphics mode
+	Redirect       string `csv:"Redirect"`
 	Channel        string `csv:"Channel"`        // Declares which channel the sound is initialized in
 	FileName       string `csv:"FileName"`       // File path and name of the sound file to play
 	IsLocal        int    `csv:"IsLocal"`        // Boolean field for localized sound

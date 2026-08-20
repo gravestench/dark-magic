@@ -23,31 +23,43 @@ type Selector struct {
 	cells               map[[2]int][]Selectable
 }
 
+// NewSelector validates stable IDs and builds a uniform-grid index in input order. Duplicate IDs are rejected because
+// the final ID tie-breaker must uniquely identify the selected world object.
 func NewSelector(selectables []Selectable, cellSize float64) (*Selector, error) {
 	if cellSize <= 0 || math.IsNaN(cellSize) || math.IsInf(cellSize, 0) {
 		return nil, fmt.Errorf("world: selection cell size must be positive and finite")
 	}
+
 	result := &Selector{cellSize: cellSize, cells: make(map[[2]int][]Selectable)}
+
 	seen := make(map[string]struct{}, len(selectables))
 	for _, selectable := range selectables {
-		if selectable.ID == "" || selectable.Kind == "" || selectable.Radius <= 0 || !finitePoint(selectable.X, selectable.Y) {
+		invalid := selectable.ID == "" || selectable.Kind == "" || selectable.Radius <= 0 ||
+			!finitePoint(selectable.X, selectable.Y)
+		if invalid {
 			return nil, fmt.Errorf("world: selectable requires ID, kind, position, and positive radius")
 		}
+
 		if _, exists := seen[selectable.ID]; exists {
 			return nil, fmt.Errorf("world: duplicate selectable %q", selectable.ID)
 		}
+
 		seen[selectable.ID] = struct{}{}
 		result.maxRadius = max(result.maxRadius, selectable.Radius)
 		key := result.cell(selectable.X, selectable.Y)
 		result.cells[key] = append(result.cells[key], selectable)
 	}
+
 	return result, nil
 }
 
+// finitePoint guards every float-to-grid conversion from NaN and infinity, whose integer conversions are not useful
+// world coordinates.
 func finitePoint(x, y float64) bool {
 	return !math.IsNaN(x) && !math.IsNaN(y) && !math.IsInf(x, 0) && !math.IsInf(y, 0)
 }
 
+// cell maps continuous coordinates to the uniform grid using floor so negative positions occupy the expected bucket.
 func (selector *Selector) cell(x, y float64) [2]int {
 	return [2]int{int(math.Floor(x / selector.cellSize)), int(math.Floor(y / selector.cellSize))}
 }
@@ -58,13 +70,16 @@ func (selector *Selector) Hit(x, y float64) (Selectable, bool) {
 	if selector == nil || !finitePoint(x, y) {
 		return Selectable{}, false
 	}
+
 	reach := int(math.Ceil(selector.maxRadius / selector.cellSize))
 	center := selector.cell(x, y)
 	candidates := make([]selectableHit, 0)
+
 	for cy := center[1] - reach; cy <= center[1]+reach; cy++ {
 		for cx := center[0] - reach; cx <= center[0]+reach; cx++ {
 			for _, candidate := range selector.cells[[2]int{cx, cy}] {
 				dx, dy := x-candidate.X, y-candidate.Y
+
 				distance := (dx*dx + dy*dy) / (candidate.Radius * candidate.Radius)
 				if distance <= 1 {
 					candidates = append(candidates, selectableHit{candidate, distance})
@@ -72,18 +87,24 @@ func (selector *Selector) Hit(x, y float64) (Selectable, bool) {
 			}
 		}
 	}
+
 	if len(candidates) == 0 {
 		return Selectable{}, false
 	}
+
+	// The comparator fully orders valid unique IDs, eliminating map/bucket traversal order from pointer selection.
 	sort.Slice(candidates, func(i, j int) bool {
 		if candidates[i].Priority != candidates[j].Priority {
 			return candidates[i].Priority > candidates[j].Priority
 		}
+
 		if candidates[i].distance != candidates[j].distance {
 			return candidates[i].distance < candidates[j].distance
 		}
+
 		return candidates[i].ID < candidates[j].ID
 	})
+
 	return candidates[0].Selectable, true
 }
 
@@ -99,37 +120,47 @@ func (m *Map) Selectables() []Selectable {
 		if !object.Resolved {
 			continue
 		}
+
 		kind := "static-object"
 		if object.Type == ObjectTypeDynamic {
 			kind = "dynamic-object"
 		}
+
 		label := object.Description
 		if label == "" {
 			label = object.Class
 		}
+
 		result = append(result, Selectable{
 			ID: fmt.Sprintf("ds1-object:%d:%d:%d", object.Type, object.ID, index), Kind: kind,
 			Label: label, X: float64(object.X), Y: float64(object.Y), Radius: 1.5,
 		})
 	}
+
 	return result
 }
 
+// SelectableAt lazily builds one immutable selector from the map's authored objects. sync.Once makes repeated pointer
+// queries cheap and ensures concurrent presentation reads share the same stable index or construction failure.
 func (m *Map) SelectableAt(x, y float64) (Selectable, bool) {
 	if m == nil {
 		return Selectable{}, false
 	}
+
+	// Map object data is immutable after loading, so constructing exactly once cannot leave the index stale.
 	m.selectorOnce.Do(func() { m.selector, m.selectorErr = NewSelector(m.Selectables(), 8) })
+
 	if m.selectorErr != nil {
 		return Selectable{}, false
 	}
+
 	return m.selector.Hit(x, y)
 }
 
 // LineClear samples authoritative authored subtile facts. Endpoints are not
 // treated as occluders because the actor and selected target may occupy them.
 func (m *Map) LineClear(fromX, fromY, toX, toY float64) bool {
-	return m.traceClear(fromX, fromY, toX, toY, func(flags Flags) bool { return flags.BlockLOS })
+	return m.traceClear(fromX, fromY, toX, toY, blocksLineOfSight)
 }
 
 // BarrierClear tests the authored barrier bit used by flying units and melee
@@ -137,36 +168,58 @@ func (m *Map) LineClear(fromX, fromY, toX, toY float64) bool {
 // mark an opaque subtile that does not stop a melee interaction, or a barrier
 // that stops one without blocking sight.
 func (m *Map) BarrierClear(fromX, fromY, toX, toY float64) bool {
-	return m.traceClear(fromX, fromY, toX, toY, func(flags Flags) bool { return flags.BlockJump })
+	return m.traceClear(fromX, fromY, toX, toY, blocksJump)
 }
 
+// blocksLineOfSight selects the DT1 flag used by visual traces without conflating it with movement or jump barriers.
+func blocksLineOfSight(flags Flags) bool {
+	return flags.BlockLOS
+}
+
+// blocksJump selects the flying/melee barrier flag independently from visual line-of-sight collision.
+func blocksJump(flags Flags) bool {
+	return flags.BlockJump
+}
+
+// traceClear uses an integer Bresenham traversal and excludes both endpoints. Actors and targets may occupy blocking
+// cells themselves; only intervening authored collision determines whether the interaction is clear.
 func (m *Map) traceClear(fromX, fromY, toX, toY float64, blocked func(Flags) bool) bool {
 	x0, y0 := CollisionCell(fromX), CollisionCell(fromY)
 	x1, y1 := CollisionCell(toX), CollisionCell(toY)
 	dx, dy := absInt(x1-x0), absInt(y1-y0)
+
 	sx, sy := -1, -1
 	if x0 < x1 {
 		sx = 1
 	}
+
 	if y0 < y1 {
 		sy = 1
 	}
+
 	err := dx - dy
+
 	for {
-		if (x0 != CollisionCell(fromX) || y0 != CollisionCell(fromY)) && (x0 != x1 || y0 != y1) {
+		atStart := x0 == CollisionCell(fromX) && y0 == CollisionCell(fromY)
+
+		atEnd := x0 == x1 && y0 == y1
+		if !atStart && !atEnd {
 			flags, inside := m.FlagsAt(x0, y0)
 			if !inside || blocked(flags) {
 				return false
 			}
 		}
+
 		if x0 == x1 && y0 == y1 {
 			return true
 		}
+
 		twice := 2 * err
 		if twice > -dy {
 			err -= dy
 			x0 += sx
 		}
+
 		if twice < dx {
 			err += dx
 			y0 += sy
@@ -174,9 +227,11 @@ func (m *Map) traceClear(fromX, fromY, toX, toY float64, blocked func(Flags) boo
 	}
 }
 
+// absInt provides the integer magnitude shared by deterministic navigation and line traversal.
 func absInt(value int) int {
 	if value < 0 {
 		return -value
 	}
+
 	return value
 }

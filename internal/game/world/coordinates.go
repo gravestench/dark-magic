@@ -14,31 +14,38 @@ type Coordinates struct {
 	HeightTiles int
 }
 
+// TileToSubtile scales authored tile coordinates into the fixed collision grid without rounding fractional inputs.
 func (c Coordinates) TileToSubtile(point Point) Point {
 	return Point{X: point.X * SubtilesPerTile, Y: point.Y * SubtilesPerTile}
 }
 
+// SubtileToTile reverses TileToSubtile while retaining fractional positions for presentation and interpolation.
 func (c Coordinates) SubtileToTile(point Point) Point {
 	return Point{X: point.X / SubtilesPerTile, Y: point.Y / SubtilesPerTile}
 }
 
+// SubtileToWorldPixel projects a gameplay subtile center into the map's isometric canvas. The map height determines the
+// horizontal origin, keeping negative diamond coordinates inside the preview margin.
 func (c Coordinates) SubtileToWorldPixel(point Point) Point {
 	originX := float64(c.HeightTiles*TilePixelWidth/2 + PreviewMargin)
 	// The tile origin is its top isometric vertex, while an integer gameplay
 	// position names the CENTER of that subtile's 16x8 occupancy diamond. Riiablo
 	// applies this same half-subtile height when drawing filled walkable cells.
 	originY := float64(PreviewMargin + TilePixelHeight/(2*SubtilesPerTile))
+
 	return Point{
 		X: originX + (point.X-point.Y)*TilePixelWidth/(2*SubtilesPerTile),
 		Y: originY + (point.X+point.Y)*TilePixelHeight/(2*SubtilesPerTile),
 	}
 }
 
+// WorldPixelToSubtile algebraically reverses the isometric projection and preserves fractional collision positions.
 func (c Coordinates) WorldPixelToSubtile(point Point) Point {
 	originX := float64(c.HeightTiles*TilePixelWidth/2 + PreviewMargin)
 	originY := float64(PreviewMargin + TilePixelHeight/(2*SubtilesPerTile))
 	difference := (point.X - originX) * (2 * SubtilesPerTile) / TilePixelWidth
 	sum := (point.Y - originY) * (2 * SubtilesPerTile) / TilePixelHeight
+
 	return Point{X: (difference + sum) / 2, Y: (sum - difference) / 2}
 }
 
@@ -48,14 +55,17 @@ func (Coordinates) WorldPixelToScreen(point, camera, anchor Point) Point {
 	return Point{X: anchor.X + point.X - camera.X, Y: anchor.Y + point.Y - camera.Y}
 }
 
+// ScreenToWorldPixel reverses camera anchoring so input handling can recover map-space pixels from viewport positions.
 func (Coordinates) ScreenToWorldPixel(point, camera, anchor Point) Point {
 	return Point{X: camera.X + point.X - anchor.X, Y: camera.Y + point.Y - anchor.Y}
 }
 
+// SubtileToScreen composes world projection and camera anchoring through the shared conversion rules.
 func (c Coordinates) SubtileToScreen(point, cameraSubtile, anchor Point) Point {
 	return c.WorldPixelToScreen(c.SubtileToWorldPixel(point), c.SubtileToWorldPixel(cameraSubtile), anchor)
 }
 
+// ScreenToSubtile reverses viewport anchoring and isometric projection without applying collision-cell rounding.
 func (c Coordinates) ScreenToSubtile(point, cameraSubtile, anchor Point) Point {
 	worldPixel := c.ScreenToWorldPixel(point, c.SubtileToWorldPixel(cameraSubtile), anchor)
 	return c.WorldPixelToSubtile(worldPixel)
@@ -66,8 +76,14 @@ func (c Coordinates) ScreenToSubtile(point, cameraSubtile, anchor Point) Point {
 // cell instead of relying on language-specific integer conversion behavior.
 func CollisionCell(value float64) int { return int(math.Floor(value + 0.5)) }
 
-func (m *Map) Coordinates() Coordinates { return Coordinates{HeightTiles: m.HeightTiles} }
+// Coordinates returns projection state derived from immutable map geometry, preventing adapters from supplying a
+// mismatched height and shifting the entire isometric canvas.
+func (m *Map) Coordinates() Coordinates {
+	return Coordinates{HeightTiles: m.HeightTiles}
+}
 
+// FlagsAtPosition applies the package-wide center-rounding rule before collision lookup. Continuous movement and direct
+// collision queries therefore agree at half-subtile boundaries.
 func (m *Map) FlagsAtPosition(x, y float64) (Flags, bool) {
 	return m.FlagsAt(CollisionCell(x), CollisionCell(y))
 }
