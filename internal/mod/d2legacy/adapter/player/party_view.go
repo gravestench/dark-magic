@@ -8,10 +8,9 @@ import (
 	"github.com/gravestench/dark-magic/internal/game/simulation"
 )
 
-const (
-	PartyViewVersion   uint32 = 1
-	MaxPartyViewRoster        = 8
-)
+const PartyViewVersion uint32 = 1
+
+const MaxPartyViewRoster = 8
 
 var ErrPartyView = errors.New("party view: authenticated projection is absent")
 
@@ -41,28 +40,35 @@ func ProjectPartyView(playerID string, checkpoint simulation.Checkpoint) (PartyV
 	if checkpoint.Snapshot == nil || strings.TrimSpace(playerID) == "" {
 		return view, ErrPartyView
 	}
+
 	identities, found := findComponent(*checkpoint.Snapshot, "d2legacy.player.identity")
 	if !found {
 		return view, ErrPartyView
 	}
+
 	entity, _, found := findString(identities, "player", playerID)
 	if !found {
 		return view, ErrPartyView
 	}
+
 	component, found := findComponent(*checkpoint.Snapshot, "d2legacy.player.party_view")
 	if !found {
 		return view, ErrPartyView
 	}
+
 	fields, found := findInstance(component, entity)
 	if !found || intField(fields, "schema_version") != int64(PartyViewVersion) {
 		return view, ErrPartyView
 	}
+
 	view.Revision = uint64(max(0, intField(fields, "revision")))
 	view.PartyID = stringField(fields, "party_id")
+
 	count := intField(fields, "roster_count")
 	if count < 1 || count > MaxPartyViewRoster {
 		return view, ErrPartyView
 	}
+
 	for slot := int64(1); slot <= count; slot++ {
 		suffix := fmt.Sprintf("_%d", slot)
 		view.Roster = append(view.Roster, PartyRosterEntry{
@@ -73,5 +79,6 @@ func ProjectPartyView(playerID string, checkpoint simulation.Checkpoint) (PartyV
 			Relationship: stringField(fields, "relationship"+suffix),
 		})
 	}
+
 	return view, nil
 }

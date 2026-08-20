@@ -8,26 +8,34 @@ import (
 	recordstore "github.com/gravestench/dark-magic/internal/game/data/store"
 )
 
+// rowBy locates one archive record by a stable key. Returning nil lets callers
+// report the missing domain record alongside their higher-level expectation.
 func rowBy(rows []map[string]string, column, value string) map[string]string {
 	for _, row := range rows {
 		if row[column] == value {
 			return row
 		}
 	}
+
 	return nil
 }
 
+// TestOwnedTargetArchivesPinAttackRateData pins weapon and animation inputs
+// used by attack-rate calculations against the owned target archives.
 func TestOwnedTargetArchivesPinAttackRateData(t *testing.T) {
 	directory := os.Getenv("DARK_MAGIC_TEST_MPQ_DIRECTORY")
 	if directory == "" {
 		t.Skip("set DARK_MAGIC_TEST_MPQ_DIRECTORY to the expansion 1.14d MPQ directory")
 	}
+
 	t.Setenv("MPQ_DIRECTORY", directory)
+
 	assets, err := content.FromEnvironment()
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer assets.Close()
+	defer func() { _ = assets.Close() }()
+
 	pinned, generation, err := recordstore.Pin(assets)
 	if err != nil {
 		t.Fatal(err)
@@ -37,7 +45,9 @@ func TestOwnedTargetArchivesPinAttackRateData(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+
 	attackrate := rowBy(stats, "Stat", "attackrate")
+
 	itemRate := rowBy(stats, "Stat", "item_fasterattackrate")
 	if generation.ID == "" || attackrate == nil || attackrate["ID"] != "68" || attackrate["Signed"] != "1" ||
 		attackrate["UpdateAnimRate"] != "1" || itemRate == nil || itemRate["ID"] != "93" || itemRate["Signed"] != "1" {
@@ -48,6 +58,7 @@ func TestOwnedTargetArchivesPinAttackRateData(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+
 	phaseBlade, warPike := rowBy(weapons, "code", "7cr"), rowBy(weapons, "code", "7p7")
 	if phaseBlade == nil || phaseBlade["version"] != "100" || phaseBlade["speed"] != "-30" ||
 		warPike == nil || warPike["version"] != "100" || warPike["speed"] != "20" {
@@ -58,6 +69,7 @@ func TestOwnedTargetArchivesPinAttackRateData(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+
 	for _, code := range []string{"swing1", "swing2", "swing3"} {
 		row := rowBy(properties, "code", code)
 		if row == nil || row["func1"] != "8" || row["stat1"] != "item_fasterattackrate" {

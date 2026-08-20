@@ -29,92 +29,153 @@ func QuestModule(source snapshotter, locale ...textLookup) modruntime.Module {
 	if len(locale) > 0 {
 		text = locale[0]
 	}
+
 	return modruntime.Module{
 		Name: "d2legacy.quest_catalog/v1",
-		Help: modruntime.ModuleHelp{Summary: "Read recovered Diablo II quest and speech relationships.", Commands: map[string]modruntime.CommandHelp{
-			"quest":  {Usage: "d2legacy.quest_catalog.quest(id)", Summary: "Return one normalized quest definition or nil."},
-			"quests": {Usage: "d2legacy.quest_catalog.quests([act])", Summary: "Return quests in canonical ID order, optionally filtered by zero-based act."},
-			"speech": {Usage: "d2legacy.quest_catalog.speech(sound)", Summary: "Return the localization key for a logical sound ID."},
-			"dialog": {Usage: "d2legacy.quest_catalog.dialog(sound)", Summary: "Resolve a speech ID into timed localized text."},
-		}},
+		Help: modruntime.ModuleHelp{
+			Summary: "Read recovered Diablo II quest and speech relationships.",
+			Commands: map[string]modruntime.CommandHelp{
+				"quest": {
+					Usage:   "d2legacy.quest_catalog.quest(id)",
+					Summary: "Return one normalized quest definition or nil.",
+				},
+				"quests": {
+					Usage:   "d2legacy.quest_catalog.quests([act])",
+					Summary: "Return quests in canonical ID order, optionally filtered by zero-based act.",
+				},
+				"speech": {
+					Usage:   "d2legacy.quest_catalog.speech(sound)",
+					Summary: "Return the localization key for a logical sound ID.",
+				},
+				"dialog": {
+					Usage:   "d2legacy.quest_catalog.dialog(sound)",
+					Summary: "Resolve a speech ID into timed localized text.",
+				},
+			},
+		},
 		Loader: func(state *lua.LState) int {
 			module := state.SetFuncs(state.NewTable(), map[string]lua.LGFunction{
-				"quest": func(state *lua.LState) int {
-					snapshot, err := source.Snapshot()
-					if err != nil {
-						return raise(state, err)
-					}
-					quest, found := snapshot.QuestsByID[state.CheckInt(1)]
-					if !found {
-						state.Push(lua.LNil)
-						return 1
-					}
-					state.Push(questTable(state, quest))
-					return 1
-				},
-				"quests": func(state *lua.LState) int {
-					snapshot, err := source.Snapshot()
-					if err != nil {
-						return raise(state, err)
-					}
-					act := -1
-					if state.GetTop() > 0 && state.Get(1) != lua.LNil {
-						act = state.CheckInt(1)
-					}
-					result := state.NewTable()
-					for _, quest := range snapshot.Quests {
-						if act < 0 || quest.Act == act {
-							result.Append(questTable(state, quest))
-						}
-					}
-					state.Push(result)
-					return 1
-				},
-				"speech": func(state *lua.LState) int {
-					snapshot, err := source.Snapshot()
-					if err != nil {
-						return raise(state, err)
-					}
-					entry, found := snapshot.SpeechByName[strings.ToLower(state.CheckString(1))]
-					if !found {
-						state.Push(lua.LNil)
-						return 1
-					}
-					state.Push(speechTable(state, entry.Sound, entry.StringKey))
-					return 1
-				},
-				"dialog": func(state *lua.LState) int {
-					if text == nil {
-						return raise(state, fmt.Errorf("quest catalog: no localization source"))
-					}
-					snapshot, err := source.Snapshot()
-					if err != nil {
-						return raise(state, err)
-					}
-					entry, found := snapshot.SpeechByName[strings.ToLower(state.CheckString(1))]
-					if !found {
-						state.Push(lua.LNil)
-						return 1
-					}
-					localized, err := text.Text(entry.StringKey)
-					if err != nil {
-						return raise(state, err)
-					}
-					rate, body, err := ParseDialogueText(localized)
-					if err != nil {
-						return raise(state, fmt.Errorf("quest catalog: dialog %q: %w", entry.Sound, err))
-					}
-					result := speechTable(state, entry.Sound, entry.StringKey)
-					result.RawSetString("text", lua.LString(body))
-					result.RawSetString("scroll_lines_per_second", lua.LNumber(rate))
-					state.Push(result)
-					return 1
-				},
+				"quest":  questLookup(source),
+				"quests": questList(source),
+				"speech": speechLookup(source),
+				"dialog": dialogueLookup(source, text),
 			})
 			module.RawSetString("api", lua.LNumber(1))
 			state.Push(module)
+
 			return 1
 		},
+	}
+}
+
+// questLookup returns one normalized quest by ID. Missing IDs produce nil so scripts can probe recovered versions
+// without treating version-specific omissions as catalog failures.
+func questLookup(source snapshotter) lua.LGFunction {
+	return func(state *lua.LState) int {
+		snapshot, err := source.Snapshot()
+		if err != nil {
+			return raise(state, err)
+		}
+
+		quest, found := snapshot.QuestsByID[state.CheckInt(1)]
+		if !found {
+			state.Push(lua.LNil)
+
+			return 1
+		}
+
+		state.Push(questTable(state, quest))
+
+		return 1
+	}
+}
+
+// questList returns quests in the snapshot's canonical order and optionally filters by zero-based act. The sentinel
+// remains internal so omitting the argument and explicitly passing nil have identical Lua behavior.
+func questList(source snapshotter) lua.LGFunction {
+	return func(state *lua.LState) int {
+		snapshot, err := source.Snapshot()
+		if err != nil {
+			return raise(state, err)
+		}
+
+		act := -1
+		if state.GetTop() > 0 && state.Get(1) != lua.LNil {
+			act = state.CheckInt(1)
+		}
+
+		result := state.NewTable()
+
+		for _, quest := range snapshot.Quests {
+			if act < 0 || quest.Act == act {
+				result.Append(questTable(state, quest))
+			}
+		}
+
+		state.Push(result)
+
+		return 1
+	}
+}
+
+// speechLookup resolves logical sound names case-insensitively, matching the recovered snapshot index. It exposes the
+// localization key but deliberately leaves text resolution to dialogueLookup.
+func speechLookup(source snapshotter) lua.LGFunction {
+	return func(state *lua.LState) int {
+		snapshot, err := source.Snapshot()
+		if err != nil {
+			return raise(state, err)
+		}
+
+		entry, found := snapshot.SpeechByName[strings.ToLower(state.CheckString(1))]
+		if !found {
+			state.Push(lua.LNil)
+
+			return 1
+		}
+
+		state.Push(speechTable(state, entry.Sound, entry.StringKey))
+
+		return 1
+	}
+}
+
+// dialogueLookup combines an immutable speech relationship with the active locale. Localization remains optional at
+// module construction time, but calling dialog without it raises a clear Lua error before touching the catalog.
+func dialogueLookup(source snapshotter, text textLookup) lua.LGFunction {
+	return func(state *lua.LState) int {
+		if text == nil {
+			return raise(state, fmt.Errorf("quest catalog: no localization source"))
+		}
+
+		snapshot, err := source.Snapshot()
+		if err != nil {
+			return raise(state, err)
+		}
+
+		entry, found := snapshot.SpeechByName[strings.ToLower(state.CheckString(1))]
+		if !found {
+			state.Push(lua.LNil)
+
+			return 1
+		}
+
+		localized, err := text.Text(entry.StringKey)
+		if err != nil {
+			return raise(state, err)
+		}
+
+		rate, body, err := ParseDialogueText(localized)
+		if err != nil {
+			return raise(state, fmt.Errorf("quest catalog: dialog %q: %w", entry.Sound, err))
+		}
+
+		result := speechTable(state, entry.Sound, entry.StringKey)
+		result.RawSetString("text", lua.LString(body))
+		result.RawSetString("scroll_lines_per_second", lua.LNumber(rate))
+		state.Push(result)
+
+		return 1
 	}
 }
 
@@ -125,22 +186,34 @@ func ParseDialogueText(value string) (float64, string, error) {
 	if !found || strings.TrimSpace(body) == "" {
 		return 0, "", fmt.Errorf("localized value has no timing line and body")
 	}
+
 	timing, err := strconv.ParseFloat(strings.TrimSpace(header), 64)
 	if err != nil || timing < 0 {
 		return 0, "", fmt.Errorf("invalid timing value %q", header)
 	}
+
 	return timing / 60, body, nil
 }
 
-func raise(state *lua.LState, err error) int { state.RaiseError("%v", err); return 0 }
+// raise forwards a Go boundary error through Lua's normal exception path. The zero return is unreachable in normal
+// execution but satisfies the LGFunction contract and keeps every handler's error branch explicit.
+func raise(state *lua.LState, err error) int {
+	state.RaiseError("%v", err)
 
+	return 0
+}
+
+// speechTable centralizes the stable Lua field names shared by speech and dialog results.
 func speechTable(state *lua.LState, sound, key string) *lua.LTable {
 	result := state.NewTable()
 	result.RawSetString("sound", lua.LString(sound))
 	result.RawSetString("string_key", lua.LString(key))
+
 	return result
 }
 
+// questTable converts one recovered quest without exposing Go pointers or slices to Lua. Stage and alternate order is
+// preserved because scripts use the source's canonical progression order.
 func questTable(state *lua.LState, quest recovered.Quest) *lua.LTable {
 	result := state.NewTable()
 	result.RawSetString("id", lua.LNumber(quest.ID))
@@ -150,21 +223,27 @@ func questTable(state *lua.LState, quest recovered.Quest) *lua.LTable {
 	result.RawSetString("visible", lua.LBool(quest.Visible))
 	result.RawSetString("icon", lua.LString(quest.Icon))
 	result.RawSetString("title_string_key", lua.LString(quest.TitleStringKey))
+
 	if quest.PrerequisiteID != nil {
 		result.RawSetString("prerequisite_id", lua.LNumber(*quest.PrerequisiteID))
 	}
+
 	stages := state.NewTable()
 	for _, stage := range quest.Stages {
 		entry := state.NewTable()
 		entry.RawSetString("index", lua.LNumber(stage.Index))
 		entry.RawSetString("string_key", lua.LString(stage.StringKey))
+
 		alternates := state.NewTable()
 		for _, key := range stage.Alternates {
 			alternates.Append(lua.LString(key))
 		}
+
 		entry.RawSetString("alternates", alternates)
 		stages.Append(entry)
 	}
+
 	result.RawSetString("stages", stages)
+
 	return result
 }

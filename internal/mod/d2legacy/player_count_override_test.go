@@ -12,13 +12,17 @@ import (
 	"github.com/gravestench/dark-magic/internal/game/simulation"
 )
 
+// TestMonsterScalingFollowsPopulationUntilExplicitlyOverridden verifies live
+// population drives scaling only until an authority override becomes explicit.
 func TestMonsterScalingFollowsPopulationUntilExplicitlyOverridden(t *testing.T) {
 	ctx := context.Background()
 	engine := gameecs.New()
+
 	session, err := gamesession.New(engine, gamesession.Config{CheckpointInterval: 1})
 	if err != nil {
 		t.Fatal(err)
 	}
+
 	authority, err := StartWithConfig(ctx, content.D2Legacy(), runtimeFixtureRecords{}, engine, session, Config{
 		Seed: 29,
 		InitialData: map[string]any{
@@ -31,6 +35,7 @@ func TestMonsterScalingFollowsPopulationUntilExplicitlyOverridden(t *testing.T) 
 	if err != nil {
 		t.Fatal(err)
 	}
+
 	t.Cleanup(func() {
 		_ = authority.Stop(ctx)
 		_ = session.Close()
@@ -40,11 +45,13 @@ func TestMonsterScalingFollowsPopulationUntilExplicitlyOverridden(t *testing.T) 
 	sequence := uint64(0)
 	submit := func(tick uint64, kind string, payload json.RawMessage) {
 		t.Helper()
+
 		sequence++
 		if err := session.Submit(simulation.Command{Tick: tick, Player: "system", Authority: simulation.AuthoritySystem,
 			Sequence: sequence, Kind: kind, Payload: payload}); err != nil {
 			t.Fatal(err)
 		}
+
 		if err := session.Step(); err != nil {
 			t.Fatal(err)
 		}
@@ -74,15 +81,20 @@ func TestMonsterScalingFollowsPopulationUntilExplicitlyOverridden(t *testing.T) 
 	assertMonsterPlayerCount(t, engine, "following-again", 1)
 }
 
+// TestMaximumPlayersRejectsAdmissionWithoutBecomingGameplayCount separates the
+// admission ceiling from the population value used by gameplay formulas.
 func TestMaximumPlayersRejectsAdmissionWithoutBecomingGameplayCount(t *testing.T) {
 	ctx := context.Background()
+
 	engine := gameecs.New()
-	defer engine.Close()
+	defer func() { _ = engine.Close() }()
+
 	session, err := gamesession.New(engine, gamesession.Config{})
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer session.Close()
+	defer func() { _ = session.Close() }()
+
 	authority, err := StartWithConfig(ctx, content.D2Legacy(), runtimeFixtureRecords{}, engine, session, Config{
 		Seed: 31,
 		InitialData: map[string]any{
@@ -95,33 +107,47 @@ func TestMaximumPlayersRejectsAdmissionWithoutBecomingGameplayCount(t *testing.T
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer authority.Stop(ctx)
+	defer func() { _ = authority.Stop(ctx) }()
 
-	if err := session.Submit(simulation.Command{Tick: 1, Player: "system", Authority: simulation.AuthoritySystem,
-		Sequence: 1, Kind: "system.player.enter", Payload: generatedPlayerPayload(t, "hero-alice", "alice", 0, 0)}); err != nil {
+	if err := session.Submit(simulation.Command{
+		Tick: 1, Player: "system", Authority: simulation.AuthoritySystem,
+		Sequence: 1, Kind: "system.player.enter",
+		Payload: generatedPlayerPayload(t, "hero-alice", "alice", 0, 0),
+	}); err != nil {
 		t.Fatal(err)
 	}
+
 	if err := session.Step(); err != nil {
 		t.Fatal(err)
 	}
-	if err := session.Submit(simulation.Command{Tick: 2, Player: "system", Authority: simulation.AuthoritySystem,
-		Sequence: 2, Kind: "system.player.enter", Payload: generatedPlayerPayload(t, "hero-bob", "bob", 20, 20)}); err != nil {
+
+	if err := session.Submit(simulation.Command{
+		Tick: 2, Player: "system", Authority: simulation.AuthoritySystem,
+		Sequence: 2, Kind: "system.player.enter",
+		Payload: generatedPlayerPayload(t, "hero-bob", "bob", 20, 20),
+	}); err != nil {
 		t.Fatal(err)
 	}
+
 	if err := session.Step(); !errors.Is(err, gamesession.ErrCommandApply) {
 		t.Fatalf("second admission error = %v, want %v", err, gamesession.ErrCommandApply)
 	}
 }
 
+// TestGameRulesRejectLegacyImmutablePlayerCountConfiguration prevents an old
+// bootstrap field from bypassing the live population and override contracts.
 func TestGameRulesRejectLegacyImmutablePlayerCountConfiguration(t *testing.T) {
 	ctx := context.Background()
+
 	engine := gameecs.New()
-	defer engine.Close()
+	defer func() { _ = engine.Close() }()
+
 	session, err := gamesession.New(engine, gamesession.Config{})
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer session.Close()
+	defer func() { _ = session.Close() }()
+
 	authority, err := StartWithConfig(ctx, content.D2Legacy(), runtimeFixtureRecords{}, engine, session, Config{
 		Seed: 37,
 		InitialData: map[string]any{
@@ -133,12 +159,16 @@ func TestGameRulesRejectLegacyImmutablePlayerCountConfiguration(t *testing.T) {
 	})
 	if err == nil {
 		_ = authority.Stop(ctx)
+
 		t.Fatal("legacy immutable player-count configuration was accepted")
 	}
 }
 
+// playerCountMonsterPayload builds a stable monster command whose only varying
+// inputs are exposed by arguments, keeping scaling assertions deterministic.
 func playerCountMonsterPayload(t *testing.T, spawnID string, seed int) json.RawMessage {
 	t.Helper()
+
 	payload, err := json.Marshal(map[string]any{
 		"spawn_id": spawnID, "seed": seed, "x": 90, "y": 90, "act": 1, "level_id": 2,
 		"definition": map[string]any{
@@ -153,5 +183,6 @@ func playerCountMonsterPayload(t *testing.T, spawnID string, seed int) json.RawM
 	if err != nil {
 		t.Fatal(err)
 	}
+
 	return payload
 }

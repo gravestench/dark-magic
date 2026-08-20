@@ -116,206 +116,315 @@ func ProjectHUD(playerID string, checkpoint simulation.Checkpoint) (json.RawMess
 	if checkpoint.Snapshot == nil || strings.TrimSpace(playerID) == "" {
 		return nil, ErrHUDPlayer
 	}
+
 	snapshot := *checkpoint.Snapshot
+
 	identities, found := findComponent(snapshot, "d2legacy.player.identity")
 	if !found {
 		return nil, ErrHUDPlayer
 	}
+
 	entity, identity, found := findString(identities, "player", playerID)
 	if !found {
 		return nil, ErrHUDPlayer
 	}
+
 	view := HUD{Version: HUDVersion, Tick: checkpoint.Tick}
-	view.Player = HUDIdentity{PlayerID: stringField(identity, "player"), CharacterID: stringField(identity, "character_id"), Name: stringField(identity, "name"), Class: stringField(identity, "class")}
+
+	view.Player = HUDIdentity{
+		PlayerID:    stringField(identity, "player"),
+		CharacterID: stringField(identity, "character_id"),
+		Name:        stringField(identity, "name"),
+		Class:       stringField(identity, "class"),
+	}
 	if err := fillHUD(snapshot, entity, &view); err != nil {
 		return nil, err
 	}
+
 	return json.Marshal(view)
 }
 
+// fillHUD assembles required owner state before adding optional presentation
+// domains. Missing required components fail the projection; optional components
+// retain zero values so older checkpoints remain displayable.
 func fillHUD(snapshot gameecs.Snapshot, entity uint64, view *HUD) error {
-	read := func(name string) (map[string]gameecs.ValueSnapshot, error) {
-		component, found := findComponent(snapshot, name)
-		if !found {
-			return nil, fmt.Errorf("player HUD: component %q is absent", name)
-		}
-		fields, found := findInstance(component, entity)
-		if !found {
-			return nil, fmt.Errorf("player HUD: component %q is absent for player", name)
-		}
-		return fields, nil
+	read := hudComponentReader{snapshot: snapshot, entity: entity}
+	if err := fillRequiredHUD(read, view); err != nil {
+		return err
 	}
-	vitals, err := read("d2legacy.player.vitals")
+
+	fillOptionalHUD(read, view)
+	fillHUDSkills(read, view)
+	fillHUDBelt(read, view)
+
+	return nil
+}
+
+type hudComponentReader struct {
+	snapshot gameecs.Snapshot
+	entity   uint64
+}
+
+// required returns an authenticated player's component or a diagnostic error.
+// Keeping this policy in one place makes required HUD schema additions explicit.
+func (reader hudComponentReader) required(name string) (map[string]gameecs.ValueSnapshot, error) {
+	component, found := findComponent(reader.snapshot, name)
+	if !found {
+		return nil, fmt.Errorf("player HUD: component %q is absent", name)
+	}
+
+	fields, found := findInstance(component, reader.entity)
+	if !found {
+		return nil, fmt.Errorf("player HUD: component %q is absent for player", name)
+	}
+
+	return fields, nil
+}
+
+// optional returns an authenticated player's component when the checkpoint
+// contains it. Absence deliberately maps to zero-valued presentation fields.
+func (reader hudComponentReader) optional(name string) (map[string]gameecs.ValueSnapshot, bool) {
+	component, found := findComponent(reader.snapshot, name)
+	if !found {
+		return nil, false
+	}
+
+	return findInstance(component, reader.entity)
+}
+
+// fillRequiredHUD copies the canonical durable and spatial fields that every
+// valid player checkpoint must contain, failing before a partial view escapes.
+func fillRequiredHUD(reader hudComponentReader, view *HUD) error {
+	vitals, err := reader.required("d2legacy.player.vitals")
 	if err != nil {
 		return err
 	}
+
 	view.Vitals = HUDVitals{
-		Health: intField(vitals, "health"), MaxHealth: intField(vitals, "max_health"),
-		Mana: intField(vitals, "mana"), MaxMana: intField(vitals, "max_mana"),
-		Stamina: intField(vitals, "stamina"), MaxStamina: intField(vitals, "max_stamina"),
-		StaminaRaw: intField(vitals, "stamina_raw"), MaxStaminaRaw: intField(vitals, "max_stamina_raw"),
+		Health:        intField(vitals, "health"),
+		MaxHealth:     intField(vitals, "max_health"),
+		Mana:          intField(vitals, "mana"),
+		MaxMana:       intField(vitals, "max_mana"),
+		Stamina:       intField(vitals, "stamina"),
+		MaxStamina:    intField(vitals, "max_stamina"),
+		StaminaRaw:    intField(vitals, "stamina_raw"),
+		MaxStaminaRaw: intField(vitals, "max_stamina_raw"),
 	}
-	progress, err := read("d2legacy.player.progress")
+
+	progress, err := reader.required("d2legacy.player.progress")
 	if err != nil {
 		return err
 	}
-	view.Progress = HUDProgress{Level: intField(progress, "level"), Experience: intField(progress, "experience"), UnspentSkillPoints: intField(progress, "unspent_skill_points")}
-	combat, err := read("d2legacy.player.combat_stats")
+
+	view.Progress = HUDProgress{
+		Level:              intField(progress, "level"),
+		Experience:         intField(progress, "experience"),
+		UnspentSkillPoints: intField(progress, "unspent_skill_points"),
+	}
+
+	combat, err := reader.required("d2legacy.player.combat_stats")
 	if err != nil {
 		return err
 	}
+
 	view.Combat = HUDCombat{AttackRating: intField(combat, "attack_rating"), Defense: intField(combat, "defense")}
-	position, err := read("d2legacy.world.position")
+
+	position, err := reader.required("d2legacy.world.position")
 	if err != nil {
 		return err
 	}
+
 	view.Position = HUDPosition{X: floatField(position, "x"), Y: floatField(position, "y")}
-	location, err := read("d2legacy.world.location")
+
+	location, err := reader.required("d2legacy.world.location")
 	if err != nil {
 		return err
 	}
+
 	view.Location = HUDLocation{Act: intField(location, "act"), LevelID: intField(location, "level_id")}
-	if animation, found := findComponent(snapshot, "d2legacy.player.animation"); found {
-		if fields, present := findInstance(animation, entity); present {
-			view.Animation.Mode = stringField(fields, "mode")
-			view.Animation.StartTick = uint64(max(0, intField(fields, "start_tick")))
-		}
+
+	return nil
+}
+
+// fillOptionalHUD adds live presentation and movement details when available.
+// Each component stays optional to preserve compatibility with older snapshots.
+func fillOptionalHUD(reader hudComponentReader, view *HUD) {
+	if fields, found := reader.optional("d2legacy.player.animation"); found {
+		view.Animation.Mode = stringField(fields, "mode")
+		view.Animation.StartTick = uint64(max(0, intField(fields, "start_tick")))
 	}
-	if facing, found := findComponent(snapshot, "d2legacy.world.facing"); found {
-		if fields, present := findInstance(facing, entity); present {
-			view.Animation.Direction = intField(fields, "direction")
-		}
+
+	if fields, found := reader.optional("d2legacy.world.facing"); found {
+		view.Animation.Direction = intField(fields, "direction")
 	}
-	if movement, found := findComponent(snapshot, "d2legacy.player.movement_mode"); found {
-		if fields, present := findInstance(movement, entity); present {
-			view.Movement.Running = boolField(fields, "running")
-		}
+
+	if fields, found := reader.optional("d2legacy.player.movement_mode"); found {
+		view.Movement.Running = boolField(fields, "running")
 	}
-	if movement, found := findComponent(snapshot, "d2legacy.player.movement_stats"); found {
-		if fields, present := findInstance(movement, entity); present {
-			view.Movement.VelocityPercent = intField(fields, "velocitypercent")
-			view.Movement.ItemFasterMoveVelocity = intField(fields, "item_fastermovevelocity")
-			view.Movement.RunDrain = intField(fields, "run_drain")
-			view.Movement.StaminaRecoveryBonus = intField(fields, "staminarecoverybonus")
-			view.Movement.StaminaDrainPercent = intField(fields, "item_staminadrainpct")
-			view.Movement.ArmorRunDrain = intField(fields, "armor_run_drain")
-		}
+
+	if fields, found := reader.optional("d2legacy.player.movement_stats"); found {
+		view.Movement.VelocityPercent = intField(fields, "velocitypercent")
+		view.Movement.ItemFasterMoveVelocity = intField(fields, "item_fastermovevelocity")
+		view.Movement.RunDrain = intField(fields, "run_drain")
+		view.Movement.StaminaRecoveryBonus = intField(fields, "staminarecoverybonus")
+		view.Movement.StaminaDrainPercent = intField(fields, "item_staminadrainpct")
+		view.Movement.ArmorRunDrain = intField(fields, "armor_run_drain")
 	}
-	if velocity, found := findComponent(snapshot, "d2legacy.world.velocity"); found {
-		if fields, present := findInstance(velocity, entity); present {
-			view.Movement.Velocity = HUDPosition{X: floatField(fields, "x"), Y: floatField(fields, "y")}
-		}
+
+	if fields, found := reader.optional("d2legacy.world.velocity"); found {
+		view.Movement.Velocity = HUDPosition{X: floatField(fields, "x"), Y: floatField(fields, "y")}
 	}
-	if bounds, found := findComponent(snapshot, "d2legacy.world.bounds"); found {
-		if fields, present := findInstance(bounds, entity); present {
-			view.Movement.Bounds = HUDPosition{X: floatField(fields, "width"), Y: floatField(fields, "height")}
-		}
+
+	if fields, found := reader.optional("d2legacy.world.bounds"); found {
+		view.Movement.Bounds = HUDPosition{X: floatField(fields, "width"), Y: floatField(fields, "height")}
 	}
-	if colliders, found := findComponent(snapshot, "d2legacy.world.collider"); found {
-		if fields, present := findInstance(colliders, entity); present {
-			view.Movement.Radius = floatField(fields, "radius")
-		}
+
+	if fields, found := reader.optional("d2legacy.world.collider"); found {
+		view.Movement.Radius = floatField(fields, "radius")
 	}
-	if assignment, found := findComponent(snapshot, "d2legacy.player.skill_assignment"); found {
-		if fields, present := findInstance(assignment, entity); present {
-			view.Skills.Left, view.Skills.Right = intField(fields, "left"), intField(fields, "right")
-		}
+
+	if fields, found := reader.optional("d2legacy.player.skill_assignment"); found {
+		view.Skills.Left = intField(fields, "left")
+		view.Skills.Right = intField(fields, "right")
 	}
+}
+
+// fillHUDSkills projects only skills owned by the authenticated player and
+// sorts them so snapshots with different ECS iteration order encode identically.
+func fillHUDSkills(reader hudComponentReader, view *HUD) {
 	view.Skills.Learned = []HUDLearnedSkill{}
-	if learned, found := findComponent(snapshot, "d2legacy.player.learned_skill"); found {
+
+	if learned, found := findComponent(reader.snapshot, "d2legacy.player.learned_skill"); found {
 		for _, instance := range learned.Instances {
 			fields, present := findInstance(learned, instance.Entity)
-			if !present || entityField(fields, "owner") != entity {
+			if !present || entityField(fields, "owner") != reader.entity {
 				continue
 			}
+
 			view.Skills.Learned = append(view.Skills.Learned, HUDLearnedSkill{
-				SkillID: intField(fields, "skill_id"), Level: intField(fields, "level"), ListRow: intField(fields, "list_row"),
-				LeftAllowed: boolField(fields, "left_allowed"), RightAllowed: boolField(fields, "right_allowed"),
+				SkillID:      intField(fields, "skill_id"),
+				Level:        intField(fields, "level"),
+				ListRow:      intField(fields, "list_row"),
+				LeftAllowed:  boolField(fields, "left_allowed"),
+				RightAllowed: boolField(fields, "right_allowed"),
 			})
 		}
 	}
+
 	sort.Slice(view.Skills.Learned, func(i, j int) bool {
 		if view.Skills.Learned[i].ListRow == view.Skills.Learned[j].ListRow {
 			return view.Skills.Learned[i].SkillID < view.Skills.Learned[j].SkillID
 		}
+
 		return view.Skills.Learned[i].ListRow < view.Skills.Learned[j].ListRow
 	})
-	view.Belt.Slots = make([]string, 16)
-	if belt, found := findComponent(snapshot, "d2legacy.player.belt"); found {
-		if fields, present := findInstance(belt, entity); present {
-			view.Belt.Capacity = intField(fields, "capacity")
-			for slot := 1; slot <= len(view.Belt.Slots); slot++ {
-				view.Belt.Slots[slot-1] = stringField(fields, fmt.Sprintf("slot_%d", slot))
-			}
-		}
-	}
-	return nil
 }
 
+// fillHUDBelt reserves the stable sixteen-slot wire shape even when no belt
+// component exists, preventing optional ECS state from changing JSON shape.
+func fillHUDBelt(reader hudComponentReader, view *HUD) {
+	view.Belt.Slots = make([]string, 16)
+	if fields, found := reader.optional("d2legacy.player.belt"); found {
+		view.Belt.Capacity = intField(fields, "capacity")
+		for slot := 1; slot <= len(view.Belt.Slots); slot++ {
+			view.Belt.Slots[slot-1] = stringField(fields, fmt.Sprintf("slot_%d", slot))
+		}
+	}
+}
+
+// findComponent locates a schema by its stable name without exposing live ECS
+// stores; every projection therefore reads only the immutable checkpoint copy.
 func findComponent(snapshot gameecs.Snapshot, name string) (gameecs.ComponentSnapshot, bool) {
 	for _, component := range snapshot.Components {
 		if component.Name == name {
 			return component, true
 		}
 	}
+
 	return gameecs.ComponentSnapshot{}, false
 }
 
+// findInstance maps one positional snapshot row back to named fields. Rows with
+// mismatched schemas are rejected instead of being partially interpreted.
 func findInstance(component gameecs.ComponentSnapshot, entity uint64) (map[string]gameecs.ValueSnapshot, bool) {
 	for _, instance := range component.Instances {
 		if instance.Entity != entity || len(instance.Values) != len(component.Fields) {
 			continue
 		}
+
 		fields := make(map[string]gameecs.ValueSnapshot, len(component.Fields))
 		for index, field := range component.Fields {
 			fields[field.Name] = instance.Values[index]
 		}
+
 		return fields, true
 	}
+
 	return nil, false
 }
 
-func findString(component gameecs.ComponentSnapshot, field, value string) (uint64, map[string]gameecs.ValueSnapshot, bool) {
+// findString identifies an entity by one string field. It preserves component
+// iteration order, which matches the existing first-match authentication rule.
+func findString(
+	component gameecs.ComponentSnapshot,
+	field, value string,
+) (uint64, map[string]gameecs.ValueSnapshot, bool) {
 	for _, instance := range component.Instances {
 		fields, found := findInstance(component, instance.Entity)
 		if found && stringField(fields, field) == value {
 			return instance.Entity, fields, true
 		}
 	}
+
 	return 0, nil, false
 }
 
+// stringField reads a string snapshot value, treating absent optional fields as
+// their wire-format zero value rather than panicking on schema evolution.
 func stringField(fields map[string]gameecs.ValueSnapshot, name string) string {
 	if value := fields[name].String; value != nil {
 		return *value
 	}
+
 	return ""
 }
 
+// intField reads an integer snapshot value, preserving zero-value behavior for
+// optional or older component fields.
 func intField(fields map[string]gameecs.ValueSnapshot, name string) int64 {
 	if value := fields[name].Int; value != nil {
 		return *value
 	}
+
 	return 0
 }
 
+// floatField reconstructs a float from its deterministic snapshot bit pattern;
+// absent optional fields remain zero.
 func floatField(fields map[string]gameecs.ValueSnapshot, name string) float64 {
 	if value := fields[name].Float; value != nil {
 		return math.Float64frombits(*value)
 	}
+
 	return 0
 }
 
+// boolField reads a boolean snapshot value while keeping absent optional fields
+// backward-compatible with false.
 func boolField(fields map[string]gameecs.ValueSnapshot, name string) bool {
 	if value := fields[name].Bool; value != nil {
 		return *value
 	}
+
 	return false
 }
 
+// entityField reads an ECS relationship without leaking a live entity handle;
+// zero continues to mean an absent relationship.
 func entityField(fields map[string]gameecs.ValueSnapshot, name string) uint64 {
 	if value := fields[name].Entity; value != nil {
 		return *value
 	}
+
 	return 0
 }

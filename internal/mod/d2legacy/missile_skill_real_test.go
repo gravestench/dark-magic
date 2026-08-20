@@ -18,28 +18,34 @@ func TestTargetArchivesBootSkillBehaviorFamilies(t *testing.T) {
 	if directory == "" {
 		t.Skip("set DARK_MAGIC_TEST_MPQ_DIRECTORY to the expansion 1.14d MPQ directory")
 	}
+
 	t.Setenv("MPQ_DIRECTORY", directory)
+
 	assets, err := content.FromEnvironment(content.Layer{Name: "d2legacy", FS: content.D2Legacy()})
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer assets.Close()
+	defer func() { _ = assets.Close() }()
 
 	engine := gameecs.New()
-	defer engine.Close()
+	defer func() { _ = engine.Close() }()
+
 	session, err := gamesession.New(engine, gamesession.Config{})
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer session.Close()
+	defer func() { _ = session.Close() }()
+
 	pinned, _, err := recordstore.Pin(assets)
 	if err != nil {
 		t.Fatal(err)
 	}
+
 	missiles, err := pinned.Load("data/global/excel/Missiles.txt")
 	if err != nil {
 		t.Fatal(err)
 	}
+
 	for missile, want := range map[string]string{
 		"firebolt":        "",
 		"amphibiangoo1":   "33",
@@ -52,13 +58,18 @@ func TestTargetArchivesBootSkillBehaviorFamilies(t *testing.T) {
 			t.Fatalf("owned expansion 1.14d missile %q KnockBack = %#v, want %q", missile, row, want)
 		}
 	}
+
 	fireball := rowBy(missiles, "Missile", "fireball")
-	if fireball == nil || fireball["CelFile"] != "Fireball" || fireball["NumDirections"] != "16" || fireball["Trans"] != "1" {
+	if fireball == nil ||
+		fireball["CelFile"] != "Fireball" ||
+		fireball["NumDirections"] != "16" ||
+		fireball["Trans"] != "1" {
 		t.Fatalf("owned expansion 1.14d fireball presentation fields = %#v", fireball)
 	}
+
 	authority, err := Start(t.Context(), content.D2Legacy(), pinned, engine, session, 314)
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer authority.Stop(t.Context())
+	defer func() { _ = authority.Stop(t.Context()) }()
 }

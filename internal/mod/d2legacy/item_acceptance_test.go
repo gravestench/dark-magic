@@ -12,15 +12,26 @@ import (
 	"github.com/gravestench/dark-magic/internal/game/simulation"
 )
 
+// TestItemReconnectRecoveryEquipmentVendorAndServiceRestoreIdentically covers
+// the full item lifecycle to ensure checkpoint recovery preserves every owner.
 func TestItemReconnectRecoveryEquipmentVendorAndServiceRestoreIdentically(t *testing.T) {
 	ctx := context.Background()
 	initial := itemAcceptanceBootstrap()
 	engine := gameecs.New()
+
 	session, err := gamesession.New(engine, gamesession.Config{CheckpointInterval: 1})
 	if err != nil {
 		t.Fatal(err)
 	}
-	authority, err := StartWithConfig(ctx, content.D2Legacy(), fixtureRecords{}, engine, session, Config{Seed: 91, InitialData: initial})
+
+	authority, err := StartWithConfig(
+		ctx,
+		content.D2Legacy(),
+		fixtureRecords{},
+		engine,
+		session,
+		Config{Seed: 91, InitialData: initial},
+	)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -31,30 +42,40 @@ func TestItemReconnectRecoveryEquipmentVendorAndServiceRestoreIdentically(t *tes
 	}); err != nil {
 		t.Fatal(err)
 	}
+
 	if err := session.Step(); err != nil {
 		t.Fatal(err)
 	}
+
 	replay, err := session.Replay()
 	if err != nil {
 		t.Fatal(err)
 	}
+
 	checkpoint := replay.Checkpoints[len(replay.Checkpoints)-1]
+
 	assertItemPlacement(t, engine, "sale", "held", "")
 
 	submitItemAcceptanceCommands(t, session)
 	itemAcceptanceSteps(t, session)
+
 	originalReplay, err := session.Replay()
 	if err != nil {
 		t.Fatal(err)
 	}
+
 	original := originalReplay.Checkpoints[len(originalReplay.Checkpoints)-1]
+
 	assertItemAcceptanceOutcome(t, engine)
+
 	if err := authority.Stop(ctx); err != nil {
 		t.Fatal(err)
 	}
+
 	if err := session.Close(); err != nil {
 		t.Fatal(err)
 	}
+
 	if err := engine.Close(); err != nil {
 		t.Fatal(err)
 	}
@@ -63,187 +84,248 @@ func TestItemReconnectRecoveryEquipmentVendorAndServiceRestoreIdentically(t *tes
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer restoredEngine.Close()
+	defer func() { _ = restoredEngine.Close() }()
+
 	restoredSession, err := gamesession.New(restoredEngine, gamesession.Config{CheckpointInterval: 1})
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer restoredSession.Close()
-	restored, err := StartWithConfig(ctx, content.D2Legacy(), fixtureRecords{}, restoredEngine, restoredSession, Config{Seed: 91, InitialData: initial, Restore: checkpoint.Participants})
+	defer func() { _ = restoredSession.Close() }()
+
+	restored, err := StartWithConfig(
+		ctx,
+		content.D2Legacy(),
+		fixtureRecords{},
+		restoredEngine,
+		restoredSession,
+		Config{Seed: 91, InitialData: initial, Restore: checkpoint.Participants},
+	)
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer restored.Stop(ctx)
+	defer func() { _ = restored.Stop(ctx) }()
 
 	// The held sale item survived the disconnect/checkpoint boundary before any
 	// transaction resumes against the reconstructed Lua runtime.
 	assertItemPlacement(t, restoredEngine, "sale", "held", "")
 	submitItemAcceptanceCommands(t, restoredSession)
 	itemAcceptanceSteps(t, restoredSession)
+
 	restoredReplay, err := restoredSession.Replay()
 	if err != nil {
 		t.Fatal(err)
 	}
+
 	continued := restoredReplay.Checkpoints[len(restoredReplay.Checkpoints)-1]
 	if continued.Checksum != original.Checksum {
 		t.Fatalf("restored item matrix checksum = %s, want %s", continued.Checksum, original.Checksum)
 	}
+
 	assertItemAcceptanceOutcome(t, restoredEngine)
 }
 
+// TestEquippedAttackRatingSourceIsAddedAndRemoved verifies derived attack
+// rating follows equipment ownership without leaving stale stat sources.
 func TestEquippedAttackRatingSourceIsAddedAndRemoved(t *testing.T) {
 	engine := gameecs.New()
-	defer engine.Close()
+	defer func() { _ = engine.Close() }()
+
 	session, err := gamesession.New(engine, gamesession.Config{})
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer session.Close()
+	defer func() { _ = session.Close() }()
+
 	authority, err := StartWithConfig(t.Context(), content.D2Legacy(), fixtureRecords{}, engine, session,
 		Config{Seed: 92, InitialData: itemAcceptanceBootstrap()})
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer authority.Stop(t.Context())
+	defer func() { _ = authority.Stop(t.Context()) }()
+
 	if err := session.Submit(simulation.Command{Tick: 1, Player: "system", Authority: simulation.AuthoritySystem,
 		Sequence: 1, Kind: "system.player.enter", Payload: itemAcceptancePlayerPayload(t)}); err != nil {
 		t.Fatal(err)
 	}
+
 	if err := session.Submit(itemCommand(t, 1, 1, "item.vendor_sell", map[string]any{
 		"item_id": "sale", "vendor": "charsi", "category": "weap",
 	})); err != nil {
 		t.Fatal(err)
 	}
+
 	if err := session.Submit(itemCommand(t, 1, 2, "item.move", map[string]any{
 		"item_id": "weapon", "destination": map[string]any{"container": "held"},
 	})); err != nil {
 		t.Fatal(err)
 	}
+
 	if err := session.Submit(itemCommand(t, 2, 3, "item.move", map[string]any{
 		"item_id": "weapon", "place_held": true,
 		"destination": map[string]any{"container": "equipment", "slot": "rarm", "weapon_set": 0},
 	})); err != nil {
 		t.Fatal(err)
 	}
+
 	for range 3 {
 		if err := session.Step(); err != nil {
 			t.Fatal(err)
 		}
 	}
+
 	assertPlayerAttackRating(t, engine, 965, 1)
+
 	if err := session.Submit(itemCommand(t, 4, 4, "item.move", map[string]any{
 		"item_id": "weapon", "destination": map[string]any{"container": "inventory", "x": 2, "y": 0},
 	})); err != nil {
 		t.Fatal(err)
 	}
+
 	for range 2 {
 		if err := session.Step(); err != nil {
 			t.Fatal(err)
 		}
 	}
+
 	assertPlayerAttackRating(t, engine, 65, 0)
 }
 
+// TestEquippedArmorDefenseSourcesAreAddedAndRemoved verifies armor defense
+// contributions appear and disappear with the corresponding equipment slots.
 func TestEquippedArmorDefenseSourcesAreAddedAndRemoved(t *testing.T) {
 	engine := gameecs.New()
-	defer engine.Close()
+	defer func() { _ = engine.Close() }()
+
 	session, err := gamesession.New(engine, gamesession.Config{})
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer session.Close()
+	defer func() { _ = session.Close() }()
+
 	authority, err := StartWithConfig(t.Context(), content.D2Legacy(), fixtureRecords{}, engine, session,
 		Config{Seed: 93, InitialData: itemAcceptanceBootstrap()})
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer authority.Stop(t.Context())
+	defer func() { _ = authority.Stop(t.Context()) }()
+
 	if err := session.Submit(simulation.Command{Tick: 1, Player: "system", Authority: simulation.AuthoritySystem,
 		Sequence: 1, Kind: "system.player.enter", Payload: itemAcceptancePlayerPayload(t)}); err != nil {
 		t.Fatal(err)
 	}
+
 	if err := session.Submit(itemCommand(t, 1, 1, "item.vendor_sell", map[string]any{
 		"item_id": "sale", "vendor": "charsi", "category": "weap",
 	})); err != nil {
 		t.Fatal(err)
 	}
+
 	if err := session.Submit(itemCommand(t, 1, 2, "item.move", map[string]any{
 		"item_id": "armor", "destination": map[string]any{"container": "held"},
 	})); err != nil {
 		t.Fatal(err)
 	}
+
 	if err := session.Submit(itemCommand(t, 2, 3, "item.move", map[string]any{
 		"item_id": "armor", "place_held": true,
 		"destination": map[string]any{"container": "equipment", "slot": "head"},
 	})); err != nil {
 		t.Fatal(err)
 	}
+
 	for range 3 {
 		if err := session.Step(); err != nil {
 			t.Fatal(err)
 		}
 	}
+
 	assertPlayerCombatStat(t, engine, "defense", 45, 1)
+
 	if err := session.Submit(itemCommand(t, 4, 4, "item.move", map[string]any{
 		"item_id": "weapon", "destination": map[string]any{"container": "held"},
 	})); err != nil {
 		t.Fatal(err)
 	}
+
 	if err := session.Submit(itemCommand(t, 5, 5, "item.move", map[string]any{
 		"item_id": "weapon", "place_held": true,
 		"destination": map[string]any{"container": "equipment", "slot": "rarm", "weapon_set": 0},
 	})); err != nil {
 		t.Fatal(err)
 	}
+
 	for range 3 {
 		if err := session.Step(); err != nil {
 			t.Fatal(err)
 		}
 	}
+
 	assertPlayerCombatStat(t, engine, "defense", 45, 1)
 	assertPlayerAttackRating(t, engine, 965, 1)
+
 	if err := session.Submit(itemCommand(t, 7, 6, "item.move", map[string]any{
 		"item_id": "armor", "destination": map[string]any{"container": "inventory", "x": 4, "y": 0},
 	})); err != nil {
 		t.Fatal(err)
 	}
+
 	for range 2 {
 		if err := session.Step(); err != nil {
 			t.Fatal(err)
 		}
 	}
+
 	assertPlayerCombatStat(t, engine, "defense", 5, 0)
 	assertPlayerAttackRating(t, engine, 965, 1)
 }
 
+// assertPlayerAttackRating names the common combat-stat assertion at the domain
+// level, keeping individual equipment scenarios focused on lifecycle changes.
 func assertPlayerAttackRating(t *testing.T, engine *gameecs.Engine, wanted int64, sources int) {
 	assertPlayerCombatStat(t, engine, "attack_rating", wanted, sources)
 }
 
-func assertPlayerCombatStat(t *testing.T, engine *gameecs.Engine, statName string, wanted int64, sources int) {
+// assertPlayerCombatStat checks both the resolved value and source cardinality;
+// equal totals alone would miss duplicated or stale equipment contributions.
+func assertPlayerCombatStat(
+	t *testing.T,
+	engine *gameecs.Engine,
+	statName string,
+	wanted int64,
+	sources int,
+) {
 	t.Helper()
+
 	stats, _ := akara.GetDynamicStore(engine.World(), "d2legacy.player.combat_stats")
 	value, _ := stats.Get(stats.Entities()[0])
+
 	rating, _ := value.Get(statName)
 	if rating != wanted {
 		t.Fatalf("%s = %v, want %d", statName, rating, wanted)
 	}
+
 	store, _ := akara.GetDynamicStore(engine.World(), "d2legacy.stat.source")
 	count := 0
+
 	for _, entity := range store.Entities() {
 		source, _ := store.Get(entity)
+
 		stat, _ := source.Get("stat")
 		if stat == statName {
 			count++
 		}
 	}
+
 	if count != sources {
 		t.Fatalf("%s sources = %d, want %d", statName, count, sources)
 	}
 }
 
+// submitItemAcceptanceCommands records the canonical multi-owner item workflow
+// with explicit command order so restore tests replay the same contract.
 func submitItemAcceptanceCommands(t *testing.T, session *gamesession.Session) {
 	t.Helper()
+
 	commands := []simulation.Command{
 		itemCommand(t, 2, 1, "item.vendor_sell", map[string]any{
 			"item_id": "sale", "vendor": "charsi", "category": "weap",
@@ -267,17 +349,33 @@ func submitItemAcceptanceCommands(t *testing.T, session *gamesession.Session) {
 	}
 }
 
-func itemCommand(t *testing.T, tick, sequence uint64, kind string, payload map[string]any) simulation.Command {
+// itemCommand marshals fixture payloads while preserving tick and sequence at
+// each call site, making authority ordering easy to audit.
+func itemCommand(
+	t *testing.T,
+	tick uint64,
+	sequence uint64,
+	kind string,
+	payload map[string]any,
+) simulation.Command {
 	t.Helper()
+
 	data, err := json.Marshal(payload)
 	if err != nil {
 		t.Fatal(err)
 	}
-	return simulation.Command{Tick: tick, Player: "alice", Authority: simulation.AuthorityPlayer, Sequence: sequence, Kind: kind, Payload: data}
+
+	return simulation.Command{
+		Tick: tick, Player: "alice", Authority: simulation.AuthorityPlayer,
+		Sequence: sequence, Kind: kind, Payload: data,
+	}
 }
 
+// itemAcceptanceSteps advances through each phase separately so a failure names
+// the ownership transition that failed instead of only the final outcome.
 func itemAcceptanceSteps(t *testing.T, session *gamesession.Session) {
 	t.Helper()
+
 	for range 2 {
 		if err := session.Step(); err != nil {
 			t.Fatal(err)
@@ -285,6 +383,8 @@ func itemAcceptanceSteps(t *testing.T, session *gamesession.Session) {
 	}
 }
 
+// assertItemAcceptanceOutcome verifies all terminal placements and service
+// effects together, guarding against items being duplicated between owners.
 func assertItemAcceptanceOutcome(t *testing.T, engine *gameecs.Engine) {
 	t.Helper()
 	assertItemPlacement(t, engine, "sale", "vendor", "weap")
@@ -292,61 +392,82 @@ func assertItemAcceptanceOutcome(t *testing.T, engine *gameecs.Engine) {
 	assertItemPlacement(t, engine, "weapon", "equipment", "rarm")
 	items, _ := akara.GetDynamicStore(engine.World(), "d2legacy.item.identity")
 	found := map[string]any{}
+
 	for _, entity := range items.Entities() {
 		item, _ := items.Get(entity)
 		id, _ := item.Get("id")
 		found[id.(string)] = item
 	}
+
 	if _, exists := found["service-material"]; exists {
 		t.Fatal("completed service retained its consumed material")
 	}
+
 	target := found["service-target"].(*akara.DynamicComponent)
+
 	applied, _ := target.Get("applied_services")
 	if applied != "socket" {
 		t.Fatalf("applied services = %v, want socket", applied)
 	}
+
 	layouts, _ := akara.GetDynamicStore(engine.World(), "d2legacy.items.layout")
 	layout, _ := layouts.Get(layouts.Entities()[0])
+
 	gold, _ := layout.Get("carried_gold")
 	if gold != int64(1025) {
 		t.Fatalf("carried gold = %v, want 1025 after sale and service", gold)
 	}
+
 	profiles, _ := akara.GetDynamicStore(engine.World(), "d2legacy.combat.melee_profile")
 	profile, _ := profiles.Get(profiles.Entities()[0])
 	rangeValue, _ := profile.Get("range")
 	minimum, _ := profile.Get("physical_min")
+
 	maximum, _ := profile.Get("physical_max")
 	if rangeValue != float64(3) || minimum != int64(512) || maximum != int64(1024) {
 		t.Fatalf("equipped melee profile = %v/%v-%v", rangeValue, minimum, maximum)
 	}
 }
 
+// assertItemPlacement checks item identity, container, and slot as one ownership
+// tuple because any partial match represents an invalid inventory state.
 func assertItemPlacement(t *testing.T, engine *gameecs.Engine, wanted, container, slot string) {
 	t.Helper()
+
 	items, _ := akara.GetDynamicStore(engine.World(), "d2legacy.item.identity")
 	placements, _ := akara.GetDynamicStore(engine.World(), "d2legacy.item.placement")
+
 	for _, entity := range items.Entities() {
 		item, _ := items.Get(entity)
+
 		id, _ := item.Get("id")
 		if id != wanted {
 			continue
 		}
+
 		placed, present := placements.Get(entity)
 		if !present {
 			t.Fatalf("item %q has no placement", wanted)
 		}
+
 		actualContainer, _ := placed.Get("container")
+
 		actualSlot, _ := placed.Get("slot")
 		if actualContainer != container || actualSlot != slot {
 			t.Fatalf("item %q placement = %v/%v, want %s/%s", wanted, actualContainer, actualSlot, container, slot)
 		}
+
 		return
 	}
+
 	t.Fatalf("item %q not found", wanted)
 }
 
+// itemAcceptancePlayerPayload builds the stable player-entry command shared by
+// fresh and restored workflows, preventing fixture drift between timelines.
 func itemAcceptancePlayerPayload(t *testing.T) []byte {
 	t.Helper()
+
 	payload, err := json.Marshal(map[string]any{
 		"character_id": "hero", "player": "alice", "name": "Hero", "class": "Amazon",
 		"level": 1, "experience": 0, "dexterity": 20, "vitality": 20, "defense": 0,
@@ -359,9 +480,12 @@ func itemAcceptancePlayerPayload(t *testing.T) []byte {
 	if err != nil {
 		t.Fatal(err)
 	}
+
 	return payload
 }
 
+// itemAcceptanceBootstrap defines immutable item and service records needed by
+// the scenario; keeping them together exposes the fixture's authoritative data.
 func itemAcceptanceBootstrap() map[string]any {
 	item := func(id, code, container string) map[string]any {
 		return map[string]any{"id": id, "code": code, "width": 1.0, "height": 1.0, "container": container}
@@ -383,6 +507,7 @@ func itemAcceptanceBootstrap() map[string]any {
 	target["slot"] = "target"
 	material := item("service-material", "r01", "quest_service")
 	material["slot"] = "material"
+
 	return map[string]any{
 		"d2legacy.items": map[string]any{
 			"owner": "alice", "inventory_width": 10.0, "inventory_height": 4.0,

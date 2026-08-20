@@ -1,25 +1,22 @@
 package player
 
 import (
-	"encoding/json"
 	"errors"
-	"fmt"
 	"math"
 	"strings"
-
-	"github.com/gravestench/dark-magic/internal/game/simulation"
 )
 
+const ClientViewVersion uint32 = 12
+
 const (
-	ClientViewVersion    uint32 = 12
-	MaxHUDLearnedSkills         = 256
-	MaxHUDBeltSlots             = 16
-	MaxPrivateItems             = 1024
-	maxViewIdentityBytes        = 128
-	maxViewLabelBytes           = 256
-	maxViewTokenBytes           = 256
-	maxItemGridDimension        = 256
-	maxItemDimension            = 16
+	MaxHUDLearnedSkills  = 256
+	MaxHUDBeltSlots      = 16
+	MaxPrivateItems      = 1024
+	maxViewIdentityBytes = 128
+	maxViewLabelBytes    = 256
+	maxViewTokenBytes    = 256
+	maxItemGridDimension = 256
+	maxItemDimension     = 16
 )
 
 var ErrClientView = errors.New("client view: invalid projection")
@@ -49,49 +46,67 @@ func ValidateClientView(view ClientView, tick uint64) error {
 		view.Events.Version != EventViewVersion || view.Events.Tick != tick {
 		return ErrClientView
 	}
+
 	if err := validateHUDView(view.HUD); err != nil {
 		return err
 	}
+
 	if err := validateDecodedWorldView(view.World); err != nil {
 		return err
 	}
+
 	if err := validatePrivateView(view.Private); err != nil {
 		return err
 	}
+
 	if err := validateEventView(view.Events, tick); err != nil {
 		return err
 	}
+
 	return validatePartyView(view.Party, view.HUD.Player.PlayerID)
 }
 
+// validatePartyView enforces owner-first ordering and consistent party identity.
+// Those invariants let presentation trust roster[0] without a second lookup.
 func validatePartyView(party PartyView, owner string) error {
 	if len(party.Roster) < 1 || len(party.Roster) > MaxPartyViewRoster ||
 		!bounded(party.PartyID, maxViewIdentityBytes) || party.Revision > uint64(1<<63-1) ||
 		party.Roster[0].PlayerID != owner || party.Roster[0].Relationship != "self" {
 		return ErrClientView
 	}
-	seen, ownerFound, memberFound := make(map[string]struct{}, len(party.Roster)), false, false
+
+	seen := make(map[string]struct{}, len(party.Roster))
+	ownerFound := false
+	memberFound := false
+
 	for _, entry := range party.Roster {
 		if !boundedRequired(entry.PlayerID, maxViewIdentityBytes) ||
 			!boundedRequired(entry.Name, maxViewLabelBytes) || !boundedRequired(entry.Class, maxWorldKindBytes) ||
 			entry.Level < 1 || !validPartyRelationship(entry.Relationship) {
 			return ErrClientView
 		}
+
 		if _, duplicate := seen[entry.PlayerID]; duplicate {
 			return ErrClientView
 		}
+
 		seen[entry.PlayerID] = struct{}{}
 		if entry.PlayerID == owner {
 			ownerFound = entry.Relationship == "self"
 		}
+
 		memberFound = memberFound || entry.Relationship == "party"
 	}
+
 	if !ownerFound || (party.PartyID == "") != !memberFound {
 		return ErrClientView
 	}
+
 	return nil
 }
 
+// validPartyRelationship limits the client to the presentation vocabulary it
+// understands, preventing unknown relationship states from gaining UI meaning.
 func validPartyRelationship(value string) bool {
 	switch value {
 	case "self", "party", "invited_you", "invited", "unavailable", "available":
@@ -101,6 +116,8 @@ func validPartyRelationship(value string) bool {
 	}
 }
 
+// validateHUDView bounds every owner-private collection and numeric field before
+// presentation allocates resources or derives movement and health state.
 func validateHUDView(hud HUD) error {
 	identity := hud.Player
 	if !boundedRequired(identity.PlayerID, maxViewIdentityBytes) ||
@@ -118,24 +135,32 @@ func validateHUDView(hud HUD) error {
 		len(hud.Belt.Slots) > MaxHUDBeltSlots || hud.Belt.Capacity < 0 || hud.Belt.Capacity > MaxHUDBeltSlots {
 		return ErrClientView
 	}
+
 	for _, slot := range hud.Belt.Slots {
 		if !bounded(slot, maxViewIdentityBytes) {
 			return ErrClientView
 		}
 	}
+
 	for _, skill := range hud.Skills.Learned {
 		if skill.SkillID < 0 || skill.Level < 0 || skill.ListRow < 0 {
 			return ErrClientView
 		}
 	}
+
 	return nil
 }
 
+// validateDecodedWorldView rejects duplicate public identities and malformed
+// nested entities so client-side maps cannot silently overwrite one another.
 func validateDecodedWorldView(world WorldView) error {
-	if len(world.Entities) > MaxWorldViewEntities || len(world.Missiles) > MaxWorldViewMissiles || len(world.States) > MaxWorldViewStates ||
+	if len(world.Entities) > MaxWorldViewEntities ||
+		len(world.Missiles) > MaxWorldViewMissiles ||
+		len(world.States) > MaxWorldViewStates ||
 		!finiteView(world.Origin.X, world.Origin.Y) {
 		return ErrClientView
 	}
+
 	seen := make(map[string]struct{}, len(world.Entities)+len(world.Missiles))
 	for _, entity := range world.Entities {
 		if err := validateWorldEntity(entity); err != nil ||
@@ -143,38 +168,50 @@ func validateDecodedWorldView(world WorldView) error {
 			!bounded(entity.Mode, maxWorldKindBytes) {
 			return ErrClientView
 		}
+
 		if (entity.Health == nil) != (entity.MaxHealth == nil) ||
 			(entity.Health != nil && (*entity.Health < 0 || *entity.MaxHealth < 0 || *entity.Health > *entity.MaxHealth)) {
 			return ErrClientView
 		}
+
 		if _, duplicate := seen[entity.ID]; duplicate {
 			return ErrClientView
 		}
+
 		seen[entity.ID] = struct{}{}
 	}
+
 	for _, missile := range world.Missiles {
 		if err := validateWorldMissile(missile); err != nil {
 			return err
 		}
+
 		if _, duplicate := seen[missile.ID]; duplicate {
 			return ErrClientView
 		}
+
 		seen[missile.ID] = struct{}{}
 	}
+
 	states := make(map[worldStateKey]struct{}, len(world.States))
 	for _, state := range world.States {
 		if err := validateWorldState(state); err != nil {
 			return err
 		}
+
 		key := worldStateKey{targetID: state.TargetID, stateID: state.StateID}
 		if _, duplicate := states[key]; duplicate {
 			return ErrClientView
 		}
+
 		states[key] = struct{}{}
 	}
+
 	return nil
 }
 
+// validatePrivateView bounds inventory shapes, strings, and interaction values.
+// This is a trust boundary because all fields may originate from a remote host.
 func validatePrivateView(private PrivateView) error {
 	layout := private.Items.Layout
 	if len(private.Items.Items) > MaxPrivateItems ||
@@ -186,6 +223,7 @@ func validatePrivateView(private PrivateView) error {
 		layout.CarriedGold < 0 || layout.StashedGold < 0 {
 		return ErrClientView
 	}
+
 	seen := make(map[string]struct{}, len(private.Items.Items))
 	for _, item := range private.Items.Items {
 		if !boundedRequired(item.ID, maxViewIdentityBytes) || !boundedRequired(item.Code, maxWorldKindBytes) ||
@@ -193,72 +231,59 @@ func validatePrivateView(private PrivateView) error {
 			!bounded(item.Container, maxWorldKindBytes) || !bounded(item.Slot, maxWorldKindBytes) ||
 			!bounded(item.InventoryDC6, maxViewTokenBytes) || !bounded(item.WorldDC6, maxViewTokenBytes) ||
 			!bounded(item.Composite, maxViewTokenBytes) || !bounded(item.WeaponClass, maxWorldKindBytes) ||
-			item.Width < 0 || item.Width > maxItemDimension || item.Height < 0 || item.Height > maxItemDimension || item.BaseCost < 0 {
+			item.Width < 0 || item.Width > maxItemDimension ||
+			item.Height < 0 || item.Height > maxItemDimension || item.BaseCost < 0 {
 			return ErrClientView
 		}
+
 		if _, duplicate := seen[item.ID]; duplicate {
 			return ErrClientView
 		}
+
 		seen[item.ID] = struct{}{}
 	}
+
 	target := private.Interaction.Target
 	if private.Interaction.Active != (target != nil) {
 		return ErrClientView
 	}
+
 	if target != nil && (!boundedRequired(target.ID, maxViewIdentityBytes) ||
 		!bounded(target.NPC, maxWorldKindBytes) || !bounded(target.Vendor, maxWorldKindBytes) ||
 		!bounded(target.Categories, maxViewTokenBytes) || !bounded(target.Services, maxViewTokenBytes) ||
 		!finiteView(target.X, target.Y, target.Radius) || target.Radius < 0) {
 		return ErrClientView
 	}
+
 	return nil
 }
 
-func bounded(value string, maximum int) bool { return len(value) <= maximum }
+// bounded applies byte-oriented wire limits, matching JSON allocation cost and
+// preserving the protocol's existing treatment of UTF-8 strings.
+func bounded(value string, maximum int) bool {
+	return len(value) <= maximum
+}
 
+// boundedRequired combines a byte bound with the nonblank identity invariant
+// used for fields that become client-side map keys.
 func boundedRequired(value string, maximum int) bool {
 	return strings.TrimSpace(value) != "" && bounded(value, maximum)
 }
 
-func boundedDimension(value int64) bool { return value >= 0 && value <= maxItemGridDimension }
+// boundedDimension prevents untrusted inventory layouts from requesting grids
+// beyond the presentation client's fixed safety limit.
+func boundedDimension(value int64) bool {
+	return value >= 0 && value <= maxItemGridDimension
+}
 
+// finiteView rejects NaN and infinity before values reach rendering arithmetic,
+// where they could poison transforms and spatial comparisons.
 func finiteView(values ...float64) bool {
 	for _, value := range values {
 		if math.IsNaN(value) || math.IsInf(value, 0) {
 			return false
 		}
 	}
-	return true
-}
 
-func ProjectClientView(playerID string, checkpoint simulation.Checkpoint) (json.RawMessage, error) {
-	hudPayload, err := ProjectHUD(playerID, checkpoint)
-	if err != nil {
-		return nil, err
-	}
-	worldPayload, err := ProjectWorldView(playerID, checkpoint)
-	if err != nil {
-		return nil, err
-	}
-	private, err := ProjectPrivateView(playerID, checkpoint)
-	if err != nil {
-		return nil, err
-	}
-	party, err := ProjectPartyView(playerID, checkpoint)
-	if err != nil {
-		return nil, err
-	}
-	events, err := ProjectEventView(playerID, checkpoint)
-	if err != nil {
-		return nil, err
-	}
-	var hud HUD
-	var world WorldView
-	if err := json.Unmarshal(hudPayload, &hud); err != nil {
-		return nil, fmt.Errorf("client view: HUD: %w", err)
-	}
-	if err := json.Unmarshal(worldPayload, &world); err != nil {
-		return nil, fmt.Errorf("client view: world: %w", err)
-	}
-	return json.Marshal(ClientView{Version: ClientViewVersion, Tick: checkpoint.Tick, HUD: hud, World: world, Private: private, Party: party, Events: events})
+	return true
 }

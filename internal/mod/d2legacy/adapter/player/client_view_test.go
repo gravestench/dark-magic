@@ -5,6 +5,8 @@ import (
 	"testing"
 )
 
+// TestValidateClientViewRejectsUnboundedOrInvalidNetworkState exercises the
+// combined envelope as an untrusted network boundary.
 func TestValidateClientViewRejectsUnboundedOrInvalidNetworkState(t *testing.T) {
 	valid := validClientView(7)
 	if err := ValidateClientView(valid, 7); err != nil {
@@ -44,6 +46,7 @@ func TestValidateClientViewRejectsUnboundedOrInvalidNetworkState(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			candidate := validClientView(7)
 			mutate(&candidate)
+
 			if err := ValidateClientView(candidate, 7); err == nil {
 				t.Fatal("invalid network projection was accepted")
 			}
@@ -51,6 +54,8 @@ func TestValidateClientViewRejectsUnboundedOrInvalidNetworkState(t *testing.T) {
 	}
 }
 
+// validClientView returns the smallest internally consistent envelope, letting
+// each validation case mutate exactly one invariant.
 func validClientView(tick uint64) ClientView {
 	return ClientView{
 		Version: ClientViewVersion,
