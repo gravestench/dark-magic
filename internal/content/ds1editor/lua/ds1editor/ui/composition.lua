@@ -387,7 +387,8 @@ function composition.button(parent, options)
     local content = measured(options)
     local inset_left = options.padding_left or options.padding_x or metrics.button_inset_left
     local inset_right = options.padding_right or options.padding_x or metrics.button_inset_right
-    local width = math.max(options.width or 0, metrics.button_min_width,
+    local minimum_width = options.min_width or metrics.button_min_width
+    local width = math.max(options.width or 0, minimum_width,
         content.width + inset_left + inset_right)
     local button = composition.strip(parent, {
         left=options.left or 0, top=options.top or 0, width=width,
@@ -422,7 +423,7 @@ function composition.button(parent, options)
         self.content = content
         if not options.width then
             self:set_bounds(self.left, self.top,
-                math.max(metrics.button_min_width, content.width + inset_left + inset_right))
+                math.max(minimum_width, content.width + inset_left + inset_right))
         end
         position_content()
     end

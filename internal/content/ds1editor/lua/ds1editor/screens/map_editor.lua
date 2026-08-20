@@ -119,16 +119,22 @@ local function box(parent, rect, color, z)
     return node
 end
 
+-- Apply measured bitmap text and re-anchor the node from its top-left layout
+-- coordinate. Dynamic multi-line labels must be repositioned after set_text:
+-- changing the texture height while retaining its old center makes it grow
+-- upward into neighboring content.
+local function set_label(node, value, x, y, width, alignment, style)
+    local actual_width = width or 200
+    local _, height = text.set(node, style or "font_lab_caption", value, actual_width, alignment or "left")
+    node:set_position(x + actual_width / 2, y + height / 2)
+    return height
+end
+
 -- Create measured bitmap text using top-left UI coordinates.
 local function label(parent, value, x, y, width, alignment, style, z)
     local node = render.create("hud", parent)
     node:set_z(z or 0)
-    local actual_width = width or 200
-    local _, height = text.set(node, style or "font_lab_caption", value, actual_width, alignment or "left")
-    -- Render nodes are centered on their position. Accept top-left layout facts
-    -- here so every call site can use ordinary UI coordinates without clipping
-    -- headings at the window edge or drifting controls at larger resolutions.
-    node:set_position(x + actual_width / 2, y + height / 2)
+    set_label(node, value, x, y, width, alignment, style)
     return node
 end
 
@@ -196,10 +202,13 @@ function map_editor:refresh_chrome()
         self.layer_boxes[index]:set_state(visibility[layer.kind] and "selected" or "idle")
     end
     local brush = self.brush
-    text.set(self.brush_meta, "font_lab_color", string.format(
-        "[gold]BRUSH[/]\n[white]%02d / %02d / %02d[/]\n[grey]type / style / sequence[/]",
-        brush.orientation or 0, brush.style or 0, brush.sequence or 0
-    ), self.inspector_right - self.inspector_left - 36, "left")
+    if self.brush_meta and not self.selected_compact then
+        set_label(self.brush_meta, string.format(
+            "[gold]BRUSH[/]\n[white]%02d / %02d / %02d[/]\n[grey]type / style / sequence[/]",
+            brush.orientation or 0, brush.style or 0, brush.sequence or 0
+        ), self.inspector_left + 24, layout.tileset_heading + 4,
+            self.selected_preview_rect.left - self.inspector_left - 36, "left", "font_lab_caption")
+    end
 end
 
 -- Switch inspector subtrees while retaining both panels for cheap toggles.
@@ -811,8 +820,8 @@ function map_editor:refresh_tile_grid()
             if ok then
                 local scale = math.min(
                     0.7,
-                    (control.width - 8) / math.max(1, width),
-                    (control.height - 17) / math.max(1, height)
+                    control.preview_width / math.max(1, width),
+                    control.preview_height / math.max(1, height)
                 )
                 control.preview:set_scale(scale, scale)
             end
@@ -887,7 +896,12 @@ function map_editor:select_tile(choice)
             return self.tile_preview:set_dt1(self.brush.source_path, self.palette, self.brush.source_index, "composite")
         end)
         if ok then
-            local scale = math.min(1, 156 / math.max(1, width, height))
+            local bounds = self.selected_preview_rect
+            local scale = math.min(
+                1,
+                (bounds.right - bounds.left) / math.max(1, width),
+                (bounds.bottom - bounds.top) / math.max(1, height)
+            )
             self.tile_preview:set_scale(scale, scale)
         end
     end
@@ -939,6 +953,10 @@ end
 function map_editor:refresh_selected_preview()
     if not self.tile_preview then return end
     self:clear_selected_preview_nodes()
+    if self.selected_compact then
+        self.tile_preview:set_visible(false)
+        return
+    end
     local selected = self.selected_cell
     if not selected then
         local active_kind = layers[self.layer_index].kind
@@ -949,8 +967,10 @@ function map_editor:refresh_selected_preview()
     self.tile_preview:set_visible(false)
     local ok, cell = pcall(editor.cell, selected.point.x, selected.point.y)
     if not ok then return end
-    local center_x = (self.inspector_left + self.inspector_right) / 2
-    local baseline = layout.tileset_rows + 76
+    local bounds = self.selected_preview_rect
+    local baseline = (bounds.bottom - bounds.top) / 2
+    local available_width = bounds.right - bounds.left
+    local available_height = bounds.bottom - bounds.top
     local groups = {
         {kind="floor", values=cell.floors, z=2},
         {kind="wall", values=cell.walls, z=3},
@@ -960,14 +980,19 @@ function map_editor:refresh_selected_preview()
         if self.selected_visibility[group.kind] then
             for _, value in ipairs(group.values or {}) do
                 if value.source_path and value.source_index and (value.properties or 0) ~= 0 then
-                    local node = render.create("hud", self.selected_root)
+                    local node = render.create("hud", self.selected_preview_root)
                     local loaded, width, height = pcall(function()
                         return node:set_dt1(value.source_path, self.palette, value.source_index, "composite")
                     end)
                     if loaded then
-                        local scale = math.min(1, 156 / math.max(1, width, height))
+                        local scale = math.min(
+                            1,
+                            available_width / math.max(1, width),
+                            available_height / math.max(1, height)
+                        )
                         node:set_scale(scale, scale)
-                        node:set_position(center_x, baseline - height * scale / 2)
+                        node:set_position(0, baseline - height * scale / 2)
+                        node:set_clip(bounds.left, bounds.top, available_width, available_height)
                         node:set_z(group.z)
                         self.selected_preview_nodes[#self.selected_preview_nodes + 1] = node
                     else
@@ -978,14 +1003,19 @@ function map_editor:refresh_selected_preview()
         end
     end
     if self.selected_visibility.collision and self.preview_world then
-        local node = render.create("hud", self.selected_root)
+        local node = render.create("hud", self.selected_preview_root)
         local point = selected.point
         local _, _, width, height = node:set_world_collision_region(
             self.preview_world, point.x * 5, point.y * 5, (point.x + 1) * 5, (point.y + 1) * 5
         )
-        local scale = math.min(1, 156 / math.max(1, width, height))
+        local scale = math.min(
+            1,
+            available_width / math.max(1, width),
+            available_height / math.max(1, height)
+        )
         node:set_scale(scale, scale)
-        node:set_position(center_x, baseline - height * scale / 2)
+        node:set_position(0, baseline - height * scale / 2)
+        node:set_clip(bounds.left, bounds.top, available_width, available_height)
         node:set_z(8)
         self.selected_preview_nodes[#self.selected_preview_nodes + 1] = node
     end
@@ -997,35 +1027,70 @@ function map_editor:refresh_selected_view()
     self:refresh_selected_preview()
     local selected, value = self.selected_cell, self.selected_cell and self.selected_cell.value
     if not selected or not value then
-        text.set(
+        local prompt = self.selected_compact
+            and "[grey]PICK a non-empty tile to inspect it.[/]"
+            or "[grey]Use PICK and click a non-empty floor, wall, or shadow record to inspect and edit it.[/]"
+        set_label(
             self.selected_meta,
-            "font_lab_color",
-            "[grey]Use PICK and click a non-empty floor, wall, or shadow record to inspect and edit it.[/]",
-            self.inspector_right - self.inspector_left - 36,
-            "left"
+            prompt,
+            self.selected_meta_left,
+            self.selected_meta_top,
+            self.selected_meta_width,
+            "left",
+            "font_lab_caption"
         )
         for _, control in ipairs(self.edit_controls or {}) do
             control.box:set_visible(false)
             control.label:set_visible(false)
         end
+        for _, node in pairs(self.edit_value_labels or {}) do node:set_visible(false) end
+        if self.hidden_control then self.hidden_control:set_visible(false) end
         return
     end
     local orientation = value.orientation or (selected.kind == "shadow" and 13 or 0)
-    text.set(self.selected_meta, "font_lab_color", string.format(
-        "[gold]CELL[/] %d, %d   [gold]%s[/]\n"
-            .. "[white]%02d / %02d / %02d[/]   RAW 0x%08X\n"
-            .. "[gold]DT1[/] %s  #%d\n"
-            .. "[grey]%d×%d  rarity %d  dir %d  roof %d\n"
-            .. "Collision cells: walk %d  LOS %d  jump %d  player %d  light %d[/]",
-        selected.point.x, selected.point.y, string.upper(selected.kind), orientation, value.style or 0,
-        value.sequence or 0, value.properties or 0, file_name(value.source_path), value.source_index or -1,
-        value.width or 0, math.abs(value.height or 0), value.rarity or 0, value.direction or 0,
-        value.roof_height or 0, value.blocked_walk or 0, value.blocked_los or 0, value.blocked_jump or 0,
-        value.blocked_player or 0, value.blocked_light or 0
-    ), self.inspector_right - self.inspector_left - 36, "left")
+    local metadata
+    if self.selected_compact then
+        metadata = string.format(
+            "[gold]%d,%d %s[/] [white]%02d/%02d/%02d[/]  %s #%d",
+            selected.point.x, selected.point.y, string.upper(selected.kind), orientation, value.style or 0,
+            value.sequence or 0, file_name(value.source_path), value.source_index or -1
+        )
+    else
+        metadata = string.format(
+            "[gold]CELL %d, %d  %s[/]   [white]%02d/%02d/%02d[/]   RAW 0x%08X\n"
+                .. "[gold]DT1[/] %s #%d   [grey]%dx%d  R%d D%d H%d[/]\n"
+                .. "[grey]DT1 FLAGS  walk %d  LOS %d  jump %d  player %d  light %d[/]",
+            selected.point.x, selected.point.y, string.upper(selected.kind), orientation, value.style or 0,
+            value.sequence or 0, value.properties or 0, file_name(value.source_path), value.source_index or -1,
+            value.width or 0, math.abs(value.height or 0), value.rarity or 0, value.direction or 0,
+            value.roof_height or 0, value.blocked_walk or 0, value.blocked_los or 0, value.blocked_jump or 0,
+            value.blocked_player or 0, value.blocked_light or 0
+        )
+    end
+    set_label(self.selected_meta, metadata, self.selected_meta_left, self.selected_meta_top,
+        self.selected_meta_width, "left", "font_lab_caption")
     for _, control in ipairs(self.edit_controls or {}) do
+        control.disabled = control.field == "orientation" and selected.kind ~= "wall"
         control.box:set_visible(true)
         control.label:set_visible(true)
+        control.box:set_state(control.disabled and "disabled" or "idle")
+    end
+    local field_values = {
+        orientation=orientation,
+        style=value.style or 0,
+        sequence=value.sequence or 0,
+        prop1=value.prop1 or ((value.properties or 0) % 256),
+        unknown1=value.unknown1 or (math.floor((value.properties or 0) / 16384) % 64),
+        unknown2=value.unknown2 or (math.floor((value.properties or 0) / 67108864) % 32),
+    }
+    for field, node in pairs(self.edit_value_labels or {}) do
+        node:set_visible(true)
+        text.set(node, "font_lab_caption", string.format("%02d", field_values[field] or 0), 30, "center")
+    end
+    if self.hidden_control then
+        self.hidden_control:set_visible(true)
+        self.hidden_control:set_label(value.hidden and "HIDDEN ON" or "HIDDEN OFF")
+        self.hidden_control:set_state(value.hidden and "selected" or "idle")
     end
 end
 
@@ -1043,6 +1108,14 @@ function map_editor:edit_selected(field, delta)
     elseif field == "prop1" then
         local prop1 = clamp(properties % 256 + delta, 0, 255)
         properties = properties - properties % 256 + prop1
+    elseif field == "unknown1" then
+        local current = math.floor(properties / 16384) % 64
+        local next_value = clamp(current + delta, 0, 63)
+        properties = properties + (next_value - current) * 16384
+    elseif field == "unknown2" then
+        local current = math.floor(properties / 67108864) % 32
+        local next_value = clamp(current + delta, 0, 31)
+        properties = properties + (next_value - current) * 67108864
     elseif field == "hidden" then
         properties = properties >= 2147483648 and properties - 2147483648 or properties + 2147483648
     else return end
@@ -1229,7 +1302,7 @@ function map_editor:click_chrome(pointer_x, pointer_y)
         end
     elseif self.inspector_mode == "selected" then
         for _, control in ipairs(self.edit_controls) do
-            if in_rect(pointer_x, pointer_y, control.rect) then
+            if not control.disabled and in_rect(pointer_x, pointer_y, control.rect) then
                 self:edit_selected(control.field, control.delta); return true
             end
         end
@@ -1467,8 +1540,16 @@ function map_editor:create()
         local left = self.inspector_left + 18 + column * (tile_width + tile_gap)
         local top = tile_top + row * (tile_height + tile_gap)
         local rect = {left=left, top=top, right=left + tile_width, bottom=top + tile_height}
-        local preview = render.create("hud", self.library_root)
-        preview:set_position((rect.left + rect.right) / 2, rect.top + 36)
+        -- Give every thumbnail its own positioned root. DT1 images are local
+        -- to the card instead of inheriting a screen-space coordinate through
+        -- a shared list root, and an absolute clip keeps tall wall art inside
+        -- the recessed card.
+        local preview_root = render.create("hud", self.library_root)
+        preview_root:set_position((rect.left + rect.right) / 2, rect.top + 36)
+        preview_root:set_z(2)
+        local preview = render.create("hud", preview_root)
+        preview:set_position(0, 0)
+        preview:set_clip(rect.left + 4, rect.top + 4, tile_width - 8, tile_height - 22)
         preview:set_z(2)
         self.tile_cells[slot] = {
             box=ui.recess(self.library_root, {
@@ -1486,53 +1567,111 @@ function map_editor:create()
                 "font_lab_caption",
                 3
             ),
+            preview_root=preview_root,
+            preview_width=tile_width - 8,
+            preview_height=tile_height - 22,
             rect=rect, width=tile_width, height=tile_height,
         }
     end
 
     self.selected_root = render.create("hud", self.root)
     self.selected_root:set_z(20)
-    self.tile_preview = render.create("hud", self.selected_root)
-    self.tile_preview:set_position((self.inspector_left + self.inspector_right) / 2, layout.tileset_rows + 30)
+    local selected_left = self.inspector_left + 18
+    local selected_width = self.inspector_right - self.inspector_left - 36
+    local selected_top = layout.tileset_heading - 4
+    local selected_room = canvas.bottom - selected_top
+    self.selected_compact = selected_room < 300
+    local hero_height = self.selected_compact and 0 or 72
+    local preview_left = self.inspector_left + math.floor((self.inspector_right - self.inspector_left) * 0.52)
+    self.selected_preview_rect = {
+        left=preview_left + 4,
+        top=selected_top + 4,
+        right=self.inspector_right - 22,
+        bottom=selected_top + math.max(32, hero_height) - 4,
+    }
+    self.selected_hero = ui.recess(self.selected_root, {
+        left=self.inspector_left + 12,
+        top=selected_top,
+        width=self.inspector_right - self.inspector_left - 24,
+        height=math.max(32, hero_height),
+        z=1,
+        seed=103,
+    })
+    self.selected_hero:set_visible(not self.selected_compact)
+    self.selected_preview_root = render.create("hud", self.selected_root)
+    self.selected_preview_root:set_position(
+        (self.selected_preview_rect.left + self.selected_preview_rect.right) / 2,
+        (self.selected_preview_rect.top + self.selected_preview_rect.bottom) / 2
+    )
+    self.selected_preview_root:set_z(2)
+    self.selected_preview_root:set_visible(not self.selected_compact)
+    self.tile_preview = render.create("hud", self.selected_preview_root)
+    self.tile_preview:set_position(0, 0)
+    self.tile_preview:set_clip(
+        self.selected_preview_rect.left,
+        self.selected_preview_rect.top,
+        self.selected_preview_rect.right - self.selected_preview_rect.left,
+        self.selected_preview_rect.bottom - self.selected_preview_rect.top
+    )
     self.tile_preview:set_z(2)
+    self.selected_meta_left = selected_left
+    self.selected_meta_top = self.selected_compact and selected_top or selected_top + hero_height + 4
+    self.selected_meta_width = selected_width
     self.selected_meta = label(
         self.selected_root,
         "",
-        self.inspector_left + 18,
-        layout.physical_heading,
-        self.inspector_right - self.inspector_left - 36,
+        self.selected_meta_left,
+        self.selected_meta_top,
+        self.selected_meta_width,
         "left",
-        "font_lab_color",
+        "font_lab_caption",
         2
     )
+    local edit_columns = self.selected_compact and 3 or 2
+    local edit_rows_count = math.ceil(6 / edit_columns)
+    local edit_height = 32 + edit_rows_count * 36 + 36
+    local edit_top = canvas.bottom - edit_height
     ui.section(self.selected_root, {
         left=self.inspector_left + 12,
-        top=canvas.bottom - 244,
+        top=edit_top,
         width=self.inspector_right - self.inspector_left - 24,
         z=1,
-        seed=103,
+        seed=104,
     })
     label(
         self.selected_root,
         "[gold]AUTHORED DS1 FIELDS[/]",
         self.inspector_left + 18,
-        canvas.bottom - 236,
+        edit_top + 8,
         self.inspector_right - self.inspector_left - 36,
         "left",
         "font_lab_caption",
         2
     )
     self.edit_controls = {}
-    local edit_rows = {{"TYPE", "orientation"}, {"STYLE", "style"}, {"SEQUENCE", "sequence"}, {"PROP1", "prop1"}}
-    for row, value in ipairs(edit_rows) do
-        local top = canvas.bottom - 216 + (row - 1) * 42
-        label(self.selected_root, value[1], self.inspector_left + 18, top + 11, 88, "left", "font_lab_caption", 2)
-        for _, action in ipairs({{-1, "−"}, {1, "+"}}) do
-            local left = self.inspector_right - (action[1] == -1 and 104 or 56)
-            local rect = {left=left, top=top, right=left + 44, bottom=top + 40}
+    self.edit_value_labels = {}
+    local edit_fields = {
+        {"TYPE", "orientation"}, {"STYLE", "style"}, {"SEQ", "sequence"},
+        {"PROP1", "prop1"}, {"AUX14", "unknown1"}, {"AUX26", "unknown2"},
+    }
+    local field_gap = 6
+    local field_width = math.floor((selected_width - field_gap * (edit_columns - 1)) / edit_columns)
+    for index, value in ipairs(edit_fields) do
+        local column = (index - 1) % edit_columns
+        local row = math.floor((index - 1) / edit_columns)
+        local left = selected_left + column * (field_width + field_gap)
+        local top = edit_top + 32 + row * 36
+        label(self.selected_root, value[1], left, top + 8, 54, "left", "font_lab_caption", 2)
+        self.edit_value_labels[value[2]] = label(
+            self.selected_root, "00", left + 52, top + 8, 30, "center", "font_lab_caption", 2
+        )
+        for _, action in ipairs({{-1, "-"}, {1, "+"}}) do
+            local button_left = left + field_width - (action[1] == -1 and 72 or 36)
+            local rect = {left=button_left, top=top, right=button_left + 34, bottom=top + 32}
             local button = ui.button(self.selected_root, {
                 left=rect.left, top=rect.top, width=rect.right - rect.left,
-                label=action[2], text_style="font_lab_caption", state="idle", z=2,
+                label=action[2], text_style="font_lab_caption", skin="well",
+                min_width=33, padding_x=4, state="idle", z=2,
             })
             self.edit_controls[#self.edit_controls + 1] = {
                 field=value[2], delta=action[1], rect=rect,
@@ -1542,16 +1681,17 @@ function map_editor:create()
         end
     end
     local hidden_rect = {
-        left=self.inspector_left + 18,
-        top=canvas.bottom - 48,
+        left=selected_left,
+        top=edit_top + 32 + edit_rows_count * 36 + 2,
         right=self.inspector_right - 18,
-        bottom=canvas.bottom - 8,
+        bottom=edit_top + 32 + edit_rows_count * 36 + 34,
     }
     local hidden_button = ui.button(self.selected_root, {
         left=hidden_rect.left, top=hidden_rect.top,
         width=hidden_rect.right - hidden_rect.left,
-        label="TOGGLE HIDDEN", text_style="font_lab_caption", state="idle", z=2,
+        label="HIDDEN OFF", text_style="font_lab_caption", skin="well", state="idle", z=2,
     })
+    self.hidden_control = hidden_button
     self.edit_controls[#self.edit_controls + 1] = {
         field="hidden", delta=1, rect=hidden_rect,
         box=hidden_button,
@@ -1561,13 +1701,14 @@ function map_editor:create()
     self.brush_meta = label(
         self.selected_root,
         "",
-        self.inspector_left + 18,
-        layout.tileset_heading - 4,
-        self.inspector_right - self.inspector_left - 36,
+        selected_left + 6,
+        selected_top + 8,
+        preview_left - selected_left - 12,
         "left",
-        "font_lab_color",
+        "font_lab_caption",
         2
     )
+    self.brush_meta:set_visible(not self.selected_compact)
 
     self.assets = vfs.list("data/global/tiles", ".ds1") or {}
     self.asset_picker = fuzzy_picker.create(self.root, {
