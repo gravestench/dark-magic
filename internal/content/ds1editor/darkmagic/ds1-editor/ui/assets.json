@@ -493,12 +493,12 @@
           20
         ],
         "grand_bottom_left": [
-          80,
-          80
+          64,
+          64
         ],
         "grand_bottom_right": [
-          80,
-          80
+          64,
+          64
         ],
         "grand_fill": [
           32,
@@ -517,12 +517,12 @@
           20
         ],
         "grand_top_left": [
-          80,
-          80
+          64,
+          64
         ],
         "grand_top_right": [
-          80,
-          80
+          64,
+          64
         ],
         "icon_disabled": [
           48,
@@ -553,12 +553,12 @@
           16
         ],
         "panel_bottom_left": [
-          32,
-          32
+          20,
+          20
         ],
         "panel_bottom_right": [
-          32,
-          32
+          20,
+          20
         ],
         "panel_fill": [
           32,
@@ -577,12 +577,12 @@
           16
         ],
         "panel_top_left": [
-          32,
-          32
+          20,
+          20
         ],
         "panel_top_right": [
-          32,
-          32
+          20,
+          20
         ],
         "radio_hover": [
           24,

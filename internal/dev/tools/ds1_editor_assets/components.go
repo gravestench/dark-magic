@@ -33,24 +33,24 @@ type compositionReferences struct {
 // is captured from the approved pixel-art composition kit at one source pixel
 // per output pixel; smaller controls remain hand-authored on the same grid.
 var componentSpecs = []componentSpec{
-	{Name: "grand_top_left", Width: 80, Height: 80},
+	{Name: "grand_top_left", Width: 64, Height: 64},
 	{Name: "grand_top", Width: 32, Height: 20, Variants: 5, RepeatAxis: "x"},
-	{Name: "grand_top_right", Width: 80, Height: 80},
+	{Name: "grand_top_right", Width: 64, Height: 64},
 	{Name: "grand_left", Width: 20, Height: 32, Variants: 5, RepeatAxis: "y"},
 	{Name: "grand_fill", Width: 32, Height: 32, Variants: 6, RepeatAxis: "xy"},
 	{Name: "grand_right", Width: 20, Height: 32, Variants: 5, RepeatAxis: "y"},
-	{Name: "grand_bottom_left", Width: 80, Height: 80},
+	{Name: "grand_bottom_left", Width: 64, Height: 64},
 	{Name: "grand_bottom", Width: 32, Height: 20, Variants: 5, RepeatAxis: "x"},
-	{Name: "grand_bottom_right", Width: 80, Height: 80},
-	{Name: "panel_top_left", Width: 32, Height: 32},
+	{Name: "grand_bottom_right", Width: 64, Height: 64},
+	{Name: "panel_top_left", Width: 20, Height: 20},
 	{Name: "panel_top", Width: 32, Height: 16, Variants: 4, RepeatAxis: "x"},
-	{Name: "panel_top_right", Width: 32, Height: 32},
+	{Name: "panel_top_right", Width: 20, Height: 20},
 	{Name: "panel_left", Width: 16, Height: 32, Variants: 4, RepeatAxis: "y"},
 	{Name: "panel_fill", Width: 32, Height: 32, Variants: 6, RepeatAxis: "xy"},
 	{Name: "panel_right", Width: 16, Height: 32, Variants: 4, RepeatAxis: "y"},
-	{Name: "panel_bottom_left", Width: 32, Height: 32},
+	{Name: "panel_bottom_left", Width: 20, Height: 20},
 	{Name: "panel_bottom", Width: 32, Height: 16, Variants: 4, RepeatAxis: "x"},
-	{Name: "panel_bottom_right", Width: 32, Height: 32},
+	{Name: "panel_bottom_right", Width: 20, Height: 20},
 	{Name: "section_left", Width: 24, Height: 32},
 	{Name: "section_center", Width: 16, Height: 32, Variants: 4, RepeatAxis: "x"},
 	{Name: "section_right", Width: 24, Height: 32},
@@ -328,16 +328,20 @@ func captureGrandComponent(reference image.Image, spec componentSpec, variant in
 
 	target := image.NewNRGBA(image.Rect(0, 0, spec.Width, spec.Height))
 	name := spec.Name
+	referenceBounds := reference.Bounds()
 
 	switch name {
 	case "grand_top_left":
-		draw.Draw(target, target.Bounds(), reference, image.Pt(0, 0), draw.Src)
+		draw.Draw(target, target.Bounds(), reference, referenceBounds.Min, draw.Src)
 	case "grand_top_right":
-		draw.Draw(target, target.Bounds(), reference, image.Pt(1548, 0), draw.Src)
+		draw.Draw(target, target.Bounds(), reference,
+			image.Pt(referenceBounds.Max.X-spec.Width, referenceBounds.Min.Y), draw.Src)
 	case "grand_bottom_left":
-		draw.Draw(target, target.Bounds(), reference, image.Pt(0, 886), draw.Src)
+		draw.Draw(target, target.Bounds(), reference,
+			image.Pt(referenceBounds.Min.X, referenceBounds.Max.Y-spec.Height), draw.Src)
 	case "grand_bottom_right":
-		draw.Draw(target, target.Bounds(), reference, image.Pt(1548, 886), draw.Src)
+		draw.Draw(target, target.Bounds(), reference,
+			image.Pt(referenceBounds.Max.X-spec.Width, referenceBounds.Max.Y-spec.Height), draw.Src)
 	case "grand_top", "grand_bottom":
 		left := 300 + (variant%5)*128
 		top := 0
@@ -592,12 +596,12 @@ func drawPanelComponent(target *image.NRGBA, name string, variant int) {
 		top := strings.Contains(name, "top")
 		left := strings.HasSuffix(name, "left")
 		drawCornerRails(target, top, left)
-		centerX, centerY := 8, 8
+		centerX, centerY := 5, 5
 		if !left {
-			centerX = bounds.Max.X - 9
+			centerX = bounds.Max.X - 6
 		}
 		if !top {
-			centerY = bounds.Max.Y - 9
+			centerY = bounds.Max.Y - 6
 		}
 		drawRivet(target, centerX, centerY, nativeColors.Gold)
 		drawCornerCurl(target, centerX, centerY, top, left)
@@ -607,17 +611,21 @@ func drawPanelComponent(target *image.NRGBA, name string, variant int) {
 func fillStone(target *image.NRGBA, variant int) {
 	bounds := target.Bounds()
 	draw.Draw(target, bounds, &image.Uniform{C: nativeColors.StoneDark}, image.Point{}, draw.Src)
-	// Repetition variants are accents, not noise. At most one shallow nick is
-	// authored into a sufficiently large tile; most variants remain quiet.
-	if bounds.Dx() >= 24 && bounds.Dy() >= 24 && variant%3 == 1 {
-		x := bounds.Min.X + 7 + (variant*7)%(bounds.Dx()-14)
-		y := bounds.Min.Y + 7 + (variant*11)%(bounds.Dy()-14)
-		length := 2 + variant%3
-		for step := 0; step < length; step++ {
-			setIfInside(target, x+step, y+step/2, nativeColors.Stone)
-		}
-		if variant%2 == 0 {
-			setIfInside(target, x+length-1, y+2, nativeColors.Ink)
+	// Sparse, irregular pixel clusters keep broad panels legible as stone
+	// without introducing the obvious bars or checkerboard seams produced by
+	// regular texture strokes. Each tile variant uses a different distribution.
+	if bounds.Dx() >= 24 && bounds.Dy() >= 24 {
+		for detail := 0; detail < 7; detail++ {
+			x := bounds.Min.X + 4 + (variant*13+detail*11)%(bounds.Dx()-8)
+			y := bounds.Min.Y + 4 + (variant*7+detail*17)%(bounds.Dy()-8)
+			shade := nativeColors.Stone
+			if (variant+detail)%3 == 0 {
+				shade = nativeColors.Ink
+			}
+			setIfInside(target, x, y, shade)
+			if detail%3 == 1 {
+				setIfInside(target, x+1, y-1, shade)
+			}
 		}
 	}
 }

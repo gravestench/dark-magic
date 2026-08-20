@@ -1251,12 +1251,11 @@ function map_editor:create()
         z=9,
         seed=21,
     })
-    ui.frame(self.root, {
-        left=4,
+    ui.tool_tray(self.root, {
+        left=8,
         top=canvas.top,
-        width=64,
+        width=60,
         height=canvas.bottom - canvas.top,
-        state="panel",
         z=10,
         seed=31,
     })

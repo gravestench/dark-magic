@@ -148,26 +148,58 @@ local function nine_slice(parent, options, definitions, minimum_size)
     return frame
 end
 
--- Structural panels retain 32px ornamental corners and use deterministic
+-- Structural panels retain compact ornamental corners and use deterministic
 -- authored variants across every long rail and stone field.
 function composition.frame(parent, options)
-    return nine_slice(parent, options, panel_parts, 64)
+    return nine_slice(parent, options, panel_parts, 40)
 end
 
 function composition.chrome(parent, options)
     options = options or {}
     options.fill = false
-    return nine_slice(parent, options, panel_parts, 64)
+    return nine_slice(parent, options, panel_parts, 40)
 end
 
 function composition.grand_frame(parent, options)
-    return nine_slice(parent, options, grand_parts, 160)
+    return nine_slice(parent, options, grand_parts, 128)
 end
 
 function composition.grand_chrome(parent, options)
     options = options or {}
     options.fill = false
-    return nine_slice(parent, options, grand_parts, 160)
+    return nine_slice(parent, options, grand_parts, 128)
+end
+
+-- A tool tray shares the shell's outer edge, so it needs a stone field and a
+-- single inner rail—not a second complete frame with dangling top/bottom caps.
+function composition.tool_tray(parent, options)
+    options = options or {}
+    local tray = control_methods({
+        left=options.left or 0,
+        top=options.top or 0,
+        width=assert(options.width, "tool tray width is required"),
+        height=assert(options.height, "tool tray height is required"),
+        seed=options.seed or 0,
+    })
+    tray.root = render.create("hud", parent)
+    tray.root:set_z(options.z or 0)
+    tray.fill = render.create("hud", tray.root)
+    tray.fill:set_z(1)
+    tray.rail = render.create("hud", tray.root)
+    tray.rail:set_z(2)
+
+    function tray:set_bounds(left, top, width, height)
+        self.left, self.top, self.width, self.height = left, top, width, height
+        local _, _, _, rail_width = assets.definition("composition", "panel_right")
+        tiled(self.fill, "panel_fill", width, height, self.seed)
+        tiled(self.rail, "panel_right", rail_width, height, self.seed + 1)
+        self.fill:set_position(0, 0)
+        self.rail:set_position(width / 2 - rail_width / 2, 0)
+        self.root:set_position(left + width / 2, top + height / 2)
+    end
+
+    tray:set_bounds(tray.left, tray.top, tray.width, tray.height)
+    return tray
 end
 
 -- Preview cells need a true four-sided recess. A horizontal three-piece strip
