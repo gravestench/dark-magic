@@ -24,10 +24,19 @@ type componentSpec struct {
 	RepeatAxis string
 }
 
-// Every production component is authored directly at this final native size.
-// tools/ds1-editor/assets/source/composition-kit.png remains a style reference;
-// it is intentionally never sampled into the DC6 output.
+// Every production component has a fixed native size. Structural grand chrome
+// is captured from the approved pixel-art composition kit at one source pixel
+// per output pixel; smaller controls remain hand-authored on the same grid.
 var componentSpecs = []componentSpec{
+	{Name: "grand_top_left", Width: 80, Height: 80},
+	{Name: "grand_top", Width: 32, Height: 20, Variants: 5, RepeatAxis: "x"},
+	{Name: "grand_top_right", Width: 80, Height: 80},
+	{Name: "grand_left", Width: 20, Height: 32, Variants: 5, RepeatAxis: "y"},
+	{Name: "grand_fill", Width: 32, Height: 32, Variants: 6, RepeatAxis: "xy"},
+	{Name: "grand_right", Width: 20, Height: 32, Variants: 5, RepeatAxis: "y"},
+	{Name: "grand_bottom_left", Width: 80, Height: 80},
+	{Name: "grand_bottom", Width: 32, Height: 20, Variants: 5, RepeatAxis: "x"},
+	{Name: "grand_bottom_right", Width: 80, Height: 80},
 	{Name: "panel_top_left", Width: 32, Height: 32},
 	{Name: "panel_top", Width: 32, Height: 16, Variants: 4, RepeatAxis: "x"},
 	{Name: "panel_top_right", Width: 32, Height: 32},
@@ -124,6 +133,10 @@ var nativeColors = struct {
 // buildCompositionSheet emits native-grid sprites and records compatible
 // variant lists for the runtime's deterministic tiler.
 func buildCompositionSheet(sourceRoot, outputRoot string, palette color.Palette) (sheetManifest, error) {
+	reference, err := loadCompositionReference(sourceRoot)
+	if err != nil {
+		return sheetManifest{}, err
+	}
 	frameCount := 0
 	for _, spec := range componentSpecs {
 		frameCount += componentVariantCount(spec)
@@ -144,7 +157,7 @@ func buildCompositionSheet(sourceRoot, outputRoot string, palette color.Palette)
 		count := componentVariantCount(spec)
 		indices := make([]int, 0, count)
 		for variant := 0; variant < count; variant++ {
-			frame := drawNativeComponent(spec, variant)
+			frame := drawProductionComponent(reference, spec, variant)
 			if variant == 0 {
 				previewFrames = append(previewFrames, frame)
 			}
@@ -172,10 +185,169 @@ func buildCompositionSheet(sourceRoot, outputRoot string, palette color.Palette)
 	return manifest, nil
 }
 
+func loadCompositionReference(sourceRoot string) (image.Image, error) {
+	file, err := os.Open(filepath.Join(sourceRoot, "composition-kit.png"))
+	if err != nil {
+		return nil, fmt.Errorf("open composition-kit.png: %w", err)
+	}
+	defer file.Close() //nolint:errcheck // Decode errors retain precedence.
+
+	decoded, err := png.Decode(file)
+	if err != nil {
+		return nil, fmt.Errorf("decode composition-kit.png: %w", err)
+	}
+
+	return decoded, nil
+}
+
+func drawProductionComponent(reference image.Image, spec componentSpec, variant int) *image.NRGBA {
+	if strings.HasPrefix(spec.Name, "grand_") {
+		return captureGrandComponent(reference, spec, variant)
+	}
+	if strings.HasPrefix(spec.Name, "panel_") {
+		return capturePanelComponent(reference, spec, variant)
+	}
+	if strings.HasPrefix(spec.Name, "icon_") || spec.Name == "tool_idle" {
+		return captureIconComponent(reference, spec)
+	}
+	if strings.HasPrefix(spec.Name, "button_") || strings.HasPrefix(spec.Name, "tab_") ||
+		strings.HasPrefix(spec.Name, "well_") || strings.HasPrefix(spec.Name, "dropdown_") {
+		return captureControlComponent(reference, spec, variant)
+	}
+
+	return drawNativeComponent(spec, variant)
+}
+
+func captureControlComponent(reference image.Image, spec componentSpec, variant int) *image.NRGBA {
+	plate := image.Rect(34, 469, 212, 641)
+	switch {
+	case strings.Contains(spec.Name, "hover"):
+		plate = image.Rect(239, 469, 434, 641)
+	case strings.Contains(spec.Name, "pressed"), strings.HasPrefix(spec.Name, "well_"):
+		plate = image.Rect(443, 469, 631, 641)
+	case strings.HasPrefix(spec.Name, "tab_"):
+		plate = image.Rect(651, 469, 856, 641)
+	}
+
+	sourceBounds := plate
+	switch {
+	case strings.HasSuffix(spec.Name, "_left"):
+		sourceBounds.Max.X = sourceBounds.Min.X + 60
+	case strings.HasSuffix(spec.Name, "_right"):
+		sourceBounds.Min.X = sourceBounds.Max.X - 60
+	default:
+		center := (sourceBounds.Min.X + sourceBounds.Max.X) / 2
+		offset := (variant%4 - 2) * 8
+		sourceBounds = image.Rect(center-24+offset, sourceBounds.Min.Y, center+24+offset, sourceBounds.Max.Y)
+	}
+
+	target := image.NewNRGBA(image.Rect(0, 0, spec.Width, spec.Height))
+	xdraw.CatmullRom.Scale(target, target.Bounds(), reference, sourceBounds, xdraw.Src, nil)
+	stabilizeComponentEdges(target, spec.RepeatAxis)
+
+	if strings.HasPrefix(spec.Name, "dropdown_") && strings.HasSuffix(spec.Name, "_right") {
+		centerX, centerY := target.Bounds().Dx()/2, target.Bounds().Dy()/2
+		accent := nativeColors.Gold
+		if strings.Contains(spec.Name, "hover") {
+			accent = nativeColors.Teal
+		}
+		for row := 0; row < 4; row++ {
+			line(target, centerX-row, centerY-2+row, centerX+row, centerY-2+row, accent)
+		}
+	}
+
+	return target
+}
+
+func capturePanelComponent(reference image.Image, spec componentSpec, variant int) *image.NRGBA {
+	if strings.Contains(spec.Name, "left") && strings.Contains(spec.Name, "top") ||
+		strings.Contains(spec.Name, "right") && strings.Contains(spec.Name, "top") ||
+		strings.Contains(spec.Name, "left") && strings.Contains(spec.Name, "bottom") ||
+		strings.Contains(spec.Name, "right") && strings.Contains(spec.Name, "bottom") {
+		return drawNativeComponent(spec, variant)
+	}
+
+	target := image.NewNRGBA(image.Rect(0, 0, spec.Width, spec.Height))
+	switch spec.Name {
+	case "panel_top", "panel_bottom":
+		left := 270 + (variant%4)*38
+		copyMirrored(target, reference, image.Rect(left, 35, left+32, 51), false, spec.Name == "panel_bottom")
+	case "panel_left", "panel_right":
+		top := 44 + (variant%4)*36
+		copyMirrored(target, reference, image.Rect(730, top, 746, top+32), spec.Name == "panel_right", false)
+	case "panel_fill":
+		left := 874 + (variant%3)*36
+		top := 38 + (variant/3)*36
+		draw.Draw(target, target.Bounds(), reference, image.Pt(left, top), draw.Src)
+	}
+	stabilizeComponentEdges(target, spec.RepeatAxis)
+	return target
+}
+
+func captureIconComponent(reference image.Image, spec componentSpec) *image.NRGBA {
+	sourceBounds := image.Rect(34, 469, 212, 641)
+	switch spec.Name {
+	case "icon_hover", "icon_selected":
+		sourceBounds = image.Rect(239, 469, 434, 641)
+	case "icon_pressed":
+		sourceBounds = image.Rect(443, 469, 631, 641)
+	case "icon_disabled":
+		sourceBounds = image.Rect(864, 469, 1060, 641)
+	}
+
+	target := image.NewNRGBA(image.Rect(0, 0, spec.Width, spec.Height))
+	xdraw.CatmullRom.Scale(target, target.Bounds(), reference, sourceBounds, xdraw.Src, nil)
+	return target
+}
+
+// captureGrandComponent uses quiet, source-native samples from the approved
+// composition sheet. Mirroring the one authored corner keeps joints coherent;
+// rail variants sample distinct stretches of the braid and stonework.
+func captureGrandComponent(reference image.Image, spec componentSpec, variant int) *image.NRGBA {
+	target := image.NewNRGBA(image.Rect(0, 0, spec.Width, spec.Height))
+	name := spec.Name
+
+	switch name {
+	case "grand_top_left", "grand_top_right", "grand_bottom_left", "grand_bottom_right":
+		copyMirrored(target, reference, image.Rect(34, 34, 114, 114),
+			strings.HasSuffix(name, "right"), strings.Contains(name, "bottom"))
+	case "grand_top", "grand_bottom":
+		left := 264 + (variant%5)*34
+		copyMirrored(target, reference, image.Rect(left, 35, left+32, 55), false, name == "grand_bottom")
+	case "grand_left", "grand_right":
+		top := 40 + (variant%5)*32
+		copyMirrored(target, reference, image.Rect(730, top, 750, top+32), name == "grand_right", false)
+	case "grand_fill":
+		left := 874 + (variant%3)*36
+		top := 38 + (variant/3)*36
+		draw.Draw(target, target.Bounds(), reference, image.Pt(left, top), draw.Src)
+	}
+
+	stabilizeComponentEdges(target, spec.RepeatAxis)
+	return target
+}
+
+func copyMirrored(target *image.NRGBA, source image.Image, sourceBounds image.Rectangle, mirrorX, mirrorY bool) {
+	for y := 0; y < target.Bounds().Dy(); y++ {
+		for x := 0; x < target.Bounds().Dx(); x++ {
+			sourceX, sourceY := x, y
+			if mirrorX {
+				sourceX = target.Bounds().Dx() - 1 - x
+			}
+			if mirrorY {
+				sourceY = target.Bounds().Dy() - 1 - y
+			}
+			target.Set(x, y, source.At(sourceBounds.Min.X+sourceX, sourceBounds.Min.Y+sourceY))
+		}
+	}
+}
+
 func drawNativeComponent(spec componentSpec, variant int) *image.NRGBA {
 	target := image.NewNRGBA(image.Rect(0, 0, spec.Width, spec.Height))
 	name := spec.Name
 	switch {
+	case strings.HasPrefix(name, "grand_"):
+		drawGrandComponent(target, name, variant)
 	case strings.HasPrefix(name, "panel_"):
 		drawPanelComponent(target, name, variant)
 	case strings.HasPrefix(name, "section_"):
@@ -203,6 +375,164 @@ func drawNativeComponent(spec componentSpec, variant int) *image.NRGBA {
 	}
 	stabilizeComponentEdges(target, spec.RepeatAxis)
 	return target
+}
+
+func drawGrandComponent(target *image.NRGBA, name string, variant int) {
+	if name == "grand_fill" {
+		fillStone(target, variant)
+		return
+	}
+	bounds := target.Bounds()
+	switch name {
+	case "grand_top":
+		drawGrandHorizontalRail(target, true, variant)
+	case "grand_bottom":
+		drawGrandHorizontalRail(target, false, variant)
+	case "grand_left":
+		drawGrandVerticalRail(target, true, variant)
+	case "grand_right":
+		drawGrandVerticalRail(target, false, variant)
+	default:
+		top := strings.Contains(name, "top")
+		left := strings.HasSuffix(name, "left")
+		drawGrandHorizontalRail(target, top, variant)
+		drawGrandVerticalRail(target, left, variant)
+		centerX, centerY := 17, 17
+		if !left {
+			centerX = bounds.Max.X - 18
+		}
+		if !top {
+			centerY = bounds.Max.Y - 18
+		}
+		drawGrandCornerOrnament(target, centerX, centerY, top, left, variant)
+	}
+}
+
+func drawGrandHorizontalRail(target *image.NRGBA, top bool, variant int) {
+	bounds := target.Bounds()
+	thickness := min(20, bounds.Dy())
+	start, direction := bounds.Min.Y, 1
+	if !top {
+		start, direction = bounds.Max.Y-thickness, -1
+	}
+	draw.Draw(target, image.Rect(bounds.Min.X, start, bounds.Max.X, start+thickness),
+		&image.Uniform{C: nativeColors.StoneDark}, image.Point{}, draw.Src)
+	outer := start
+	if !top {
+		outer = start + thickness - 1
+	}
+	for offset, shade := range []color.NRGBA{
+		nativeColors.Ink, nativeColors.Highlight, nativeColors.Steel, nativeColors.Iron,
+	} {
+		line(target, bounds.Min.X, outer+offset*direction, bounds.Max.X-1, outer+offset*direction, shade)
+	}
+	inner := outer + (thickness-1)*direction
+	line(target, bounds.Min.X, inner, bounds.Max.X-1, inner, nativeColors.Ink)
+	line(target, bounds.Min.X, inner-direction, bounds.Max.X-1, inner-direction, nativeColors.GoldDark)
+	line(target, bounds.Min.X, inner-2*direction, bounds.Max.X-1, inner-2*direction, nativeColors.Steel)
+	if variant == 0 {
+		drawSmallStud(target, bounds.Min.X+bounds.Dx()/2, start+thickness/2, nativeColors.Gold)
+	} else if variant == 3 {
+		line(target, bounds.Min.X+11, start+9, bounds.Min.X+15, start+10, nativeColors.StoneLight)
+	}
+}
+
+func drawGrandVerticalRail(target *image.NRGBA, left bool, variant int) {
+	bounds := target.Bounds()
+	thickness := min(20, bounds.Dx())
+	start, direction := bounds.Min.X, 1
+	if !left {
+		start, direction = bounds.Max.X-thickness, -1
+	}
+	draw.Draw(target, image.Rect(start, bounds.Min.Y, start+thickness, bounds.Max.Y),
+		&image.Uniform{C: nativeColors.StoneDark}, image.Point{}, draw.Src)
+	outer := start
+	if !left {
+		outer = start + thickness - 1
+	}
+	for offset, shade := range []color.NRGBA{
+		nativeColors.Ink, nativeColors.Highlight, nativeColors.Steel, nativeColors.Iron,
+	} {
+		line(target, outer+offset*direction, bounds.Min.Y, outer+offset*direction, bounds.Max.Y-1, shade)
+	}
+	inner := outer + (thickness-1)*direction
+	line(target, inner, bounds.Min.Y, inner, bounds.Max.Y-1, nativeColors.Ink)
+	line(target, inner-direction, bounds.Min.Y, inner-direction, bounds.Max.Y-1, nativeColors.GoldDark)
+	line(target, inner-2*direction, bounds.Min.Y, inner-2*direction, bounds.Max.Y-1, nativeColors.Steel)
+	if variant == 0 {
+		drawSmallStud(target, start+thickness/2, bounds.Min.Y+bounds.Dy()/2, nativeColors.Gold)
+	} else if variant == 3 {
+		line(target, start+9, bounds.Min.Y+11, start+10, bounds.Min.Y+15, nativeColors.StoneLight)
+	}
+}
+
+func drawGrandCornerOrnament(
+	target *image.NRGBA,
+	centerX, centerY int,
+	top, left bool,
+	variant int,
+) {
+	directionX, directionY := 1, 1
+	if !left {
+		directionX = -1
+	}
+	if !top {
+		directionY = -1
+	}
+	drawThickDiamond(target, centerX, centerY, 16, nativeColors.Ink)
+	drawThickDiamond(target, centerX, centerY, 14, nativeColors.Highlight)
+	drawThickDiamond(target, centerX, centerY, 11, nativeColors.Steel)
+	drawThickDiamond(target, centerX, centerY, 8, nativeColors.Stone)
+	drawLargeGem(target, centerX, centerY, nativeColors.Gold)
+	armShade := nativeColors.Steel
+	if variant%2 == 1 {
+		armShade = nativeColors.Iron
+	}
+	for step := 0; step < 23; step++ {
+		x := centerX + (13+step)*directionX
+		y := centerY + (step/3)*directionY
+		setIfInside(target, x, y, armShade)
+		setIfInside(target, x, y+directionY, nativeColors.Iron)
+		if step < 17 {
+			setIfInside(target, x, y+4*directionY, nativeColors.StoneLight)
+		}
+
+		x = centerX + (step/3)*directionX
+		y = centerY + (13+step)*directionY
+		setIfInside(target, x, y, armShade)
+		setIfInside(target, x+directionX, y, nativeColors.Iron)
+		if step < 17 {
+			setIfInside(target, x+4*directionX, y, nativeColors.StoneLight)
+		}
+	}
+}
+
+func drawThickDiamond(
+	target *image.NRGBA,
+	centerX, centerY, radius int,
+	shade color.NRGBA,
+) {
+	drawDiamondOutline(target, centerX, centerY, radius, shade)
+	if radius > 2 {
+		drawDiamondOutline(target, centerX, centerY, radius-1, shade)
+	}
+}
+
+func drawLargeGem(target *image.NRGBA, centerX, centerY int, accent color.NRGBA) {
+	drawThickDiamond(target, centerX, centerY, 6, nativeColors.Ink)
+	drawThickDiamond(target, centerX, centerY, 5, nativeColors.GoldDark)
+	for y := -3; y <= 3; y++ {
+		span := 3 - absolute(y)
+		for x := -span; x <= span; x++ {
+			shade := accent
+			if x+y < -1 {
+				shade = nativeColors.GoldLight
+			} else if x+y > 2 {
+				shade = nativeColors.GoldDark
+			}
+			setIfInside(target, centerX+x, centerY+y, shade)
+		}
+	}
 }
 
 func componentVariantCount(spec componentSpec) int {
@@ -248,7 +578,7 @@ func fillStone(target *image.NRGBA, variant int) {
 	draw.Draw(target, bounds, &image.Uniform{C: nativeColors.StoneDark}, image.Point{}, draw.Src)
 	// Repetition variants are accents, not noise. At most one shallow nick is
 	// authored into a sufficiently large tile; most variants remain quiet.
-	if bounds.Dx() >= 24 && bounds.Dy() >= 24 {
+	if bounds.Dx() >= 24 && bounds.Dy() >= 24 && variant%3 == 1 {
 		x := bounds.Min.X + 7 + (variant*7)%(bounds.Dx()-14)
 		y := bounds.Min.Y + 7 + (variant*11)%(bounds.Dy()-14)
 		length := 2 + variant%3
@@ -293,7 +623,7 @@ func drawHorizontalRail(target *image.NRGBA, top bool, variant int, teal bool) {
 	}
 	x := bounds.Min.X + 5 + (variant*7)%max(8, bounds.Dx()-8)
 	y := start + thickness/2
-	if variant%2 == 0 {
+	if variant == 0 {
 		drawSmallStud(target, x, y, accent)
 	}
 }
@@ -330,18 +660,18 @@ func drawVerticalRail(target *image.NRGBA, left bool, variant int, teal bool) {
 	}
 	y := bounds.Min.Y + 5 + (variant*7)%max(8, bounds.Dy()-8)
 	x := start + thickness/2
-	if variant%2 == 0 {
+	if variant == 0 {
 		drawSmallStud(target, x, y, accent)
 	}
 }
 
 func drawHorizontalBraid(target *image.NRGBA, start, thickness, variant int, teal bool) {
-	accent := nativeColors.Steel
+	accent := nativeColors.StoneLight
 	if teal {
 		accent = nativeColors.TealDark
 	}
 	center := start + thickness/2
-	for x := target.Bounds().Min.X; x < target.Bounds().Max.X; x++ {
+	for x := target.Bounds().Min.X + 3; x < target.Bounds().Max.X-3; x += 2 {
 		phase := (x + variant*2) % 8
 		offset := phase
 		if phase > 4 {
@@ -349,17 +679,17 @@ func drawHorizontalBraid(target *image.NRGBA, start, thickness, variant int, tea
 		}
 		offset -= 2
 		setIfInside(target, x, center+offset, accent)
-		setIfInside(target, x, center-offset, nativeColors.Iron)
+		setIfInside(target, x, center-offset, nativeColors.Stone)
 	}
 }
 
 func drawVerticalBraid(target *image.NRGBA, start, thickness, variant int, teal bool) {
-	accent := nativeColors.Steel
+	accent := nativeColors.StoneLight
 	if teal {
 		accent = nativeColors.TealDark
 	}
 	center := start + thickness/2
-	for y := target.Bounds().Min.Y; y < target.Bounds().Max.Y; y++ {
+	for y := target.Bounds().Min.Y + 3; y < target.Bounds().Max.Y-3; y += 2 {
 		phase := (y + variant*2) % 8
 		offset := phase
 		if phase > 4 {
@@ -367,7 +697,7 @@ func drawVerticalBraid(target *image.NRGBA, start, thickness, variant int, teal 
 		}
 		offset -= 2
 		setIfInside(target, center+offset, y, accent)
-		setIfInside(target, center-offset, y, nativeColors.Iron)
+		setIfInside(target, center-offset, y, nativeColors.Stone)
 	}
 }
 

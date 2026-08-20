@@ -1455,17 +1455,30 @@ func (c *renderAssetCache) loadWorldTileGraphic(
 		return nil, err
 	}
 
-	key := fmt.Sprintf("world-tile-graphic\x00%p\x00%s\x00%d", world, palette, graphicIndex)
+	if graphicIndex < 0 || graphicIndex >= len(set.Graphics) {
+		return nil, fmt.Errorf("world tile graphic %d out of range", graphicIndex)
+	}
 
-	value, err := c.load(assets, key, func() (any, int, error) {
-		pixels, materializeErr := set.MaterializeGraphic(graphicIndex)
-		return pixels, max(imageWeight(pixels), 1), materializeErr
-	})
+	graphic := set.Graphics[graphicIndex]
+	prepared, err := c.loadDT1Tile(
+		assets,
+		graphic.Path,
+		palette,
+		graphic.Index,
+		"composite",
+	)
 	if err != nil {
 		return nil, err
 	}
 
-	return value.(image.Image), nil
+	return prepared.image, nil
+}
+
+// worldTileTextureKey identifies the authored DT1 picture rather than a map
+// snapshot. Editing one DS1 cell creates a new world pointer, but unchanged DT1
+// graphics must keep their decoded cache entry and native texture residency.
+func worldTileTextureKey(palette string, graphic *maprender.TileGraphic) string {
+	return fmt.Sprintf("world-dt1:%s:%s:%d", palette, graphic.Path, graphic.Index)
 }
 
 // loadWorldChunk loads world chunk before publication so malformed content cannot become observable runtime
@@ -1530,30 +1543,14 @@ func pushChunkSet(state *lua.LState, chunks *maprender.Set) {
 // storage details.
 func pushTileSet(state *lua.LState, set *maprender.TileSet) {
 	result := state.NewTable()
-	result.RawSetString("width", lua.LNumber(set.Width))
-	result.RawSetString("height", lua.LNumber(set.Height))
-	result.RawSetString("graphic_count", lua.LNumber(len(set.Graphics)))
-	result.RawSetString("bucket_size", lua.LNumber(set.BucketSize))
+	pushTileSetMetadata(result, set)
 
-	entries := state.NewTable()
-	for index, draw := range set.Draws {
-		entry := state.NewTable()
-		entry.RawSetString("index", lua.LNumber(index))
-		entry.RawSetString("graphic", lua.LNumber(draw.Graphic))
-		entry.RawSetString("x", lua.LNumber(draw.Bounds.Min.X))
-		entry.RawSetString("y", lua.LNumber(draw.Bounds.Min.Y))
-		entry.RawSetString("width", lua.LNumber(draw.Bounds.Dx()))
-		entry.RawSetString("height", lua.LNumber(draw.Bounds.Dy()))
-		entry.RawSetString("layer", lua.LNumber(draw.Layer))
-		entry.RawSetString("layer_name", lua.LString(draw.Layer.String()))
-		entry.RawSetString("depth", lua.LNumber(draw.Depth))
-		entry.RawSetString("tile_x", lua.LNumber(draw.TileX))
-		entry.RawSetString("tile_y", lua.LNumber(draw.TileY))
-		entry.RawSetString("ordinal", lua.LNumber(draw.Ordinal))
-		entries.RawSetInt(index+1, entry)
+	indexes := make([]int, len(set.Draws))
+	for index := range indexes {
+		indexes[index] = index
 	}
 
-	result.RawSetString("draws", entries)
+	result.RawSetString("draws", tileDrawTable(state, set, indexes))
 
 	buckets := state.NewTable()
 	for _, bucket := range set.Buckets {
@@ -1569,6 +1566,41 @@ func pushTileSet(state *lua.LState, set *maprender.TileSet) {
 
 	result.RawSetString("buckets", buckets)
 	state.Push(result)
+}
+
+// pushTileSetMetadata publishes bounds without allocating one Lua table per
+// placement. Viewport-driven editors can query only the draws they can show.
+func pushTileSetMetadata(result *lua.LTable, set *maprender.TileSet) {
+	result.RawSetString("width", lua.LNumber(set.Width))
+	result.RawSetString("height", lua.LNumber(set.Height))
+	result.RawSetString("graphic_count", lua.LNumber(len(set.Graphics)))
+	result.RawSetString("draw_count", lua.LNumber(len(set.Draws)))
+	result.RawSetString("bucket_size", lua.LNumber(set.BucketSize))
+}
+
+// tileDrawTable translates only selected draw indexes, avoiding a full map-sized
+// allocation each time a camera moves over a small part of the world.
+func tileDrawTable(state *lua.LState, set *maprender.TileSet, indexes []int) *lua.LTable {
+	entries := state.NewTable()
+	for entryIndex, drawIndex := range indexes {
+		draw := set.Draws[drawIndex]
+		entry := state.NewTable()
+		entry.RawSetString("index", lua.LNumber(drawIndex))
+		entry.RawSetString("graphic", lua.LNumber(draw.Graphic))
+		entry.RawSetString("x", lua.LNumber(draw.Bounds.Min.X))
+		entry.RawSetString("y", lua.LNumber(draw.Bounds.Min.Y))
+		entry.RawSetString("width", lua.LNumber(draw.Bounds.Dx()))
+		entry.RawSetString("height", lua.LNumber(draw.Bounds.Dy()))
+		entry.RawSetString("layer", lua.LNumber(draw.Layer))
+		entry.RawSetString("layer_name", lua.LString(draw.Layer.String()))
+		entry.RawSetString("depth", lua.LNumber(draw.Depth))
+		entry.RawSetString("tile_x", lua.LNumber(draw.TileX))
+		entry.RawSetString("tile_y", lua.LNumber(draw.TileY))
+		entry.RawSetString("ordinal", lua.LNumber(draw.Ordinal))
+		entries.RawSetInt(entryIndex+1, entry)
+	}
+
+	return entries
 }
 
 // loadDS1Collision loads ds1 collision before publication so malformed content cannot become observable
@@ -2315,6 +2347,14 @@ func (r *RenderCapability) Module() Module {
 					"engine.render.world_tiles(world, palette)",
 					"Return shared DT1 graphic placement geometry for an authoritative world map.",
 				),
+				"world_tile_metadata": commandHelp(
+					"engine.render.world_tile_metadata(world, palette)",
+					"Return shared world-tile bounds and counts without publishing every placement.",
+				),
+				"world_tile_view": commandHelp(
+					"engine.render.world_tile_view(world, palette, left, top, right, bottom)",
+					"Return only shared world-tile placements intersecting a map-pixel viewport.",
+				),
 				"assets_available": commandHelp(
 					"engine.render.assets_available()",
 					"Report whether asset-backed rendering is available.",
@@ -2541,6 +2581,54 @@ func (r *RenderCapability) Module() Module {
 					}
 
 					pushTileSet(state, set)
+
+					return 1
+				},
+				"world_tile_metadata": func(state *lua.LState) int {
+					if assets == nil {
+						state.RaiseError("render asset filesystem is unavailable")
+						return 0
+					}
+
+					set, err := cache.loadWorldTiles(
+						assets,
+						checkWorldMap(state, 1),
+						state.CheckString(2),
+					)
+					if err != nil {
+						state.RaiseError("indexing shared world tiles: %v", err)
+						return 0
+					}
+
+					result := state.NewTable()
+					pushTileSetMetadata(result, set)
+					state.Push(result)
+
+					return 1
+				},
+				"world_tile_view": func(state *lua.LState) int {
+					if assets == nil {
+						state.RaiseError("render asset filesystem is unavailable")
+						return 0
+					}
+
+					set, err := cache.loadWorldTiles(
+						assets,
+						checkWorldMap(state, 1),
+						state.CheckString(2),
+					)
+					if err != nil {
+						state.RaiseError("indexing shared world tiles: %v", err)
+						return 0
+					}
+
+					view := image.Rect(
+						state.CheckInt(3),
+						state.CheckInt(4),
+						state.CheckInt(5),
+						state.CheckInt(6),
+					)
+					state.Push(tileDrawTable(state, set, set.Visible(view, nil)))
 
 					return 1
 				},
@@ -3412,7 +3500,7 @@ func registerRenderNodeType(state *lua.LState) {
 			// A presentation snapshot changes identity after every edit, but an
 			// unchanged DT1 record does not. Key shared textures by authored graphic
 			// identity so retained per-tile nodes survive incremental editor updates.
-			key := fmt.Sprintf("world-dt1:%s:%s:%d", palette, graphic.Path, graphic.Index)
+			key := worldTileTextureKey(palette, graphic)
 			if err := node.setSharedImage(key, pixels); err != nil {
 				state.RaiseError("updating shared world tile node: %v", err)
 				return 0

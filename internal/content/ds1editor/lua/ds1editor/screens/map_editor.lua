@@ -26,18 +26,18 @@ local palettes = {
 }
 
 local layout = {
-    canvas_top=132,
-    toolbar_top=44,
-    toolbar_bottom=92,
-    document_meta_top=106,
-    tool_top=140,
-    layer_top=144,
-    mode_top=198,
-    auto_top=240,
-    tileset_heading=290,
-    tileset_rows=316,
-    physical_heading=410,
-    tile_top=438,
+    canvas_top=116,
+    toolbar_top=52,
+    toolbar_bottom=100,
+    document_meta_top=68,
+    tool_top=124,
+    layer_top=124,
+    mode_top=178,
+    auto_top=220,
+    tileset_heading=272,
+    tileset_rows=298,
+    physical_heading=424,
+    tile_top=452,
 }
 
 local canvas = {left=66, top=layout.canvas_top, right=554, bottom=564}
@@ -109,10 +109,10 @@ end
 -- Native-resolution mode supplies these dimensions directly from the drawable
 -- surface, not from a scaled 800×600 render target.
 local function layout_canvas(width, height)
-    local inspector_width = clamp(math.floor(width * 0.25), 230, 360)
-    local left, top = 66, layout.canvas_top
-    local right = math.max(left + 320, width - inspector_width - 16)
-    return {left=left, top=top, right=right, bottom=height - 36}, right + 8, width - 8
+    local inspector_width = clamp(math.floor(width * 0.27), 300, 380)
+    local left, top = 72, layout.canvas_top
+    local right = math.max(left + 360, width - inspector_width - 12)
+    return {left=left, top=top, right=right, bottom=height - 40}, right + 6, width - 8
 end
 
 -- Create a solid retained rectangle for canvas and content-card backgrounds.
@@ -160,8 +160,22 @@ function map_editor:set_message(value, kind)
         self.status,
         "font_lab_color",
         "[" .. self.message_kind .. "]" .. self.message .. "[/]",
-        self.surface_width - 48,
+        math.max(240, self.surface_width - 660),
         "left"
+    )
+end
+
+function map_editor:refresh_status_detail()
+    if not self.status_detail then return end
+    local point = self.selected_cell and self.selected_cell.point
+    local tile = point and string.format("%d, %d", point.x, point.y) or "--, --"
+    local layer = layers[self.layer_index] and layers[self.layer_index].label or "FLOOR"
+    text.set(
+        self.status_detail,
+        "font_lab_caption",
+        string.format("TILE: %s    LAYER: %s    ZOOM: %d%%", tile, layer, math.floor(self.zoom * 100 + 0.5)),
+        560,
+        "right"
     )
 end
 
@@ -170,27 +184,22 @@ function map_editor:refresh_chrome()
     local summary = self.summary
     local name = self.path ~= "" and file_name(self.path) or "No map open"
     local dirty = summary and summary.dirty and "  [gold]● UNSAVED[/]" or "  [green]● SAVED[/]"
-    text.set(self.title, "font_lab_heading", "DS1 MAP EDITOR", 400, "left")
-    text.set(self.subtitle, "font_lab_color", "[blue]" .. name .. "[/]" .. dirty, 400, "left")
+    text.set(self.title, "font_lab_color", "DS1 MAP EDITOR", self.surface_width - 32, "center")
+    text.set(self.subtitle, "font_lab_caption", "[blue]" .. name .. "[/]" .. dirty, 260, "right")
     if summary then
-        text.set(self.document_meta, "font_lab_color", string.format(
-            "[gold]MAP[/] %d × %d    [gold]ACT[/] %d    [gold]LAYERS[/] %d floor / %d wall",
+        text.set(self.document_meta, "font_lab_caption", string.format(
+            "[gold]%d × %d[/]   ACT %d   %dF / %dW",
             summary.width, summary.height, summary.act, summary.floor_layers, summary.wall_layers
-        ), canvas.right - 86, "left")
+        ), math.max(1, self.surface_width - 876), "left")
     else
-        text.set(
-            self.document_meta,
-            "font_lab_color",
-            "[grey]Open a DS1. Source mounts are read-only; Save writes to the editor output folder.[/]",
-            canvas.right - 86,
-            "left"
-        )
+        text.set(self.document_meta, "font_lab_caption", "", 1, "left")
     end
 
     for index, tool in ipairs(tools) do
         local selected = self.tool == tool.id
         self.tool_boxes[index]:set_state(selected and "selected" or "idle")
     end
+    self:refresh_status_detail()
     if self.grid_button then
         self.grid_button:set_state(self.grid_visible and "selected" or "idle")
     end
@@ -262,6 +271,7 @@ function map_editor:position_map()
     self.map_root:set_position(canvas_center_x + self.pan_x, canvas_center_y + self.pan_y)
     self.map_root:set_scale(self.zoom, self.zoom)
     if self.map_visibility and self.map_visibility.collision then self:refresh_collision_nodes() end
+    self:refresh_status_detail()
 end
 
 -- Change zoom while preserving the map-local point currently under the mouse cursor.
@@ -283,19 +293,11 @@ function map_editor:clear_preview()
         render.preload_release(self.preview_job)
         self.preview_job = nil
     end
-    -- Tile decoding is intentionally owned by background preload jobs.
-    -- Completed jobs can be released now; pending jobs finish independently and
-    -- are no longer referenced by this editor revision.
-    for index, pending in pairs(self.chunk_jobs or {}) do
-        local job = pending.handle or pending
-        local status = render.preload_status(job)
-        if status and status.done then render.preload_release(job) end
-        self.chunk_jobs[index] = nil
-    end
     for _, retained in pairs(self.chunk_nodes) do
         if retained.node:exists() then retained.node:destroy() end
     end
     self.chunk_nodes = {}
+    self.visible_signature, self.visible_pending = nil, true
     for _, node in pairs(self.collision_nodes or {}) do
         if node:exists() then node:destroy() end
     end
@@ -388,13 +390,6 @@ function map_editor:apply_tile_delta(points)
             self.chunk_nodes[key] = nil
         end
     end
-    for key, pending in pairs(self.chunk_jobs) do
-        if dirty[dirty_cell_key(pending.tile_x, pending.tile_y)] then
-            local status = render.preload_status(pending.handle)
-            if status and status.done then render.preload_release(pending.handle) end
-            self.chunk_jobs[key] = nil
-        end
-    end
 end
 
 -- Publish completed background preview work and stream its visible chunks.
@@ -414,7 +409,7 @@ function map_editor:finish_preview()
             self:set_message(tostring(status.errors[1] or "Could not render this map"), "red")
             return
         end
-        local ok, chunk_set = pcall(render.world_tiles, self.preview_world, self.palette)
+        local ok, chunk_set = pcall(render.world_tile_metadata, self.preview_world, self.palette)
         if not ok then
             self:set_message(tostring(chunk_set), "red")
             return
@@ -423,9 +418,9 @@ function map_editor:finish_preview()
             self:apply_tile_delta(self.pending_dirty)
         else
             self:clear_preview()
-            self.chunk_jobs = {}
         end
         self.chunk_set = chunk_set
+        self.visible_pending = true
         if self.pending_fit then self:fit() else self:position_map() end
         self:refresh_collision_nodes(self.pending_dirty)
         if self.selected_cell then self:refresh_selected_preview() end
@@ -624,79 +619,68 @@ function map_editor:refresh_visible_chunks()
     local map_top = (canvas.top - (canvas_center_y + self.pan_y)) / self.zoom + self.chunk_set.height / 2
     local map_right = (canvas.right - (canvas_center_x + self.pan_x)) / self.zoom + self.chunk_set.width / 2
     local map_bottom = (canvas.bottom - (canvas_center_y + self.pan_y)) / self.zoom + self.chunk_set.height / 2
-    local visible, draws, admitted = {}, {}, 0
-    local bucket_size = self.chunk_set.bucket_size
-    local first_column = math.floor((map_left - 96) / bucket_size)
-    local last_column = math.floor((map_right + 96) / bucket_size)
-    local first_row = math.floor((map_top - 384) / bucket_size)
-    local last_row = math.floor((map_bottom + 96) / bucket_size)
-    for row = first_row, last_row do
-        for column = first_column, last_column do
-            for _, index in ipairs(self.chunk_set.buckets[column .. ":" .. row] or {}) do
-                local draw = self.chunk_set.draws[index]
-                local key = tile_key(draw)
-                local layer_visible = self.map_visibility[presentation_kind(draw.layer_name)]
-                if layer_visible and not draws[key]
-                    and draw.x + draw.width >= map_left - 96 and draw.x <= map_right + 96
-                    and draw.y + draw.height >= map_top - 384 and draw.y <= map_bottom + 96 then
-                    draws[key], visible[key] = draw, true
-                end
-            end
-        end
+    local signature = table.concat({
+        tostring(math.floor(map_left)), tostring(math.floor(map_top)),
+        tostring(math.ceil(map_right)), tostring(math.ceil(map_bottom)),
+        tostring(self.map_visibility.floor), tostring(self.map_visibility.wall),
+        tostring(self.map_visibility.shadow),
+    }, ":")
+    if self.visible_signature == signature and not self.visible_pending then return end
+
+    local ok, draw_order = pcall(
+        render.world_tile_view,
+        self.preview_world,
+        self.palette,
+        math.floor(map_left - 96),
+        math.floor(map_top - 384),
+        math.ceil(map_right + 96),
+        math.ceil(map_bottom + 96)
+    )
+    if not ok then
+        self:set_message(tostring(draw_order), "red")
+        return
     end
 
-    for key, draw in pairs(draws) do
+    local visible, admitted = {}, 0
+    local remaining = 0
+    local tile_publish_budget = 96
+    for _, draw in ipairs(draw_order) do
+        local key = tile_key(draw)
+        local layer_visible = self.map_visibility[presentation_kind(draw.layer_name)]
+        visible[key] = layer_visible
         local retained = self.chunk_nodes[key]
-        if retained then
+        if retained and layer_visible then
             retained.node:set_visible(true)
-        else
-            local pending = self.chunk_jobs[key]
-            if pending then
-                local status = render.preload_status(pending.handle)
-                if status and status.done then
-                    if status.failed and status.failed > 0 then
-                        render.preload_release(pending.handle)
-                        self.chunk_jobs[key] = nil
-                        self:set_message(tostring(status.errors[1] or "Could not render map tile"), "red")
-                    elseif admitted < 2 then
-                        render.preload_release(pending.handle)
-                        self.chunk_jobs[key] = nil
-                        local created = render.create("hud", self.map_root)
-                        local ok, x, y, width, height = pcall(function()
-                            return created:set_world_tile(pending.world, self.palette, pending.index)
-                        end)
-                        if not ok then
-                            created:destroy()
-                            self:set_message(tostring(x), "red")
-                        else
-                            created:set_position(x - self.chunk_set.width / 2 + width / 2,
-                                y - self.chunk_set.height / 2 + height / 2)
-                            created:set_z(pending.depth)
-                            self.chunk_nodes[key] = {
-                                node=created, tile_x=pending.tile_x, tile_y=pending.tile_y,
-                            }
-                            admitted = admitted + 1
-                        end
-                    end
-                end
-            elseif admitted < 4 then
-                self.chunk_jobs[key] = {
-                    handle=render.preload({{
-                        kind="world_tile", world=self.preview_world, palette=self.palette, chunk_index=draw.index,
-                    }}),
-                    world=self.preview_world, index=draw.index, depth=draw.depth,
-                    tile_x=draw.tile_x, tile_y=draw.tile_y,
+        elseif layer_visible and admitted < tile_publish_budget then
+            local created = render.create("hud", self.map_root)
+            local ok, x, y, width, height = pcall(function()
+                return created:set_world_tile(self.preview_world, self.palette, draw.index)
+            end)
+            if not ok then
+                created:destroy()
+                self:set_message(tostring(x), "red")
+            else
+                created:set_position(x - self.chunk_set.width / 2 + width / 2,
+                    y - self.chunk_set.height / 2 + height / 2)
+                created:set_z(draw.depth)
+                self.chunk_nodes[key] = {
+                    node=created, tile_x=draw.tile_x, tile_y=draw.tile_y,
                 }
                 admitted = admitted + 1
             end
+        elseif layer_visible then
+            remaining = remaining + 1
         end
     end
     for key, retained in pairs(self.chunk_nodes) do
         if not visible[key] then retained.node:set_visible(false) end
     end
-    if next(self.chunk_nodes) then
+    if remaining > 0 then
+        self:set_message("Publishing " .. tostring(remaining) .. " visible map tiles…", "gold")
+    elseif next(self.chunk_nodes) then
         self:set_message("Ready. Paint, pick, erase, or pan — every stroke is undoable.", "green")
     end
+    self.visible_signature, self.visible_pending = signature, remaining > 0
 end
 
 -- Open one mounted DS1 and refresh all derived palette, tileset, and preview state.
@@ -1220,7 +1204,7 @@ function map_editor:click_chrome(pointer_x, pointer_y)
     end
     if self.inspector_mode == "library" then
         for row, control in ipairs(self.tileset_rows) do
-            local top = layout.tileset_rows + (row - 1) * 29
+            local top = layout.tileset_rows + (row - 1) * 27
             local rect = {left=self.inspector_left + 18, top=top, right=self.inspector_right - 18, bottom=top + 25}
             if control.box:exists() and in_rect(pointer_x, pointer_y, rect) then
                 self:select_tileset(self.tileset_scroll + row); return true
@@ -1249,18 +1233,43 @@ function map_editor:create()
 	self.surface_width, self.surface_height = surface_size()
 	canvas, self.inspector_left, self.inspector_right = layout_canvas(self.surface_width, self.surface_height)
 	canvas_center_x = (canvas.left + canvas.right) / 2
-	canvas_center_y = (canvas.top + canvas.bottom) / 2
-	self.root = render.create("hud")
+    canvas_center_y = (canvas.top + canvas.bottom) / 2
+    self.root = render.create("hud")
     box(self.root, {left=0,top=0,right=self.surface_width,bottom=self.surface_height}, {11, 16, 24, 255}, -20)
+    ui.grand_chrome(self.root, {
+        left=4,
+        top=4,
+        width=self.surface_width - 8,
+        height=self.surface_height - 8,
+        z=30,
+        seed=11,
+    })
     ui.frame(self.root, {
         left=8,
-        top=36,
+        top=44,
         width=self.surface_width - 16,
         height=64,
         state="panel",
         z=10,
     })
     box(self.root, {left=canvas.left,top=canvas.top,right=canvas.right,bottom=canvas.bottom}, {6, 10, 15, 255}, -15)
+    ui.chrome(self.root, {
+        left=canvas.left - 4,
+        top=canvas.top - 4,
+        width=canvas.right - canvas.left + 8,
+        height=canvas.bottom - canvas.top + 8,
+        z=9,
+        seed=21,
+    })
+    ui.frame(self.root, {
+        left=4,
+        top=canvas.top,
+        width=64,
+        height=canvas.bottom - canvas.top,
+        state="panel",
+        z=10,
+        seed=31,
+    })
     ui.frame(self.root, {
         left=self.inspector_left,
         top=canvas.top,
@@ -1271,7 +1280,7 @@ function map_editor:create()
     })
     ui.well(self.root, {
         left=8,
-        top=self.surface_height - 32,
+        top=self.surface_height - 36,
         width=self.surface_width - 16,
         height=28,
         z=10,
@@ -1284,32 +1293,60 @@ function map_editor:create()
     self.map_root:set_clip(canvas.left, canvas.top, canvas.right - canvas.left, canvas.bottom - canvas.top)
     self.map_root:set_visible(true)
     self.chunk_nodes = {}
-    self.title = label(self.root, "", 16, 4, 400, "left", "font_lab_heading", 20)
-    self.subtitle = label(self.root, "", 372, 8, self.surface_width - 388, "left", "font_lab_color", 20)
+    self.title = label(
+        self.root,
+        "",
+        16,
+        8,
+        self.surface_width - 32,
+        "center",
+        "font_lab_color",
+        40
+    )
+    self.subtitle = label(
+        self.root,
+        "",
+        self.surface_width - 292,
+        layout.document_meta_top,
+        260,
+        "right",
+        "font_lab_caption",
+        20
+    )
     self.document_meta = label(
         self.root,
         "",
-        66,
+        560,
         layout.document_meta_top,
-        canvas.right - 86,
+        math.max(1, self.surface_width - 876),
         "left",
-        "font_lab_color",
+        "font_lab_caption",
         20
     )
     self.status = label(
         self.root,
         "",
         20,
-        self.surface_height - 29,
-        self.surface_width - 48,
+        self.surface_height - 33,
+        math.max(240, self.surface_width - 660),
         "left",
+        "font_lab_caption",
+        20
+    )
+    self.status_detail = label(
+        self.root,
+        "",
+        self.surface_width - 600,
+        self.surface_height - 33,
+        560,
+        "right",
         "font_lab_caption",
         20
     )
 
     self.top_buttons = {}
     for index, value in ipairs({"OPEN", "SAVE", "UNDO", "REDO", "TILES", "GRID"}) do
-        local positions = {{16,64},{68,116},{120,168},{172,220},{224,272},{276,324}}
+        local positions = {{88,136},{140,188},{192,240},{244,292},{296,344},{348,396}}
         local rect = {
             left=positions[index][1],
             top=layout.toolbar_top,
@@ -1326,7 +1363,7 @@ function map_editor:create()
     end
 
     self.palette_button = ui.dropdown(self.root, {
-        left=336,
+        left=408,
         top=layout.toolbar_top,
         label="PALETTE: ACT I",
         text_style="font_lab_caption",
@@ -1336,7 +1373,7 @@ function map_editor:create()
     self.palette_options = {}
     for index, palette in ipairs(palettes) do
         local button = ui.button(self.root, {
-            left=336,
+            left=408,
             top=layout.toolbar_bottom + 4 + (index - 1) * 40,
             label=palette.label,
             text_style="font_lab_caption",
@@ -1350,8 +1387,8 @@ function map_editor:create()
 
     self.tool_boxes = {}
     for index, tool in ipairs(tools) do
-        local top = layout.tool_top + (index - 1) * 52
-        local rect = {left=10, top=top, right=58, bottom=top + 48}
+        local top = layout.tool_top + (index - 1) * 54
+        local rect = {left=12, top=top, right=60, bottom=top + 48}
         self.tool_boxes[index] = icon_button(self.root, rect, "authoring", tool.id, 20)
     end
 
@@ -1408,8 +1445,8 @@ function map_editor:create()
         1
     )
     self.tileset_rows = {}
-    for row = 1, 3 do
-        local top = layout.tileset_rows + (row - 1) * 29
+    for row = 1, 4 do
+        local top = layout.tileset_rows + (row - 1) * 27
         local rect = {left=self.inspector_left + 18, top=top, right=self.inspector_right - 18, bottom=top + 25}
         self.tileset_rows[row] = {
             box=ui.well(self.library_root, {
@@ -1445,16 +1482,20 @@ function map_editor:create()
         "font_lab_caption",
         1
     )
-    self.tile_columns = 2
-    local tile_gap, tile_top = 6, layout.tile_top
-    local tile_width = math.floor((self.inspector_right - self.inspector_left - 42 - tile_gap) / self.tile_columns)
-    local tile_rows = math.max(2, math.floor((canvas.bottom - tile_top - 8) / 74))
+    self.tile_columns = self.inspector_right - self.inspector_left >= 300 and 3 or 2
+    local tile_gap, tile_top = 5, layout.tile_top
+    local tile_width = math.floor(
+        (self.inspector_right - self.inspector_left - 36 - tile_gap * (self.tile_columns - 1))
+        / self.tile_columns
+    )
+    local tile_height = 80
+    local tile_rows = math.max(2, math.floor((canvas.bottom - tile_top - 8) / (tile_height + tile_gap)))
     self.tile_cells = {}
     for slot = 1, tile_rows * self.tile_columns do
         local column, row = (slot - 1) % self.tile_columns, math.floor((slot - 1) / self.tile_columns)
         local left = self.inspector_left + 18 + column * (tile_width + tile_gap)
-        local top = tile_top + row * 74
-        local rect = {left=left, top=top, right=left + tile_width, bottom=top + 68}
+        local top = tile_top + row * (tile_height + tile_gap)
+        local rect = {left=left, top=top, right=left + tile_width, bottom=top + tile_height}
         local preview = render.create("hud", self.library_root)
         preview:set_position((rect.left + rect.right) / 2, rect.top + 28)
         preview:set_z(2)
@@ -1474,7 +1515,7 @@ function map_editor:create()
                 "font_lab_caption",
                 3
             ),
-            rect=rect, width=tile_width, height=68,
+            rect=rect, width=tile_width, height=tile_height,
         }
     end
 
@@ -1574,7 +1615,8 @@ function map_editor:create()
         on_select=function(value) self:select_tile(self.tile_by_label[value]) end,
     })
 
-    self.path, self.summary, self.chunk_set, self.preview_world, self.chunk_jobs = "", nil, nil, nil, {}
+    self.path, self.summary, self.chunk_set, self.preview_world = "", nil, nil, nil
+    self.visible_signature, self.visible_pending = nil, true
     self.palette, self.palette_index = palettes[1].path, 1
     self.palette_override, self.palette_menu_open = false, false
     self.zoom, self.pan_x, self.pan_y = 1, 0, 0

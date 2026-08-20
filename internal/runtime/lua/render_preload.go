@@ -384,9 +384,31 @@ func (p *assetPreloader) load(request AssetPreloadRequest) error {
 			return fmt.Errorf("world map is required")
 		}
 
-		_, err := p.cache.loadWorldTiles(p.assets, request.World, request.Palette)
+		set, err := p.cache.loadWorldTiles(p.assets, request.World, request.Palette)
+		if err != nil {
+			return err
+		}
 
-		return err
+		// Warm each unique DT1 picture once. A placement set can contain many
+		// thousands of draws but typically references only a few hundred physical
+		// records; warming per placement multiplies decode, job, and Lua overhead.
+		for graphicIndex, graphic := range set.Graphics {
+			pixels, loadErr := p.cache.loadWorldTileGraphic(
+				p.assets,
+				request.World,
+				request.Palette,
+				graphicIndex,
+			)
+			if loadErr != nil {
+				return loadErr
+			}
+
+			if p.composer != nil {
+				p.composer.WarmTextureKey(worldTileTextureKey(request.Palette, graphic), pixels)
+			}
+		}
+
+		return nil
 	case "world_tile":
 		if request.World == nil {
 			return fmt.Errorf("world map is required")

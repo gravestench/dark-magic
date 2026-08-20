@@ -93,12 +93,23 @@ func TestCompositionSpritesKeepNativeBoundsAndRepeatableEdges(t *testing.T) {
 }
 
 func TestPanelChromeDoesNotBakeInThePanelFill(t *testing.T) {
-	corner := drawNativeComponent(componentSpecs[0], 0)
+	corner := drawNativeComponent(findComponentSpec(t, "panel_top_left"), 0)
 	if alpha := corner.NRGBAAt(24, 24).A; alpha != 0 {
 		t.Fatalf("panel corner inner field alpha = %d, want transparent border-only chrome", alpha)
 	}
-	fill := drawNativeComponent(componentSpecs[4], 0)
+	fill := drawNativeComponent(findComponentSpec(t, "panel_fill"), 0)
 	if alpha := fill.NRGBAAt(16, 16).A; alpha != 255 {
 		t.Fatalf("panel fill alpha = %d, want opaque tiled fill", alpha)
 	}
+}
+
+func findComponentSpec(t *testing.T, name string) componentSpec {
+	t.Helper()
+	for _, spec := range componentSpecs {
+		if spec.Name == name {
+			return spec
+		}
+	}
+	t.Fatalf("component %q not found", name)
+	return componentSpec{}
 }

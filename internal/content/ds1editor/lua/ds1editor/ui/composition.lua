@@ -19,6 +19,18 @@ local panel_parts = {
     {name="panel_bottom_right", horizontal="right", vertical="bottom"},
 }
 
+local grand_parts = {
+    {name="grand_top_left", horizontal="left", vertical="top"},
+    {name="grand_top", horizontal="stretch", vertical="top"},
+    {name="grand_top_right", horizontal="right", vertical="top"},
+    {name="grand_left", horizontal="left", vertical="stretch"},
+    {name="grand_fill", horizontal="stretch", vertical="stretch"},
+    {name="grand_right", horizontal="right", vertical="stretch"},
+    {name="grand_bottom_left", horizontal="left", vertical="bottom"},
+    {name="grand_bottom", horizontal="stretch", vertical="bottom"},
+    {name="grand_bottom_right", horizontal="right", vertical="bottom"},
+}
+
 local recess_parts = {
     {name="recess_top_left", horizontal="left", vertical="top"},
     {name="recess_top", horizontal="stretch", vertical="top"},
@@ -146,6 +158,16 @@ function composition.chrome(parent, options)
     options = options or {}
     options.fill = false
     return nine_slice(parent, options, panel_parts, 64)
+end
+
+function composition.grand_frame(parent, options)
+    return nine_slice(parent, options, grand_parts, 160)
+end
+
+function composition.grand_chrome(parent, options)
+    options = options or {}
+    options.fill = false
+    return nine_slice(parent, options, grand_parts, 160)
 end
 
 -- Preview cells need a true four-sided recess. A horizontal three-piece strip
