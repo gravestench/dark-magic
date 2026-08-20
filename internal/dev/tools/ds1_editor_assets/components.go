@@ -24,6 +24,11 @@ type componentSpec struct {
 	RepeatAxis string
 }
 
+type compositionReferences struct {
+	mockup image.Image
+	kit    image.Image
+}
+
 // Every production component has a fixed native size. Structural grand chrome
 // is captured from the approved pixel-art composition kit at one source pixel
 // per output pixel; smaller controls remain hand-authored on the same grid.
@@ -133,7 +138,7 @@ var nativeColors = struct {
 // buildCompositionSheet emits native-grid sprites and records compatible
 // variant lists for the runtime's deterministic tiler.
 func buildCompositionSheet(sourceRoot, outputRoot string, palette color.Palette) (sheetManifest, error) {
-	reference, err := loadCompositionReference(sourceRoot)
+	references, err := loadCompositionReferences(sourceRoot)
 	if err != nil {
 		return sheetManifest{}, err
 	}
@@ -157,7 +162,7 @@ func buildCompositionSheet(sourceRoot, outputRoot string, palette color.Palette)
 		count := componentVariantCount(spec)
 		indices := make([]int, 0, count)
 		for variant := 0; variant < count; variant++ {
-			frame := drawProductionComponent(reference, spec, variant)
+			frame := drawProductionComponent(references, spec, variant)
 			if variant == 0 {
 				previewFrames = append(previewFrames, frame)
 			}
@@ -185,34 +190,44 @@ func buildCompositionSheet(sourceRoot, outputRoot string, palette color.Palette)
 	return manifest, nil
 }
 
-func loadCompositionReference(sourceRoot string) (image.Image, error) {
-	file, err := os.Open(filepath.Join(sourceRoot, "composition-kit.png"))
+func loadCompositionReferences(sourceRoot string) (compositionReferences, error) {
+	kit, err := loadCompositionPNG(filepath.Join(sourceRoot, "composition-kit.png"))
 	if err != nil {
-		return nil, fmt.Errorf("open composition-kit.png: %w", err)
+		return compositionReferences{}, err
+	}
+	mockup, err := loadCompositionPNG(filepath.Join(filepath.Dir(sourceRoot), "mockups", "editor-v2.png"))
+	if err != nil {
+		return compositionReferences{}, err
+	}
+	return compositionReferences{mockup: mockup, kit: kit}, nil
+}
+
+func loadCompositionPNG(path string) (image.Image, error) {
+	file, err := os.Open(path)
+	if err != nil {
+		return nil, fmt.Errorf("open %s: %w", filepath.Base(path), err)
 	}
 	defer file.Close() //nolint:errcheck // Decode errors retain precedence.
-
 	decoded, err := png.Decode(file)
 	if err != nil {
-		return nil, fmt.Errorf("decode composition-kit.png: %w", err)
+		return nil, fmt.Errorf("decode %s: %w", filepath.Base(path), err)
 	}
-
 	return decoded, nil
 }
 
-func drawProductionComponent(reference image.Image, spec componentSpec, variant int) *image.NRGBA {
+func drawProductionComponent(references compositionReferences, spec componentSpec, variant int) *image.NRGBA {
 	if strings.HasPrefix(spec.Name, "grand_") {
-		return captureGrandComponent(reference, spec, variant)
+		return captureGrandComponent(references.mockup, spec, variant)
 	}
 	if strings.HasPrefix(spec.Name, "panel_") {
-		return capturePanelComponent(reference, spec, variant)
+		return capturePanelComponent(references.mockup, spec, variant)
 	}
 	if strings.HasPrefix(spec.Name, "icon_") || spec.Name == "tool_idle" {
-		return captureIconComponent(reference, spec)
+		return captureIconComponent(references.kit, spec)
 	}
 	if strings.HasPrefix(spec.Name, "button_") || strings.HasPrefix(spec.Name, "tab_") ||
 		strings.HasPrefix(spec.Name, "well_") || strings.HasPrefix(spec.Name, "dropdown_") {
-		return captureControlComponent(reference, spec, variant)
+		return captureControlComponent(references.kit, spec, variant)
 	}
 
 	return drawNativeComponent(spec, variant)
@@ -260,24 +275,27 @@ func captureControlComponent(reference image.Image, spec componentSpec, variant 
 }
 
 func capturePanelComponent(reference image.Image, spec componentSpec, variant int) *image.NRGBA {
-	if strings.Contains(spec.Name, "left") && strings.Contains(spec.Name, "top") ||
-		strings.Contains(spec.Name, "right") && strings.Contains(spec.Name, "top") ||
-		strings.Contains(spec.Name, "left") && strings.Contains(spec.Name, "bottom") ||
-		strings.Contains(spec.Name, "right") && strings.Contains(spec.Name, "bottom") {
-		return drawNativeComponent(spec, variant)
-	}
-
 	target := image.NewNRGBA(image.Rect(0, 0, spec.Width, spec.Height))
 	switch spec.Name {
+	case "panel_top_left", "panel_top_right", "panel_bottom_left", "panel_bottom_right":
+		return drawNativeComponent(spec, variant)
 	case "panel_top", "panel_bottom":
-		left := 270 + (variant%4)*38
-		copyMirrored(target, reference, image.Rect(left, 35, left+32, 51), false, spec.Name == "panel_bottom")
+		left := 320 + (variant%4)*96
+		top := 141
+		if spec.Name == "panel_bottom" {
+			top = 875
+		}
+		draw.Draw(target, target.Bounds(), reference, image.Pt(left, top), draw.Src)
 	case "panel_left", "panel_right":
-		top := 44 + (variant%4)*36
-		copyMirrored(target, reference, image.Rect(730, top, 746, top+32), spec.Name == "panel_right", false)
+		top := 280 + (variant%4)*96
+		left := 92
+		if spec.Name == "panel_right" {
+			left = 1174
+		}
+		draw.Draw(target, target.Bounds(), reference, image.Pt(left, top), draw.Src)
 	case "panel_fill":
-		left := 874 + (variant%3)*36
-		top := 38 + (variant/3)*36
+		left := 900 + (variant%3)*48
+		top := 78 + (variant/3)*36
 		draw.Draw(target, target.Bounds(), reference, image.Pt(left, top), draw.Src)
 	}
 	stabilizeComponentEdges(target, spec.RepeatAxis)
@@ -308,18 +326,31 @@ func captureGrandComponent(reference image.Image, spec componentSpec, variant in
 	name := spec.Name
 
 	switch name {
-	case "grand_top_left", "grand_top_right", "grand_bottom_left", "grand_bottom_right":
-		copyMirrored(target, reference, image.Rect(34, 34, 114, 114),
-			strings.HasSuffix(name, "right"), strings.Contains(name, "bottom"))
+	case "grand_top_left":
+		draw.Draw(target, target.Bounds(), reference, image.Pt(0, 0), draw.Src)
+	case "grand_top_right":
+		draw.Draw(target, target.Bounds(), reference, image.Pt(1548, 0), draw.Src)
+	case "grand_bottom_left":
+		draw.Draw(target, target.Bounds(), reference, image.Pt(0, 886), draw.Src)
+	case "grand_bottom_right":
+		draw.Draw(target, target.Bounds(), reference, image.Pt(1548, 886), draw.Src)
 	case "grand_top", "grand_bottom":
-		left := 264 + (variant%5)*34
-		copyMirrored(target, reference, image.Rect(left, 35, left+32, 55), false, name == "grand_bottom")
+		left := 300 + (variant%5)*128
+		top := 0
+		if name == "grand_bottom" {
+			top = 946
+		}
+		draw.Draw(target, target.Bounds(), reference, image.Pt(left, top), draw.Src)
 	case "grand_left", "grand_right":
-		top := 40 + (variant%5)*32
-		copyMirrored(target, reference, image.Rect(730, top, 750, top+32), name == "grand_right", false)
+		top := 260 + (variant%5)*96
+		left := 0
+		if name == "grand_right" {
+			left = 1608
+		}
+		draw.Draw(target, target.Bounds(), reference, image.Pt(left, top), draw.Src)
 	case "grand_fill":
-		left := 874 + (variant%3)*36
-		top := 38 + (variant/3)*36
+		left := 900 + (variant%3)*36
+		top := 70 + (variant/3)*36
 		draw.Draw(target, target.Bounds(), reference, image.Pt(left, top), draw.Src)
 	}
 

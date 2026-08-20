@@ -112,7 +112,7 @@ local function layout_canvas(width, height)
     local inspector_width = clamp(math.floor(width * 0.27), 300, 380)
     local left, top = 72, layout.canvas_top
     local right = math.max(left + 360, width - inspector_width - 12)
-    return {left=left, top=top, right=right, bottom=height - 40}, right + 6, width - 8
+    return {left=left, top=top, right=right, bottom=height - 72}, right + 6, width - 8
 end
 
 -- Create a solid retained rectangle for canvas and content-card backgrounds.
@@ -158,7 +158,7 @@ function map_editor:set_message(value, kind)
     self.message, self.message_kind = value or "", kind or "white"
     text.set(
         self.status,
-        "font_lab_color",
+        "font_lab_caption",
         "[" .. self.message_kind .. "]" .. self.message .. "[/]",
         math.max(240, self.surface_width - 660),
         "left"
@@ -1278,12 +1278,13 @@ function map_editor:create()
         state="panel",
         z=10,
     })
-    ui.well(self.root, {
-        left=8,
-        top=self.surface_height - 36,
-        width=self.surface_width - 16,
-        height=28,
+    ui.frame(self.root, {
+        left=56,
+        top=self.surface_height - 68,
+        width=self.surface_width - 112,
+        height=60,
         z=10,
+        seed=41,
     })
 
     self.map_root = render.create("hud", self.root)
@@ -1326,8 +1327,8 @@ function map_editor:create()
     self.status = label(
         self.root,
         "",
-        20,
-        self.surface_height - 33,
+        72,
+        self.surface_height - 49,
         math.max(240, self.surface_width - 660),
         "left",
         "font_lab_caption",
@@ -1337,7 +1338,7 @@ function map_editor:create()
         self.root,
         "",
         self.surface_width - 600,
-        self.surface_height - 33,
+        self.surface_height - 49,
         560,
         "right",
         "font_lab_caption",
