@@ -15,21 +15,27 @@ import (
 	lua "github.com/yuin/gopher-lua"
 )
 
+// TestSceneFrameContextLabelsFocusedScene protects the scene frame context labels focused scene contract, including
+// its observable ordering and failure behavior.
 func TestSceneFrameContextLabelsFocusedScene(t *testing.T) {
 	manager := navigation.New()
 	scenes := NewScenes(New(), manager)
+
 	ctx := scenes.FrameContext(context.Background())
 	if got, ok := pprof.Label(ctx, "scene"); !ok || got != "none" {
 		t.Fatalf("empty scene label = %q, %v; want none, true", got, ok)
 	}
+
 	if err := manager.Register("title", func(context.Context) (navigation.Scene, error) {
 		return &frameLabelScene{}, nil
 	}); err != nil {
 		t.Fatal(err)
 	}
+
 	if err := manager.Replace(context.Background(), "title"); err != nil {
 		t.Fatal(err)
 	}
+
 	ctx = scenes.FrameContext(context.Background())
 	if got, ok := pprof.Label(ctx, "scene"); !ok || got != "title" {
 		t.Fatalf("focused scene label = %q, %v; want title, true", got, ok)
@@ -38,38 +44,66 @@ func TestSceneFrameContextLabelsFocusedScene(t *testing.T) {
 
 type frameLabelScene struct{}
 
-func (*frameLabelScene) Create(context.Context) error                { return nil }
-func (*frameLabelScene) Enter(context.Context) error                 { return nil }
-func (*frameLabelScene) Update(context.Context, time.Duration) error { return nil }
-func (*frameLabelScene) Render(context.Context) error                { return nil }
-func (*frameLabelScene) Exit(context.Context) error                  { return nil }
-func (*frameLabelScene) Destroy(context.Context) error               { return nil }
+// Create owns the create step at this boundary, keeping its side effects and failure point explicit to callers.
+func (*frameLabelScene) Create(context.Context) error { return nil }
 
+// Enter owns the enter step at this boundary, keeping its side effects and failure point explicit to callers.
+func (*frameLabelScene) Enter(context.Context) error { return nil }
+
+// Update applies the phase under its ownership boundary so readers cannot observe a partially updated value.
+func (*frameLabelScene) Update(context.Context, time.Duration) error { return nil }
+
+// Render performs in one rendering boundary so compositing order and pixel ownership remain explicit.
+func (*frameLabelScene) Render(context.Context) error { return nil }
+
+// Exit owns the exit step at this boundary, keeping its side effects and failure point explicit to callers.
+func (*frameLabelScene) Exit(context.Context) error { return nil }
+
+// Destroy owns the destroy step at this boundary, keeping its side effects and failure point explicit to callers.
+func (*frameLabelScene) Destroy(context.Context) error { return nil }
+
+// TestLuaSceneNavigationAndScopedRendering protects the lua scene navigation and scoped rendering contract,
+// including its observable ordering and failure behavior.
 func TestLuaSceneNavigationAndScopedRendering(t *testing.T) {
 	t.Parallel()
 
 	runtime := New()
 	calls := ""
-	if err := runtime.RegisterModule(Module{Name: "test.sink/v1", Loader: func(state *lua.LState) int {
-		state.Push(state.SetFuncs(state.NewTable(), map[string]lua.LGFunction{"add": func(state *lua.LState) int { calls += state.CheckString(1); return 0 }}))
-		return 1
-	}}); err != nil {
+
+	if err := runtime.RegisterModule(
+		Module{Name: "test.sink/v1", Loader: func(state *lua.LState) int {
+			state.Push(
+				state.SetFuncs(
+					state.NewTable(),
+					map[string]lua.LGFunction{
+						"add": func(state *lua.LState) int { calls += state.CheckString(1); return 0 },
+					},
+				),
+			)
+
+			return 1
+		}},
+	); err != nil {
 		t.Fatal(err)
 	}
+
 	manager := navigation.New()
 	scenes := NewScenes(runtime, manager)
 	profiler := &recordingSceneProfiler{}
 	scenes.SetProfiler(profiler)
+
 	var composer render.Composer
 	for _, module := range []Module{RenderModule(runtime, &composer), scenes.Module()} {
 		if err := runtime.RegisterModule(module); err != nil {
 			t.Fatal(err)
 		}
 	}
+
 	if err := runtime.Start(context.Background()); err != nil {
 		t.Fatal(err)
 	}
-	defer runtime.Stop(context.Background())
+	defer func() { _ = runtime.Stop(context.Background()) }()
+
 	source := fstest.MapFS{"boot.lua": &fstest.MapFile{Data: []byte(`
 local render = require("engine.render/v1")
 local scenes = require("engine.scene/v1")
@@ -88,72 +122,101 @@ return {
     scenes.replace("world")
   end,
 }`)}}
+
 	definition, err := LoadDefinition(context.Background(), runtime, source, "boot.lua")
 	if err != nil {
 		t.Fatal(err)
 	}
+
 	components := host.NewManager()
 	if err := components.Register(definition.Managed()); err != nil {
 		t.Fatal(err)
 	}
+
 	if err := components.Enable(context.Background(), definition.ID); err != nil {
 		t.Fatal(err)
 	}
+
 	if err := scenes.Flush(context.Background()); err != nil {
 		t.Fatal(err)
 	}
+
 	if err := scenes.Update(context.Background(), time.Second/60); err != nil {
 		t.Fatal(err)
 	}
+
 	if err := scenes.Render(context.Background()); err != nil {
 		t.Fatal(err)
 	}
+
 	if got := manager.Stack(); !reflect.DeepEqual(got, []string{"world"}) {
 		t.Fatalf("stack = %v", got)
 	}
+
 	if len(composer.Snapshot()) != 1 {
 		t.Fatalf("render nodes = %#v", composer.Snapshot())
 	}
+
 	if err := manager.Close(context.Background()); err != nil {
 		t.Fatal(err)
 	}
+
 	if len(composer.Snapshot()) != 0 {
 		t.Fatalf("render nodes leaked: %#v", composer.Snapshot())
 	}
+
 	if calls != "create;enter;update;render;exit;destroy;" {
 		t.Fatalf("calls = %q", calls)
 	}
+
 	if !reflect.DeepEqual(profiler.scenes, []string{"world"}) {
 		t.Fatalf("profiled scenes = %v", profiler.scenes)
 	}
 }
 
+// TestNonfocusedLuaSceneCannotReadFocusedOverlayInput protects the nonfocused lua scene cannot read focused overlay
+// input contract, including its observable ordering and failure behavior.
 func TestNonfocusedLuaSceneCannotReadFocusedOverlayInput(t *testing.T) {
 	ctx := context.Background()
 	runtime := New()
 	observed := make(map[string]bool)
-	if err := runtime.RegisterModule(Module{Name: "test.focus/v1", Loader: func(state *lua.LState) int {
-		state.Push(state.SetFuncs(state.NewTable(), map[string]lua.LGFunction{"record": func(state *lua.LState) int {
-			observed[state.CheckString(1)] = state.CheckBool(2)
-			return 0
-		}}))
-		return 1
-	}}); err != nil {
+
+	if err := runtime.RegisterModule(
+		Module{Name: "test.focus/v1", Loader: func(state *lua.LState) int {
+			state.Push(
+				state.SetFuncs(
+					state.NewTable(),
+					map[string]lua.LGFunction{"record": func(state *lua.LState) int {
+						observed[state.CheckString(1)] = state.CheckBool(2)
+						return 0
+					}},
+				),
+			)
+
+			return 1
+		}},
+	); err != nil {
 		t.Fatal(err)
 	}
+
 	manager := navigation.New()
 	scenes := NewScenes(runtime, manager)
+
 	var input inputstate.Store
 	scenes.SetInputStore(&input)
+
 	for _, module := range []Module{InputModule(&input), scenes.Module()} {
 		if err := runtime.RegisterModule(module); err != nil {
 			t.Fatal(err)
 		}
 	}
+
 	if err := runtime.Start(ctx); err != nil {
 		t.Fatal(err)
 	}
-	defer runtime.Stop(ctx)
+
+	defer func() { _ = runtime.Stop(ctx) }()
+
 	source := fstest.MapFS{"boot.lua": &fstest.MapFile{Data: []byte(`
 local input=require("engine.input/v1")
 local scenes=require("engine.scene/v1")
@@ -169,24 +232,36 @@ return {id="boot",api=1,start=function(self)
   scenes.push("overlay")
 end}
 `)}}
+
 	definition, err := LoadDefinition(ctx, runtime, source, "boot.lua")
 	if err != nil {
 		t.Fatal(err)
 	}
+
 	components := host.NewManager()
 	if err := components.Register(definition.Managed()); err != nil {
 		t.Fatal(err)
 	}
+
 	if err := components.Enable(ctx, definition.ID); err != nil {
 		t.Fatal(err)
 	}
+
 	if err := scenes.Flush(ctx); err != nil {
 		t.Fatal(err)
 	}
-	input.Publish(inputstate.Frame{Actions: map[string]inputstate.ActionState{"confirm": {Pressed: true}}, Owner: inputstate.FocusOwner{Domain: inputstate.FocusScene, ID: "overlay"}})
+
+	input.Publish(
+		inputstate.Frame{
+			Actions: map[string]inputstate.ActionState{"confirm": {Pressed: true}},
+			Owner:   inputstate.FocusOwner{Domain: inputstate.FocusScene, ID: "overlay"},
+		},
+	)
+
 	if err := scenes.Update(ctx, time.Second/60); err != nil {
 		t.Fatal(err)
 	}
+
 	if observed["world"] || !observed["overlay"] {
 		t.Fatalf("input visibility = %#v", observed)
 	}
@@ -194,25 +269,32 @@ end}
 
 type recordingSceneProfiler struct{ scenes []string }
 
+// CaptureSceneHeap owns the capture scene heap step at this boundary, keeping its side effects and failure point
+// explicit to callers.
 func (p *recordingSceneProfiler) CaptureSceneHeap(scene string) error {
 	p.scenes = append(p.scenes, scene)
 	return nil
 }
 
+// TestLuaSceneReplacementDestroysPreviousComposition protects the lua scene replacement destroys previous
+// composition contract, including its observable ordering and failure behavior.
 func TestLuaSceneReplacementDestroysPreviousComposition(t *testing.T) {
 	runtime := New()
 	manager := navigation.New()
 	scenes := NewScenes(runtime, manager)
+
 	var composer render.Composer
 	for _, module := range []Module{RenderModule(runtime, &composer), scenes.Module()} {
 		if err := runtime.RegisterModule(module); err != nil {
 			t.Fatal(err)
 		}
 	}
+
 	if err := runtime.Start(context.Background()); err != nil {
 		t.Fatal(err)
 	}
-	defer runtime.Stop(context.Background())
+	defer func() { _ = runtime.Stop(context.Background()) }()
+
 	source := fstest.MapFS{"boot.lua": &fstest.MapFile{Data: []byte(`
 local render=require("engine.render/v1"); local scenes=require("engine.scene/v1")
 local function screen(layer) return {create=function(self)
@@ -221,51 +303,64 @@ end} end
 return {id="boot",api=1,start=function(self)
   scenes.register("one",screen("hud")); scenes.register("two",screen("hud")); scenes.replace("one")
 end}`)}}
+
 	definition, err := LoadDefinition(context.Background(), runtime, source, "boot.lua")
 	if err != nil {
 		t.Fatal(err)
 	}
+
 	components := host.NewManager()
 	if err := components.Register(definition.Managed()); err != nil {
 		t.Fatal(err)
 	}
+
 	if err := components.Enable(context.Background(), definition.ID); err != nil {
 		t.Fatal(err)
 	}
+
 	if err := scenes.Flush(context.Background()); err != nil {
 		t.Fatal(err)
 	}
+
 	if got := composer.Diagnostics().ActiveNodes; got != 2 {
 		t.Fatalf("first scene nodes = %d", got)
 	}
+
 	err = runtime.Run(context.Background(), func(state *lua.LState) error {
 		return state.DoString(`require("engine.scene/v1").replace("two")`)
 	})
 	if err != nil {
 		t.Fatal(err)
 	}
+
 	if err := scenes.Flush(context.Background()); err != nil {
 		t.Fatal(err)
 	}
+
 	if got := composer.Diagnostics().ActiveNodes; got != 2 {
 		t.Fatalf("replacement retained both scenes: nodes = %d", got)
 	}
 }
 
+// TestLuaSceneReentryDoesNotShareMutableDefinitionState protects the lua scene reentry does not share mutable
+// definition state contract, including its observable ordering and failure behavior.
 func TestLuaSceneReentryDoesNotShareMutableDefinitionState(t *testing.T) {
 	runtime := New()
 	manager := navigation.New()
 	scenes := NewScenes(runtime, manager)
+
 	var composer render.Composer
 	for _, module := range []Module{RenderModule(runtime, &composer), scenes.Module()} {
 		if err := runtime.RegisterModule(module); err != nil {
 			t.Fatal(err)
 		}
 	}
+
 	if err := runtime.Start(context.Background()); err != nil {
 		t.Fatal(err)
 	}
-	defer runtime.Stop(context.Background())
+	defer func() { _ = runtime.Stop(context.Background()) }()
+
 	source := fstest.MapFS{"boot.lua": {Data: []byte(`
 local render=require("engine.render/v1"); local scenes=require("engine.scene/v1")
 local screen={
@@ -276,26 +371,33 @@ local screen={
 return {id="boot",api=1,start=function(self)
   scenes.register("screen",screen); scenes.replace("screen")
 end}`)}}
+
 	definition, err := LoadDefinition(context.Background(), runtime, source, "boot.lua")
 	if err != nil {
 		t.Fatal(err)
 	}
+
 	components := host.NewManager()
 	if err := components.Register(definition.Managed()); err != nil {
 		t.Fatal(err)
 	}
+
 	if err := components.Enable(context.Background(), definition.ID); err != nil {
 		t.Fatal(err)
 	}
+
 	if err := scenes.Flush(context.Background()); err != nil {
 		t.Fatal(err)
 	}
+
 	if err := manager.Replace(context.Background(), "screen"); err != nil {
 		t.Fatal(err)
 	}
+
 	if err := scenes.Update(context.Background(), time.Second/60); err != nil {
 		t.Fatalf("re-entered scene retained a stale render handle: %v", err)
 	}
+
 	if got := composer.Diagnostics().ActiveNodes; got != 1 {
 		t.Fatalf("active nodes = %d, want 1", got)
 	}

@@ -14,44 +14,66 @@ type Simulation struct {
 	world *scene.State
 }
 
+// NewSimulation constructs simulation with its dependencies in one place, keeping ownership and cleanup
+// explicit.
 func NewSimulation(world *scene.State) *Simulation { return &Simulation{world: world} }
 
+// Move owns the move step at this boundary, keeping its side effects and failure point explicit to callers.
 func (s *Simulation) Move(dx, dy float64) {
 	s.mu.Lock()
 	s.world.MoveHero(dx, dy)
 	s.mu.Unlock()
 }
 
+// Snapshot returns a stable snapshot observation without exposing mutable runtime state to callers.
 func (s *Simulation) Snapshot() scene.State {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
+
 	return *s.world
 }
 
+// SimulationModule defines the simulation module Lua boundary in one place so scripts receive a stable command and
+// error contract.
 func SimulationModule(simulation *Simulation) Module {
-	return Module{Name: "engine.simulation/v1", Help: documentedModule("Inspect and command the deterministic game simulation.", map[string]CommandHelp{
-		"move_hero": commandHelp("engine.simulation.move_hero(dx, dy)", "Move the simulated hero by a relative amount."),
-		"state":     commandHelp("engine.simulation.state()", "Return the current simulation snapshot."),
-	}), Loader: func(state *lua.LState) int {
-		module := state.SetFuncs(state.NewTable(), map[string]lua.LGFunction{
-			"move_hero": func(state *lua.LState) int {
-				simulation.Move(float64(state.CheckNumber(1)), float64(state.CheckNumber(2)))
-				return 0
+	return Module{
+		Name: "engine.simulation/v1",
+		Help: documentedModule(
+			"Inspect and command the deterministic game simulation.",
+			map[string]CommandHelp{
+				"move_hero": commandHelp(
+					"engine.simulation.move_hero(dx, dy)",
+					"Move the simulated hero by a relative amount.",
+				),
+				"state": commandHelp(
+					"engine.simulation.state()",
+					"Return the current simulation snapshot.",
+				),
 			},
-			"state": func(state *lua.LState) int {
-				world := simulation.Snapshot()
-				result := state.NewTable()
-				result.RawSetString("seed", lua.LNumber(world.Seed))
-				result.RawSetString("hero_x", lua.LNumber(world.Hero.X))
-				result.RawSetString("hero_y", lua.LNumber(world.Hero.Y))
-				result.RawSetString("camera_x", lua.LNumber(world.Camera.X))
-				result.RawSetString("camera_y", lua.LNumber(world.Camera.Y))
-				state.Push(result)
-				return 1
-			},
-		})
-		module.RawSetString("api", lua.LNumber(1))
-		state.Push(module)
-		return 1
-	}}
+		),
+		Loader: func(state *lua.LState) int {
+			module := state.SetFuncs(state.NewTable(), map[string]lua.LGFunction{
+				"move_hero": func(state *lua.LState) int {
+					simulation.Move(float64(state.CheckNumber(1)), float64(state.CheckNumber(2)))
+					return 0
+				},
+				"state": func(state *lua.LState) int {
+					world := simulation.Snapshot()
+					result := state.NewTable()
+					result.RawSetString("seed", lua.LNumber(world.Seed))
+					result.RawSetString("hero_x", lua.LNumber(world.Hero.X))
+					result.RawSetString("hero_y", lua.LNumber(world.Hero.Y))
+					result.RawSetString("camera_x", lua.LNumber(world.Camera.X))
+					result.RawSetString("camera_y", lua.LNumber(world.Camera.Y))
+					state.Push(result)
+
+					return 1
+				},
+			})
+			module.RawSetString("api", lua.LNumber(1))
+			state.Push(module)
+
+			return 1
+		},
+	}
 }

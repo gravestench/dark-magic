@@ -4,15 +4,22 @@ import (
 	rl "github.com/gen2brain/raylib-go/raylib"
 )
 
+// InputState describes a key or button during one sampled renderer frame.
 type InputState int
 
 const (
+	// StateUp means the control is inactive and had no transition this frame.
 	StateUp InputState = iota
+	// StateDown means the control remains held after an earlier press.
 	StateDown
+	// StateReleased means the control transitioned to inactive this frame.
 	StateReleased
+	// StatePressed means the control transitioned to active or emitted an allowed held-key repeat this frame.
 	StatePressed
 )
 
+// KeyboardState returns a defensive copy of the most recently sampled ordinary keys. Callers may retain or mutate the
+// map without racing the next renderer-thread update.
 func (s *Service) KeyboardState() map[int32]InputState {
 	s.mux.RLock()
 	defer s.mux.RUnlock()
@@ -20,12 +27,15 @@ func (s *Service) KeyboardState() map[int32]InputState {
 	return cloneStates(s.keyStates)
 }
 
+// KeyState returns one ordinary key from a consistent sampled frame; unknown keys intentionally read as StateUp.
 func (s *Service) KeyState(key int32) InputState {
 	s.mux.RLock()
 	defer s.mux.RUnlock()
+
 	return s.keyStates[key]
 }
 
+// KeyboardModifierState returns a defensive copy so consumer-side chord detection cannot mutate service ownership.
 func (s *Service) KeyboardModifierState() map[int32]InputState {
 	s.mux.RLock()
 	defer s.mux.RUnlock()
@@ -33,18 +43,24 @@ func (s *Service) KeyboardModifierState() map[int32]InputState {
 	return cloneStates(s.keyModStates)
 }
 
+// ModifierKeyState returns one modifier from the latest sample while sharing the same lock as bulk snapshots.
 func (s *Service) ModifierKeyState(key int32) InputState {
 	s.mux.RLock()
 	defer s.mux.RUnlock()
+
 	return s.keyModStates[key]
 }
 
+// MouseCursorState returns the last valid logical coordinate, which remains stable while the native pointer is outside
+// the game viewport.
 func (s *Service) MouseCursorState() (x, y int) {
 	s.mux.RLock()
 	defer s.mux.RUnlock()
+
 	return s.cursor.X, s.cursor.Y
 }
 
+// MouseButtonState returns a defensive copy of every tracked button so callers cannot modify the next frame's state.
 func (s *Service) MouseButtonState() map[int32]InputState {
 	s.mux.RLock()
 	defer s.mux.RUnlock()
@@ -52,20 +68,26 @@ func (s *Service) MouseButtonState() map[int32]InputState {
 	return cloneStates(s.mouseButtonStates)
 }
 
+// MouseWheelState returns the two-axis delta sampled for the current frame rather than accumulating prior motion.
 func (s *Service) MouseWheelState() (x, y float32) {
 	s.mux.RLock()
 	defer s.mux.RUnlock()
+
 	return s.scroll.X, s.scroll.Y
 }
 
+// cloneStates preserves Service ownership of mutable maps across frame publication.
 func cloneStates(states map[int32]InputState) map[int32]InputState {
 	result := make(map[int32]InputState, len(states))
 	for key, state := range states {
 		result[key] = state
 	}
+
 	return result
 }
 
+// updateKeyboardState samples the complete ordinary-key set while holding the publication lock, preventing readers
+// from combining key states from two native frames.
 func (s *Service) updateKeyboardState() {
 	s.mux.Lock()
 	for _, key := range s.normalKeyCodes() {
@@ -74,6 +96,7 @@ func (s *Service) updateKeyboardState() {
 	s.mux.Unlock()
 }
 
+// updateKeyboardModifierState samples modifiers separately because they never use held-key repeat semantics.
 func (s *Service) updateKeyboardModifierState() {
 	s.mux.Lock()
 	for _, key := range s.modifierKeyCodes() {
@@ -82,6 +105,8 @@ func (s *Service) updateKeyboardModifierState() {
 	s.mux.Unlock()
 }
 
+// updateMouseCursorState converts the native position through the renderer viewport and retains the previous logical
+// point when conversion reports letterboxing or an out-of-window coordinate.
 func (s *Service) updateMouseCursorState() {
 	s.mux.Lock()
 	p := rl.GetMousePosition()
@@ -90,6 +115,7 @@ func (s *Service) updateMouseCursorState() {
 	s.mux.Unlock()
 }
 
+// updateMouseWheelState replaces both axes with Raylib's per-frame delta so scroll input is consumed exactly once.
 func (s *Service) updateMouseWheelState() {
 	s.mux.Lock()
 	delta := rl.GetMouseWheelMoveV()
@@ -105,12 +131,15 @@ func retainLogicalCursor(previousX, previousY, x, y int, inside bool) (int, int)
 	if !inside {
 		return previousX, previousY
 	}
+
 	return x, y
 }
 
+// updateMouseButtonState samples every supported Raylib button under one lock and gives edge transitions precedence
+// over the held state for the same frame.
 func (s *Service) updateMouseButtonState() {
 	s.mux.Lock()
-	for _, key := range s.mouseButtonKeyCodess() {
+	for _, key := range s.mouseButtonCodes() {
 		code := int32(key)
 		s.mouseButtonStates[code] = StateUp
 
@@ -125,16 +154,21 @@ func (s *Service) updateMouseButtonState() {
 	s.mux.Unlock()
 }
 
+// currentKeyState preserves transition precedence: press (including allowed repeat), release, held, then up. This
+// ordering ensures a transition cannot be hidden by Raylib also reporting the key as down.
 func currentKeyState(key int32, repeat bool) InputState {
 	if rl.IsKeyPressed(key) || repeat && rl.IsKeyPressedRepeat(key) {
 		return StatePressed
 	}
+
 	if rl.IsKeyReleased(key) {
 		return StateReleased
 	}
+
 	if rl.IsKeyDown(key) {
 		return StateDown
 	}
+
 	return StateUp
 }
 
@@ -152,6 +186,7 @@ func repeatsWhenHeld(key int32) bool {
 	}
 }
 
+// normalKeyCodes defines the stable keyboard surface published by Service; keys outside this list read as StateUp.
 func (*Service) normalKeyCodes() []int32 {
 	return []int32{
 		rl.KeySpace,
@@ -258,6 +293,7 @@ func (*Service) normalKeyCodes() []int32 {
 	}
 }
 
+// modifierKeyCodes keeps left and right modifiers distinct so callers can implement exact chord policy.
 func (*Service) modifierKeyCodes() []int32 {
 	return []int32{
 		rl.KeyLeftShift,
@@ -271,7 +307,8 @@ func (*Service) modifierKeyCodes() []int32 {
 	}
 }
 
-func (*Service) mouseButtonKeyCodess() []rl.MouseButton {
+// mouseButtonCodes lists every Raylib mouse button sampled into a published frame.
+func (*Service) mouseButtonCodes() []rl.MouseButton {
 	return []rl.MouseButton{
 		rl.MouseButtonLeft,
 		rl.MouseButtonRight,

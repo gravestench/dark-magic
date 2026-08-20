@@ -30,8 +30,10 @@ func (h *Handles) Add(typeName string, value any) (Handle, error) {
 	if typeName == "" || value == nil {
 		return Handle{}, fmt.Errorf("modruntime: handle type and value are required")
 	}
+
 	h.mu.Lock()
 	defer h.mu.Unlock()
+
 	var slot uint32
 	if len(h.free) != 0 {
 		slot = h.free[len(h.free)-1]
@@ -40,9 +42,11 @@ func (h *Handles) Add(typeName string, value any) (Handle, error) {
 		slot = uint32(len(h.slots))
 		h.slots = append(h.slots, handleSlot{generation: 1})
 	}
+
 	entry := &h.slots[slot]
 	entry.typeName = typeName
 	entry.value = value
+
 	return Handle{Type: typeName, Slot: slot, Generation: entry.generation}, nil
 }
 
@@ -50,13 +54,17 @@ func (h *Handles) Add(typeName string, value any) (Handle, error) {
 func (h *Handles) Get(handle Handle) (any, error) {
 	h.mu.RLock()
 	defer h.mu.RUnlock()
+
 	if int(handle.Slot) >= len(h.slots) {
 		return nil, fmt.Errorf("modruntime: invalid %s handle slot %d", handle.Type, handle.Slot)
 	}
+
 	entry := h.slots[handle.Slot]
-	if entry.value == nil || entry.generation != handle.Generation || entry.typeName != handle.Type {
+	if entry.value == nil || entry.generation != handle.Generation ||
+		entry.typeName != handle.Type {
 		return nil, fmt.Errorf("modruntime: stale or invalid %s handle", handle.Type)
 	}
+
 	return entry.value, nil
 }
 
@@ -64,19 +72,26 @@ func (h *Handles) Get(handle Handle) (any, error) {
 func (h *Handles) Release(handle Handle) error {
 	h.mu.Lock()
 	defer h.mu.Unlock()
+
 	if int(handle.Slot) >= len(h.slots) {
 		return fmt.Errorf("modruntime: invalid %s handle slot %d", handle.Type, handle.Slot)
 	}
+
 	entry := &h.slots[handle.Slot]
-	if entry.value == nil || entry.generation != handle.Generation || entry.typeName != handle.Type {
+	if entry.value == nil || entry.generation != handle.Generation ||
+		entry.typeName != handle.Type {
 		return fmt.Errorf("modruntime: stale or invalid %s handle", handle.Type)
 	}
+
 	entry.value = nil
 	entry.typeName = ""
+
 	entry.generation++
 	if entry.generation == 0 {
 		entry.generation = 1
 	}
+
 	h.free = append(h.free, handle.Slot)
+
 	return nil
 }

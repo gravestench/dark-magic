@@ -25,12 +25,16 @@ func (s *Scope) Add(release ReleaseFunc) error {
 	if release == nil {
 		return errors.New("modruntime: nil resource release")
 	}
+
 	s.mu.Lock()
 	defer s.mu.Unlock()
+
 	if s.closed {
 		return errors.New("modruntime: resource scope is closed")
 	}
+
 	s.releases = append(s.releases, release)
+
 	return nil
 }
 
@@ -41,16 +45,19 @@ func (s *Scope) Close() error {
 		s.mu.Unlock()
 		return nil
 	}
+
 	s.closed = true
 	releases := s.releases
 	s.releases = nil
 	s.mu.Unlock()
 
 	var errs []error
+
 	for i := len(releases) - 1; i >= 0; i-- {
 		if err := releases[i](); err != nil {
 			errs = append(errs, fmt.Errorf("modruntime: release resource %d: %w", i, err))
 		}
 	}
+
 	return errors.Join(errs...)
 }

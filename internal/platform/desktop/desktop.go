@@ -101,4 +101,6 @@ type ConsoleOptions struct {
 
 type discardAudioBackend struct{}
 
+// Apply acknowledges every mixer command without native playback, allowing muted backends to advance mixer state and
+// release command-owned data instead of leaving the queue undrained.
 func (discardAudioBackend) Apply(audio.Command) error { return nil }

@@ -27,7 +27,8 @@ type Service struct {
 	stopFrames func()
 }
 
-// Start initializes input state and subscribes polling to the renderer frame.
+// Start initializes published state before subscribing update to the renderer owner thread. The initial cursor is the
+// logical center so software-pointer consumers have a meaningful coordinate before the first native sample.
 func (s *Service) Start(context.Context) error {
 	s.keyStates = make(map[int32]InputState)
 	s.keyModStates = make(map[int32]InputState)
@@ -35,23 +36,27 @@ func (s *Service) Start(context.Context) error {
 	width, height := s.renderer.Resolution()
 	s.cursor.X, s.cursor.Y = width/2, height/2
 	s.stopFrames = s.renderer.SubscribeFrame(s.update)
+
 	return nil
 }
 
-// Stop detaches frame polling.
+// Stop detaches frame polling exactly once so subsequent renderer frames cannot mutate a stopped service.
 func (s *Service) Stop(context.Context) error {
 	if s.stopFrames != nil {
 		s.stopFrames()
 		s.stopFrames = nil
 	}
+
 	return nil
 }
 
-// New constructs input with its renderer dependency explicitly.
+// New records the renderer dependency without starting native sampling; lifecycle ownership remains with the caller.
 func New(renderer raylibRenderer.Dependency) *Service {
 	return &Service{renderer: renderer}
 }
 
+// update samples keyboard, modifiers, cursor, wheel, and buttons in stable order on every renderer frame. Each domain
+// publishes under its own lock interval, matching the established reader-visible timing.
 func (s *Service) update() {
 	s.updateKeyboardState()
 	s.updateKeyboardModifierState()

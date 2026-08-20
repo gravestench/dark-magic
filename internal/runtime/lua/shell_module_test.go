@@ -9,19 +9,24 @@ import (
 	"github.com/yuin/gopher-lua"
 )
 
+// TestShellModuleEditsResetsAndSavesSettings protects the shell module edits resets and saves settings contract,
+// including its observable ordering and failure behavior.
 func TestShellModuleEditsResetsAndSavesSettings(t *testing.T) {
 	settings, err := shell.NewSettings(filepath.Join(t.TempDir(), "shell.json"))
 	if err != nil {
 		t.Fatal(err)
 	}
+
 	runtime := New()
 	if err := runtime.RegisterModule(ShellModule(settings)); err != nil {
 		t.Fatal(err)
 	}
+
 	if err := runtime.Start(context.Background()); err != nil {
 		t.Fatal(err)
 	}
-	defer runtime.Stop(context.Background())
+	defer func() { _ = runtime.Stop(context.Background()) }()
+
 	source := `local shell = require("engine.shell/v1")
 shell.set("font_size", 24)
 shell.set_many({opacity=0.8, console_height=0.7, transcript_limit=500, animation_speed=2})
@@ -35,6 +40,7 @@ shell.reset()
 assert(shell.get("font_size") == shell.defaults().font_size)
 shell.reload()
 assert(shell.get("font_size") == 24)`
+
 	if err := runtime.Run(context.Background(), func(state *lua.LState) error {
 		return state.DoString(source)
 	}); err != nil {
