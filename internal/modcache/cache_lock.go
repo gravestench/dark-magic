@@ -28,17 +28,21 @@ func (store *Store) withMutationLock(operation func() error) error {
 	deadline := time.Now().Add(cacheLockTimeout)
 	lockPath := filepath.Join(store.root, ".mutation.lock")
 	permissionRaces := 0
+
 	for {
 		err := os.Mkdir(lockPath, 0o700)
 		if err == nil {
 			operationErr := operation()
 			removeErr := os.Remove(lockPath)
+
 			return errors.Join(operationErr, removeErr)
 		}
+
 		contended, inspectErr := mutationLockContended(lockPath, err)
 		if inspectErr != nil {
 			return fmt.Errorf("modcache: acquire mutation lock: %w", inspectErr)
 		}
+
 		if !contended {
 			// If another Windows owner removed the directory between our failed
 			// Mkdir and Stat, the path is already gone but Mkdir's error remains
@@ -46,19 +50,26 @@ func (store *Store) withMutationLock(operation func() error) error {
 			// permission failure still returns its original error promptly.
 			if os.IsPermission(err) && permissionRaces < 10 {
 				permissionRaces++
+
 				time.Sleep(time.Millisecond)
+
 				continue
 			}
+
 			return fmt.Errorf("modcache: acquire mutation lock: %w", err)
 		}
+
 		permissionRaces = 0
+
 		if info, statErr := os.Stat(lockPath); statErr == nil && time.Since(info.ModTime()) > cacheLockStale {
 			_ = os.Remove(lockPath)
 			continue
 		}
+
 		if time.Now().After(deadline) {
 			return errors.New("modcache: timed out waiting for another process to finish updating the cache")
 		}
+
 		time.Sleep(10 * time.Millisecond)
 	}
 }
@@ -71,12 +82,15 @@ func mutationLockContended(lockPath string, createErr error) (bool, error) {
 	if os.IsExist(createErr) {
 		return true, nil
 	}
+
 	_, statErr := os.Stat(lockPath)
 	if statErr == nil {
 		return true, nil
 	}
+
 	if os.IsNotExist(statErr) {
 		return false, nil
 	}
+
 	return false, errors.Join(createErr, statErr)
 }

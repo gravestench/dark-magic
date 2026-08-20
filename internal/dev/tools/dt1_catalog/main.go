@@ -10,113 +10,89 @@ import (
 	"os"
 	"strings"
 
-	assetinspect "github.com/gravestench/dark-magic/internal/assets/inspect"
 	"github.com/gravestench/dark-magic/internal/content"
-	ds1 "github.com/gravestench/ds1/pkg"
-	"github.com/gravestench/dt1"
 )
 
+type catalogFlags struct {
+	assets string
+	stamps string
+}
+
+// main preserves the command's exit-code split: missing input is usage error 2, while catalog failures use 1.
 func main() {
-	paths := flag.String("assets", "", "comma-separated DT1 asset paths")
-	stamps := flag.String("stamps", "", "comma-separated DS1 stamps whose tile identities should be printed")
-	flag.Parse()
-	if strings.TrimSpace(*paths) == "" && strings.TrimSpace(*stamps) == "" {
+	options := parseCatalogFlags()
+	if !options.hasInput() {
 		fmt.Fprintln(os.Stderr, "dt1_catalog: -assets or -stamps is required")
 		os.Exit(2)
 	}
+
 	source, err := content.FromEnvironment()
 	if err != nil {
 		fatal(err)
 	}
-	for _, path := range strings.Split(*paths, ",") {
-		if strings.TrimSpace(path) == "" {
-			continue
-		}
-		if err := inspect(source, strings.TrimSpace(path)); err != nil {
-			fatal(err)
-		}
-	}
-	for _, path := range strings.Split(*stamps, ",") {
-		if strings.TrimSpace(path) == "" {
-			continue
-		}
-		if err := inspectStamp(source, strings.TrimSpace(path)); err != nil {
-			fatal(err)
-		}
+
+	if err := printCatalog(source, os.Stdout, options); err != nil {
+		fatal(err)
 	}
 }
 
-func inspectStamp(source *content.FS, path string) error {
-	file, err := source.Open(path)
-	if err != nil {
-		return fmt.Errorf("open %q: %w", path, err)
-	}
-	defer file.Close()
-	stamp, err := ds1.FromReader(file)
-	if err != nil {
-		return fmt.Errorf("decode %q: %w", path, err)
-	}
-	fmt.Printf("%s (%dx%d)\n", path, stamp.Width, stamp.Height)
-	dependencies, err := assetinspect.DS1TilePaths(source, path)
-	if err != nil {
+// parseCatalogFlags keeps the established flag names and defaults in one place so the CLI contract remains visible.
+func parseCatalogFlags() catalogFlags {
+	assets := flag.String("assets", "", "comma-separated DT1 asset paths")
+	stamps := flag.String("stamps", "", "comma-separated DS1 stamps whose tile identities should be printed")
+
+	flag.Parse()
+
+	return catalogFlags{assets: *assets, stamps: *stamps}
+}
+
+// hasInput rejects lists containing only separators or whitespace before opening the configured content source.
+func (options catalogFlags) hasInput() bool {
+	return strings.TrimSpace(options.assets) != "" || strings.TrimSpace(options.stamps) != ""
+}
+
+// printCatalog preserves assets-before-stamps ordering and stops at the first inspection failure.
+func printCatalog(source *content.FS, output io.Writer, options catalogFlags) error {
+	if err := inspectAssetList(source, output, options.assets, inspectDT1); err != nil {
 		return err
 	}
-	for _, dependency := range dependencies {
-		fmt.Printf("  library %s\n", dependency)
-	}
-	for y, row := range stamp.Tiles {
-		for x, record := range row {
-			for layer, floor := range record.Floors {
-				if !floor.Hidden && floor.Prop1 != 0 {
-					fmt.Printf("  %3d,%3d floor[%d] main=%3d sub=%3d\n", x, y, layer, floor.Style, floor.Sequence)
-				}
-			}
-			for layer, wall := range record.Walls {
-				if !wall.Hidden && wall.Prop1 != 0 {
-					fmt.Printf("  %3d,%3d wall[%d] orientation=%2d main=%3d sub=%3d\n", x, y, layer, wall.Type, wall.Style, wall.Sequence)
-				}
-			}
-		}
-	}
-	return nil
+
+	return inspectAssetList(source, output, options.stamps, inspectStamp)
 }
 
-func inspect(source *content.FS, path string) error {
-	file, err := source.Open(path)
-	if err != nil {
-		return fmt.Errorf("open %q: %w", path, err)
-	}
-	defer file.Close()
-	data, err := io.ReadAll(file)
-	if err != nil {
-		return fmt.Errorf("read %q: %w", path, err)
-	}
-	header, err := dt1.ProbeBytes(data)
-	if err != nil {
-		return fmt.Errorf("probe %q: %w", path, err)
-	}
-	fmt.Printf("%s (header %d.%d, %s)", path, header.Version, header.SubVersion, header.Layout)
-	if header.Layout != dt1.LayoutModern {
-		fmt.Println(" -- body intentionally not decoded")
-		return nil
-	}
-	decoded, err := dt1.OpenBytes(data)
-	if err != nil {
-		return fmt.Errorf("decode %q: %w", path, err)
-	}
-	fmt.Printf(" (%d records)\n", decoded.NumTiles())
-	for index := 0; index < decoded.NumTiles(); index++ {
-		tile, err := decoded.TileMetadata(index)
-		if err != nil {
+// inspectAssetList normalizes each comma-separated path while retaining caller-defined order and duplicates.
+func inspectAssetList(
+	source *content.FS,
+	output io.Writer,
+	paths string,
+	inspectAsset func(*content.FS, io.Writer, string) error,
+) error {
+	for _, path := range strings.Split(paths, ",") {
+		path = strings.TrimSpace(path)
+		if path == "" {
+			continue
+		}
+
+		// Immediate failure prevents later output from making a partial catalog look complete.
+		if err := inspectAsset(source, output, path); err != nil {
 			return err
 		}
-		fmt.Printf("%4d orientation=%2d main=%3d sub=%3d rarity=%3d size=%4dx%4d material=%v\n",
-			index, tile.Type, tile.Style, tile.Sequence, tile.RarityFrameIndex,
-			tile.Width, tile.Height, tile.MaterialFlags)
 	}
+
 	return nil
 }
 
+// closeReadAsset preserves the command's historical choice to ignore close errors after read-only asset access.
+func closeReadAsset(asset io.Closer) {
+	_ = asset.Close()
+}
+
+// writeCatalogf keeps stdout best-effort so only asset access and decoding determine the command's error behavior.
+func writeCatalogf(output io.Writer, format string, arguments ...any) {
+	_, _ = fmt.Fprintf(output, format, arguments...)
+}
+
+// fatal applies the command prefix consistently and terminates with the established runtime-failure status.
 func fatal(err error) {
 	fmt.Fprintln(os.Stderr, "dt1_catalog:", err)
 	os.Exit(1)

@@ -10,17 +10,22 @@ import (
 	"github.com/gravestench/dark-magic/internal/localization"
 )
 
+// TestOwnedTargetRedemptionAuraRecordsAndLocalizedIntent pins corpse conversion
+// behavior and its localized description to the owned data set.
 func TestOwnedTargetRedemptionAuraRecordsAndLocalizedIntent(t *testing.T) {
 	directory := os.Getenv("DARK_MAGIC_TEST_MPQ_DIRECTORY")
 	if directory == "" {
 		t.Skip("set DARK_MAGIC_TEST_MPQ_DIRECTORY to the expansion 1.14d MPQ directory")
 	}
+
 	t.Setenv("MPQ_DIRECTORY", directory)
+
 	assets, err := content.FromEnvironment(content.Layer{Name: "d2legacy", FS: content.D2Legacy()})
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer assets.Close()
+	defer func() { _ = assets.Close() }()
+
 	store := recordstore.New(assets)
 	store.SetLogger(nil)
 
@@ -28,10 +33,12 @@ func TestOwnedTargetRedemptionAuraRecordsAndLocalizedIntent(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+
 	redemption := rowBy(skills, "Id", "124")
 	if redemption == nil {
 		t.Fatal("owned expansion 1.14d Redemption row is missing")
 	}
+
 	for field, want := range map[string]string{
 		"skill": "Redemption", "srvstfunc": "", "srvdofunc": "82", "aura": "1", "immediate": "",
 		"leftskill": "", "range": "none", "InGame": "1", "InTown": "1", "aurafilter": "4354",
@@ -50,13 +57,16 @@ func TestOwnedTargetRedemptionAuraRecordsAndLocalizedIntent(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+
 	auraState := rowBy(states, "state", "redemption")
 	redeemedState := rowBy(states, "state", "redeemed")
+
 	if auraState == nil || auraState["id"] != "50" || auraState["aura"] != "1" ||
 		auraState["onsound"] != "paladin_aura_redemption" || auraState["overlay1"] != "redemptionfront" ||
 		auraState["overlay2"] != "redemptionback" {
 		t.Fatalf("owned expansion 1.14d Redemption aura state = %#v", auraState)
 	}
+
 	if redeemedState == nil || redeemedState["id"] != "99" || redeemedState["udead"] != "1" ||
 		redeemedState["monstaydeath"] != "1" || redeemedState["bossstaydeath"] != "1" ||
 		redeemedState["hide"] != "1" || redeemedState["setfunc"] != "10" ||
@@ -68,6 +78,7 @@ func TestOwnedTargetRedemptionAuraRecordsAndLocalizedIntent(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+
 	description := rowBy(descriptions, "skilldesc", "redemption")
 	if description == nil || description["desccalca1"] != "ln56" || description["desccalca2"] != "dm34" ||
 		description["desccalca3"] != "ln12" || description["desctexta1"] != "StrSkill107" ||
@@ -79,7 +90,9 @@ func TestOwnedTargetRedemptionAuraRecordsAndLocalizedIntent(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+
 	front := rowBy(overlays, "overlay", "redemptionfront")
+
 	back := rowBy(overlays, "overlay", "redemptionback")
 	if front == nil || front["Filename"] != "null" || front["Frames"] != "2" || front["Trans"] != "3" ||
 		front["PreDraw"] != "0" || back == nil || back["Filename"] != "Redemption" ||
@@ -92,7 +105,9 @@ func TestOwnedTargetRedemptionAuraRecordsAndLocalizedIntent(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+
 	success := rowBy(missiles, "Missile", "redemption")
+
 	failure := rowBy(missiles, "Missile", "redemptionfail")
 	if success == nil || success["Id"] != "173" || success["CelFile"] != "RedemptionGhost" ||
 		success["AnimLen"] != "16" || success["Range"] != "18" || success["Trans"] != "1" ||
@@ -100,6 +115,7 @@ func TestOwnedTargetRedemptionAuraRecordsAndLocalizedIntent(t *testing.T) {
 		failure["AnimLen"] != "13" || failure["Range"] != "13" || failure["NumDirections"] != "4" {
 		t.Fatalf("owned expansion 1.14d Redemption missiles = success %#v failure %#v", success, failure)
 	}
+
 	for _, path := range []string{
 		"data/global/overlays/Redemption.dcc",
 		"data/global/missiles/RedemptionGhost.dcc",

@@ -15,6 +15,7 @@ func ShellModule(settings *shell.Settings) Module {
 		result.RawSetString("opacity", lua.LNumber(values.Opacity))
 		result.RawSetString("transcript_limit", lua.LNumber(values.TranscriptLimit))
 		result.RawSetString("animation_speed", lua.LNumber(values.AnimationSpeed))
+
 		return result
 	}
 	setValue := func(state *lua.LState, values *shell.SettingsValues, name string, index int) {
@@ -33,21 +34,54 @@ func ShellModule(settings *shell.Settings) Module {
 			state.RaiseError("unknown shell setting %q", name)
 		}
 	}
+
 	return Module{Name: "engine.shell/v1", Help: ModuleHelp{
 		Summary: "Inspect and edit interactive shell presentation settings.",
 		Commands: map[string]CommandHelp{
-			"values":   {Summary: "Return the active runtime settings.", Usage: "engine.shell.values()"},
-			"defaults": {Summary: "Return the built-in default settings.", Usage: "engine.shell.defaults()"},
-			"get":      {Summary: "Read one active setting by name.", Usage: "engine.shell.get(name)"},
-			"set": {Summary: "Change a setting immediately without saving it.", Usage: "engine.shell.set(name, value)", Parameters: []ParameterHelp{
-				{Name: "name", Type: "string", Description: "A key returned by engine.shell.values()."},
-				{Name: "value", Type: "number", Description: "New setting value."},
-			}},
-			"set_many": {Summary: "Validate and apply several settings atomically.", Usage: "engine.shell.set_many(values)"},
-			"reset":    {Summary: "Reset all runtime settings to defaults without saving.", Usage: "engine.shell.reset()"},
-			"reload":   {Summary: "Discard unsaved changes and reload persistent settings.", Usage: "engine.shell.reload()"},
-			"save":     {Summary: "Persist the active settings for future launches.", Usage: "engine.shell.save()"},
-			"status":   {Summary: "Return persistence path and unsaved-change state.", Usage: "engine.shell.status()"},
+			"values": {
+				Summary: "Return the active runtime settings.",
+				Usage:   "engine.shell.values()",
+			},
+			"defaults": {
+				Summary: "Return the built-in default settings.",
+				Usage:   "engine.shell.defaults()",
+			},
+			"get": {
+				Summary: "Read one active setting by name.",
+				Usage:   "engine.shell.get(name)",
+			},
+			"set": {
+				Summary: "Change a setting immediately without saving it.",
+				Usage:   "engine.shell.set(name, value)",
+				Parameters: []ParameterHelp{
+					{
+						Name:        "name",
+						Type:        "string",
+						Description: "A key returned by engine.shell.values().",
+					},
+					{Name: "value", Type: "number", Description: "New setting value."},
+				},
+			},
+			"set_many": {
+				Summary: "Validate and apply several settings atomically.",
+				Usage:   "engine.shell.set_many(values)",
+			},
+			"reset": {
+				Summary: "Reset all runtime settings to defaults without saving.",
+				Usage:   "engine.shell.reset()",
+			},
+			"reload": {
+				Summary: "Discard unsaved changes and reload persistent settings.",
+				Usage:   "engine.shell.reload()",
+			},
+			"save": {
+				Summary: "Persist the active settings for future launches.",
+				Usage:   "engine.shell.save()",
+			},
+			"status": {
+				Summary: "Return persistence path and unsaved-change state.",
+				Usage:   "engine.shell.status()",
+			},
 		},
 	}, Loader: func(state *lua.LState) int {
 		module := state.SetFuncs(state.NewTable(), map[string]lua.LGFunction{
@@ -75,26 +109,32 @@ func ShellModule(settings *shell.Settings) Module {
 					state.RaiseError("unknown shell setting %q", name)
 					return 0
 				}
+
 				return 1
 			},
 			"set": func(state *lua.LState) int {
 				values := settings.Values()
 				setValue(state, &values, state.CheckString(1), 2)
+
 				if err := settings.Update(values); err != nil {
 					state.RaiseError("set shell setting: %v", err)
 				}
+
 				return 0
 			},
 			"set_many": func(state *lua.LState) int {
 				values := settings.Values()
+
 				state.CheckTable(1).ForEach(func(key, value lua.LValue) {
 					state.Push(value)
 					setValue(state, &values, key.String(), state.GetTop())
 					state.Pop(1)
 				})
+
 				if err := settings.Update(values); err != nil {
 					state.RaiseError("set shell settings: %v", err)
 				}
+
 				return 0
 			},
 			"reset": func(*lua.LState) int { settings.Reset(); return 0 },
@@ -102,12 +142,14 @@ func ShellModule(settings *shell.Settings) Module {
 				if err := settings.Reload(); err != nil {
 					state.RaiseError("reload shell settings: %v", err)
 				}
+
 				return 0
 			},
 			"save": func(state *lua.LState) int {
 				if err := settings.Save(); err != nil {
 					state.RaiseError("save shell settings: %v", err)
 				}
+
 				return 0
 			},
 			"status": func(state *lua.LState) int {
@@ -115,12 +157,14 @@ func ShellModule(settings *shell.Settings) Module {
 				result.RawSetString("path", lua.LString(settings.Path()))
 				result.RawSetString("dirty", lua.LBool(settings.Dirty()))
 				state.Push(result)
+
 				return 1
 			},
 		})
 		module.RawSetString("api", lua.LNumber(1))
 		module.RawSetString("name", lua.LString("engine.shell/v1"))
 		state.Push(module)
+
 		return 1
 	}}
 }

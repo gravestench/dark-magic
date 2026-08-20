@@ -9,6 +9,8 @@ import (
 	gametransition "github.com/gravestench/dark-magic/internal/mod/d2legacy/adapter/transition"
 )
 
+// TestPreparedWorldOwnsDestinationAndBootstrapLevelIdentity verifies that admission and population derive level,
+// dimensions, spawn, and seed from the same prepared topology instead of composition-root defaults.
 func TestPreparedWorldOwnsDestinationAndBootstrapLevelIdentity(t *testing.T) {
 	zone, err := worldgen.NewZone(worldgen.Definition{
 		Request: worldgen.Request{Version: worldgen.ContractVersion, Seed: 41, Act: 1, LevelID: 7},
@@ -17,32 +19,41 @@ func TestPreparedWorldOwnsDestinationAndBootstrapLevelIdentity(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+
 	prepared := &Prepared{
 		Worlds: map[int]*gameworld.Map{7: {WidthSubtiles: 100, HeightSubtiles: 50}},
 		Zones:  map[int]*worldgen.Zone{7: zone},
 		Spawns: map[int][2]float64{7: {11, 12}},
 		Seam:   gametransition.Seam{Wilderness: gametransition.SeamEndpoint{LevelID: 7}},
 	}
+
 	destination, err := prepared.Destination(7)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if destination.X != 11 || destination.Y != 12 || destination.Width != 100 || destination.Height != 50 || destination.LevelID != 7 {
+
+	if destination.X != 11 || destination.Y != 12 || destination.Width != 100 ||
+		destination.Height != 50 || destination.LevelID != 7 {
 		t.Fatalf("destination = %#v", destination)
 	}
+
 	command, err := prepared.PopulationCommand(0)
 	if err != nil {
 		t.Fatal(err)
 	}
+
 	var payload map[string]any
 	if err := json.Unmarshal(command.Payload, &payload); err != nil {
 		t.Fatal(err)
 	}
+
 	if payload["level_id"] != float64(7) || payload["seed"] != float64(41) {
 		t.Fatalf("population payload = %#v", payload)
 	}
 }
 
+// TestPopulationDataPreservesRoomBoundsAndAdjacency verifies the coordinate conversion and topology identity consumed
+// by deterministic resident placement.
 func TestPopulationDataPreservesRoomBoundsAndAdjacency(t *testing.T) {
 	zone, err := worldgen.NewZone(worldgen.Definition{
 		Request: worldgen.Request{Version: worldgen.ContractVersion, Seed: 41, Act: 1, LevelID: 2},
@@ -57,27 +68,39 @@ func TestPopulationDataPreservesRoomBoundsAndAdjacency(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+
 	gameMap, err := gameworld.NewOpenMap(100, 50)
 	if err != nil {
 		t.Fatal(err)
 	}
+
 	prepared := &Prepared{
-		Worlds: map[int]*gameworld.Map{2: gameMap}, Zones: map[int]*worldgen.Zone{2: zone},
-		Seam: gametransition.Seam{Wilderness: gametransition.SeamEndpoint{LevelID: 2}},
+		Worlds: map[int]*gameworld.Map{2: gameMap},
+		Zones:  map[int]*worldgen.Zone{2: zone},
+		Seam:   gametransition.Seam{Wilderness: gametransition.SeamEndpoint{LevelID: 2}},
 	}
 	population := prepared.PopulationData(0)
 	rooms := population["rooms"].([]any)
+
 	first := rooms[0].(map[string]any)
 	if first["x"] != float64(10) || first["y"] != float64(15) ||
 		first["width"] != float64(20) || first["height"] != float64(25) || first["populate"] != true {
 		t.Fatalf("first population room = %#v", first)
 	}
+
 	links := population["links"].([]any)
-	if first["id"] != "1" || len(links) != 1 || links[0].(map[string]any)["from"] != "1" || links[0].(map[string]any)["to"] != "2" {
+	if len(links) != 1 {
+		t.Fatalf("population links = %#v", links)
+	}
+
+	firstLink := links[0].(map[string]any)
+	if first["id"] != "1" || firstLink["from"] != "1" || firstLink["to"] != "2" {
 		t.Fatalf("population links = %#v", links)
 	}
 }
 
+// TestInteractionDataAttachesDS1TargetsToGeneratedRooms verifies that decoded selectable identity is enriched with the
+// same room and resident IDs used by population state.
 func TestInteractionDataAttachesDS1TargetsToGeneratedRooms(t *testing.T) {
 	zone, err := worldgen.NewZone(worldgen.Definition{
 		Request: worldgen.Request{Version: worldgen.ContractVersion, Seed: 41, Act: 1, LevelID: 2},
@@ -87,19 +110,23 @@ func TestInteractionDataAttachesDS1TargetsToGeneratedRooms(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+
 	gameMap, err := gameworld.NewOpenMap(100, 50)
 	if err != nil {
 		t.Fatal(err)
 	}
+
 	gameMap.Objects = []gameworld.Object{{
 		Type: gameworld.ObjectTypeStatic, ID: 12, X: 11, Y: 16,
 		Description: "Chest", Resolved: true,
 	}}
 	data := InteractionData(map[int]*gameworld.Map{2: gameMap}, map[int]*worldgen.Zone{2: zone}, "alice", "")
+
 	targets := data["targets"].([]any)
 	if len(targets) != 2 {
 		t.Fatalf("interaction targets = %#v", targets)
 	}
+
 	got := targets[1].(map[string]any)
 	if got["id"] != "ds1-object:2:12:0" || got["resident_id"] != "level:2:ds1-object:2:12:0" ||
 		got["level_id"] != float64(2) || got["room_id"] != "7" {
@@ -107,24 +134,30 @@ func TestInteractionDataAttachesDS1TargetsToGeneratedRooms(t *testing.T) {
 	}
 }
 
+// TestInitialDataUsesSharedInteractionAndTransitionContracts verifies that session bootstrap publishes owner,
+// development, difficulty, and bidirectional seam policy without client-specific rewrites.
 func TestInitialDataUsesSharedInteractionAndTransitionContracts(t *testing.T) {
 	prepared := &Prepared{Worlds: map[int]*gameworld.Map{}, Difficulty: 2, Seam: gametransition.Seam{
 		Town:       gametransition.SeamEndpoint{LevelID: 1, X: 4, Y: 5, Width: 20, Height: 30},
 		Wilderness: gametransition.SeamEndpoint{LevelID: 2, X: 6, Y: 7, Width: 40, Height: 50},
 	}}
 	initial := prepared.InitialData("realm-authority", false)
+
 	interactions := initial["d2legacy.interactions"].(map[string]any)
 	if interactions["owner"] != "realm-authority" {
 		t.Fatalf("interactions = %#v", interactions)
 	}
+
 	transitions := initial["d2legacy.world_transitions"].(map[string]any)
 	if len(transitions["seams"].([]any)) != 2 {
 		t.Fatalf("transitions = %#v", transitions)
 	}
+
 	development := initial["d2legacy.development_items"].(map[string]any)
 	if development["enabled"] != false || development["create_empty_containers"] != true {
 		t.Fatalf("development = %#v", development)
 	}
+
 	rules := initial["d2legacy.game_rules"].(map[string]any)
 	if rules["difficulty"] != 2 {
 		t.Fatalf("game rules = %#v", rules)

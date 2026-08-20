@@ -32,12 +32,16 @@ type Config struct {
 	Mods        *modcache.ResolvedSet
 }
 
+// Mode describes which ownership layer is hosting the shared authoritative composition.
 type Mode string
 
 const (
+	// ModeStandalone runs without a listening transport or Realm worker owner.
 	ModeStandalone Mode = "standalone"
-	ModeListen     Mode = "listen"
-	ModeRealm      Mode = "realm"
+	// ModeListen exposes the shared authority through a locally owned network listener.
+	ModeListen Mode = "listen"
+	// ModeRealm gives Realm worker lifecycle code ownership of the shared authority.
+	ModeRealm Mode = "realm"
 )
 
 // Host owns one authoritative ECS, session, and d2legacy runtime. Allocation
@@ -53,89 +57,166 @@ type Host struct {
 // Start creates the renderer-free composition used by cmd/server, realm-owned
 // workers, and future in-process listen servers.
 func Start(ctx context.Context, source fs.FS, records d2legacy.Records, config Config) (*Host, error) {
-	if ctx == nil || source == nil || records == nil {
-		return nil, errors.New("game server: context, content, and records are required")
-	}
-	if strings.TrimSpace(config.SessionID) == "" {
-		return nil, errors.New("game server: session ID is required")
-	}
-	if config.Mode == "" {
-		config.Mode = ModeStandalone
-	}
-	if config.Mode != ModeStandalone && config.Mode != ModeListen && config.Mode != ModeRealm {
-		return nil, fmt.Errorf("game server: unknown hosting mode %q", config.Mode)
-	}
-	if err := gamesession.ValidatePredictionTier(config.Prediction); err != nil {
+	config, err := validateHostConfig(ctx, source, records, config)
+	if err != nil {
 		return nil, err
 	}
-	if config.Content != nil {
-		pinnable, ok := config.Content.(interface {
-			fs.FS
-			List(string, string) ([]string, error)
-			ResolveSource(string) (string, string, error)
-		})
-		if ok {
-			pinned, _, pinErr := recordstore.Pin(pinnable)
-			if pinErr != nil && !errors.Is(pinErr, recordstore.ErrNoAuthoritativeTables) {
-				return nil, fmt.Errorf("game server: pin authoritative records: %w", pinErr)
-			}
-			if pinErr == nil {
-				records = pinned
-			}
-		}
+
+	records, err = pinHostRecords(records, config.Content)
+	if err != nil {
+		return nil, err
 	}
+
 	engine := gameecs.New()
+
 	session, err := gamesession.New(engine, config.Session)
 	if err != nil {
 		_ = engine.Close()
+
 		return nil, err
 	}
-	initialData := cloneInitialData(config.InitialData)
-	gameDataGenerationID := simulation.GameDataGenerationIDForAssetSet(config.AssetSetID)
-	if pinned, ok := records.(interface{ GenerationID() string }); ok && pinned.GenerationID() != "" {
-		gameDataGenerationID = pinned.GenerationID()
+
+	d2config, err := buildAuthorityConfig(config, records)
+	if err != nil {
+		closeSessionFoundation(session, engine)
+
+		return nil, err
 	}
-	initialData["engine.game_data_generation_id"] = gameDataGenerationID
-	d2config := d2legacy.Config{Seed: config.Seed, InitialData: initialData, Packages: config.Packages, AssetSetID: config.AssetSetID,
-		GameDataGenerationID: gameDataGenerationID}
-	if config.Mods != nil {
-		if config.Content == nil {
-			_ = session.Close()
-			_ = engine.Close()
-			return nil, errors.New("game server: resolved mods require package content")
-		}
-		d2config.PackageContent = config.Content
-		for _, pkg := range config.Mods.Extensions.Packages {
-			extensionSource, subErr := fs.Sub(config.Content, path.Join("mods", pkg.Manifest.ID))
-			if subErr != nil {
-				_ = session.Close()
-				_ = engine.Close()
-				return nil, fmt.Errorf("game server: resolve extension %q: %w", pkg.Manifest.ID, subErr)
-			}
-			d2config.Extensions = append(d2config.Extensions, d2legacy.Extension{Manifest: pkg.Manifest, Source: extensionSource})
-		}
-	}
+
 	authority, err := d2legacy.StartWithConfig(ctx, source, records, engine, session, d2config)
 	if err != nil {
-		_ = session.Close()
-		_ = engine.Close()
+		closeSessionFoundation(session, engine)
+
 		return nil, err
 	}
+
 	allocation, err := gamesession.Allocate(config.SessionID, authority.Identity, config.Prediction)
 	if err != nil {
 		_ = authority.Stop(context.Background())
-		_ = session.Close()
-		_ = engine.Close()
+
+		closeSessionFoundation(session, engine)
+
 		return nil, fmt.Errorf("game server: allocate session: %w", err)
 	}
+
 	return &Host{Mode: config.Mode, Engine: engine, Session: session, Authority: authority, Allocation: allocation}, nil
 }
 
+// validateHostConfig normalizes the default mode while rejecting incomplete or unsupported composition inputs.
+func validateHostConfig(
+	ctx context.Context,
+	source fs.FS,
+	records d2legacy.Records,
+	config Config,
+) (Config, error) {
+	if ctx == nil || source == nil || records == nil {
+		return Config{}, errors.New("game server: context, content, and records are required")
+	}
+
+	if strings.TrimSpace(config.SessionID) == "" {
+		return Config{}, errors.New("game server: session ID is required")
+	}
+
+	if config.Mode == "" {
+		config.Mode = ModeStandalone
+	}
+
+	if config.Mode != ModeStandalone && config.Mode != ModeListen && config.Mode != ModeRealm {
+		return Config{}, fmt.Errorf("game server: unknown hosting mode %q", config.Mode)
+	}
+
+	if err := gamesession.ValidatePredictionTier(config.Prediction); err != nil {
+		return Config{}, err
+	}
+
+	return config, nil
+}
+
+// pinnableRecords is the optional content capability required to freeze authoritative table provenance.
+type pinnableRecords interface {
+	fs.FS
+	List(string, string) ([]string, error)
+	ResolveSource(string) (string, string, error)
+}
+
+// pinHostRecords prefers content-pinned records but tolerates distributions with no authoritative tables.
+func pinHostRecords(records d2legacy.Records, content fs.FS) (d2legacy.Records, error) {
+	pinnable, ok := content.(pinnableRecords)
+	if !ok {
+		return records, nil
+	}
+
+	pinned, _, err := recordstore.Pin(pinnable)
+	if errors.Is(err, recordstore.ErrNoAuthoritativeTables) {
+		return records, nil
+	}
+
+	if err != nil {
+		return nil, fmt.Errorf("game server: pin authoritative records: %w", err)
+	}
+
+	return pinned, nil
+}
+
+// buildAuthorityConfig binds immutable data generation and extension sources to the runtime started by this host.
+func buildAuthorityConfig(config Config, records d2legacy.Records) (d2legacy.Config, error) {
+	generationID := hostGameDataGenerationID(config.AssetSetID, records)
+	initialData := cloneInitialData(config.InitialData)
+	initialData["engine.game_data_generation_id"] = generationID
+
+	authorityConfig := d2legacy.Config{
+		Seed:                 config.Seed,
+		InitialData:          initialData,
+		Packages:             config.Packages,
+		AssetSetID:           config.AssetSetID,
+		GameDataGenerationID: generationID,
+	}
+	if config.Mods == nil {
+		return authorityConfig, nil
+	}
+
+	if config.Content == nil {
+		return d2legacy.Config{}, errors.New("game server: resolved mods require package content")
+	}
+
+	authorityConfig.PackageContent = config.Content
+	for _, pkg := range config.Mods.Extensions.Packages {
+		extensionSource, err := fs.Sub(config.Content, path.Join("mods", pkg.Manifest.ID))
+		if err != nil {
+			return d2legacy.Config{}, fmt.Errorf("game server: resolve extension %q: %w", pkg.Manifest.ID, err)
+		}
+
+		authorityConfig.Extensions = append(authorityConfig.Extensions, d2legacy.Extension{
+			Manifest: pkg.Manifest,
+			Source:   extensionSource,
+		})
+	}
+
+	return authorityConfig, nil
+}
+
+// hostGameDataGenerationID uses pinned-record provenance when available and otherwise derives it from the asset set.
+func hostGameDataGenerationID(assetSetID string, records d2legacy.Records) string {
+	if pinned, ok := records.(interface{ GenerationID() string }); ok && pinned.GenerationID() != "" {
+		return pinned.GenerationID()
+	}
+
+	return simulation.GameDataGenerationIDForAssetSet(assetSetID)
+}
+
+// closeSessionFoundation unwinds resources in dependency order before authority ownership has been established.
+func closeSessionFoundation(session *gamesession.Session, engine *gameecs.Engine) {
+	_ = session.Close()
+	_ = engine.Close()
+}
+
+// cloneInitialData prevents runtime bootstrap from mutating configuration retained by the caller.
 func cloneInitialData(source map[string]any) map[string]any {
 	result := make(map[string]any, len(source)+1)
 	for key, value := range source {
 		result[key] = value
 	}
+
 	return result
 }
 
@@ -144,6 +225,7 @@ func (host *Host) Admit(characterID string, client simulation.RuntimeIdentity) (
 	if host == nil {
 		return gamesession.AdmissionToken{}, errors.New("game server: nil host")
 	}
+
 	return host.Allocation.Admit(characterID, client)
 }
 
@@ -152,6 +234,7 @@ func (host *Host) ValidateReconnect(token gamesession.AdmissionToken, client sim
 	if host == nil {
 		return errors.New("game server: nil host")
 	}
+
 	return host.Allocation.ValidateReconnect(token, client)
 }
 
@@ -160,18 +243,23 @@ func (host *Host) Close(ctx context.Context) error {
 	if host == nil {
 		return nil
 	}
+
 	if ctx == nil {
 		ctx = context.Background()
 	}
+
 	var authorityErr, sessionErr, engineErr error
 	if host.Authority != nil {
 		authorityErr = host.Authority.Stop(ctx)
 	}
+
 	if host.Session != nil {
 		sessionErr = host.Session.Close()
 	}
+
 	if host.Engine != nil {
 		engineErr = host.Engine.Close()
 	}
+
 	return errors.Join(authorityErr, sessionErr, engineErr)
 }

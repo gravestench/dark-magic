@@ -6,15 +6,19 @@ import (
 	"testing/fstest"
 )
 
+// TestWorldgenModuleCanonicalizesOpaqueModRecipe protects the worldgen module canonicalizes opaque mod recipe
+// contract, including its observable ordering and failure behavior.
 func TestWorldgenModuleCanonicalizesOpaqueModRecipe(t *testing.T) {
 	runtime := New()
 	if err := runtime.RegisterModule(WorldgenModule()); err != nil {
 		t.Fatal(err)
 	}
+
 	if err := runtime.Start(t.Context()); err != nil {
 		t.Fatal(err)
 	}
-	defer runtime.Stop(t.Context())
+	defer func() { _ = runtime.Stop(t.Context()) }()
+
 	script := fstest.MapFS{"test.lua": {Data: []byte(`
 local worldgen=require("engine.worldgen/v1")
 local zone=assert(worldgen.admit({

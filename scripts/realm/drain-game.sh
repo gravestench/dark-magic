@@ -3,6 +3,7 @@
 set -eu
 . "$(CDPATH= cd -- "$(dirname -- "$0")" && pwd -P)/common.sh"
 
+# realm_usage emphasizes the canonical-save implication and the token transport boundary of this operator action.
 realm_usage() {
     cat <<'EOF'
 Usage: scripts/realm/drain-game.sh GAME_ID
@@ -25,6 +26,9 @@ realm_require_command curl
 [ -f "$REALM_OPERATOR_TOKEN_FILE" ] || realm_fail "operator token is unavailable: $REALM_OPERATOR_TOKEN_FILE"
 realm_operator_token=$(tr -d '\r\n' < "$REALM_OPERATOR_TOKEN_FILE")
 [ "${#realm_operator_token}" -ge 32 ] || realm_fail "operator token is invalid"
+
+# curl reads the credential from a protected temporary file so the bearer token never appears in argv or process-list
+# output. Unset the shell copy immediately after writing the header to shorten its in-memory lifetime as well.
 realm_header=$(mktemp "$REALM_RUNTIME_DIR/.operator-header.XXXXXX")
 trap 'rm -f "$realm_header"' EXIT HUP INT TERM
 chmod 600 "$realm_header"

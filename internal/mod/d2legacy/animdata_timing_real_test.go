@@ -10,52 +10,69 @@ import (
 	recordstore "github.com/gravestench/dark-magic/internal/game/data/store"
 )
 
+// TestOwnedTargetArchivesPinPlayerActionAnimationTiming verifies that real
+// animation records remain the source of authoritative action timing.
 func TestOwnedTargetArchivesPinPlayerActionAnimationTiming(t *testing.T) {
 	directory := os.Getenv("DARK_MAGIC_TEST_MPQ_DIRECTORY")
 	if directory == "" {
 		t.Skip("set DARK_MAGIC_TEST_MPQ_DIRECTORY to the expansion 1.14d MPQ directory")
 	}
+
 	t.Setenv("MPQ_DIRECTORY", directory)
+
 	assets, err := content.FromEnvironment()
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer assets.Close()
+	defer func() { _ = assets.Close() }()
+
 	pinned, generation, err := recordstore.Pin(assets)
 	if err != nil {
 		t.Fatal(err)
 	}
+
 	if source, found := pinned.Source(recordstore.AnimationDataPath); !found || source.Layer == "" {
 		t.Fatalf("AnimData provenance = %#v/%v", source, found)
 	}
+
 	catalog, err := assetdecode.AnimationData(pinned, recordstore.AnimationDataPath)
 	if err != nil {
 		t.Fatal(err)
 	}
+
 	record := catalog.GetRecord("AMA1HTH")
 	if record == nil {
 		t.Fatal("owned target is missing AMA1HTH")
 	}
+
 	events := record.Events()
 	if generation.ID == "" || record.FramesPerDirection() != 13 || record.Speed() != 256 ||
 		len(events) != 1 || events[8] != cof.EventAttack {
 		t.Fatalf("generation=%s AMA1HTH frames=%d speed=%d events=%v", generation.ID,
 			record.FramesPerDirection(), record.Speed(), events)
 	}
+
 	for _, key := range []string{"AMWLHTH", "AMRNHTH"} {
 		movement := catalog.GetRecord(key)
 		if movement == nil {
 			t.Fatalf("owned target is missing %s", key)
 		}
-		if frames, speed, events := movement.FramesPerDirection(), movement.Speed(), movement.Events(); frames != 8 || speed != 256 || len(events) != 0 {
+
+		frames := movement.FramesPerDirection()
+		speed := movement.Speed()
+
+		events := movement.Events()
+		if frames != 8 || speed != 256 || len(events) != 0 {
 			t.Fatalf("generation=%s %s frames=%d speed=%d events=%v", generation.ID, key, frames, speed, events)
 		}
 	}
+
 	for _, key := range []string{"SOSCHTH", "SOSC1HS", "SOSCSTF"} {
 		cast := catalog.GetRecord(key)
 		if cast == nil {
 			t.Fatalf("owned target is missing %s", key)
 		}
+
 		events := cast.Events()
 		if cast.FramesPerDirection() != 14 || cast.Speed() != 256 || len(events) != 1 || events[7] != cof.EventAttack {
 			t.Fatalf("generation=%s %s frames=%d speed=%d events=%v", generation.ID,

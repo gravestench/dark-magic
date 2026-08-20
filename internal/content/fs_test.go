@@ -11,6 +11,7 @@ import (
 	"testing/fstest"
 )
 
+// TestLayerPriorityProvenanceAndEnumeration pins shadowing, provenance, and merged lexical directory order together.
 func TestLayerPriorityProvenanceAndEnumeration(t *testing.T) {
 	t.Parallel()
 
@@ -26,6 +27,7 @@ func TestLayerPriorityProvenanceAndEnumeration(t *testing.T) {
 		"data/shared.txt": &fstest.MapFile{Data: []byte("mod")},
 		"data/mod.txt":    &fstest.MapFile{Data: []byte("mod only")},
 	}
+
 	contentFS, err := New(
 		Layer{Name: "user-mods", FS: mods},
 		Layer{Name: "darkmagic", FS: shim},
@@ -34,79 +36,105 @@ func TestLayerPriorityProvenanceAndEnumeration(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+
 	data, err := fs.ReadFile(contentFS, `\data\shared.txt`)
 	if err != nil {
 		t.Fatal(err)
 	}
+
 	if string(data) != "mod" {
 		t.Fatalf("shared data = %q", data)
 	}
+
 	source, err := contentFS.Resolve("/data/shared.txt")
 	if err != nil {
 		t.Fatal(err)
 	}
+
 	if source.Layer != "user-mods" || source.Path != "data/shared.txt" {
 		t.Fatalf("source = %#v", source)
 	}
+
 	entries, err := contentFS.ReadDir("data")
 	if err != nil {
 		t.Fatal(err)
 	}
+
 	var names []string
 	for _, entry := range entries {
 		names = append(names, entry.Name())
 	}
+
 	want := []string{"base.txt", "mod.txt", "shared.txt", "shim.txt"}
 	if !reflect.DeepEqual(names, want) {
 		t.Fatalf("entries = %v, want %v", names, want)
 	}
 }
 
+// TestMountAndUnmount proves dynamic priority changes expose the next source without reordering surviving layers.
 func TestMountAndUnmount(t *testing.T) {
 	t.Parallel()
 
-	contentFS, err := New(Layer{Name: "base", FS: fstest.MapFS{"value": &fstest.MapFile{Data: []byte("base")}}})
+	contentFS, err := New(Layer{
+		Name: "base",
+		FS:   fstest.MapFS{"value": &fstest.MapFile{Data: []byte("base")}},
+	})
 	if err != nil {
 		t.Fatal(err)
 	}
-	if err := contentFS.MountFirst(Layer{Name: "mod", FS: fstest.MapFS{"value": &fstest.MapFile{Data: []byte("mod")}}}); err != nil {
+
+	if err := contentFS.MountFirst(Layer{
+		Name: "mod",
+		FS:   fstest.MapFS{"value": &fstest.MapFile{Data: []byte("mod")}},
+	}); err != nil {
 		t.Fatal(err)
 	}
+
 	if got := contentFS.Layers(); !reflect.DeepEqual(got, []string{"mod", "base"}) {
 		t.Fatalf("layers = %v", got)
 	}
+
 	if !contentFS.Unmount("mod") {
 		t.Fatal("expected mod to be unmounted")
 	}
+
 	data, err := fs.ReadFile(contentFS, "value")
 	if err != nil {
 		t.Fatal(err)
 	}
+
 	if string(data) != "base" {
 		t.Fatalf("value = %q", data)
 	}
 }
 
+// TestZIPAndDirectoryNormalizePaths ensures ZIP adapters accept Diablo separators through the common path contract.
 func TestZIPAndDirectoryNormalizePaths(t *testing.T) {
 	t.Parallel()
 
 	directory := t.TempDir()
 	zipPath := filepath.Join(directory, "shim.zip")
+
 	file, err := os.Create(zipPath)
 	if err != nil {
 		t.Fatal(err)
 	}
+
 	writer := zip.NewWriter(file)
+
 	entry, err := writer.Create("scripts/boot.lua")
 	if err != nil {
 		t.Fatal(err)
 	}
+
 	if _, err := entry.Write([]byte("return true")); err != nil {
 		t.Fatal(err)
 	}
+
 	if err := writer.Close(); err != nil {
 		t.Fatal(err)
 	}
+
 	if err := file.Close(); err != nil {
 		t.Fatal(err)
 	}
@@ -115,16 +143,21 @@ func TestZIPAndDirectoryNormalizePaths(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer Close(zipFS)
+	defer func() {
+		_ = Close(zipFS)
+	}()
+
 	data, err := fs.ReadFile(zipFS, `\scripts\boot.lua`)
 	if err != nil {
 		t.Fatal(err)
 	}
+
 	if string(data) != "return true" {
 		t.Fatalf("zip data = %q", data)
 	}
 }
 
+// TestD2LegacyContainsBoot protects the embedded first-party mod's executable entry point.
 func TestD2LegacyContainsBoot(t *testing.T) {
 	t.Parallel()
 
@@ -132,11 +165,13 @@ func TestD2LegacyContainsBoot(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+
 	if len(data) == 0 {
 		t.Fatal("empty boot.lua")
 	}
 }
 
+// TestNormalizeRejectsTraversal ensures content paths cannot escape a mounted source.
 func TestNormalizeRejectsTraversal(t *testing.T) {
 	t.Parallel()
 
@@ -147,6 +182,7 @@ func TestNormalizeRejectsTraversal(t *testing.T) {
 	}
 }
 
+// TestExistsWalkAndInvalidation exercises the convenience view and generation stream used by derived caches.
 func TestExistsWalkAndInvalidation(t *testing.T) {
 	contentFS, err := New(Layer{Name: "base", FS: fstest.MapFS{
 		"components/a.lua": &fstest.MapFile{Data: []byte("return {}")},
@@ -155,35 +191,45 @@ func TestExistsWalkAndInvalidation(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+
 	if !contentFS.Exists(`\components\a.lua`) || contentFS.Exists("missing") {
 		t.Fatal("unexpected existence result")
 	}
+
 	var names []string
+
 	if err := contentFS.Walk("components", func(name string, _ fs.DirEntry, err error) error {
 		if err == nil {
 			names = append(names, name)
 		}
+
 		return err
 	}); err != nil {
 		t.Fatal(err)
 	}
+
 	if !reflect.DeepEqual(names, []string{"components", "components/a.lua", "components/b.lua"}) {
 		t.Fatalf("walk = %v", names)
 	}
+
 	changes, cancel := contentFS.Subscribe(1)
 	defer cancel()
+
 	change, err := contentFS.Invalidate(`\components\a.lua`)
 	if err != nil {
 		t.Fatal(err)
 	}
+
 	if observed := <-changes; observed != change || observed.Generation != 1 || observed.Path != "components/a.lua" {
 		t.Fatalf("change = %#v observed = %#v", change, observed)
 	}
+
 	if contentFS.Generation() != change.Generation {
 		t.Fatalf("generation = %d", contentFS.Generation())
 	}
 }
 
+// TestListCombinesDirectoryAndFlatArchiveIndexes pins suffix filtering, deduplication, and lexical result order.
 func TestListCombinesDirectoryAndFlatArchiveIndexes(t *testing.T) {
 	t.Parallel()
 
@@ -202,6 +248,7 @@ func TestListCombinesDirectoryAndFlatArchiveIndexes(t *testing.T) {
 			`data\global\other\ignored.dt1`,
 		},
 	}
+
 	contentFS, err := New(
 		Layer{Name: "directory", FS: directory},
 		Layer{Name: "archive", FS: archive},
@@ -209,110 +256,138 @@ func TestListCombinesDirectoryAndFlatArchiveIndexes(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+
 	got, err := contentFS.List(`data\global\tiles`, ".DT1")
 	if err != nil {
 		t.Fatal(err)
 	}
+
 	want := []string{"data/global/tiles/archive.dt1", "data/global/tiles/shared.dt1"}
 	if !reflect.DeepEqual(got, want) {
 		t.Fatalf("list = %v, want %v", got, want)
 	}
 }
 
+// testListedFS exposes a synthetic flat member index beside an ordinary fixture filesystem.
 type testListedFS struct {
 	fs.FS
 	paths []string
 }
 
+// Paths returns a defensive copy so the test double honors the production index ownership contract.
 func (f *testListedFS) Paths() []string { return append([]string(nil), f.paths...) }
 
+// TestFromEnvironmentAppliesResolvedModPriority pins caller-supplied ordering when no external data is configured.
 func TestFromEnvironmentAppliesResolvedModPriority(t *testing.T) {
 	first := fstest.MapFS{"boot.lua": &fstest.MapFile{Data: []byte("first")}}
 	second := fstest.MapFS{"boot.lua": &fstest.MapFile{Data: []byte("second")}}
+
 	t.Setenv("MPQ_DIRECTORY", "")
+
 	contentFS, err := FromEnvironment(Layer{Name: "first", FS: first}, Layer{Name: "second", FS: second})
 	if err != nil {
 		t.Fatal(err)
 	}
+
 	if got := contentFS.Layers(); !reflect.DeepEqual(got, []string{"first", "second"}) {
 		t.Fatalf("layers = %v", got)
 	}
+
 	data, err := fs.ReadFile(contentFS, "boot.lua")
 	if err != nil || string(data) != "first" {
 		t.Fatalf("boot = %q, %v", data, err)
 	}
 }
 
+// TestFromEnvironmentAcceptsAnEmptyModSet ensures the generic VFS does not inject first-party content policy.
 func TestFromEnvironmentAcceptsAnEmptyModSet(t *testing.T) {
 	t.Setenv("MPQ_DIRECTORY", "")
+
 	contentFS, err := FromEnvironment()
 	if err != nil {
 		t.Fatal(err)
 	}
+
 	if layers := contentFS.Layers(); len(layers) != 0 {
 		t.Fatalf("mod-neutral layers = %v", layers)
 	}
 }
 
+// TestFromEnvironmentMountsMultipleMPQDirectoriesInOrder pins configured root order and loose-file fallback.
 func TestFromEnvironmentMountsMultipleMPQDirectoriesInOrder(t *testing.T) {
 	first, second := t.TempDir(), t.TempDir()
 	if err := os.WriteFile(filepath.Join(first, "shared.gpl"), []byte("first"), 0o600); err != nil {
 		t.Fatal(err)
 	}
+
 	if err := os.WriteFile(filepath.Join(second, "shared.gpl"), []byte("second"), 0o600); err != nil {
 		t.Fatal(err)
 	}
+
 	if err := os.WriteFile(filepath.Join(second, "second-only.gpl"), []byte("mounted"), 0o600); err != nil {
 		t.Fatal(err)
 	}
+
 	t.Setenv("DARK_MAGIC_FIRST_CONTENT", first)
 	t.Setenv("DARK_MAGIC_SECOND_CONTENT", second)
 	t.Setenv("MPQ_DIRECTORY", "$DARK_MAGIC_FIRST_CONTENT, $DARK_MAGIC_SECOND_CONTENT")
+
 	contentFS, err := FromEnvironment()
 	if err != nil {
 		t.Fatal(err)
 	}
+
 	if got := contentFS.Layers(); !reflect.DeepEqual(got, []string{"mpq-0-directory", "mpq-1-directory"}) {
 		t.Fatalf("layers = %v", got)
 	}
+
 	shared, err := fs.ReadFile(contentFS, "shared.gpl")
 	if err != nil || string(shared) != "first" {
 		t.Fatalf("shared = %q, %v", shared, err)
 	}
+
 	secondOnly, err := fs.ReadFile(contentFS, "second-only.gpl")
 	if err != nil || string(secondOnly) != "mounted" {
 		t.Fatalf("second-only = %q, %v", secondOnly, err)
 	}
 }
 
+// TestFromEnvironmentRejectsEmptyMPQDirectoryEntry keeps configuration errors indexed for operator diagnosis.
 func TestFromEnvironmentRejectsEmptyMPQDirectoryEntry(t *testing.T) {
 	t.Setenv("MPQ_DIRECTORY", t.TempDir()+",")
+
 	if _, err := FromEnvironment(); err == nil || !strings.Contains(err.Error(), "entry 2 is empty") {
 		t.Fatalf("error = %v", err)
 	}
 }
 
+// TestStandardMPQOrderStartsWithLegacyPatchArchive protects patched tables from being shadowed by base archives.
 func TestStandardMPQOrderStartsWithLegacyPatchArchive(t *testing.T) {
 	if len(standardMPQNames) == 0 || standardMPQNames[0] != "patch_d2.mpq" {
 		t.Fatalf("archive priority = %v", standardMPQNames)
 	}
 }
 
+// TestFromEnvironmentListsRealMPQMapAssets optionally exercises flat indexes against legally owned game data.
 func TestFromEnvironmentListsRealMPQMapAssets(t *testing.T) {
 	directory := os.Getenv("DARK_MAGIC_TEST_MPQ_DIRECTORY")
 	if directory == "" {
 		t.Skip("set DARK_MAGIC_TEST_MPQ_DIRECTORY to a Diablo II MPQ directory")
 	}
+
 	t.Setenv("MPQ_DIRECTORY", directory)
+
 	contentFS, err := FromEnvironment()
 	if err != nil {
 		t.Fatal(err)
 	}
+
 	defer func() {
 		for _, layer := range contentFS.snapshot() {
 			_ = Close(layer.FS)
 		}
 	}()
+
 	if _, err := fs.ReadFile(contentFS, "data/global/excel/sets.txt"); err != nil {
 		t.Fatalf("open patch table sets.txt: %v", err)
 	}
@@ -322,9 +397,11 @@ func TestFromEnvironmentListsRealMPQMapAssets(t *testing.T) {
 		if listErr != nil {
 			t.Fatalf("list %s: %v", suffix, listErr)
 		}
+
 		if len(paths) == 0 {
 			t.Fatalf("no %s assets found in mounted MPQs", suffix)
 		}
+
 		t.Logf("found %d %s assets", len(paths), suffix)
 	}
 }

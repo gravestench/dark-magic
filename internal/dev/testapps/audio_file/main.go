@@ -3,74 +3,78 @@ package main
 import (
 	"flag"
 	"fmt"
-	"io/fs"
 	"os"
-	"os/exec"
-	"path/filepath"
-
-	"github.com/gravestench/dark-magic/internal/content"
-	darkpaths "github.com/gravestench/dark-magic/internal/paths"
 )
 
+const audioFileUsage = "usage: audio_file_test -asset data/global/sfx/example.wav [-output file.wav] [-play]"
+
+type commandOptions struct {
+	assetPath  string
+	outputPath string
+	play       bool
+}
+
+// main keeps the command's phases and fatal exits visible so errors retain their established messages, codes, and
+// temporary-file ownership.
 func main() {
-	asset := flag.String("asset", "", "WAV asset path in the layered content filesystem")
-	play := flag.Bool("play", false, "play with mplayer after extraction")
-	output := flag.String("output", "", "optional output WAV path")
-	flag.Parse()
-	if *asset == "" {
-		fmt.Fprintln(os.Stderr, "usage: audio_file_test -asset data/global/sfx/example.wav [-output file.wav] [-play]")
-		os.Exit(2)
+	options := parseCommandOptions()
+	if options.assetPath == "" {
+		exitWithAudioFileUsage()
 	}
-	contentFS, err := content.FromEnvironment()
+
+	audioData, err := readLayeredAudioAsset(options.assetPath)
 	if err != nil {
-		fatal(err)
+		exitWithAudioFileError(err)
 	}
-	data, err := fs.ReadFile(contentFS, *asset)
+
+	destination, err := resolveAudioDestination(options.outputPath, options.play)
 	if err != nil {
-		fatal(err)
+		exitWithAudioFileError(err)
 	}
-	fileName := *output
-	if fileName != "" {
-		fileName, err = darkpaths.ExpandHost(fileName)
-		if err != nil {
-			fatal(err)
-		}
+
+	if err := writeOrDescribeAudio(os.Stdout, options.assetPath, audioData, destination); err != nil {
+		exitWithAudioFileError(err)
 	}
-	temporary := false
-	if fileName == "" && *play {
-		file, err := os.CreateTemp("", "dark-magic-*.wav")
-		if err != nil {
-			fatal(err)
-		}
-		fileName = file.Name()
-		_ = file.Close()
-		temporary = true
+
+	if !options.play {
+		return
 	}
-	if fileName != "" {
-		if err := os.WriteFile(fileName, data, 0o644); err != nil {
-			fatal(err)
-		}
-		fmt.Printf("wrote %d bytes to %s\n", len(data), fileName)
-	} else {
-		fmt.Printf("%s: %d bytes\n", *asset, len(data))
+
+	// A successful command removes tool-owned output. Fatal playback errors still use os.Exit and therefore preserve
+	// the command's existing behavior of bypassing deferred cleanup.
+	if destination.temporary {
+		defer removeTemporaryAudio(destination.path)
 	}
-	if *play {
-		if temporary {
-			defer os.Remove(fileName)
-		}
-		if _, err := exec.LookPath("mplayer"); err != nil {
-			fatal(fmt.Errorf("mplayer is required for -play: %w", err))
-		}
-		command := exec.Command("mplayer", filepath.Clean(fileName))
-		command.Stdout = os.Stdout
-		command.Stderr = os.Stderr
-		if err := command.Run(); err != nil {
-			fatal(err)
-		}
+
+	if err := playAudioFile(destination.path); err != nil {
+		exitWithAudioFileError(err)
 	}
 }
 
-func fatal(err error) {
+// parseCommandOptions uses the process FlagSet so help text, parse failures, and exit behavior stay compatible with
+// the original command-line interface.
+func parseCommandOptions() commandOptions {
+	assetPath := flag.String("asset", "", "WAV asset path in the layered content filesystem")
+	play := flag.Bool("play", false, "play with mplayer after extraction")
+	outputPath := flag.String("output", "", "optional output WAV path")
+
+	flag.Parse()
+
+	return commandOptions{
+		assetPath:  *assetPath,
+		outputPath: *outputPath,
+		play:       *play,
+	}
+}
+
+// exitWithAudioFileUsage distinguishes missing required input from extraction failures by retaining exit status 2.
+func exitWithAudioFileUsage() {
+	fmt.Fprintln(os.Stderr, audioFileUsage)
+	os.Exit(2)
+}
+
+// exitWithAudioFileError gives every operational failure the command prefix and exit status callers already expect.
+func exitWithAudioFileError(err error) {
 	fmt.Fprintln(os.Stderr, "audio_file_test:", err)
 	os.Exit(1)
 }

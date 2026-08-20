@@ -48,6 +48,7 @@ type RuntimeRecipe struct {
 	CapabilityVersions   map[string]string `json:"capability_versions,omitempty"`
 }
 
+// Validate rejects recipes that cannot uniquely identify every deterministic runtime input.
 func (recipe RuntimeRecipe) Validate() error {
 	if recipe.Schema != RuntimeRecipeSchema || strings.TrimSpace(recipe.EngineAPI) == "" ||
 		strings.TrimSpace(recipe.NetworkProtocol) == "" || strings.TrimSpace(recipe.AuthoritativeHash) == "" ||
@@ -55,21 +56,27 @@ func (recipe RuntimeRecipe) Validate() error {
 		ValidateGameDataGenerationID(recipe.GameDataGenerationID) != nil {
 		return errors.New("simulation: invalid runtime recipe contract")
 	}
+
 	if err := validateRuntimePackage(recipe.Packages.Base); err != nil {
 		return fmt.Errorf("simulation: invalid base package: %w", err)
 	}
+
 	seen := map[string]struct{}{recipe.Packages.Base.ID: {}}
+
 	packageIDs := []string{recipe.Packages.Base.ID}
 	for _, pkg := range recipe.Packages.Extensions {
 		if err := validateRuntimePackage(pkg); err != nil {
 			return fmt.Errorf("simulation: invalid extension package: %w", err)
 		}
+
 		if _, duplicate := seen[pkg.ID]; duplicate {
 			return fmt.Errorf("simulation: duplicate runtime package %q", pkg.ID)
 		}
+
 		seen[pkg.ID] = struct{}{}
 		packageIDs = append(packageIDs, pkg.ID)
 	}
+
 	for index, id := range packageIDs {
 		for _, other := range packageIDs[index+1:] {
 			if strings.HasPrefix(id, other+".") || strings.HasPrefix(other, id+".") {
@@ -77,11 +84,13 @@ func (recipe RuntimeRecipe) Validate() error {
 			}
 		}
 	}
+
 	for name, version := range recipe.CapabilityVersions {
 		if strings.TrimSpace(name) == "" || strings.TrimSpace(version) == "" {
 			return errors.New("simulation: invalid runtime capability version")
 		}
 	}
+
 	return nil
 }
 
@@ -92,13 +101,16 @@ func (recipe RuntimeRecipe) Validate() error {
 func GameDataGenerationIDForAssetSet(assetSetID string) string {
 	payload := GameDataGenerationSchema + "\x00" + assetSetID + "\x00" + RecordParserSchema
 	digest := sha256.Sum256([]byte(payload))
+
 	return "sha256:" + hex.EncodeToString(digest[:])
 }
 
+// ValidateGameDataGenerationID requires the canonical lower-case SHA-256 representation.
 func ValidateGameDataGenerationID(value string) error {
 	if !validSHA256Digest(value) {
 		return errors.New("simulation: invalid game-data generation identity")
 	}
+
 	return nil
 }
 
@@ -108,25 +120,34 @@ func ValidateAssetSetID(value string) error {
 	if !validSHA256Digest(value) {
 		return errors.New("simulation: invalid asset-set identity")
 	}
+
 	return nil
 }
 
+// validateRuntimePackage requires complete immutable package metadata for replay provenance.
 func validateRuntimePackage(pkg RuntimePackage) error {
-	if strings.TrimSpace(pkg.ID) == "" || strings.TrimSpace(pkg.Version) == "" || !validSHA256Digest(pkg.Digest) || pkg.Size <= 0 {
+	if strings.TrimSpace(pkg.ID) == "" ||
+		strings.TrimSpace(pkg.Version) == "" ||
+		!validSHA256Digest(pkg.Digest) ||
+		pkg.Size <= 0 {
 		return errors.New("package ID, version, digest, and positive size are required")
 	}
+
 	return nil
 }
 
+// validSHA256Digest accepts only the canonical prefix and lower-case hexadecimal form.
 func validSHA256Digest(value string) bool {
 	const prefix = "sha256:"
 	if !strings.HasPrefix(value, prefix) || len(value) != len(prefix)+64 {
 		return false
 	}
+
 	for _, character := range value[len(prefix):] {
 		if !strings.ContainsRune("0123456789abcdef", character) {
 			return false
 		}
 	}
+
 	return true
 }

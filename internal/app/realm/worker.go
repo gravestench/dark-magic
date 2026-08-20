@@ -49,27 +49,40 @@ type workerMembership struct {
 	claimDeadline time.Time
 }
 
+// NewWorkerMemberships constructs the worker boundary and validates dependencies before callers can publish or mutate
+// shared state.
 func NewWorkerMemberships() *WorkerMemberships {
-	return &WorkerMemberships{players: make(map[string]workerMembership), expired: make(map[string]struct{}), now: time.Now}
+	return &WorkerMemberships{
+		players: make(map[string]workerMembership),
+		expired: make(map[string]struct{}),
+		now:     time.Now,
+	}
 }
 
+// Admit coordinates admit through the owning worker synchronization boundary so shared state is published only after a
+// complete transition.
 func (memberships *WorkerMemberships) Admit(playerID string, claimDeadline time.Time) {
 	if memberships == nil || strings.TrimSpace(playerID) == "" {
 		return
 	}
+
 	if claimDeadline.IsZero() {
 		claimDeadline = memberships.now().Add(45 * time.Second)
 	}
+
 	memberships.mu.Lock()
 	memberships.players[playerID] = workerMembership{claimDeadline: claimDeadline}
 	delete(memberships.expired, playerID)
 	memberships.mu.Unlock()
 }
 
+// Connect coordinates connect through the owning worker synchronization boundary so shared state is published only
+// after a complete transition.
 func (memberships *WorkerMemberships) Connect(playerID string) {
 	if memberships == nil || strings.TrimSpace(playerID) == "" {
 		return
 	}
+
 	memberships.mu.Lock()
 	if membership, active := memberships.players[playerID]; active {
 		membership.connected = true
@@ -79,10 +92,13 @@ func (memberships *WorkerMemberships) Connect(playerID string) {
 	memberships.mu.Unlock()
 }
 
+// Expire coordinates expire through the owning worker synchronization boundary so shared state is published only after
+// a complete transition.
 func (memberships *WorkerMemberships) Expire(playerID string) {
 	if memberships == nil || strings.TrimSpace(playerID) == "" {
 		return
 	}
+
 	memberships.mu.Lock()
 	if _, active := memberships.players[playerID]; active {
 		memberships.expired[playerID] = struct{}{}
@@ -90,33 +106,43 @@ func (memberships *WorkerMemberships) Expire(playerID string) {
 	memberships.mu.Unlock()
 }
 
+// Remove coordinates remove through the owning worker synchronization boundary so shared state is published only after
+// a complete transition.
 func (memberships *WorkerMemberships) Remove(playerID string) {
 	if memberships == nil {
 		return
 	}
+
 	memberships.mu.Lock()
 	delete(memberships.players, playerID)
 	delete(memberships.expired, playerID)
 	memberships.mu.Unlock()
 }
 
+// Status coordinates status through the owning worker synchronization boundary so shared state is published only after
+// a complete transition.
 func (memberships *WorkerMemberships) Status() (int, []string) {
 	if memberships == nil {
 		return 0, nil
 	}
+
 	memberships.mu.Lock()
 	defer memberships.mu.Unlock()
+
 	now := memberships.now()
 	for playerID, membership := range memberships.players {
 		if !membership.connected && !membership.claimDeadline.After(now) {
 			memberships.expired[playerID] = struct{}{}
 		}
 	}
+
 	expired := make([]string, 0, len(memberships.expired))
 	for playerID := range memberships.expired {
 		expired = append(expired, playerID)
 	}
+
 	sort.Strings(expired)
+
 	return len(memberships.players), expired
 }
 
@@ -207,31 +233,41 @@ type GameRecovery struct {
 	PlayerIDs  []string                       `json:"player_ids,omitempty"`
 }
 
+// NewGameRecovery constructs the worker boundary and validates dependencies before callers can publish or mutate
+// shared state.
 func NewGameRecovery(checkpoint gamesession.RecoveryCheckpoint, playerIDs []string) (GameRecovery, error) {
 	recovery := GameRecovery{Version: GameRecoveryVersion, Checkpoint: checkpoint,
 		PlayerIDs: append([]string(nil), playerIDs...)}
 	if err := ValidateGameRecovery(recovery); err != nil {
 		return GameRecovery{}, err
 	}
+
 	sort.Strings(recovery.PlayerIDs)
+
 	return recovery, nil
 }
 
+// ValidateGameRecovery checks the worker invariant before state changes, keeping invalid values off shared paths.
 func ValidateGameRecovery(recovery GameRecovery) error {
-	if recovery.Version != GameRecoveryVersion || gamesession.ValidateRecoveryCheckpoint(recovery.Checkpoint) != nil || len(recovery.PlayerIDs) > 8 {
+	if recovery.Version != GameRecoveryVersion || gamesession.ValidateRecoveryCheckpoint(recovery.Checkpoint) != nil ||
+		len(recovery.PlayerIDs) > 8 {
 		return ErrWorker
 	}
+
 	seen := make(map[string]struct{}, len(recovery.PlayerIDs))
 	for _, playerID := range recovery.PlayerIDs {
 		playerID = strings.TrimSpace(playerID)
 		if playerID == "" || len(playerID) > 255 {
 			return ErrWorker
 		}
+
 		if _, exists := seen[playerID]; exists {
 			return ErrWorker
 		}
+
 		seen[playerID] = struct{}{}
 	}
+
 	return nil
 }
 
@@ -260,6 +296,8 @@ type inProcessWorker struct {
 	memberships *WorkerMemberships
 }
 
+// newInProcessWorker constructs the worker boundary and validates dependencies before callers can publish or mutate
+// shared state.
 func newInProcessWorker(host *gameserver.Host) (WorkerClient, error) {
 	return NewInProcessWorker(host)
 }
@@ -273,111 +311,160 @@ func NewInProcessWorker(host *gameserver.Host) (WorkerClient, error) {
 // NewInProcessWorkerWithDestination publishes the exact spawn prepared by the
 // worker. Realm may provide a fallback only for legacy in-process fixtures;
 // production admissions always use this worker-owned geometry.
-func NewInProcessWorkerWithDestination(host *gameserver.Host, destination playeradapter.Destination) (WorkerClient, error) {
+func NewInProcessWorkerWithDestination(
+	host *gameserver.Host,
+	destination playeradapter.Destination,
+) (WorkerClient, error) {
 	return NewInProcessWorkerWithMemberships(host, destination, NewWorkerMemberships())
 }
 
 // NewInProcessWorkerWithMemberships binds worker control to the same transport
 // membership tracker used by a realm-worker QUIC endpoint.
-func NewInProcessWorkerWithMemberships(host *gameserver.Host, destination playeradapter.Destination, memberships *WorkerMemberships) (WorkerClient, error) {
-	if host == nil || host.Session == nil || strings.TrimSpace(host.Allocation.SessionID) == "" || strings.TrimSpace(host.Allocation.IdentityHash) == "" {
+func NewInProcessWorkerWithMemberships(
+	host *gameserver.Host,
+	destination playeradapter.Destination,
+	memberships *WorkerMemberships,
+) (WorkerClient, error) {
+	if host == nil || host.Session == nil || strings.TrimSpace(host.Allocation.SessionID) == "" ||
+		strings.TrimSpace(host.Allocation.IdentityHash) == "" {
 		return nil, ErrWorker
 	}
+
 	if memberships == nil {
 		return nil, ErrWorker
 	}
+
 	return &inProcessWorker{host: host, destination: destination, memberships: memberships}, nil
 }
 
+// Status returns the worker observation through its owning boundary so callers receive a consistent snapshot and error
+// contract.
 func (worker *inProcessWorker) Status(ctx context.Context) (WorkerStatus, error) {
 	if err := worker.ready(ctx); err != nil {
 		return WorkerStatus{}, err
 	}
+
 	checkpoint, err := worker.host.Session.CanonicalCheckpoint()
 	if err != nil {
 		return WorkerStatus{}, err
 	}
+
 	active, expired := worker.memberships.Status()
+
 	return WorkerStatus{Ready: true, Tick: checkpoint.Tick, ActivePlayers: active, ExpiredPlayers: expired}, nil
 }
 
+// Checkpoint contains checkpoint within the worker boundary so callers do not duplicate its domain-specific policy.
 func (worker *inProcessWorker) Checkpoint(ctx context.Context) (gamesession.RecoveryCheckpoint, error) {
 	if err := worker.ready(ctx); err != nil {
 		return gamesession.RecoveryCheckpoint{}, err
 	}
+
 	return worker.host.Session.RecoveryCheckpoint()
 }
 
+// Describe contains describe within the worker boundary so callers do not duplicate its domain-specific policy.
 func (worker *inProcessWorker) Describe(ctx context.Context) (WorkerDescription, error) {
 	if err := worker.ready(ctx); err != nil {
 		return WorkerDescription{}, err
 	}
-	return WorkerDescription{GameID: worker.host.Allocation.SessionID, Runtime: cloneRuntimeIdentity(worker.host.Allocation.Identity), IdentityHash: worker.host.Allocation.IdentityHash,
-		EntryDestination: worker.destination}, nil
+
+	return WorkerDescription{
+		GameID:           worker.host.Allocation.SessionID,
+		Runtime:          cloneRuntimeIdentity(worker.host.Allocation.Identity),
+		IdentityHash:     worker.host.Allocation.IdentityHash,
+		EntryDestination: worker.destination,
+	}, nil
 }
 
+// AdmitCharacter contains admit character within the worker boundary so callers do not duplicate its domain-specific
+// policy.
 func (worker *inProcessWorker) AdmitCharacter(ctx context.Context, request WorkerAdmission) error {
 	if err := worker.ready(ctx); err != nil {
 		return err
 	}
+
 	if strings.TrimSpace(request.PlayerID) == "" || strings.TrimSpace(request.Actor) == "" || request.Sequence == 0 {
 		return ErrWorker
 	}
+
 	if err := worker.host.Allocation.ValidateDurable(request.Compatibility); err != nil {
 		return err
 	}
+
 	checkpoint, err := worker.host.Session.CanonicalCheckpoint()
 	if err != nil {
 		return err
 	}
+
 	command, err := playeradapter.AdmissionCommand(request.Character, request.PlayerID, request.Destination,
 		request.Actor, request.Sequence, checkpoint.Tick+1, simulation.AuthoritySystem)
 	if err != nil {
 		return err
 	}
+
 	if err := worker.host.Session.Submit(command); err != nil {
 		return err
 	}
+
 	worker.memberships.Admit(request.PlayerID, request.ClaimDeadline)
+
 	return nil
 }
 
+// RemoveCharacter owns the worker cleanup transition so resources and durable state are retired in the required order.
 func (worker *inProcessWorker) RemoveCharacter(ctx context.Context, playerID string) error {
 	if err := worker.ready(ctx); err != nil {
 		return err
 	}
+
 	if err := worker.departures.Submit(worker.host.Session, playerID); err != nil {
 		return err
 	}
+
 	worker.memberships.Remove(playerID)
+
 	return nil
 }
 
-func (worker *inProcessWorker) ProjectCharacter(ctx context.Context, playerID string, baseline d2save.Character) (d2save.Character, error) {
+// ProjectCharacter contains project character within the worker boundary so callers do not duplicate its
+// domain-specific policy.
+func (worker *inProcessWorker) ProjectCharacter(
+	ctx context.Context,
+	playerID string,
+	baseline d2save.Character,
+) (d2save.Character, error) {
 	if err := worker.ready(ctx); err != nil {
 		return d2save.Character{}, err
 	}
+
 	checkpoint, err := worker.host.Session.CanonicalCheckpoint()
 	if err != nil {
 		return d2save.Character{}, err
 	}
+
 	return playeradapter.ProjectCharacter(playerID, baseline, checkpoint)
 }
 
+// Close owns the worker cleanup transition so resources and durable state are retired in the required order.
 func (worker *inProcessWorker) Close(ctx context.Context) error {
 	if worker == nil || worker.host == nil {
 		return nil
 	}
+
 	return worker.host.Close(ctx)
 }
 
+// ready decodes the worker representation at one boundary so malformed data fails before it becomes shared state.
 func (worker *inProcessWorker) ready(ctx context.Context) error {
 	if worker == nil || worker.host == nil || worker.host.Session == nil {
 		return ErrWorker
 	}
+
 	if ctx == nil {
 		return ErrWorker
 	}
+
 	select {
 	case <-ctx.Done():
 		return ctx.Err()
@@ -392,6 +479,8 @@ type localTicketIssuer struct {
 	authority *gameserver.TicketAuthority
 }
 
+// newLocalTicketIssuer constructs the worker boundary and validates dependencies before callers can publish or mutate
+// shared state.
 func newLocalTicketIssuer(authority *gameserver.TicketAuthority) (TicketIssuer, error) {
 	return NewLocalTicketIssuer(authority)
 }
@@ -402,31 +491,42 @@ func NewLocalTicketIssuer(authority *gameserver.TicketAuthority) (TicketIssuer, 
 	if authority == nil {
 		return nil, ErrWorker
 	}
+
 	return &localTicketIssuer{authority: authority}, nil
 }
 
-func (issuer *localTicketIssuer) Issue(ctx context.Context, principal AdmissionPrincipal, lifetime time.Duration) (string, error) {
+// Issue contains issue within the worker boundary so callers do not duplicate its domain-specific policy.
+func (issuer *localTicketIssuer) Issue(
+	ctx context.Context,
+	principal AdmissionPrincipal,
+	lifetime time.Duration,
+) (string, error) {
 	if issuer == nil || issuer.authority == nil || ctx == nil {
 		return "", ErrWorker
 	}
+
 	select {
 	case <-ctx.Done():
 		return "", ctx.Err()
 	default:
 	}
+
 	return issuer.authority.Issue(gameserver.Principal{ID: principal.AccountID, CharacterID: principal.CharacterID,
 		PlayerID: principal.PlayerID, CharacterRevision: principal.CharacterRevision,
 		RuntimeIdentityHash: principal.RuntimeIdentityHash}, lifetime)
 }
 
+// Revoke contains revoke within the worker boundary so callers do not duplicate its domain-specific policy.
 func (issuer *localTicketIssuer) Revoke(ctx context.Context, ticket string) error {
 	if issuer == nil || issuer.authority == nil || ctx == nil {
 		return ErrWorker
 	}
+
 	select {
 	case <-ctx.Done():
 		return ctx.Err()
 	default:
 	}
+
 	return issuer.authority.Revoke(ticket)
 }

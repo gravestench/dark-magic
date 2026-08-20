@@ -11,10 +11,13 @@ import (
 // high-frequency implementation diagnostics such as renderer and packet flow.
 const LevelTrace slog.Level = slog.LevelDebug - 4
 
+// Trace records high-volume diagnostics without forcing callers to understand the custom level value. Falling back to
+// slog.Default mirrors the package-level slog helpers and keeps optional subsystem loggers safe to call.
 func Trace(logger *slog.Logger, message string, args ...any) {
 	if logger == nil {
 		logger = slog.Default()
 	}
+
 	logger.Log(context.Background(), LevelTrace, message, args...)
 }
 

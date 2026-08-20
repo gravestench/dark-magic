@@ -17,21 +17,26 @@ func TestGenericContentStartupDoesNotInjectD2Legacy(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
+
 		if strings.Contains(string(data), "content.D2Legacy()") || strings.Contains(string(data), "FS: D2Legacy()") {
 			t.Errorf("%s injects d2legacy instead of consuming the resolved mod set", relative)
 		}
 	}
+
 	contentSource, err := os.ReadFile(filepath.Join(root, "internal/content/fs.go"))
 	if err != nil {
 		t.Fatal(err)
 	}
+
 	if strings.Contains(string(contentSource), "DARK_MAGIC_MOD_DIRECTORY") {
 		t.Fatal("generic content startup still permits an unverified directory to bypass the resolved mod lock")
 	}
+
 	distribution, err := os.ReadFile(filepath.Join(root, "internal/distribution/mods.go"))
 	if err != nil {
 		t.Fatal(err)
 	}
+
 	if !strings.Contains(string(distribution), "content.D2Legacy()") {
 		t.Fatal("product distribution no longer reconciles the bundled d2legacy package")
 	}

@@ -8,17 +8,21 @@ import (
 	lua "github.com/yuin/gopher-lua"
 )
 
+// TestAuthorityStateModuleRunsHeadlesslyAndUsesEngineOwnedState protects the authority state module runs headlessly
+// and uses engine owned state contract, including its observable ordering and failure behavior.
 func TestAuthorityStateModuleRunsHeadlesslyAndUsesEngineOwnedState(t *testing.T) {
 	stores := simulation.NewStateStore()
+
 	runtime := New()
 	if err := runtime.RegisterModule(AuthorityStateModule(stores)); err != nil {
 		t.Fatal(err)
 	}
+
 	ctx := context.Background()
 	if err := runtime.Start(ctx); err != nil {
 		t.Fatal(err)
 	}
-	defer runtime.Stop(ctx)
+	defer func() { _ = runtime.Stop(ctx) }()
 
 	script := `
 local state = require("engine.authority_state/v1")
@@ -28,9 +32,14 @@ state.register("example.counter", "counter/v1", { value = 1 })
 local current = state.read("example.counter")
 state.replace("example.counter", "counter/v1", { value = current.value + 1 })
 `
-	if err := runtime.Run(ctx, func(state *lua.LState) error { return state.DoString(script) }); err != nil {
+
+	if err := runtime.Run(
+		ctx,
+		func(state *lua.LState) error { return state.DoString(script) },
+	); err != nil {
 		t.Fatal(err)
 	}
+
 	got, found := stores.Read("example.counter")
 	if !found || string(got.Data) != `{"value":2}` {
 		t.Fatalf("registered state = %s, %v", got.Data, found)

@@ -13,6 +13,8 @@ type LocalSequencer struct {
 	sequence map[string]uint64
 }
 
+// NewLocalSequencer creates per-player counters for commands produced outside networking, preventing one local
+// producer identity from consuming another identity's sequence numbers.
 func NewLocalSequencer() *LocalSequencer {
 	return &LocalSequencer{sequence: make(map[string]uint64)}
 }
@@ -23,13 +25,18 @@ func (sequencer *LocalSequencer) Assign(commands []Command) []Command {
 	if len(commands) == 0 {
 		return nil
 	}
+
 	sequencer.mu.Lock()
 	defer sequencer.mu.Unlock()
+
+	// Copy the envelopes before assigning transport metadata so independent
+	// input producers retain ownership of their command slices.
 	result := append([]Command(nil), commands...)
 	for index := range result {
 		player := result[index].Player
 		sequencer.sequence[player]++
 		result[index].Sequence = sequencer.sequence[player]
 	}
+
 	return result
 }

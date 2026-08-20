@@ -19,11 +19,14 @@ import (
 	"github.com/gravestench/dark-magic/internal/video"
 )
 
+// TestFFmpegDecoderSupportsVerifiedCinematicMatrix checks the shipped BIK variants
+// through both video and audio paths without decoding each full cinematic.
 func TestFFmpegDecoderSupportsVerifiedCinematicMatrix(t *testing.T) {
 	directory := os.Getenv("DARK_MAGIC_TEST_MPQ_DIRECTORY")
 	if directory == "" {
 		t.Skip("set DARK_MAGIC_TEST_MPQ_DIRECTORY to the Diablo II MPQ directory")
 	}
+
 	tests := []struct {
 		archive string
 		asset   string
@@ -40,29 +43,36 @@ func TestFFmpegDecoderSupportsVerifiedCinematicMatrix(t *testing.T) {
 	}
 	decoder := video.FFmpegDecoder{}
 	stop := errors.New("verified first decoded unit")
+
 	for _, test := range tests {
+		// The asset basename keeps failures identifiable without exposing host paths.
 		t.Run(filepath.Base(test.asset), func(t *testing.T) {
 			archive, err := content.MPQ(filepath.Join(directory, test.archive))
 			if err != nil {
 				t.Fatal(err)
 			}
+
 			data, err := fs.ReadFile(archive, test.asset)
 			if err != nil {
 				t.Fatal(err)
 			}
+
 			err = decoder.Decode(context.Background(), bytes.NewReader(data), func(frame video.Frame) error {
 				if frame.Image.Bounds().Dx() != 640 || frame.Image.Bounds().Dy() <= 0 || frame.PTS < 0 {
 					t.Fatalf("invalid frame: bounds=%v PTS=%s", frame.Image.Bounds(), frame.PTS)
 				}
+
 				return stop
 			})
 			if !errors.Is(err, stop) {
 				t.Fatalf("video decode = %v", err)
 			}
+
 			err = decoder.DecodeAudio(context.Background(), bytes.NewReader(data), func(chunk video.AudioChunk) error {
 				if len(chunk.PCM) == 0 || chunk.SampleRate <= 0 || chunk.Channels != 2 || chunk.PTS < 0 {
 					t.Fatalf("invalid audio chunk: %#v", chunk)
 				}
+
 				return stop
 			})
 			if !errors.Is(err, stop) {
@@ -72,37 +82,50 @@ func TestFFmpegDecoderSupportsVerifiedCinematicMatrix(t *testing.T) {
 	}
 }
 
+// TestFFmpegDecoderReadsRealBIK verifies frame geometry and strictly increasing
+// timestamps on a real archive while stopping after enough frames to stay fast.
 func TestFFmpegDecoderReadsRealBIK(t *testing.T) {
 	mpqPath := os.Getenv("DARK_MAGIC_TEST_VIDEO_MPQ")
 	if mpqPath == "" {
 		t.Skip("set DARK_MAGIC_TEST_VIDEO_MPQ to d2video.mpq")
 	}
+
 	archive, err := content.MPQ(mpqPath)
 	if err != nil {
 		t.Fatal(err)
 	}
+
 	data, err := fs.ReadFile(archive, "data/local/video/New_Bliz640x480.bik")
 	if err != nil {
 		t.Fatal(err)
 	}
+
 	stop := errors.New("enough frames decoded")
 	frames := 0
+
 	var previousPTS time.Duration
+
 	err = (video.FFmpegDecoder{}).Decode(context.Background(), bytes.NewReader(data), func(frame video.Frame) error {
 		frames++
+
 		if frame.PTS < 0 {
 			t.Fatalf("negative frame PTS %s", frame.PTS)
 		}
+
 		if frame.Image.Bounds().Dx() != 640 || frame.Image.Bounds().Dy() != 480 {
 			t.Fatalf("frame size = %v", frame.Image.Bounds().Size())
 		}
+
 		if frames > 1 && frame.PTS <= previousPTS {
 			t.Fatalf("frame PTS %s did not advance after %s", frame.PTS, previousPTS)
 		}
+
 		previousPTS = frame.PTS
+
 		if frames == 3 {
 			return stop
 		}
+
 		return nil
 	})
 	if !errors.Is(err, stop) {
@@ -110,24 +133,32 @@ func TestFFmpegDecoderReadsRealBIK(t *testing.T) {
 	}
 }
 
+// BenchmarkFFmpegDecoderRealBIK measures full-stream decode throughput and
+// allocations only when the opt-in archive fixture is available.
 func BenchmarkFFmpegDecoderRealBIK(b *testing.B) {
 	mpqPath := os.Getenv("DARK_MAGIC_TEST_VIDEO_MPQ")
 	if mpqPath == "" {
 		b.Skip("set DARK_MAGIC_TEST_VIDEO_MPQ to d2video.mpq")
 	}
+
 	archive, err := content.MPQ(mpqPath)
 	if err != nil {
 		b.Fatal(err)
 	}
+
 	data, err := fs.ReadFile(archive, "data/local/video/New_Bliz640x480.bik")
 	if err != nil {
 		b.Fatal(err)
 	}
+
 	decoder := video.FFmpegDecoder{}
+
 	b.ReportAllocs()
 	b.SetBytes(int64(len(data)))
+
 	for b.Loop() {
 		frames := 0
+
 		err := decoder.Decode(context.Background(), bytes.NewReader(data), func(frame video.Frame) error {
 			frames++
 			return nil
@@ -138,76 +169,136 @@ func BenchmarkFFmpegDecoderRealBIK(b *testing.B) {
 	}
 }
 
+// TestEmbeddedBackendPresentsRealBIKFrame verifies the full decoder-to-composer
+// pipeline uploads visible content rather than merely allocating a black texture.
 func TestEmbeddedBackendPresentsRealBIKFrame(t *testing.T) {
 	mpqPath := os.Getenv("DARK_MAGIC_TEST_VIDEO_MPQ")
 	if mpqPath == "" {
 		t.Skip("set DARK_MAGIC_TEST_VIDEO_MPQ to d2video.mpq")
 	}
+
 	archive, err := content.MPQ(mpqPath)
 	if err != nil {
 		t.Fatal(err)
 	}
-	var composer render.Composer
-	var mixer audio.Mixer
+
+	var (
+		composer render.Composer
+		mixer    audio.Mixer
+	)
+
 	decoder := video.FFmpegDecoder{}
-	backend := &video.Embedded{Composer: &composer, Mixer: &mixer, Viewport: image.Pt(640, 480), Video: decoder, Audio: decoder}
+	backend := &video.Embedded{
+		Composer: &composer,
+		Mixer:    &mixer,
+		Viewport: image.Pt(640, 480),
+		Video:    decoder,
+		Audio:    decoder,
+	}
+
 	playback, err := backend.Play(archive, "data/local/video/New_Bliz640x480.bik")
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer playback.Stop()
+
+	// Cleanup waits for decoder goroutines and retained resources even when an
+	// assertion below fails before natural completion.
+	t.Cleanup(func() {
+		if err := playback.Stop(); err != nil {
+			t.Errorf("stop playback: %v", err)
+		}
+	})
+
+	// Polling samples the public retained state; a deadline keeps absent native
+	// presentation progress from hanging an integration run.
 	deadline := time.Now().Add(2 * time.Second)
 	for time.Now().Before(deadline) {
-		nodes := composer.Snapshot()
-		if len(nodes) == 1 {
-			resource, err := composer.ResourceSnapshot(nodes[0].Resource)
-			if err == nil {
-				frame := resource.Payload.(image.Image)
-				for y := 0; y < frame.Bounds().Dy(); y += 40 {
-					for x := 0; x < frame.Bounds().Dx(); x += 40 {
-						r, g, b, _ := frame.At(x, y).RGBA()
-						if r != 0 || g != 0 || b != 0 {
-							return
-						}
-					}
-				}
-			}
+		if compositionContainsVisibleFrame(&composer) {
+			return
 		}
+
 		time.Sleep(10 * time.Millisecond)
 	}
-	t.Fatalf("embedded backend did not present a non-black frame: %#v, playback %#v", composer.Diagnostics(), playback.Snapshot())
+
+	t.Fatalf(
+		"embedded backend did not present a non-black frame: %#v, playback %#v",
+		composer.Diagnostics(),
+		playback.Snapshot(),
+	)
 }
 
+// compositionContainsVisibleFrame samples the retained texture on a coarse grid;
+// one non-black pixel is sufficient to prove a decoded frame replaced the surface.
+func compositionContainsVisibleFrame(composer *render.Composer) bool {
+	nodes := composer.Snapshot()
+	if len(nodes) != 1 {
+		return false
+	}
+
+	resource, err := composer.ResourceSnapshot(nodes[0].Resource)
+	if err != nil {
+		return false
+	}
+
+	frame := resource.Payload.(image.Image)
+	for y := 0; y < frame.Bounds().Dy(); y += 40 {
+		for x := 0; x < frame.Bounds().Dx(); x += 40 {
+			r, g, b, _ := frame.At(x, y).RGBA()
+			if r != 0 || g != 0 || b != 0 {
+				return true
+			}
+		}
+	}
+
+	return false
+}
+
+// TestFFmpegDecoderReadsRealBIKAudio verifies PCM shape and plausible monotonic
+// timestamps while limiting work to the first hundred decoded chunks.
 func TestFFmpegDecoderReadsRealBIKAudio(t *testing.T) {
 	mpqPath := os.Getenv("DARK_MAGIC_TEST_VIDEO_MPQ")
 	if mpqPath == "" {
 		t.Skip("set DARK_MAGIC_TEST_VIDEO_MPQ to d2video.mpq")
 	}
+
 	archive, err := content.MPQ(mpqPath)
 	if err != nil {
 		t.Fatal(err)
 	}
+
 	data, err := fs.ReadFile(archive, "data/local/video/New_Bliz640x480.bik")
 	if err != nil {
 		t.Fatal(err)
 	}
+
 	stop := errors.New("enough audio decoded")
 	chunks := 0
+
 	var previousPTS time.Duration
-	err = (video.FFmpegDecoder{}).DecodeAudio(context.Background(), bytes.NewReader(data), func(chunk video.AudioChunk) error {
-		chunks++
-		if len(chunk.PCM) == 0 || chunk.SampleRate <= 0 || chunk.Channels != 2 {
-			t.Fatalf("invalid PCM chunk: bytes=%d rate=%d channels=%d", len(chunk.PCM), chunk.SampleRate, chunk.Channels)
-		}
-		if chunk.PTS < 0 || chunks > 1 && (chunk.PTS <= previousPTS || chunk.PTS-previousPTS > time.Second) {
-			t.Fatalf("audio PTS %s did not advance after %s", chunk.PTS, previousPTS)
-		}
-		previousPTS = chunk.PTS
-		if chunks == 100 {
-			return stop
-		}
-		return nil
-	})
+
+	err = (video.FFmpegDecoder{}).DecodeAudio(
+		context.Background(),
+		bytes.NewReader(data),
+		func(chunk video.AudioChunk) error {
+			chunks++
+
+			if len(chunk.PCM) == 0 || chunk.SampleRate <= 0 || chunk.Channels != 2 {
+				t.Fatalf("invalid PCM chunk: bytes=%d rate=%d channels=%d", len(chunk.PCM), chunk.SampleRate, chunk.Channels)
+			}
+
+			if chunk.PTS < 0 || chunks > 1 && (chunk.PTS <= previousPTS || chunk.PTS-previousPTS > time.Second) {
+				t.Fatalf("audio PTS %s did not advance after %s", chunk.PTS, previousPTS)
+			}
+
+			previousPTS = chunk.PTS
+
+			if chunks == 100 {
+				return stop
+			}
+
+			return nil
+		},
+	)
 	if !errors.Is(err, stop) {
 		t.Fatalf("decode audio = %v", err)
 	}

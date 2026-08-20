@@ -10,10 +10,12 @@ import (
 	"github.com/gravestench/dark-magic/internal/mod/d2legacy/data/recovered"
 )
 
+// Records supplies generation-pinned table rows used to resolve dynamic object identities.
 type Records interface {
 	Load(string) ([]map[string]string, error)
 }
 
+// staticDefinition joins the object record identity with its recovered human-readable description.
 type staticDefinition struct {
 	objectID    int
 	description string
@@ -33,6 +35,7 @@ func New(recoveredData recovered.Snapshot, records Records) (*Resolver, error) {
 	if err := resolver.Update(recoveredData, records); err != nil {
 		return nil, err
 	}
+
 	return resolver, nil
 }
 
@@ -43,27 +46,58 @@ func (resolver *Resolver) Update(recoveredData recovered.Snapshot, records Recor
 	if err != nil {
 		return fmt.Errorf("d2legacy world objects: load MonPreset.txt: %w", err)
 	}
-	replacement := &Resolver{
-		static:  make(map[string]staticDefinition, len(recoveredData.MapObjects)),
-		dynamic: make(map[string]string, len(presets)),
+
+	static := indexStaticDefinitions(recoveredData.MapObjects)
+
+	dynamic, err := indexDynamicDefinitions(presets)
+	if err != nil {
+		return err
 	}
-	for _, entry := range recoveredData.MapObjects {
-		replacement.static[key(entry.Act, entry.ID)] = staticDefinition{objectID: entry.ObjectID, description: entry.Description}
+
+	// Build both indexes before taking the lock so readers never observe a partial data-generation replacement.
+	resolver.mu.Lock()
+	resolver.static = static
+	resolver.dynamic = dynamic
+	resolver.mu.Unlock()
+
+	return nil
+}
+
+// indexStaticDefinitions projects recovered DS1 identities into the act-local key space used by map objects.
+func indexStaticDefinitions(entries []recovered.MapObject) map[string]staticDefinition {
+	definitions := make(map[string]staticDefinition, len(entries))
+
+	for _, entry := range entries {
+		definitions[key(entry.Act, entry.ID)] = staticDefinition{
+			objectID:    entry.ObjectID,
+			description: entry.Description,
+		}
 	}
+
+	return definitions
+}
+
+// indexDynamicDefinitions preserves authored per-act row order because DS1 dynamic IDs are positional indexes.
+func indexDynamicDefinitions(rows []map[string]string) (map[string]string, error) {
+	definitions := make(map[string]string, len(rows))
 	actOffsets := make(map[int]int, 5)
-	for row, entry := range presets {
+
+	for row, entry := range rows {
 		act, err := strconv.Atoi(entry["Act"])
 		if err != nil {
-			return fmt.Errorf("d2legacy world objects: MonPreset.txt row %d has invalid Act %q", row+2, entry["Act"])
+			return nil, fmt.Errorf(
+				"d2legacy world objects: MonPreset.txt row %d has invalid Act %q",
+				row+2,
+				entry["Act"],
+			)
 		}
+
 		index := actOffsets[act]
-		replacement.dynamic[key(act, index)] = entry["Place"]
+		definitions[key(act, index)] = entry["Place"]
 		actOffsets[act] = index + 1
 	}
-	resolver.mu.Lock()
-	resolver.static, resolver.dynamic = replacement.static, replacement.dynamic
-	resolver.mu.Unlock()
-	return nil
+
+	return definitions, nil
 }
 
 // ResolveStaticObject maps a DS1 static ID to Objects.txt and its recovered
@@ -72,9 +106,12 @@ func (resolver *Resolver) ResolveStaticObject(act, id int) (int, string, bool) {
 	if resolver == nil {
 		return 0, "", false
 	}
+
 	resolver.mu.RLock()
 	defer resolver.mu.RUnlock()
+
 	entry, found := resolver.static[key(act, id)]
+
 	return entry.objectID, entry.description, found
 }
 
@@ -84,10 +121,16 @@ func (resolver *Resolver) ResolveDynamicObject(act, id int) (string, bool) {
 	if resolver == nil {
 		return "", false
 	}
+
 	resolver.mu.RLock()
 	defer resolver.mu.RUnlock()
+
 	entry, found := resolver.dynamic[key(act, id)]
+
 	return entry, found
 }
 
-func key(act, id int) string { return fmt.Sprintf("%d:%d", act, id) }
+// key keeps identical numeric IDs from different acts in independent lookup namespaces.
+func key(act, id int) string {
+	return fmt.Sprintf("%d:%d", act, id)
+}

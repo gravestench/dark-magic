@@ -10,6 +10,8 @@ import (
 	gametransition "github.com/gravestench/dark-magic/internal/mod/d2legacy/adapter/transition"
 )
 
+// TestEntryWorldSpawnsKeepGameplayAndSeamCaptureDistinct prevents screenshot fixture positioning from
+// changing normal character admission while preserving generated wilderness arrival.
 func TestEntryWorldSpawnsKeepGameplayAndSeamCaptureDistinct(t *testing.T) {
 	seam := gametransition.Seam{
 		Town:       gametransition.SeamEndpoint{ArrivalX: 11, ArrivalY: 12},
@@ -20,6 +22,7 @@ func TestEntryWorldSpawnsKeepGameplayAndSeamCaptureDistinct(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+
 	if entry[1] != [2]float64{1, 2} || entry[2] != [2]float64{21, 22} {
 		t.Fatalf("ordinary entry spawns = %#v", entry)
 	}
@@ -28,6 +31,7 @@ func TestEntryWorldSpawnsKeepGameplayAndSeamCaptureDistinct(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+
 	if capture[1] != [2]float64{11, 12} || capture[2] != [2]float64{21, 22} {
 		t.Fatalf("seam capture spawns = %#v", capture)
 	}
@@ -37,21 +41,31 @@ func TestEntryWorldSpawnsKeepGameplayAndSeamCaptureDistinct(t *testing.T) {
 	}
 }
 
+// TestActivateCurrentConnectedWorldKeepsClickRoute proves connected correction refresh can rebind the
+// same map without clearing an in-progress click route.
 func TestActivateCurrentConnectedWorldKeepsClickRoute(t *testing.T) {
 	engine := gameecs.New()
-	t.Cleanup(func() { _ = engine.Close() })
+
+	t.Cleanup(func() {
+		_ = engine.Close()
+	})
+
 	controller := &d2movement.MovementController{}
+
 	source, err := d2movement.NewMovementSource(engine, &inputstate.Store{}, "realm-player", "game_world", controller)
 	if err != nil {
 		t.Fatal(err)
 	}
+
 	world := &gameworld.Map{}
 	app := &application{
 		gameWorlds:       map[int]*gameworld.Map{2: world},
 		movementSource:   source,
 		activeWorldLevel: 2,
 	}
+
 	app.activateWorld(2)
+
 	if err := controller.SetMoveTarget(30, 20); err != nil {
 		t.Fatal(err)
 	}

@@ -4,8 +4,11 @@ var _ EaseFunctionProvider = &QuinticOutEaseProvider{}
 var _ EaseFunctionProvider = &QuinticInEaseProvider{}
 var _ EaseFunctionProvider = &QuinticInOutEaseProvider{}
 
+// QuinticOutEaseProvider exposes the repository's historical quintic-out formula.
 type QuinticOutEaseProvider struct{}
 
+// New returns the existing parameter-free formula unchanged; exact output is
+// retained even where the conventional curve would first shift the input.
 func (*QuinticOutEaseProvider) New(_ []float64) func(float64) float64 {
 	quintic := func(v float64) float64 {
 		return v*v*v*v*v + 1
@@ -14,8 +17,10 @@ func (*QuinticOutEaseProvider) New(_ []float64) func(float64) float64 {
 	return quintic
 }
 
+// QuinticInEaseProvider accelerates progress with a fifth-degree polynomial.
 type QuinticInEaseProvider struct{}
 
+// New returns the parameter-free quintic-in curve.
 func (*QuinticInEaseProvider) New(_ []float64) func(float64) float64 {
 	quintic := func(v float64) float64 {
 		return v * v * v * v * v
@@ -24,8 +29,11 @@ func (*QuinticInEaseProvider) New(_ []float64) func(float64) float64 {
 	return quintic
 }
 
+// QuinticInOutEaseProvider joins quintic acceleration and deceleration.
 type QuinticInOutEaseProvider struct{}
 
+// New returns the historical two-branch quintic formula without normalizing
+// behavior beyond the calculations already used by authored animations.
 func (*QuinticInOutEaseProvider) New(_ []float64) func(float64) float64 {
 	quintic := func(v float64) float64 {
 		v *= 2

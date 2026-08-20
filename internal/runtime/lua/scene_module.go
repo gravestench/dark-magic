@@ -31,6 +31,8 @@ type Scenes struct {
 
 type SceneProfiler interface{ CaptureSceneHeap(string) error }
 
+// SetProfiler applies profiler through the capability boundary so validation completes before shared state
+// changes.
 func (s *Scenes) SetProfiler(profiler SceneProfiler) { s.profiler = profiler }
 
 // SetInputStore applies capability-level suppression while nonfocused scenes
@@ -44,6 +46,7 @@ func (s *Scenes) FrameContext(ctx context.Context) context.Context {
 	if !ok {
 		name = "none"
 	}
+
 	return pprof.WithLabels(ctx, pprof.Labels("scene", name))
 }
 
@@ -54,24 +57,44 @@ func NewScenes(runtime *Runtime, manager *navigation.Manager) *Scenes {
 
 // Module returns the engine.scene/v1 capability.
 func (s *Scenes) Module() Module {
-	return Module{Name: "engine.scene/v1", Help: documentedModule("Register Lua scenes and navigate the active scene stack.", map[string]CommandHelp{
-		"register":       commandHelp("engine.scene.register(definition)", "Register a Lua-authored scene definition."),
-		"replace":        commandHelp("engine.scene.replace(id [, payload])", "Replace the active scene."),
-		"push":           commandHelp("engine.scene.push(id [, payload])", "Push a scene above the active scene."),
-		"pop":            commandHelp("engine.scene.pop([payload])", "Pop the active scene."),
-		"toggle_overlay": commandHelp("engine.scene.toggle_overlay(id, slot)", "Toggle an overlay in the left, right, or full spatial slot."),
-	}), Loader: func(state *lua.LState) int {
-		module := state.SetFuncs(state.NewTable(), map[string]lua.LGFunction{
-			"register":       s.luaRegister,
-			"replace":        s.luaRequest("replace"),
-			"push":           s.luaRequest("push"),
-			"pop":            s.luaRequest("pop"),
-			"toggle_overlay": s.luaToggleOverlay,
-		})
-		module.RawSetString("api", lua.LNumber(1))
-		state.Push(module)
-		return 1
-	}}
+	return Module{
+		Name: "engine.scene/v1",
+		Help: documentedModule(
+			"Register Lua scenes and navigate the active scene stack.",
+			map[string]CommandHelp{
+				"register": commandHelp(
+					"engine.scene.register(definition)",
+					"Register a Lua-authored scene definition.",
+				),
+				"replace": commandHelp(
+					"engine.scene.replace(id [, payload])",
+					"Replace the active scene.",
+				),
+				"push": commandHelp(
+					"engine.scene.push(id [, payload])",
+					"Push a scene above the active scene.",
+				),
+				"pop": commandHelp("engine.scene.pop([payload])", "Pop the active scene."),
+				"toggle_overlay": commandHelp(
+					"engine.scene.toggle_overlay(id, slot)",
+					"Toggle an overlay in the left, right, or full spatial slot.",
+				),
+			},
+		),
+		Loader: func(state *lua.LState) int {
+			module := state.SetFuncs(state.NewTable(), map[string]lua.LGFunction{
+				"register":       s.luaRegister,
+				"replace":        s.luaRequest("replace"),
+				"push":           s.luaRequest("push"),
+				"pop":            s.luaRequest("pop"),
+				"toggle_overlay": s.luaToggleOverlay,
+			})
+			module.RawSetString("api", lua.LNumber(1))
+			state.Push(module)
+
+			return 1
+		},
+	}
 }
 
 // Flush applies deferred navigation requests outside scene callbacks.
@@ -80,8 +103,10 @@ func (s *Scenes) Flush(ctx context.Context) error {
 	pending := s.pending
 	s.pending = nil
 	s.mu.Unlock()
+
 	for _, request := range pending {
 		var err error
+
 		switch request.kind {
 		case "replace":
 			err = s.manager.Replace(ctx, request.id)
@@ -92,19 +117,25 @@ func (s *Scenes) Flush(ctx context.Context) error {
 		case "toggle_overlay":
 			err = s.manager.ToggleOverlay(ctx, request.id, request.slot)
 		}
+
 		if err != nil {
 			return fmt.Errorf("modruntime: scene %s %q: %w", request.kind, request.id, err)
 		}
 	}
+
 	return nil
 }
 
+// luaToggleOverlay owns the lua toggle overlay step at this boundary, keeping its side effects and failure point
+// explicit to callers.
 func (s *Scenes) luaToggleOverlay(state *lua.LState) int {
 	id := state.CheckString(1)
 	slot := state.CheckString(2)
+
 	s.mu.Lock()
 	s.pending = append(s.pending, navigationRequest{kind: "toggle_overlay", id: id, slot: slot})
 	s.mu.Unlock()
+
 	return 0
 }
 
@@ -113,6 +144,7 @@ func (s *Scenes) Update(ctx context.Context, elapsed time.Duration) error {
 	if err := s.manager.Update(ctx, elapsed); err != nil {
 		return err
 	}
+
 	return s.Flush(ctx)
 }
 
@@ -123,41 +155,59 @@ func (s *Scenes) Render(ctx context.Context) error { return s.manager.Render(ctx
 // scene definitions.
 func (s *Scenes) Close(ctx context.Context) error { return s.manager.Close(ctx) }
 
+// luaRegister owns the lua register step at this boundary, keeping its side effects and failure point explicit to
+// callers.
 func (s *Scenes) luaRegister(state *lua.LState) int {
 	scope, err := s.runtime.requireActiveScope()
 	if err != nil {
 		state.RaiseError("%v", err)
 		return 0
 	}
+
 	id := state.CheckString(1)
 	table := state.CheckTable(2)
+
 	definition, err := parseSceneDefinition(id, table)
 	if err != nil {
 		state.RaiseError("%v", err)
 		return 0
 	}
+
 	if err := s.manager.Register(id, func(context.Context) (navigation.Scene, error) {
-		return &luaScene{id: id, runtime: s.runtime, definition: definition, scope: &Scope{}, profiler: s.profiler, input: s.input}, nil
+		return &luaScene{
+			id:         id,
+			runtime:    s.runtime,
+			definition: definition,
+			scope:      &Scope{},
+			profiler:   s.profiler,
+			input:      s.input,
+		}, nil
 	}); err != nil {
 		state.RaiseError("registering scene %q: %v", id, err)
 		return 0
 	}
+
 	if err := scope.Add(func() error { return s.manager.Unregister(id) }); err != nil {
 		_ = s.manager.Unregister(id)
 		state.RaiseError("owning scene registration %q: %v", id, err)
 	}
+
 	return 0
 }
 
+// luaRequest owns the lua request step at this boundary, keeping its side effects and failure point explicit to
+// callers.
 func (s *Scenes) luaRequest(kind string) lua.LGFunction {
 	return func(state *lua.LState) int {
 		id := ""
 		if kind != "pop" {
 			id = state.CheckString(1)
 		}
+
 		s.mu.Lock()
 		s.pending = append(s.pending, navigationRequest{kind: kind, id: id})
 		s.mu.Unlock()
+
 		return 0
 	}
 }
@@ -172,6 +222,8 @@ type luaSceneDefinition struct {
 	worldView             string
 }
 
+// parseSceneDefinition parses parse scene definition at the package boundary so malformed input fails before state
+// publication.
 func parseSceneDefinition(id string, table *lua.LTable) (luaSceneDefinition, error) {
 	definition := luaSceneDefinition{table: table}
 	for name, target := range map[string]**lua.LFunction{
@@ -182,34 +234,52 @@ func parseSceneDefinition(id string, table *lua.LTable) (luaSceneDefinition, err
 		if value == lua.LNil {
 			continue
 		}
+
 		function, ok := value.(*lua.LFunction)
 		if !ok {
 			return luaSceneDefinition{}, fmt.Errorf("scene %q %s must be a function", id, name)
 		}
+
 		*target = function
 	}
+
 	if blocks := table.RawGetString("blocks_update_below"); blocks != lua.LNil {
 		value, ok := blocks.(lua.LBool)
 		if !ok {
-			return luaSceneDefinition{}, fmt.Errorf("scene %q blocks_update_below must be a boolean", id)
+			return luaSceneDefinition{}, fmt.Errorf(
+				"scene %q blocks_update_below must be a boolean",
+				id,
+			)
 		}
+
 		definition.blocks = bool(value)
 	}
+
 	if passthrough := table.RawGetString("passes_input_below"); passthrough != lua.LNil {
 		value, ok := passthrough.(lua.LBool)
 		if !ok {
-			return luaSceneDefinition{}, fmt.Errorf("scene %q passes_input_below must be a boolean", id)
+			return luaSceneDefinition{}, fmt.Errorf(
+				"scene %q passes_input_below must be a boolean",
+				id,
+			)
 		}
+
 		definition.passesInput = bool(value)
 	}
+
 	definition.worldView = "center"
 	if worldView := table.RawGetString("world_view"); worldView != lua.LNil {
 		value, ok := worldView.(lua.LString)
 		if !ok || value != "left" && value != "right" && value != "center" {
-			return luaSceneDefinition{}, fmt.Errorf("scene %q world_view must be left, right, or center", id)
+			return luaSceneDefinition{}, fmt.Errorf(
+				"scene %q world_view must be left, right, or center",
+				id,
+			)
 		}
+
 		definition.worldView = string(value)
 	}
+
 	return definition, nil
 }
 
@@ -228,42 +298,94 @@ type luaScene struct {
 // transactional lifecycle work enough bounded time to finish on slower disks.
 const sceneLifecycleBudget = 10 * time.Second
 
+// Create owns the create step at this boundary, keeping its side effects and failure point explicit to callers.
 func (s *luaScene) Create(ctx context.Context) error {
 	return s.callLifecycle(ctx, s.definition.create)
 }
-func (s *luaScene) Enter(ctx context.Context) error  { return s.callLifecycle(ctx, s.definition.enter) }
+
+// Enter owns the enter step at this boundary, keeping its side effects and failure point explicit to callers.
+func (s *luaScene) Enter(
+	ctx context.Context,
+) error {
+	return s.callLifecycle(ctx, s.definition.enter)
+}
+
+// Render performs in one rendering boundary so compositing order and pixel ownership remain explicit.
 func (s *luaScene) Render(ctx context.Context) error { return s.call(ctx, s.definition.render) }
-func (s *luaScene) Exit(ctx context.Context) error   { return s.callLifecycle(ctx, s.definition.exit) }
-func (s *luaScene) BlocksUpdateBelow() bool          { return s.definition.blocks }
-func (s *luaScene) PassesInputBelow() bool           { return s.definition.passesInput }
-func (s *luaScene) WorldView() string                { return s.definition.worldView }
+
+// Exit owns the exit step at this boundary, keeping its side effects and failure point explicit to callers.
+func (s *luaScene) Exit(
+	ctx context.Context,
+) error {
+	return s.callLifecycle(ctx, s.definition.exit)
+}
+
+// BlocksUpdateBelow owns the blocks update below step at this boundary, keeping its side effects and failure point
+// explicit to callers.
+func (s *luaScene) BlocksUpdateBelow() bool { return s.definition.blocks }
+
+// PassesInputBelow owns the passes input below step at this boundary, keeping its side effects and failure point
+// explicit to callers.
+func (s *luaScene) PassesInputBelow() bool { return s.definition.passesInput }
+
+// WorldView owns the world view step at this boundary, keeping its side effects and failure point explicit to
+// callers.
+func (s *luaScene) WorldView() string { return s.definition.worldView }
+
+// Update applies the phase under its ownership boundary so readers cannot observe a partially updated value.
 func (s *luaScene) Update(ctx context.Context, elapsed time.Duration) error {
 	return s.UpdateInputFocused(ctx, elapsed, true, true, s.definition.worldView)
 }
 
+// UpdateFocused applies the focused phase under its ownership boundary so readers cannot observe a partially
+// updated value.
 func (s *luaScene) UpdateFocused(ctx context.Context, elapsed time.Duration, focused bool) error {
 	return s.UpdateInputFocused(ctx, elapsed, focused, focused, s.definition.worldView)
 }
 
-func (s *luaScene) UpdateInputFocused(ctx context.Context, elapsed time.Duration, focused, inputAllowed bool, worldView string) error {
+// UpdateInputFocused applies the input focused phase under its ownership boundary so readers cannot observe
+// a partially updated value.
+func (s *luaScene) UpdateInputFocused(
+	ctx context.Context,
+	elapsed time.Duration,
+	focused, inputAllowed bool,
+	worldView string,
+) error {
 	mode := "none"
 	if focused {
 		mode = "focused"
 	} else if inputAllowed {
 		mode = "gameplay"
 	}
+
 	return s.UpdateRoutedInput(ctx, elapsed, focused, mode, worldView)
 }
 
-func (s *luaScene) UpdateRoutedInput(ctx context.Context, elapsed time.Duration, focused bool, mode, worldView string) error {
+// UpdateRoutedInput applies the routed input phase under its ownership boundary so readers cannot observe a
+// partially updated value.
+func (s *luaScene) UpdateRoutedInput(
+	ctx context.Context,
+	elapsed time.Duration,
+	focused bool,
+	mode, worldView string,
+) error {
 	if s.definition.update == nil {
 		return nil
 	}
+
 	var result error
+
 	pprof.Do(ctx, pprof.Labels("scene", s.id), func(ctx context.Context) {
 		invoke := func() error {
 			return s.runtime.runScoped(ctx, s.scope, func(state *lua.LState) error {
-				return state.CallByParam(lua.P{Fn: s.definition.update, NRet: 0, Protect: true}, s.instanceTable(state), lua.LNumber(elapsed.Seconds()), lua.LBool(focused), lua.LBool(mode != "none"), lua.LString(worldView))
+				return state.CallByParam(
+					lua.P{Fn: s.definition.update, NRet: 0, Protect: true},
+					s.instanceTable(state),
+					lua.LNumber(elapsed.Seconds()),
+					lua.LBool(focused),
+					lua.LBool(mode != "none"),
+					lua.LString(worldView),
+				)
 			})
 		}
 		if mode == "none" && s.input != nil {
@@ -278,39 +400,63 @@ func (s *luaScene) UpdateRoutedInput(ctx context.Context, elapsed time.Duration,
 			result = invoke()
 		}
 	})
+
 	return result
 }
+
+// Destroy owns the destroy step at this boundary, keeping its side effects and failure point explicit to callers.
 func (s *luaScene) Destroy(ctx context.Context) error {
 	err := s.callLifecycle(ctx, s.definition.destroy)
 	if s.profiler != nil {
 		err = errorsJoin(err, s.profiler.CaptureSceneHeap(s.id))
 	}
+
 	return errorsJoin(err, s.scope.Close())
 }
 
+// callLifecycle executes lifecycle through the runtime boundary so ownership, error wrapping, and cleanup
+// remain consistent.
 func (s *luaScene) callLifecycle(ctx context.Context, function *lua.LFunction) error {
 	if function == nil {
 		return nil
 	}
+
 	var result error
+
 	pprof.Do(ctx, pprof.Labels("scene", s.id), func(ctx context.Context) {
-		result = s.runtime.runScopedWithBudget(ctx, s.scope, sceneLifecycleBudget, func(state *lua.LState) error {
-			return state.CallByParam(lua.P{Fn: function, NRet: 0, Protect: true}, s.instanceTable(state))
-		})
+		result = s.runtime.runScopedWithBudget(
+			ctx,
+			s.scope,
+			sceneLifecycleBudget,
+			func(state *lua.LState) error {
+				return state.CallByParam(
+					lua.P{Fn: function, NRet: 0, Protect: true},
+					s.instanceTable(state),
+				)
+			},
+		)
 	})
+
 	return result
 }
 
+// call executes through the runtime boundary so ownership, error wrapping, and cleanup remain consistent.
 func (s *luaScene) call(ctx context.Context, function *lua.LFunction) error {
 	if function == nil {
 		return nil
 	}
+
 	var result error
+
 	pprof.Do(ctx, pprof.Labels("scene", s.id), func(ctx context.Context) {
 		result = s.runtime.runScoped(ctx, s.scope, func(state *lua.LState) error {
-			return state.CallByParam(lua.P{Fn: function, NRet: 0, Protect: true}, s.instanceTable(state))
+			return state.CallByParam(
+				lua.P{Fn: function, NRet: 0, Protect: true},
+				s.instanceTable(state),
+			)
 		})
 	})
+
 	return result
 }
 
@@ -322,24 +468,31 @@ func (s *luaScene) instanceTable(state *lua.LState) *lua.LTable {
 	if s.instance != nil {
 		return s.instance
 	}
+
 	s.instance = state.NewTable()
 	s.definition.table.ForEach(func(key, value lua.LValue) {
 		s.instance.RawSet(key, value)
 	})
+
 	return s.instance
 }
 
+// errorsJoin owns the errors join step at this boundary, keeping its side effects and failure point explicit to
+// callers.
 func errorsJoin(errs ...error) error {
 	var result error
+
 	for _, err := range errs {
 		if err == nil {
 			continue
 		}
+
 		if result == nil {
 			result = err
 		} else {
 			result = fmt.Errorf("%v; %w", result, err)
 		}
 	}
+
 	return result
 }

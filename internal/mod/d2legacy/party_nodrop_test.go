@@ -9,6 +9,8 @@ import (
 	"github.com/gravestench/dark-magic/internal/game/simulation"
 )
 
+// TestMonsterDeathUsesCreditedPlayersLivingSameLevelPartyForNoDrop verifies
+// loot scaling counts only eligible nearby party members at the death tick.
 func TestMonsterDeathUsesCreditedPlayersLivingSameLevelPartyForNoDrop(t *testing.T) {
 	ctx := context.Background()
 	authority, engine, session := startPartyFixture(t, nil)
@@ -39,6 +41,7 @@ func TestMonsterDeathUsesCreditedPlayersLivingSameLevelPartyForNoDrop(t *testing
 			t.Fatal(err)
 		}
 	}
+
 	stepPartySession(t, session)
 	assertMonsterPlayerCount(t, engine, "level:2:room:party-nodrop:monster:1", 2)
 
@@ -51,26 +54,35 @@ func TestMonsterDeathUsesCreditedPlayersLivingSameLevelPartyForNoDrop(t *testing
 		"side": "left", "target_x": 4, "target_y": 0,
 		"target_id": "monster:level:2:room:party-nodrop:monster:1",
 	})
+
 	for attempt := uint64(0); attempt < 4; attempt++ {
 		if deaths, found := akara.GetDynamicStore(engine.World(), "d2legacy.monster.death"); found && deaths.Len() > 0 {
 			break
 		}
-		if err := session.Submit(simulation.Command{Tick: 4 + 8*attempt, Player: "alice", Authority: simulation.AuthorityPlayer,
+
+		if err := session.Submit(simulation.Command{
+			Tick: 4 + 8*attempt, Player: "alice", Authority: simulation.AuthorityPlayer,
 			Sequence: 2 + attempt, Kind: "player.use_skill", Payload: cast}); err != nil {
 			t.Fatal(err)
 		}
+
 		stepSession(t, session, 8)
 	}
+
 	deaths, _ := akara.GetDynamicStore(engine.World(), "d2legacy.monster.death")
 	if deaths.Len() != 1 {
 		stats, _ := akara.GetDynamicStore(engine.World(), "d2legacy.monster.stats")
+
 		var health any
+
 		if stats.Len() > 0 {
 			value, _ := stats.Get(stats.Entities()[0])
 			health, _ = value.Get("health")
 		}
+
 		t.Fatalf("monster deaths = %d, want 1; health=%v", deaths.Len(), health)
 	}
+
 	death, _ := deaths.Get(deaths.Entities()[0])
 	for field, want := range map[string]int64{
 		"game_player_count":         2,
@@ -84,6 +96,7 @@ func TestMonsterDeathUsesCreditedPlayersLivingSameLevelPartyForNoDrop(t *testing
 			t.Fatalf("death %s = %v, want %d", field, got, want)
 		}
 	}
+
 	credited, _ := death.Get("credited_id")
 	if credited != "player:alice" {
 		t.Fatalf("death credited ID = %v, want player:alice", credited)

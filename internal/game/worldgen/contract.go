@@ -9,7 +9,6 @@ package worldgen
 import (
 	"errors"
 	"fmt"
-	"strings"
 )
 
 const ContractVersion = 1
@@ -34,13 +33,17 @@ type Request struct {
 	Difficulty Difficulty `json:"difficulty"`
 }
 
+// Validate checks the engine-owned replay identity without interpreting opaque mod dimensions.
+// Accepting unknown acts and difficulties keeps the contract reusable while version and level checks prevent ambiguity.
 func (request Request) Validate() error {
 	if request.Version != ContractVersion {
 		return fmt.Errorf("%w: unsupported version %d", ErrRequest, request.Version)
 	}
+
 	if request.LevelID <= 0 {
 		return fmt.Errorf("%w: level ID must be positive", ErrRequest)
 	}
+
 	return nil
 }
 
@@ -62,7 +65,11 @@ type Bounds struct {
 	Height int `json:"height"`
 }
 
-func (bounds Bounds) valid() bool { return bounds.Width > 0 && bounds.Height > 0 }
+// valid reports whether the half-open rectangle can contain world tiles.
+// Coordinates may be negative because only dimensions, not placement policy, belong to this generic contract.
+func (bounds Bounds) valid() bool {
+	return bounds.Width > 0 && bounds.Height > 0
+}
 
 // Stamp places one authored DS1 recipe. TilePaths are the deterministic DT1
 // inputs selected from LvlTypes plus masks; they are asset identities, not
@@ -153,90 +160,4 @@ type Definition struct {
 	Paths      []PathTile      `json:"paths,omitempty"`
 	Structures []StructureTile `json:"structures,omitempty"`
 	Trace      []string        `json:"trace,omitempty"`
-}
-
-func validateDefinition(def Definition) error {
-	if err := def.Request.Validate(); err != nil {
-		return err
-	}
-	if strings.TrimSpace(string(def.Kind)) == "" {
-		return fmt.Errorf("%w: kind is required", ErrZone)
-	}
-	if !def.Bounds.valid() {
-		return fmt.Errorf("%w: bounds must have positive dimensions", ErrZone)
-	}
-	stampIDs := make(map[uint32]struct{}, len(def.Stamps))
-	for _, stamp := range def.Stamps {
-		if stamp.ID == 0 || stamp.Width <= 0 || stamp.Height <= 0 || strings.TrimSpace(stamp.DS1Path) == "" {
-			return fmt.Errorf("%w: incomplete stamp %d", ErrZone, stamp.ID)
-		}
-		if _, duplicate := stampIDs[stamp.ID]; duplicate {
-			return fmt.Errorf("%w: duplicate stamp %d", ErrZone, stamp.ID)
-		}
-		stampIDs[stamp.ID] = struct{}{}
-	}
-	roomIDs := make(map[uint32]struct{}, len(def.Rooms))
-	for _, room := range def.Rooms {
-		if room.ID == 0 || room.Width <= 0 || room.Height <= 0 {
-			return fmt.Errorf("%w: incomplete room %d", ErrZone, room.ID)
-		}
-		if _, duplicate := roomIDs[room.ID]; duplicate {
-			return fmt.Errorf("%w: duplicate room %d", ErrZone, room.ID)
-		}
-		if room.StampID != 0 {
-			if _, found := stampIDs[room.StampID]; !found {
-				return fmt.Errorf("%w: room %d references stamp %d", ErrZone, room.ID, room.StampID)
-			}
-		}
-		roomIDs[room.ID] = struct{}{}
-	}
-	for _, link := range def.Links {
-		if link.From == link.To {
-			return fmt.Errorf("%w: room %d links to itself", ErrZone, link.From)
-		}
-		if _, found := roomIDs[link.From]; !found {
-			return fmt.Errorf("%w: link references room %d", ErrZone, link.From)
-		}
-		if _, found := roomIDs[link.To]; !found {
-			return fmt.Errorf("%w: link references room %d", ErrZone, link.To)
-		}
-	}
-	warpIDs := make(map[uint32]struct{}, len(def.Warps))
-	for _, warp := range def.Warps {
-		if warp.ID == 0 || warp.DestinationLevel <= 0 || warp.X < def.Bounds.X || warp.Y < def.Bounds.Y || warp.X >= def.Bounds.X+def.Bounds.Width || warp.Y >= def.Bounds.Y+def.Bounds.Height {
-			return fmt.Errorf("%w: incomplete or out-of-bounds warp %d", ErrZone, warp.ID)
-		}
-		if warp.Direction != "north" && warp.Direction != "east" && warp.Direction != "south" && warp.Direction != "west" {
-			return fmt.Errorf("%w: warp %d has invalid direction %q", ErrZone, warp.ID, warp.Direction)
-		}
-		if _, duplicate := warpIDs[warp.ID]; duplicate {
-			return fmt.Errorf("%w: duplicate warp %d", ErrZone, warp.ID)
-		}
-		warpIDs[warp.ID] = struct{}{}
-	}
-	seenPath := make(map[PathTile]struct{}, len(def.Paths))
-	for _, tile := range def.Paths {
-		if tile.X < def.Bounds.X || tile.Y < def.Bounds.Y || tile.X >= def.Bounds.X+def.Bounds.Width || tile.Y >= def.Bounds.Y+def.Bounds.Height {
-			return fmt.Errorf("%w: out-of-bounds path tile %d,%d", ErrZone, tile.X, tile.Y)
-		}
-		if _, duplicate := seenPath[tile]; duplicate {
-			return fmt.Errorf("%w: duplicate path tile %d,%d", ErrZone, tile.X, tile.Y)
-		}
-		seenPath[tile] = struct{}{}
-	}
-	seenStructure := make(map[[2]int]struct{}, len(def.Structures))
-	for _, tile := range def.Structures {
-		if tile.X < def.Bounds.X || tile.Y < def.Bounds.Y || tile.X >= def.Bounds.X+def.Bounds.Width || tile.Y >= def.Bounds.Y+def.Bounds.Height {
-			return fmt.Errorf("%w: out-of-bounds structure tile %d,%d", ErrZone, tile.X, tile.Y)
-		}
-		if strings.TrimSpace(tile.Kind) == "" {
-			return fmt.Errorf("%w: structure kind is required", ErrZone)
-		}
-		position := [2]int{tile.X, tile.Y}
-		if _, duplicate := seenStructure[position]; duplicate {
-			return fmt.Errorf("%w: overlapping structure tile %d,%d", ErrZone, tile.X, tile.Y)
-		}
-		seenStructure[position] = struct{}{}
-	}
-	return nil
 }

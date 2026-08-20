@@ -14,6 +14,8 @@ import (
 	playeradapter "github.com/gravestench/dark-magic/internal/mod/d2legacy/adapter/player"
 )
 
+// TestGroundItemResidencyRestoresAcrossInactiveRoom verifies inactive-room
+// serialization preserves item ownership, placement, and checksum parity.
 func TestGroundItemResidencyRestoresAcrossInactiveRoom(t *testing.T) {
 	ctx := context.Background()
 	authority, engine, session := startGroundItemFixture(t, nil)
@@ -39,13 +41,16 @@ func TestGroundItemResidencyRestoresAcrossInactiveRoom(t *testing.T) {
 		Sequence: 1, Kind: "system.population.bootstrap", Payload: population}); err != nil {
 		t.Fatal(err)
 	}
+
 	if err := session.Step(); err != nil {
 		t.Fatal(err)
 	}
+
 	if err := session.Submit(simulation.Command{Tick: 2, Player: "system", Authority: simulation.AuthoritySystem,
 		Sequence: 1, Kind: "system.player.enter", Payload: generatedPlayerPayload(t, "hero", "alice", 1, 1)}); err != nil {
 		t.Fatal(err)
 	}
+
 	if err := session.Step(); err != nil {
 		t.Fatal(err)
 	}
@@ -55,19 +60,24 @@ func TestGroundItemResidencyRestoresAcrossInactiveRoom(t *testing.T) {
 	assertGroundItemWorldState(t, engine, item, "world", true)
 
 	submitMoveCommand(t, session, engine.Tick()+1, "alice", 1, 1)
+
 	for playerPositionX(t, engine, "alice") < 20 {
 		if err := session.Step(); err != nil {
 			t.Fatal(err)
 		}
+
 		if engine.Tick() > 110 {
 			t.Fatal("player did not leave the ground-item room")
 		}
 	}
+
 	stopTick := engine.Tick() + 1
 	submitMoveCommand(t, session, stopTick, "alice", 2, 0)
+
 	if err := session.Step(); err != nil {
 		t.Fatal(err)
 	}
+
 	assertResidentActivation(t, engine, item, false, false)
 	assertInactiveRoom(t, authority, "a", "item:alice:ground-potion")
 	inactive := groundItemResidencySnapshot(t, engine, item)
@@ -76,11 +86,14 @@ func TestGroundItemResidencyRestoresAcrossInactiveRoom(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+
 	checkpoint := replay.Checkpoints[len(replay.Checkpoints)-1]
+
 	private, err := playeradapter.ProjectPrivateView("alice", checkpoint)
 	if err != nil {
 		t.Fatal(err)
 	}
+
 	if len(private.Items.Items) != 0 {
 		t.Fatalf("inactive ground item leaked into private presentation: %#v", private.Items.Items)
 	}
@@ -91,9 +104,11 @@ func TestGroundItemResidencyRestoresAcrossInactiveRoom(t *testing.T) {
 		_ = restoredSession.Close()
 		_ = restoredEngine.Close()
 	})
+
 	if got := groundItemResidencySnapshot(t, restoredEngine, item); !reflect.DeepEqual(got, inactive) {
 		t.Fatalf("restored inactive ground item = %#v, want %#v", got, inactive)
 	}
+
 	assertInactiveRoom(t, restored, "a", "item:alice:ground-potion")
 
 	returnTick := checkpoint.Tick + 1
@@ -101,6 +116,7 @@ func TestGroundItemResidencyRestoresAcrossInactiveRoom(t *testing.T) {
 	submitMoveCommand(t, restoredSession, returnTick, "alice", 1, -1)
 	stepSession(t, session, 55)
 	stepSession(t, restoredSession, 55)
+
 	stopTick = returnTick + 55
 	submitMoveCommand(t, session, stopTick, "alice", 4, 0)
 	submitMoveCommand(t, restoredSession, stopTick, "alice", 2, 0)
@@ -129,24 +145,37 @@ func TestGroundItemResidencyRestoresAcrossInactiveRoom(t *testing.T) {
 	assertEqualLatestChecksums(t, session, restoredSession, "redropped ground item")
 }
 
-func startGroundItemFixture(t *testing.T, checkpoint *simulation.Checkpoint) (*Authority, *gameecs.Engine, *gamesession.Session) {
+// startGroundItemFixture boots either a fresh or restored authority with the
+// same seed, making checkpoint state the only difference between both runs.
+func startGroundItemFixture(
+	t *testing.T,
+	checkpoint *simulation.Checkpoint,
+) (*Authority, *gameecs.Engine, *gamesession.Session) {
 	t.Helper()
-	var engine *gameecs.Engine
-	var restore []simulation.ParticipantState
+
+	var (
+		engine  *gameecs.Engine
+		restore []simulation.ParticipantState
+	)
+
 	if checkpoint == nil {
 		engine = gameecs.New()
 	} else {
 		var err error
+
 		engine, err = gameecs.RestoreSnapshot(*checkpoint.Snapshot)
 		if err != nil {
 			t.Fatal(err)
 		}
+
 		restore = checkpoint.Participants
 	}
+
 	session, err := gamesession.New(engine, gamesession.Config{CheckpointInterval: 1})
 	if err != nil {
 		t.Fatal(err)
 	}
+
 	initial := map[string]any{"d2legacy.items": map[string]any{
 		"owner": "alice", "inventory_width": 10, "inventory_height": 4,
 		"stash_width": 6, "stash_height": 8, "cube_width": 3, "cube_height": 4,
@@ -157,32 +186,48 @@ func startGroundItemFixture(t *testing.T, checkpoint *simulation.Checkpoint) (*A
 			"world_dc6": "data/global/items/flphp1.dc6", "world_animated": true,
 		}},
 	}}
+
 	authority, err := StartWithConfig(t.Context(), content.D2Legacy(), generatedHostileRecords(), engine, session,
 		Config{Seed: 315, InitialData: initial, Restore: restore})
 	if err != nil {
 		_ = session.Close()
 		_ = engine.Close()
+
 		t.Fatal(err)
 	}
+
 	return authority, engine, session
 }
 
+// groundItemEntity resolves a stable item identifier to its ECS entity so
+// assertions do not depend on allocation order.
 func groundItemEntity(t *testing.T, engine *gameecs.Engine, itemID string) akara.Entity {
 	t.Helper()
+
 	identities := dynamicStore(t, engine, "d2legacy.item.identity")
 	for _, entity := range identities.Entities() {
 		identity, _ := identities.Get(entity)
+
 		value, _ := identity.Get("id")
 		if value == itemID {
 			return entity
 		}
 	}
+
 	t.Fatalf("ground item %q was not found", itemID)
+
 	return 0
 }
 
-func groundItemResidencySnapshot(t *testing.T, engine *gameecs.Engine, item akara.Entity) map[string]map[string]any {
+// groundItemResidencySnapshot captures every component that must survive room
+// inactivation, providing one parity boundary for original and restored runs.
+func groundItemResidencySnapshot(
+	t *testing.T,
+	engine *gameecs.Engine,
+	item akara.Entity,
+) map[string]map[string]any {
 	t.Helper()
+
 	result := make(map[string]map[string]any, 7)
 	for _, name := range []string{
 		"d2legacy.item.identity",
@@ -195,15 +240,26 @@ func groundItemResidencySnapshot(t *testing.T, engine *gameecs.Engine, item akar
 	} {
 		result[name] = componentSnapshot(t, engine, item, name)
 	}
+
 	return result
 }
 
-func assertGroundItemWorldState(t *testing.T, engine *gameecs.Engine, item akara.Entity, container string, spatial bool) {
+// assertGroundItemWorldState checks the mutually dependent container and
+// spatial markers; testing them together catches impossible hybrid placement.
+func assertGroundItemWorldState(
+	t *testing.T,
+	engine *gameecs.Engine,
+	item akara.Entity,
+	container string,
+	spatial bool,
+) {
 	t.Helper()
+
 	placement := componentSnapshot(t, engine, item, "d2legacy.item.placement")
 	if placement["container"] != container {
 		t.Fatalf("item container = %v, want %s", placement["container"], container)
 	}
+
 	for _, name := range []string{
 		"d2legacy.world.position", "d2legacy.world.location", "d2legacy.world.room_resident",
 	} {
@@ -214,7 +270,17 @@ func assertGroundItemWorldState(t *testing.T, engine *gameecs.Engine, item akara
 	}
 }
 
-func moveItem(t *testing.T, session *gamesession.Session, tick, sequence uint64, container string, x, y int) {
+// moveItem submits a deterministic authority command and fails at the call site
+// so ordering mistakes remain easy to diagnose.
+func moveItem(
+	t *testing.T,
+	session *gamesession.Session,
+	tick uint64,
+	sequence uint64,
+	container string,
+	x int,
+	y int,
+) {
 	t.Helper()
 	submitPartyCommand(t, session, tick, "alice", sequence, "item.move", map[string]any{
 		"item_id":     "ground-potion",
@@ -222,17 +288,28 @@ func moveItem(t *testing.T, session *gamesession.Session, tick, sequence uint64,
 	})
 }
 
-func assertEqualLatestChecksums(t *testing.T, original, restored *gamesession.Session, label string) {
+// assertEqualLatestChecksums proves both timelines converged after equivalent
+// commands, covering state that individual component assertions may omit.
+func assertEqualLatestChecksums(
+	t *testing.T,
+	original *gamesession.Session,
+	restored *gamesession.Session,
+	label string,
+) {
 	t.Helper()
+
 	originalReplay, err := original.Replay()
 	if err != nil {
 		t.Fatal(err)
 	}
+
 	restoredReplay, err := restored.Replay()
 	if err != nil {
 		t.Fatal(err)
 	}
+
 	got := restoredReplay.Checkpoints[len(restoredReplay.Checkpoints)-1].Checksum
+
 	want := originalReplay.Checkpoints[len(originalReplay.Checkpoints)-1].Checksum
 	if got != want {
 		t.Fatalf("%s checksum = %s, want %s", label, got, want)

@@ -8,27 +8,35 @@ import (
 	recordstore "github.com/gravestench/dark-magic/internal/game/data/store"
 )
 
+// TestOwnedTargetEnchantRecords pins the buff and damage fields that make
+// Enchant affect both the target and its attacks.
 func TestOwnedTargetEnchantRecords(t *testing.T) {
 	directory := os.Getenv("DARK_MAGIC_TEST_MPQ_DIRECTORY")
 	if directory == "" {
 		t.Skip("set DARK_MAGIC_TEST_MPQ_DIRECTORY to the expansion 1.14d MPQ directory")
 	}
+
 	t.Setenv("MPQ_DIRECTORY", directory)
+
 	assets, err := content.FromEnvironment(content.Layer{Name: "d2legacy", FS: content.D2Legacy()})
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer assets.Close()
+	defer func() { _ = assets.Close() }()
+
 	store := recordstore.New(assets)
 	store.SetLogger(nil)
+
 	skills, err := store.Load("data/global/excel/skills.txt")
 	if err != nil {
 		t.Fatal(err)
 	}
+
 	enchant := rowBy(skills, "Id", "52")
 	if enchant == nil {
 		t.Fatal("owned expansion 1.14d Enchant row is missing")
 	}
+
 	for field, want := range map[string]string{
 		"skill": "Enchant", "srvstfunc": "", "srvdofunc": "25", "anim": "SC", "range": "none",
 		"TargetPet": "1", "TargetAlly": "1", "mana": "25", "lvlmana": "1", "manashift": "8", "minmana": "1",
@@ -45,27 +53,33 @@ func TestOwnedTargetEnchantRecords(t *testing.T) {
 			t.Fatalf("owned expansion 1.14d Enchant %s = %q, want %q", field, enchant[field], want)
 		}
 	}
+
 	states, err := store.Load("data/global/excel/states.txt")
 	if err != nil {
 		t.Fatal(err)
 	}
+
 	state := rowBy(states, "state", enchant["aurastate"])
 	if state == nil {
 		t.Fatal("owned expansion 1.14d Enchant state row is missing")
 	}
+
 	for field, want := range map[string]string{"state": "enchant", "group": "", "castoverlay": "enchant"} {
 		if state[field] != want {
 			t.Fatalf("owned expansion 1.14d Enchant state %s = %q, want %q", field, state[field], want)
 		}
 	}
+
 	descriptions, err := store.Load("data/global/excel/SkillDesc.txt")
 	if err != nil {
 		t.Fatal(err)
 	}
+
 	description := rowBy(descriptions, "skilldesc", "enchant")
 	if description == nil {
 		t.Fatal("owned expansion 1.14d Enchant SkillDesc row is missing")
 	}
+
 	for field, want := range map[string]string{
 		"desccalca2": "toht", "desccalca4": "ln12", "dsc3calca1": "2", "dsc3calca2": "par8",
 	} {
@@ -73,10 +87,12 @@ func TestOwnedTargetEnchantRecords(t *testing.T) {
 			t.Fatalf("owned expansion 1.14d Enchant SkillDesc %s = %q, want %q", field, description[field], want)
 		}
 	}
+
 	calculations, err := store.Load("data/global/excel/skillcalc.txt")
 	if err != nil {
 		t.Fatal(err)
 	}
+
 	if len(calculations) <= 20 || calculations[20]["code"] != "toht" || calculations[20]["*desc"] != "to hit" {
 		t.Fatalf("owned expansion 1.14d skill calculation 20 = %#v, want toht", calculations)
 	}

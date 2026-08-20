@@ -4,11 +4,8 @@ package world
 
 import (
 	"fmt"
-	"io/fs"
 	"math"
 	"sync"
-
-	"github.com/gravestench/ds1"
 )
 
 // SubtilesPerTile is the fixed collision resolution encoded by DT1 tiles.
@@ -40,6 +37,7 @@ func NewOpenMap(widthSubtiles, heightSubtiles int) (*Map, error) {
 	if widthSubtiles <= 0 || heightSubtiles <= 0 {
 		return nil, fmt.Errorf("world: open map dimensions must be positive")
 	}
+
 	return &Map{
 		WidthSubtiles: widthSubtiles, HeightSubtiles: heightSubtiles,
 		WidthTiles: widthSubtiles / SubtilesPerTile, HeightTiles: heightSubtiles / SubtilesPerTile,
@@ -59,9 +57,11 @@ func (m *Map) ReplaceFloor(x, y int, identity TileIdentity, reference TileRefere
 		if m.Tiles[index].X == x && m.Tiles[index].Y == y && m.Tiles[index].Layer == LayerFloor {
 			m.Tiles[index].Identity = identity
 			m.Tiles[index].Reference = reference
+
 			return
 		}
 	}
+
 	m.Tiles = append(m.Tiles, TilePlacement{X: x, Y: y, Layer: LayerFloor, Identity: identity, Reference: reference})
 }
 
@@ -133,6 +133,8 @@ const (
 	LayerRoof
 )
 
+// String returns the stable presentation name used by diagnostics and adapters. Unknown values remain explicit instead
+// of leaking numeric layer values into user-facing output.
 func (l TileLayer) String() string {
 	switch l {
 	case LayerFloor:
@@ -159,117 +161,8 @@ type TilePlacement struct {
 	Reference TileReference
 }
 
-// Load joins one DS1 stamp with its DT1 collision definitions. It decodes no
-// renderer textures and performs no entity spawning.
-func Load(source fs.FS, stampPath string, tilePaths []string, resolvers ...ObjectResolver) (*Map, error) {
-	// Preserve the public loader's useful error ordering: the requested stamp is
-	// the primary resource, so report a missing DS1 before inspecting its DT1
-	// dependencies. Generated-zone materialization uses loadStamp directly after
-	// catalog lookup and therefore does not pay this existence probe per room.
-	if _, err := fs.Stat(source, stampPath); err != nil {
-		return nil, fmt.Errorf("world: open %q: %w", stampPath, err)
-	}
-	catalog, err := LoadTileCatalog(source, tilePaths)
-	if err != nil {
-		return nil, err
-	}
-	var resolver ObjectResolver
-	if len(resolvers) > 0 {
-		resolver = resolvers[0]
-	}
-	return loadStamp(source, stampPath, catalog, resolver)
-}
-
-func loadStamp(source fs.FS, stampPath string, catalog *TileCatalog, resolver ObjectResolver) (*Map, error) {
-	stampFile, err := source.Open(stampPath)
-	if err != nil {
-		return nil, fmt.Errorf("world: open %q: %w", stampPath, err)
-	}
-	stamp, err := ds1.FromReader(stampFile)
-	closeErr := stampFile.Close()
-	if err != nil {
-		return nil, fmt.Errorf("world: decode DS1 %q: %w", stampPath, err)
-	}
-	if closeErr != nil {
-		return nil, fmt.Errorf("world: close DS1 %q: %w", stampPath, closeErr)
-	}
-	result := &Map{
-		WidthTiles: int(stamp.Width), HeightTiles: int(stamp.Height), Act: int(stamp.Act),
-		WidthSubtiles: int(stamp.Width) * SubtilesPerTile, HeightSubtiles: int(stamp.Height) * SubtilesPerTile,
-	}
-	result.flags = make([]Flags, result.WidthSubtiles*result.HeightSubtiles)
-	for _, object := range stamp.Objects {
-		decoded := resolveObject(result.Act, object.Type, object.ID, object.X, object.Y, object.Flags, resolver)
-		result.Objects = append(result.Objects, decoded)
-	}
-	for tileY, row := range stamp.Tiles {
-		for tileX, record := range row {
-			for _, floor := range record.Floors {
-				if !floor.Hidden && floor.Prop1 != 0 {
-					result.addTile(catalog, tileX, tileY, LayerFloor, TileIdentity{MainIndex: int32(floor.Style), SubIndex: int32(floor.Sequence)})
-				}
-			}
-			for _, wall := range record.Walls {
-				identity := TileIdentity{Orientation: int32(wall.Type), MainIndex: int32(wall.Style), SubIndex: int32(wall.Sequence)}
-				if identity.Orientation == 10 || identity.Orientation == 11 {
-					result.SpecialTiles = append(result.SpecialTiles, SpecialTile{
-						X: tileX, Y: tileY,
-						Orientation: identity.Orientation, MainIndex: identity.MainIndex, SubIndex: identity.SubIndex,
-						Hidden: wall.Hidden,
-					})
-				}
-				if !wall.Hidden && wall.Prop1 != 0 {
-					layer := LayerUpperWall
-					if identity.Orientation >= 16 && identity.Orientation <= 19 {
-						layer = LayerLowerWall
-					} else if identity.Orientation == 15 {
-						layer = LayerRoof
-					}
-					result.addTile(catalog, tileX, tileY, layer, identity)
-					// A north corner is authored as one DS1 orientation but drawn
-					// from paired type-3 and type-4 DT1 records on one baseline.
-					if identity.Orientation == 3 {
-						companion := identity
-						companion.Orientation = 4
-						result.addTile(catalog, tileX, tileY, layer, companion)
-					}
-				}
-			}
-			for _, shadow := range record.Shadows {
-				if !shadow.Hidden && shadow.Prop1 != 0 {
-					result.addTile(catalog, tileX, tileY, LayerShadow, TileIdentity{Orientation: 13, MainIndex: int32(shadow.Style), SubIndex: int32(shadow.Sequence)})
-				}
-			}
-		}
-	}
-	return result, nil
-}
-
-func resolveObject(act int, objectType, id, x, y, flags int32, resolver ObjectResolver) Object {
-	result := Object{Type: objectType, ID: id, X: x, Y: y, Flags: flags}
-	if resolver == nil {
-		return result
-	}
-	switch objectType {
-	case ObjectTypeStatic:
-		result.ObjectID, result.Description, result.Resolved = resolver.ResolveStaticObject(act, int(id))
-	case ObjectTypeDynamic:
-		result.Class, result.Resolved = resolver.ResolveDynamicObject(act, int(id))
-	}
-	return result
-}
-
-func (m *Map) addTile(catalog *TileCatalog, tileX, tileY int, layer TileLayer, identity TileIdentity) {
-	reference, found := catalog.Select(identity, tileX, tileY, 0)
-	if !found {
-		return
-	}
-	m.Tiles = append(m.Tiles, TilePlacement{X: tileX, Y: tileY, Layer: layer, Identity: identity, Reference: reference})
-	if layer != LayerShadow && layer != LayerRoof {
-		m.apply(tileX, tileY, reference)
-	}
-}
-
+// apply merges one selected DT1 tile into authoritative collision. Multiple visible layers contribute flags with OR so
+// a later decorative layer can never erase a blocker established by an earlier layer.
 func (m *Map) apply(tileX, tileY int, tile TileReference) {
 	for index, source := range tile.SubTileFlags {
 		x := tileX*SubtilesPerTile + index%SubtilesPerTile
@@ -280,6 +173,7 @@ func (m *Map) apply(tileX, tileY int, tile TileReference) {
 		if x < 0 || y < 0 || x >= m.WidthSubtiles || y >= m.HeightSubtiles {
 			continue
 		}
+
 		target := &m.flags[y*m.WidthSubtiles+x]
 		target.BlockWalk = target.BlockWalk || source.BlockWalk
 		target.BlockLOS = target.BlockLOS || source.BlockLOS
@@ -289,14 +183,18 @@ func (m *Map) apply(tileX, tileY int, tile TileReference) {
 	}
 }
 
+// FlagsAt returns collision for an integer subtile and rejects both geometric and backing-slice overflow. The second
+// check protects partially constructed maps used by diagnostics and tests from panicking.
 func (m *Map) FlagsAt(x, y int) (Flags, bool) {
 	if x < 0 || y < 0 || x >= m.WidthSubtiles || y >= m.HeightSubtiles {
 		return Flags{}, false
 	}
+
 	index := y*m.WidthSubtiles + x
 	if index < 0 || index >= len(m.flags) {
 		return Flags{}, false
 	}
+
 	return m.flags[index], true
 }
 
@@ -321,6 +219,7 @@ func (m *Map) OpenPointNearSubtileForRadius(x, y, radius float64) (float64, floa
 	if radius < 0 || math.IsNaN(radius) || math.IsInf(radius, 0) {
 		return 0, 0, false
 	}
+
 	return m.openFootprintNear(CollisionCell(x), CollisionCell(y), 0, radius)
 }
 
@@ -330,27 +229,37 @@ func (m *Map) OpenPointNear(x, y float64, firstRadius int) (float64, float64, bo
 	if firstRadius < 0 {
 		return 0, 0, false
 	}
+
 	return m.openPointNear(CollisionCell(x), CollisionCell(y), firstRadius)
 }
 
+// openPointNear adapts point-sized callers to the shared footprint search without duplicating its deterministic order.
 func (m *Map) openPointNear(centerX, centerY, firstRadius int) (float64, float64, bool) {
 	return m.openFootprintNear(centerX, centerY, firstRadius, 0)
 }
 
-func (m *Map) openFootprintNear(centerX, centerY, firstRadius int, footprintRadius float64) (float64, float64, bool) {
+// openFootprintNear scans expanding square perimeters from top-left to bottom-right. That authored-coordinate order is
+// part of deterministic spawn and relocation selection, so changing it can alter replay outcomes.
+func (m *Map) openFootprintNear(
+	centerX, centerY, firstRadius int,
+	footprintRadius float64,
+) (float64, float64, bool) {
 	limit := max(m.WidthSubtiles, m.HeightSubtiles)
 	for radius := firstRadius; radius <= limit; radius++ {
 		for y := centerY - radius; y <= centerY+radius; y++ {
 			for x := centerX - radius; x <= centerX+radius; x++ {
-				if radius > 0 && x != centerX-radius && x != centerX+radius && y != centerY-radius && y != centerY+radius {
+				insideSquare := x != centerX-radius && x != centerX+radius && y != centerY-radius && y != centerY+radius
+				if radius > 0 && insideSquare {
 					continue
 				}
+
 				if m.walkableCell(navCell{x: x, y: y}, footprintRadius) {
 					return float64(x), float64(y), true
 				}
 			}
 		}
 	}
+
 	return 0, 0, false
 }
 

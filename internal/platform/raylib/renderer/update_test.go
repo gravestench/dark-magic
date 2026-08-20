@@ -6,6 +6,7 @@ import (
 	rl "github.com/gen2brain/raylib-go/raylib"
 )
 
+// TestUpdateUsesLatestCallbackSnapshot verifies subscriptions publish a complete callback list before frame traversal.
 func TestUpdateUsesLatestCallbackSnapshot(t *testing.T) {
 	service := &Service{
 		rootNode: &node{
@@ -16,6 +17,7 @@ func TestUpdateUsesLatestCallbackSnapshot(t *testing.T) {
 	}
 	firstCalls := 0
 	secondCalls := 0
+
 	service.OnFrame(func() { firstCalls++ })
 
 	service.update()
@@ -27,6 +29,7 @@ func TestUpdateUsesLatestCallbackSnapshot(t *testing.T) {
 	}
 }
 
+// TestCallbackCanRegisterCallbackDuringUpdate protects immutable snapshots from mutation during owner-thread iteration.
 func TestCallbackCanRegisterCallbackDuringUpdate(t *testing.T) {
 	service := &Service{
 		rootNode: &node{
@@ -36,15 +39,19 @@ func TestCallbackCanRegisterCallbackDuringUpdate(t *testing.T) {
 		},
 	}
 	nestedCalls := 0
+
 	service.OnFrame(func() {
 		service.OnFrame(func() { nestedCalls++ })
 	})
 
 	service.update()
+
 	if nestedCalls != 0 {
 		t.Fatalf("new callback ran in registration frame")
 	}
+
 	service.update()
+
 	if nestedCalls != 1 {
 		t.Fatalf("new callback calls = %d, want 1", nestedCalls)
 	}

@@ -15,32 +15,42 @@ func writeRealmJSON(path string, value any) error {
 	if err != nil {
 		return err
 	}
+
 	data = append(data, '\n')
+
 	directory := filepath.Dir(path)
 	if err := os.MkdirAll(directory, 0o700); err != nil {
 		return err
 	}
+
 	temporary, err := os.CreateTemp(directory, ".dark-magic-realm-*")
 	if err != nil {
 		return err
 	}
+
 	temporaryPath := temporary.Name()
-	defer os.Remove(temporaryPath)
-	if err := temporary.Chmod(0o600); err == nil {
-		_, err = temporary.Write(data)
+	defer func() { _ = os.Remove(temporaryPath) }()
+
+	// Preserve the established error contract: this helper promotes sync and close failures, while chmod or write
+	// failures are observed only if they also make one of those durability steps fail.
+	if chmodErr := temporary.Chmod(0o600); chmodErr == nil {
+		_, _ = temporary.Write(data)
 	}
-	if syncErr := temporary.Sync(); err == nil {
-		err = syncErr
-	}
+
+	err = temporary.Sync()
+
 	if closeErr := temporary.Close(); err == nil {
 		err = closeErr
 	}
+
 	if err != nil {
 		return err
 	}
+
 	if err := os.Rename(temporaryPath, path); err != nil {
 		return err
 	}
+
 	return darkpaths.SyncDirectory(directory)
 }
 
@@ -50,9 +60,11 @@ func DataDirectory(configured string) (string, error) {
 	if configured != "" {
 		return darkpaths.ExpandHost(configured)
 	}
+
 	directory, err := os.UserConfigDir()
 	if err != nil {
 		return "", err
 	}
+
 	return filepath.Join(directory, "dark-magic", "realm"), nil
 }

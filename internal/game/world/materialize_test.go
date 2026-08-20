@@ -10,103 +10,145 @@ import (
 	mapgen "github.com/gravestench/dark-magic/internal/game/worldgen"
 )
 
+// materializerFixture builds a two-stamp zone whose injected loader exposes coordinate shifting and collision copying.
 func materializerFixture(t *testing.T) *Materializer {
 	t.Helper()
+
 	zone, err := mapgen.NewZone(mapgen.Definition{
 		Request: mapgen.Request{Version: mapgen.ContractVersion, Seed: 1, Act: 1, LevelID: 9}, Kind: "maze",
 		Bounds: mapgen.Bounds{Width: 4, Height: 2},
-		Stamps: []mapgen.Stamp{{ID: 1, Role: "previous-level", Width: 2, Height: 2, DS1Path: "one.ds1"}, {ID: 2, Role: "next-level", X: 2, Width: 2, Height: 2, DS1Path: "two.ds1"}},
-		Rooms:  []mapgen.Room{{ID: 1, Width: 2, Height: 2, StampID: 1}, {ID: 2, X: 2, Width: 2, Height: 2, StampID: 2}},
-		Links:  []mapgen.Link{{From: 1, To: 2}},
+		Stamps: []mapgen.Stamp{
+			{ID: 1, Role: "previous-level", Width: 2, Height: 2, DS1Path: "one.ds1"},
+			{ID: 2, Role: "next-level", X: 2, Width: 2, Height: 2, DS1Path: "two.ds1"},
+		},
+		Rooms: []mapgen.Room{{ID: 1, Width: 2, Height: 2, StampID: 1}, {ID: 2, X: 2, Width: 2, Height: 2, StampID: 2}},
+		Links: []mapgen.Link{{From: 1, To: 2}},
 	})
 	if err != nil {
 		t.Fatal(err)
 	}
+
 	materializer, err := NewMaterializer(fstest.MapFS{}, zone)
 	if err != nil {
 		t.Fatal(err)
 	}
+
+	// The loader returns identical authored facts for both rooms, with collision added to the second for shift checks.
 	materializer.load = func(_ fs.FS, name string, _ []string, _ ...ObjectResolver) (*Map, error) {
-		result := &Map{WidthTiles: 2, HeightTiles: 2, WidthSubtiles: 10, HeightSubtiles: 10, Act: 1, flags: make([]Flags, 100)}
+		result := &Map{
+			WidthTiles: 2, HeightTiles: 2, WidthSubtiles: 10, HeightSubtiles: 10,
+			Act: 1, flags: make([]Flags, 100),
+		}
 		result.Tiles = []TilePlacement{{X: 0, Y: 1}}
 		result.SpecialTiles = []SpecialTile{{X: 1, Y: 0, Orientation: 10, MainIndex: 30, Hidden: true}}
+
 		result.Objects = []Object{{X: 2, Y: 3}}
 		if name == "two.ds1" {
 			result.flags[3*10+4].BlockWalk = true
 		}
+
 		return result, nil
 	}
+
 	return materializer
 }
 
+// TestMaterializerClipsDS1SharedTerminalEdge verifies room ownership excludes DS1's extra shared row and column.
 func TestMaterializerClipsDS1SharedTerminalEdge(t *testing.T) {
 	materializer := materializerFixture(t)
+
+	// The 3x3 decoded fixture is legal for a 2x2 recipe, but facts on its terminal edge must be clipped.
 	materializer.load = func(_ fs.FS, _ string, _ []string, _ ...ObjectResolver) (*Map, error) {
-		result := &Map{WidthTiles: 3, HeightTiles: 3, WidthSubtiles: 15, HeightSubtiles: 15, flags: make([]Flags, 225)}
+		result := &Map{
+			WidthTiles: 3, HeightTiles: 3, WidthSubtiles: 15, HeightSubtiles: 15,
+			flags: make([]Flags, 225),
+		}
 		result.Tiles = []TilePlacement{{X: 1, Y: 1}, {X: 2, Y: 1}, {X: 1, Y: 2}}
 		result.SpecialTiles = []SpecialTile{{X: 1, Y: 1, Orientation: 10}, {X: 2, Y: 1, Orientation: 11}}
 		result.flags[14*15+14].BlockWalk = true
+
 		return result, nil
 	}
 	if err := materializer.Step(t.Context()); err != nil {
 		t.Fatal(err)
 	}
+
 	if len(materializer.assembled.Tiles) != 1 {
 		t.Fatalf("terminal tiles were retained: %#v", materializer.assembled.Tiles)
 	}
+
 	if len(materializer.assembled.SpecialTiles) != 1 || materializer.assembled.SpecialTiles[0].X != 1 {
 		t.Fatalf("terminal special tiles were retained: %#v", materializer.assembled.SpecialTiles)
 	}
+
 	if flags, _ := materializer.assembled.FlagsAt(9, 9); flags.BlockWalk {
 		t.Fatal("terminal collision leaked into room footprint")
 	}
 }
 
+// TestMaterializerPublishesOnlyCompleteShiftedMap protects incremental progress, publication, and coordinate shifting.
 func TestMaterializerPublishesOnlyCompleteShiftedMap(t *testing.T) {
 	materializer := materializerFixture(t)
 	if _, err := materializer.Result(); !errors.Is(err, ErrMaterializationIncomplete) {
 		t.Fatalf("early result error = %v", err)
 	}
+
 	if got := materializer.Progress(); got.Completed != 0 || got.Total != 2 || got.CurrentRole != "previous-level" {
 		t.Fatalf("initial progress = %#v", got)
 	}
+
 	if err := materializer.Step(t.Context()); err != nil {
 		t.Fatal(err)
 	}
+
 	if _, err := materializer.Result(); !errors.Is(err, ErrMaterializationIncomplete) {
 		t.Fatalf("partial result error = %v", err)
 	}
+
 	if err := materializer.Step(t.Context()); err != nil {
 		t.Fatal(err)
 	}
+
 	result, err := materializer.Result()
 	if err != nil {
 		t.Fatal(err)
 	}
+
 	if result.WidthTiles != 4 || len(result.Tiles) != 2 || result.Tiles[1].X != 2 || result.Objects[1].X != 12 {
 		t.Fatalf("materialized map = %#v", result)
 	}
-	if len(result.SpecialTiles) != 2 || result.SpecialTiles[1].X != 3 || result.SpecialTiles[1].Y != 0 || !result.SpecialTiles[1].Hidden {
+
+	if len(result.SpecialTiles) != 2 {
 		t.Fatalf("shifted special tiles = %#v", result.SpecialTiles)
 	}
+
+	shiftedSpecial := result.SpecialTiles[1]
+	if shiftedSpecial.X != 3 || shiftedSpecial.Y != 0 || !shiftedSpecial.Hidden {
+		t.Fatalf("shifted special tiles = %#v", result.SpecialTiles)
+	}
+
 	flags, ok := result.FlagsAt(14, 3)
 	if !ok || !flags.BlockWalk {
 		t.Fatalf("shifted collision = %#v, %v", flags, ok)
 	}
 }
 
+// TestMaterializerHonorsCancellationWithoutAdvancing ensures a canceled Step is retryable at the same stamp.
 func TestMaterializerHonorsCancellationWithoutAdvancing(t *testing.T) {
 	materializer := materializerFixture(t)
 	ctx, cancel := context.WithCancel(context.Background())
 	cancel()
+
 	if err := materializer.Step(ctx); !errors.Is(err, context.Canceled) {
 		t.Fatalf("error = %v", err)
 	}
+
 	if materializer.Progress().Completed != 0 {
 		t.Fatal("canceled step advanced progress")
 	}
 }
 
+// TestMaterializerOverlayReplacesMatchingTileLayer pins layer-key and special-cell replacement semantics.
 func TestMaterializerOverlayReplacesMatchingTileLayer(t *testing.T) {
 	zone, err := mapgen.NewZone(mapgen.Definition{
 		Request: mapgen.Request{Version: mapgen.ContractVersion, Seed: 1, Act: 1, LevelID: 2}, Kind: "outdoor",
@@ -120,33 +162,46 @@ func TestMaterializerOverlayReplacesMatchingTileLayer(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+
 	materializer, err := NewMaterializer(fstest.MapFS{}, zone)
 	if err != nil {
 		t.Fatal(err)
 	}
+
+	// The second stamp changes both floor identity and special marker to expose overlay replacement behavior.
 	materializer.load = func(_ fs.FS, name string, _ []string, _ ...ObjectResolver) (*Map, error) {
 		identity := TileIdentity{MainIndex: 1}
+
 		special := SpecialTile{Orientation: 10, MainIndex: 30}
 		if name == "river.ds1" {
 			identity.MainIndex = 2
 			special.MainIndex = 31
 		}
-		return &Map{WidthTiles: 1, HeightTiles: 1, WidthSubtiles: 5, HeightSubtiles: 5,
-			flags: make([]Flags, 25), Tiles: []TilePlacement{{Layer: LayerFloor, Identity: identity}}, SpecialTiles: []SpecialTile{special}}, nil
+
+		return &Map{
+			WidthTiles: 1, HeightTiles: 1, WidthSubtiles: 5, HeightSubtiles: 5,
+			flags:        make([]Flags, 25),
+			Tiles:        []TilePlacement{{Layer: LayerFloor, Identity: identity}},
+			SpecialTiles: []SpecialTile{special},
+		}, nil
 	}
 	if err := materializer.Step(t.Context()); err != nil {
 		t.Fatal(err)
 	}
+
 	if err := materializer.Step(t.Context()); err != nil {
 		t.Fatal(err)
 	}
+
 	result, err := materializer.Result()
 	if err != nil {
 		t.Fatal(err)
 	}
+
 	if len(result.Tiles) != 1 || result.Tiles[0].Identity.MainIndex != 2 {
 		t.Fatalf("overlay tiles = %#v", result.Tiles)
 	}
+
 	if len(result.SpecialTiles) != 1 || result.SpecialTiles[0].MainIndex != 31 {
 		t.Fatalf("overlay special tiles = %#v", result.SpecialTiles)
 	}

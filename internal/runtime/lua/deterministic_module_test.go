@@ -6,15 +6,19 @@ import (
 	"testing/fstest"
 )
 
+// TestDeterministicDrawIsPureAndPurposeSeparated protects the deterministic draw is pure and purpose separated
+// contract, including its observable ordering and failure behavior.
 func TestDeterministicDrawIsPureAndPurposeSeparated(t *testing.T) {
 	runtime := New()
 	if err := runtime.RegisterModule(DeterministicModule()); err != nil {
 		t.Fatal(err)
 	}
+
 	if err := runtime.Start(t.Context()); err != nil {
 		t.Fatal(err)
 	}
-	defer runtime.Stop(t.Context())
+	defer func() { _ = runtime.Stop(t.Context()) }()
+
 	script := fstest.MapFS{"test.lua": {Data: []byte(`
 local draw=require("engine.deterministic/v1").integer
 local first=draw(42,"room",17,3)

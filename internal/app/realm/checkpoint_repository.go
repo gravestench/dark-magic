@@ -48,68 +48,96 @@ type MemoryCheckpoints struct {
 	records map[string]GameCheckpoint
 }
 
+// NewMemoryCheckpoints constructs the checkpoint repository boundary and validates dependencies before callers can
+// publish or mutate shared state.
 func NewMemoryCheckpoints() *MemoryCheckpoints {
 	return &MemoryCheckpoints{now: time.Now, records: make(map[string]GameCheckpoint)}
 }
 
+// Save coordinates save through the owning checkpoint repository synchronization boundary so shared state is published
+// only after a complete transition.
 func (store *MemoryCheckpoints) Save(ctx context.Context, record GameCheckpoint) (GameCheckpoint, error) {
 	if err := contextErr(ctx); err != nil {
 		return GameCheckpoint{}, err
 	}
+
 	validated, _, err := validateGameCheckpoint(record)
 	if err != nil {
 		return GameCheckpoint{}, err
 	}
+
 	store.mu.Lock()
 	defer store.mu.Unlock()
+
 	if existing, found := store.records[validated.GameID]; found {
 		if existing.AllocationID != validated.AllocationID || validated.Tick < existing.Tick ||
 			(validated.Tick == existing.Tick && validated.Checksum != existing.Checksum) {
 			return GameCheckpoint{}, ErrGameCheckpoint
 		}
+
 		if validated.Tick == existing.Tick {
 			return cloneGameCheckpoint(existing)
 		}
+
 		validated.CreatedAt = existing.CreatedAt
 	} else {
 		validated.CreatedAt = store.now().UTC()
 	}
+
 	validated.UpdatedAt = store.now().UTC()
 	store.records[validated.GameID] = validated
+
 	return cloneGameCheckpoint(validated)
 }
 
+// Latest coordinates latest through the owning checkpoint repository synchronization boundary so shared state is
+// published only after a complete transition.
 func (store *MemoryCheckpoints) Latest(ctx context.Context, gameID string) (GameCheckpoint, error) {
 	if err := contextErr(ctx); err != nil {
 		return GameCheckpoint{}, err
 	}
+
 	store.mu.Lock()
 	defer store.mu.Unlock()
+
 	record, found := store.records[strings.TrimSpace(gameID)]
 	if !found {
 		return GameCheckpoint{}, ErrGameCheckpoint
 	}
+
 	return cloneGameCheckpoint(record)
 }
 
+// Remove coordinates remove through the owning checkpoint repository synchronization boundary so shared state is
+// published only after a complete transition.
 func (store *MemoryCheckpoints) Remove(ctx context.Context, gameID string) error {
 	if err := contextErr(ctx); err != nil {
 		return err
 	}
+
 	store.mu.Lock()
 	delete(store.records, strings.TrimSpace(gameID))
 	store.mu.Unlock()
+
 	return nil
 }
 
-func NewGameCheckpoint(gameID, allocationID, identityHash string, checkpoint gamesession.RecoveryCheckpoint) (GameCheckpoint, error) {
+// NewGameCheckpoint constructs the checkpoint repository boundary and validates dependencies before callers can
+// publish or mutate shared state.
+func NewGameCheckpoint(
+	gameID, allocationID, identityHash string,
+	checkpoint gamesession.RecoveryCheckpoint,
+) (GameCheckpoint, error) {
 	record := GameCheckpoint{Version: GameCheckpointVersion, GameID: strings.TrimSpace(gameID),
 		AllocationID: strings.TrimSpace(allocationID), IdentityHash: strings.TrimSpace(identityHash),
 		Tick: checkpoint.State.Tick, Checksum: checkpoint.Checksum, Checkpoint: checkpoint}
 	validated, _, err := validateGameCheckpoint(record)
+
 	return validated, err
 }
 
+// validateGameCheckpoint checks the checkpoint repository invariant before state changes, keeping invalid values off
+// shared paths.
 func validateGameCheckpoint(record GameCheckpoint) (GameCheckpoint, []byte, error) {
 	if record.Version != GameCheckpointVersion || strings.TrimSpace(record.GameID) == "" ||
 		strings.TrimSpace(record.AllocationID) == "" || strings.TrimSpace(record.IdentityHash) == "" ||
@@ -118,72 +146,97 @@ func validateGameCheckpoint(record GameCheckpoint) (GameCheckpoint, []byte, erro
 		record.Checkpoint.State.Snapshot.Tick != record.Tick {
 		return GameCheckpoint{}, nil, ErrGameCheckpoint
 	}
+
 	if err := gamesession.ValidateRecoveryCheckpoint(record.Checkpoint); err != nil {
 		return GameCheckpoint{}, nil, ErrGameCheckpoint
 	}
+
 	engine, err := gameecs.RestoreSnapshot(*record.Checkpoint.State.Snapshot)
 	if err != nil {
 		return GameCheckpoint{}, nil, ErrGameCheckpoint
 	}
+
 	if err := engine.Close(); err != nil {
 		return GameCheckpoint{}, nil, ErrGameCheckpoint
 	}
+
 	participantIDs := make(map[string]struct{}, len(record.Checkpoint.State.Participants))
 	for _, participant := range record.Checkpoint.State.Participants {
 		if strings.TrimSpace(participant.ID) == "" {
 			return GameCheckpoint{}, nil, ErrGameCheckpoint
 		}
+
 		if _, duplicate := participantIDs[participant.ID]; duplicate {
 			return GameCheckpoint{}, nil, ErrGameCheckpoint
 		}
+
 		participantIDs[participant.ID] = struct{}{}
 	}
+
 	identity, err := simulation.RuntimeIdentityFromParticipants(record.Checkpoint.State.Participants)
 	if err != nil {
 		return GameCheckpoint{}, nil, ErrGameCheckpoint
 	}
+
 	digest, err := identity.Digest()
 	if err != nil || digest != record.IdentityHash {
 		return GameCheckpoint{}, nil, ErrGameCheckpoint
 	}
+
 	payload, err := json.Marshal(record.Checkpoint)
 	if err != nil || len(payload) == 0 || len(payload) > maximumGameCheckpointBytes {
 		return GameCheckpoint{}, nil, ErrGameCheckpoint
 	}
+
 	checkpoint, err := decodeGameCheckpointPayload(payload)
 	if err != nil {
 		return GameCheckpoint{}, nil, err
 	}
+
 	record.Checkpoint = checkpoint
+
 	return record, payload, nil
 }
 
+// decodeGameCheckpointPayload decodes the checkpoint repository representation at one boundary so malformed data fails
+// before it becomes shared state.
 func decodeGameCheckpointPayload(payload []byte) (gamesession.RecoveryCheckpoint, error) {
 	if len(payload) == 0 || len(payload) > maximumGameCheckpointBytes {
 		return gamesession.RecoveryCheckpoint{}, ErrGameCheckpoint
 	}
+
 	var checkpoint gamesession.RecoveryCheckpoint
+
 	decoder := json.NewDecoder(bytes.NewReader(payload))
 	decoder.DisallowUnknownFields()
+
 	if err := decoder.Decode(&checkpoint); err != nil || decoder.Decode(&struct{}{}) != io.EOF {
 		return gamesession.RecoveryCheckpoint{}, ErrGameCheckpoint
 	}
+
 	return checkpoint, nil
 }
 
+// cloneGameCheckpoint returns an independent checkpoint repository value so callers cannot mutate repository-owned
+// state through a returned record.
 func cloneGameCheckpoint(record GameCheckpoint) (GameCheckpoint, error) {
 	payload, err := json.Marshal(record.Checkpoint)
 	if err != nil {
 		return GameCheckpoint{}, fmt.Errorf("%w: %v", ErrGameCheckpoint, err)
 	}
+
 	checkpoint, err := decodeGameCheckpointPayload(payload)
 	if err != nil {
 		return GameCheckpoint{}, err
 	}
+
 	record.Checkpoint = checkpoint
+
 	return record, nil
 }
 
+// checkpointPayloadDigest contains checkpoint payload digest within the checkpoint repository boundary so callers do
+// not duplicate its domain-specific policy.
 func checkpointPayloadDigest(payload []byte) []byte {
 	digest := sha256.Sum256(payload)
 	return digest[:]

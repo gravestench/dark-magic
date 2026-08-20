@@ -9,62 +9,101 @@ import (
 	d2save "github.com/gravestench/dark-magic/internal/mod/d2legacy/adapter/save"
 )
 
+// TestAdmissionCommandCarriesDurableFactsWithoutInterpretingD2Policy verifies
+// the adapter copies save facts but leaves game-policy interpretation downstream.
 func TestAdmissionCommandCarriesDurableFactsWithoutInterpretingD2Policy(t *testing.T) {
-	character := d2save.Character{ID: "hero", Name: "Hero", Class: "Amazon", Level: 3, Expansion: true,
-		Stats: &d2save.Stats{Dexterity: 20, Vitality: 20, Defense: 7, Experience: 100, Health: 25, MaxHealth: 30, Mana: 12, MaxMana: 15, Stamina: 42, MaxStamina: 84}}
+	character := d2save.Character{
+		ID: "hero", Name: "Hero", Class: "Amazon", Level: 3, Expansion: true,
+		Stats: &d2save.Stats{
+			Dexterity: 20, Vitality: 20, Defense: 7, Experience: 100,
+			Health: 25, MaxHealth: 30, Mana: 12, MaxMana: 15, Stamina: 42, MaxStamina: 84,
+		},
+	}
+
 	destination, err := NewDestination(5, 7, 100, 80, 1, 1)
 	if err != nil {
 		t.Fatal(err)
 	}
-	command, err := AdmissionCommand(character, "player-1", destination, "server", 1, 1, simulation.AuthoritySystem)
+
+	command, err := AdmissionCommand(
+		character, "player-1", destination, "server", 1, 1, simulation.AuthoritySystem,
+	)
 	if err != nil {
 		t.Fatal(err)
 	}
+
 	var entry Entry
 	if err := json.Unmarshal(command.Payload, &entry); err != nil {
 		t.Fatal(err)
 	}
-	if entry.Dexterity != 20 || entry.Vitality != 20 || entry.Defense != 7 || entry.Class != "Amazon" || entry.Stamina != 42 || entry.MaxStamina != 84 {
+
+	if entry.Dexterity != 20 || entry.Vitality != 20 || entry.Defense != 7 ||
+		entry.Class != "Amazon" || entry.Stamina != 42 || entry.MaxStamina != 84 {
 		t.Fatalf("durable facts = %#v", entry)
 	}
+
 	encoded := string(command.Payload)
-	for _, forbidden := range []string{"attack_rating", "physical_min_raw", "melee_range", "weapon_class", "\"token\""} {
+
+	forbiddenFields := []string{
+		"attack_rating", "physical_min_raw", "melee_range", "weapon_class", "\"token\"",
+	}
+	for _, forbidden := range forbiddenFields {
 		if contains(encoded, forbidden) {
 			t.Fatalf("Go admission interpreted D2 policy into %q", forbidden)
 		}
 	}
 }
 
+// TestEntrySourceEmitsTrustedCommandForSelectedCharacter proves local selection
+// enters through the same trusted command path and is emitted only once.
 func TestEntrySourceEmitsTrustedCommandForSelectedCharacter(t *testing.T) {
 	engine := gameecs.New()
-	defer engine.Close()
+
+	t.Cleanup(func() {
+		if err := engine.Close(); err != nil {
+			t.Errorf("close ECS engine: %v", err)
+		}
+	})
+
 	saves := d2save.New(d2save.Character{ID: "hero", Name: "Hero", Class: "Amazon", Level: 1})
 	if err := saves.Select("hero"); err != nil {
 		t.Fatal(err)
 	}
+
 	source, err := NewEntrySourceAtLocation(engine, saves, "player", 12, 13, 100, 80, 5, 109)
 	if err != nil {
 		t.Fatal(err)
 	}
+
 	commands := source.Commands(1)
-	if len(commands) != 1 || commands[0].Kind != EnterCommand || commands[0].Authority != simulation.AuthoritySystem {
+	if len(commands) != 1 || commands[0].Kind != EnterCommand ||
+		commands[0].Authority != simulation.AuthoritySystem {
 		t.Fatalf("commands = %#v", commands)
 	}
 }
 
+// TestRemoteAdmissionRejectsPlayerAuthority ensures clients cannot mint their
+// own authoritative entry destinations.
 func TestRemoteAdmissionRejectsPlayerAuthority(t *testing.T) {
 	destination, _ := NewDestination(23, 17, 100, 80, 1, 1)
 	character := d2save.Character{ID: "realm-amazon", Name: "RemoteHero", Class: "Amazon", Level: 1}
-	if _, err := AdmissionCommand(character, "account:42", destination, "client", 1, 1, simulation.AuthorityPlayer); err == nil {
+
+	_, err := AdmissionCommand(
+		character, "account:42", destination, "client", 1, 1, simulation.AuthorityPlayer,
+	)
+	if err == nil {
 		t.Fatal("client minted trusted admission")
 	}
 }
 
+// contains keeps the error assertion focused on the stable diagnostic fragment
+// without requiring callers to match wrapping details.
 func contains(value, part string) bool {
 	for index := 0; index+len(part) <= len(value); index++ {
 		if value[index:index+len(part)] == part {
 			return true
 		}
 	}
+
 	return false
 }

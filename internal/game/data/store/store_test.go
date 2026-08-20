@@ -10,58 +10,77 @@ import (
 	"github.com/gravestench/dark-magic/internal/content"
 )
 
+// TestStoreLoadsCachesClonesAndInvalidatesTSV ensures callers receive copies,
+// so mutating one result cannot corrupt cached authoritative records.
 func TestStoreLoadsCachesClonesAndInvalidatesTSV(t *testing.T) {
 	t.Parallel()
 
 	source := fstest.MapFS{"records.txt": &fstest.MapFile{Data: []byte("\ufeffcode\tname\na\tAlpha\n")}}
 	store := New(source)
+
 	rows, err := store.Load("records.txt")
 	if err != nil {
 		t.Fatal(err)
 	}
+
 	if rows[0]["code"] != "a" || rows[0]["name"] != "Alpha" || !store.Loaded("records.txt") {
 		t.Fatalf("rows = %#v", rows)
 	}
+
 	rows[0]["name"] = "mutated"
+
 	again, err := store.Load("records.txt")
 	if err != nil {
 		t.Fatal(err)
 	}
+
 	if again[0]["name"] != "Alpha" {
 		t.Fatalf("cached row was mutated: %#v", again)
 	}
+
 	store.Invalidate("records.txt")
+
 	if store.Loaded("records.txt") {
 		t.Fatal("table remains loaded after invalidation")
 	}
 }
 
+// TestStorePreservesDuplicateShippedColumns protects deterministic suffixes for
+// shipped tables whose headers contain the same column more than once.
 func TestStorePreservesDuplicateShippedColumns(t *testing.T) {
 	t.Parallel()
 
 	store := New(fstest.MapFS{"armor.txt": &fstest.MapFile{Data: []byte("code\tmindam\tmindam\ncap\t1\t2\n")}})
+
 	rows, err := store.Load("armor.txt")
 	if err != nil {
 		t.Fatal(err)
 	}
+
 	if rows[0]["mindam"] != "1" || rows[0]["mindam#2"] != "2" {
 		t.Fatalf("duplicate columns were not preserved deterministically: %#v", rows)
 	}
 }
 
+// TestStorePreservesUnnamedShippedColumns keeps otherwise unreachable values
+// addressable through deterministic synthetic header names.
 func TestStorePreservesUnnamedShippedColumns(t *testing.T) {
 	t.Parallel()
 
 	store := New(fstest.MapFS{"weapons.txt": &fstest.MapFile{Data: []byte("code\t\ncax\tunused\n")}})
+
 	rows, err := store.Load("weapons.txt")
 	if err != nil {
 		t.Fatal(err)
 	}
+
 	if rows[0]["code"] != "cax" || rows[0]["#unnamed-2"] != "unused" {
 		t.Fatalf("unnamed column was not preserved deterministically: %#v", rows)
 	}
 }
 
+// TestStoreLogsEachLoadedGenerationWithProvenance ensures cache misses remain
+// attributable while cache hits do not emit duplicate load events.
 func TestStoreLogsEachLoadedGenerationWithProvenance(t *testing.T) {
 	t.Parallel()
 
@@ -71,20 +90,33 @@ func TestStoreLogsEachLoadedGenerationWithProvenance(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+
 	var output bytes.Buffer
+
 	store := New(source)
 	store.SetLogger(slog.New(slog.NewJSONHandler(&output, nil)))
+
 	for range 2 {
 		if _, err := store.Load("data/global/excel/armor.txt"); err != nil {
 			t.Fatal(err)
 		}
 	}
+
 	logged := output.String()
-	for _, expected := range []string{`"msg":"loaded records"`, `"table":"data/global/excel/armor.txt"`, `"records":1`, `"source":"patch_d2legacy.mpq"`, `"source_path":"data/global/excel/armor.txt"`} {
+
+	expectedFields := []string{
+		`"msg":"loaded records"`,
+		`"table":"data/global/excel/armor.txt"`,
+		`"records":1`,
+		`"source":"patch_d2legacy.mpq"`,
+		`"source_path":"data/global/excel/armor.txt"`,
+	}
+	for _, expected := range expectedFields {
 		if !strings.Contains(logged, expected) {
 			t.Errorf("load log %q does not contain %q", logged, expected)
 		}
 	}
+
 	if strings.Count(logged, `"msg":"loaded records"`) != 1 {
 		t.Fatalf("cache hit produced another load event: %q", logged)
 	}

@@ -10,32 +10,48 @@ import (
 	"github.com/gravestench/dark-magic/internal/runtime/lua"
 )
 
+// TestLuaSoftwareCursorFocusAndSuppressionPolicy keeps cursor ownership in the focused Lua scene.
 func TestLuaSoftwareCursorFocusAndSuppressionPolicy(t *testing.T) {
 	ctx := context.Background()
-	var input inputstate.Store
-	var composer render.Composer
+
+	var (
+		input    inputstate.Store
+		composer render.Composer
+	)
+
 	runtime := modruntime.New()
 	if err := runtime.RegisterInstaller(modruntime.ContentRequire(content.D2Legacy(), "lua")); err != nil {
 		t.Fatal(err)
 	}
+
 	if err := runtime.RegisterModule(modruntime.InputModule(&input)); err != nil {
 		t.Fatal(err)
 	}
+
 	if err := runtime.RegisterModule(modruntime.RenderModule(runtime, &composer)); err != nil {
 		t.Fatal(err)
 	}
+
 	if err := runtime.Start(ctx); err != nil {
 		t.Fatal(err)
 	}
-	defer runtime.Stop(ctx)
 
-	if err := runtime.Execute(ctx, content.D2Legacy(), "lua/d2legacy/tests/integration/cursor_visibility.lua"); err != nil {
+	defer func() {
+		if err := runtime.Stop(ctx); err != nil {
+			t.Errorf("stop cursor test runtime: %v", err)
+		}
+	}()
+
+	const visibilityScript = "lua/d2legacy/tests/integration/cursor_visibility.lua"
+	if err := runtime.Execute(ctx, content.D2Legacy(), visibilityScript); err != nil {
 		t.Fatal(err)
 	}
+
 	input.Publish(inputstate.Frame{
 		Actions: map[string]inputstate.ActionState{"pointer_primary": {Down: true}},
 		Owner:   inputstate.FocusOwner{Domain: inputstate.FocusScene, ID: "cursor-test"},
 	})
+
 	if err := runtime.Execute(ctx, content.D2Legacy(), "lua/d2legacy/tests/integration/cursor_pressed.lua"); err != nil {
 		t.Fatal(err)
 	}

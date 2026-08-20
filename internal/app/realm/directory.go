@@ -126,22 +126,34 @@ type GameDirectory struct {
 	byName map[string]string
 }
 
+// NewGameDirectory constructs the directory boundary and validates dependencies before callers can publish or mutate
+// shared state.
 func NewGameDirectory() *GameDirectory {
 	return &GameDirectory{now: time.Now, byID: make(map[string]*directoryGame), byName: make(map[string]string)}
 }
 
-func (directory *GameDirectory) Create(ctx context.Context, principal AuthenticatedPrincipal, request CreateGameRequest) (GameDetail, error) {
+// Create coordinates create through the owning directory synchronization boundary so shared state is published only
+// after a complete transition.
+func (directory *GameDirectory) Create(
+	ctx context.Context,
+	principal AuthenticatedPrincipal,
+	request CreateGameRequest,
+) (GameDetail, error) {
 	request.Expansion = true
+
 	if err := contextErr(ctx); err != nil {
 		return GameDetail{}, err
 	}
+
 	if directory == nil || !principal.valid() {
 		return GameDetail{}, ErrGameDirectoryInput
 	}
+
 	displayName, normalizedName, err := normalizeGameName(request.Name)
 	if err != nil || validateCreateGame(request) != nil {
 		return GameDetail{}, ErrGameDirectoryInput
 	}
+
 	var passwordHash []byte
 	if request.Password != "" {
 		passwordHash, err = bcrypt.GenerateFromPassword([]byte(request.Password), bcrypt.DefaultCost)
@@ -149,35 +161,50 @@ func (directory *GameDirectory) Create(ctx context.Context, principal Authentica
 			return GameDetail{}, err
 		}
 	}
+
 	if err := contextErr(ctx); err != nil {
 		return GameDetail{}, err
 	}
+
 	directory.mu.Lock()
 	defer directory.mu.Unlock()
+
 	if _, exists := directory.byName[normalizedName]; exists {
 		return GameDetail{}, ErrGameExists
 	}
+
 	gameID := uuid.New().String()
 	entry := GameDirectoryEntry{Version: GameDirectoryVersion, Revision: 1, GameID: gameID, Name: displayName,
 		Description: strings.TrimSpace(request.Description), CreatedBy: principal.name, Difficulty: request.Difficulty,
 		MaximumPlayers: request.Maximum, CharacterDifference: request.CharacterDifference,
 		PasswordRequired: len(passwordHash) != 0, Expansion: request.Expansion,
 		Hardcore: request.Hardcore, CreatedAt: directory.now().UTC()}
-	game := &directoryGame{entry: entry, state: activeRealmGameState, ownerAccount: principal.accountID, passwordHash: passwordHash,
-		reservations: make(map[string]GamePlayer)}
+	game := &directoryGame{
+		entry:        entry,
+		state:        activeRealmGameState,
+		ownerAccount: principal.accountID,
+		passwordHash: passwordHash,
+		reservations: make(map[string]GamePlayer),
+	}
 	directory.byID[gameID], directory.byName[normalizedName] = game, gameID
+
 	return gameDetail(game), nil
 }
 
+// List coordinates list through the owning directory synchronization boundary so shared state is published only after
+// a complete transition.
 func (directory *GameDirectory) List(ctx context.Context, filter GameFilter) ([]GameDirectoryEntry, error) {
 	if err := contextErr(ctx); err != nil {
 		return nil, err
 	}
+
 	if directory == nil {
 		return nil, ErrGameDirectoryInput
 	}
+
 	directory.mu.RLock()
 	defer directory.mu.RUnlock()
+
 	result := make([]GameDirectoryEntry, 0, len(directory.byID))
 	for _, game := range directory.byID {
 		if game.state != activeRealmGameState {
@@ -191,43 +218,58 @@ func (directory *GameDirectory) List(ctx context.Context, filter GameFilter) ([]
 			filter.Hardcore != nil && game.entry.Hardcore != *filter.Hardcore {
 			continue
 		}
+
 		result = append(result, game.entry)
 	}
+
 	sort.Slice(result, func(i, j int) bool {
 		if result[i].CreatedAt.Equal(result[j].CreatedAt) {
 			return result[i].GameID < result[j].GameID
 		}
+
 		return result[i].CreatedAt.Before(result[j].CreatedAt)
 	})
+
 	return result, nil
 }
 
+// Detail coordinates detail through the owning directory synchronization boundary so shared state is published only
+// after a complete transition.
 func (directory *GameDirectory) Detail(ctx context.Context, reference string) (GameDetail, error) {
 	if err := contextErr(ctx); err != nil {
 		return GameDetail{}, err
 	}
+
 	if directory == nil {
 		return GameDetail{}, ErrGameDirectoryInput
 	}
+
 	directory.mu.RLock()
 	defer directory.mu.RUnlock()
+
 	game := directory.resolveLocked(reference)
 	if game == nil || game.state != activeRealmGameState || game.entry.PasswordRequired {
 		return GameDetail{}, ErrGameNotFound
 	}
+
 	return gameDetail(game), nil
 }
 
+// admissionDetail coordinates admission detail through the owning directory synchronization boundary so shared state
+// is published only after a complete transition.
 func (directory *GameDirectory) admissionDetail(ctx context.Context, gameID string) (GameDetail, error) {
 	if err := contextErr(ctx); err != nil {
 		return GameDetail{}, err
 	}
+
 	directory.mu.RLock()
 	defer directory.mu.RUnlock()
+
 	game := directory.byID[strings.TrimSpace(gameID)]
 	if game == nil || game.state != activeRealmGameState {
 		return GameDetail{}, ErrGameNotFound
 	}
+
 	return gameDetail(game), nil
 }
 
@@ -239,18 +281,24 @@ func (directory *GameDirectory) ResolveJoin(ctx context.Context, reference, pass
 	if err := contextErr(ctx); err != nil {
 		return "", err
 	}
+
 	if directory == nil || len(password) > maximumGamePasswordBytes {
 		return "", ErrGameDirectoryInput
 	}
+
 	directory.mu.RLock()
+
 	game := directory.resolveLocked(reference)
 	if game == nil || game.state != activeRealmGameState {
 		directory.mu.RUnlock()
 		return "", ErrGameNotFound
 	}
+
 	gameID, full := game.entry.GameID, len(game.players)+len(game.reservations) >= game.entry.MaximumPlayers
 	passwordHash := append([]byte(nil), game.passwordHash...)
+
 	directory.mu.RUnlock()
+
 	if len(passwordHash) == 0 {
 		if password != "" {
 			return "", ErrGamePassword
@@ -258,89 +306,123 @@ func (directory *GameDirectory) ResolveJoin(ctx context.Context, reference, pass
 	} else if bcrypt.CompareHashAndPassword(passwordHash, []byte(password)) != nil {
 		return "", ErrGamePassword
 	}
+
 	if full {
 		return "", ErrGameFull
 	}
+
 	return gameID, nil
 }
 
 // ReservePlayer atomically claims capacity before character admission. Pending
 // reservations are private and never inflate the public player roster.
-func (directory *GameDirectory) ReservePlayer(ctx context.Context, gameID string, player GamePlayer) (GamePlayerReservation, error) {
+func (directory *GameDirectory) ReservePlayer(
+	ctx context.Context,
+	gameID string,
+	player GamePlayer,
+) (GamePlayerReservation, error) {
 	if err := contextErr(ctx); err != nil {
 		return GamePlayerReservation{}, err
 	}
+
 	if directory == nil {
 		return GamePlayerReservation{}, ErrGameDirectoryInput
 	}
+
 	if _, err := validateGamePlayers([]GamePlayer{player}); err != nil {
 		return GamePlayerReservation{}, err
 	}
+
 	directory.mu.Lock()
 	defer directory.mu.Unlock()
+
 	game := directory.byID[strings.TrimSpace(gameID)]
 	if game == nil || game.state != activeRealmGameState {
 		return GamePlayerReservation{}, ErrGameNotFound
 	}
+
 	if len(game.players)+len(game.reservations) >= game.entry.MaximumPlayers {
 		return GamePlayerReservation{}, ErrGameFull
 	}
+
 	for _, existing := range game.players {
 		if existing.CharacterID == player.CharacterID {
 			return GamePlayerReservation{}, ErrCharacterLeased
 		}
 	}
+
 	for _, existing := range game.reservations {
 		if existing.CharacterID == player.CharacterID {
 			return GamePlayerReservation{}, ErrCharacterLeased
 		}
 	}
+
 	token := uuid.New().String()
 	game.reservations[token] = player
+
 	return GamePlayerReservation{GameID: game.entry.GameID, Token: token}, nil
 }
 
-func (directory *GameDirectory) CommitPlayer(ctx context.Context, reservation GamePlayerReservation) (GameDetail, error) {
+// CommitPlayer coordinates commit player through the owning directory synchronization boundary so shared state is
+// published only after a complete transition.
+func (directory *GameDirectory) CommitPlayer(
+	ctx context.Context,
+	reservation GamePlayerReservation,
+) (GameDetail, error) {
 	if err := contextErr(ctx); err != nil {
 		return GameDetail{}, err
 	}
+
 	if directory == nil || strings.TrimSpace(reservation.Token) == "" {
 		return GameDetail{}, ErrGameDirectoryInput
 	}
+
 	directory.mu.Lock()
 	defer directory.mu.Unlock()
+
 	game := directory.byID[strings.TrimSpace(reservation.GameID)]
 	if game == nil || game.state != activeRealmGameState {
 		return GameDetail{}, ErrGameNotFound
 	}
+
 	player, found := game.reservations[reservation.Token]
 	if !found {
 		return GameDetail{}, ErrGameDirectoryInput
 	}
+
 	delete(game.reservations, reservation.Token)
 	game.players = append(game.players, player)
 	game.entry.Players = len(game.players)
 	game.entry.Revision++
+
 	return gameDetail(game), nil
 }
 
+// CancelPlayer coordinates cancel player through the owning directory synchronization boundary so shared state is
+// published only after a complete transition.
 func (directory *GameDirectory) CancelPlayer(ctx context.Context, reservation GamePlayerReservation) error {
 	if err := contextErr(ctx); err != nil {
 		return err
 	}
+
 	if directory == nil || strings.TrimSpace(reservation.Token) == "" {
 		return ErrGameDirectoryInput
 	}
+
 	directory.mu.Lock()
 	defer directory.mu.Unlock()
+
 	game := directory.byID[strings.TrimSpace(reservation.GameID)]
 	if game == nil {
 		return ErrGameNotFound
 	}
+
 	if _, found := game.reservations[reservation.Token]; !found {
 		return ErrGameDirectoryInput
 	}
+
 	delete(game.reservations, reservation.Token)
+
 	return nil
 }
 
@@ -351,25 +433,32 @@ func (directory *GameDirectory) SetPlayers(ctx context.Context, gameID string, p
 	if err := contextErr(ctx); err != nil {
 		return err
 	}
+
 	if directory == nil {
 		return ErrGameDirectoryInput
 	}
+
 	cloned, err := validateGamePlayers(players)
 	if err != nil {
 		return err
 	}
+
 	directory.mu.Lock()
 	defer directory.mu.Unlock()
+
 	game := directory.byID[strings.TrimSpace(gameID)]
 	if game == nil {
 		return ErrGameNotFound
 	}
+
 	if len(cloned) > game.entry.MaximumPlayers {
 		return ErrGameFull
 	}
+
 	game.players = cloned
 	game.entry.Players = len(cloned)
 	game.entry.Revision++
+
 	return nil
 }
 
@@ -380,24 +469,31 @@ func (directory *GameDirectory) BeginDrain(ctx context.Context, gameID string) e
 	if err := contextErr(ctx); err != nil {
 		return err
 	}
+
 	if directory == nil {
 		return ErrGameDirectoryInput
 	}
+
 	directory.mu.Lock()
 	defer directory.mu.Unlock()
+
 	game := directory.byID[strings.TrimSpace(gameID)]
 	if game == nil {
 		return ErrGameNotFound
 	}
+
 	if game.state == drainingRealmGameState {
 		return nil
 	}
+
 	if game.state != activeRealmGameState {
 		return ErrGameNotFound
 	}
+
 	game.state = drainingRealmGameState
 	game.reservations = make(map[string]GamePlayer)
 	game.entry.Revision++
+
 	return nil
 }
 
@@ -408,89 +504,118 @@ func (directory *GameDirectory) RemovePlayer(ctx context.Context, gameID, charac
 	if err := contextErr(ctx); err != nil {
 		return GameDetail{}, err
 	}
+
 	if directory == nil || strings.TrimSpace(characterID) == "" {
 		return GameDetail{}, ErrGameDirectoryInput
 	}
+
 	directory.mu.Lock()
 	defer directory.mu.Unlock()
+
 	game := directory.byID[strings.TrimSpace(gameID)]
 	if game == nil {
 		return GameDetail{}, ErrGameNotFound
 	}
+
 	for index, player := range game.players {
 		if player.CharacterID != characterID {
 			continue
 		}
+
 		game.players = append(game.players[:index:index], game.players[index+1:]...)
 		game.entry.Players = len(game.players)
 		game.entry.Revision++
+
 		return gameDetail(game), nil
 	}
+
 	return GameDetail{}, ErrCharacterNotFound
 }
 
+// Remove coordinates remove through the owning directory synchronization boundary so shared state is published only
+// after a complete transition.
 func (directory *GameDirectory) Remove(ctx context.Context, gameID string) error {
 	if err := contextErr(ctx); err != nil {
 		return err
 	}
+
 	if directory == nil {
 		return ErrGameDirectoryInput
 	}
+
 	directory.mu.Lock()
 	defer directory.mu.Unlock()
+
 	game := directory.byID[strings.TrimSpace(gameID)]
 	if game == nil {
 		return ErrGameNotFound
 	}
+
 	delete(directory.byID, game.entry.GameID)
 	delete(directory.byName, strings.ToLower(game.entry.Name))
+
 	return nil
 }
 
+// gameIDs coordinates game ids through the owning directory synchronization boundary so shared state is published only
+// after a complete transition.
 func (directory *GameDirectory) gameIDs(ctx context.Context) ([]string, error) {
 	if err := contextErr(ctx); err != nil {
 		return nil, err
 	}
+
 	if directory == nil {
 		return nil, ErrGameDirectoryInput
 	}
+
 	directory.mu.RLock()
 	defer directory.mu.RUnlock()
+
 	result := make([]string, 0, len(directory.byID))
 	for gameID := range directory.byID {
 		result = append(result, gameID)
 	}
+
 	sort.Strings(result)
+
 	return result, nil
 }
 
+// resolveLocked contains resolve locked within the directory boundary so callers do not duplicate its domain-specific
+// policy.
 func (directory *GameDirectory) resolveLocked(reference string) *directoryGame {
 	reference = strings.TrimSpace(reference)
 	if game := directory.byID[reference]; game != nil {
 		return game
 	}
+
 	return directory.byID[directory.byName[strings.ToLower(strings.Join(strings.Fields(reference), " "))]]
 }
 
+// normalizeGameName checks the directory invariant before state changes, keeping invalid values off shared paths.
 func normalizeGameName(name string) (string, string, error) {
 	display := strings.Join(strings.Fields(name), " ")
 	if display == "" || len(display) > maximumGameNameBytes || !utf8.ValidString(display) {
 		return "", "", ErrGameDirectoryInput
 	}
+
 	for _, value := range display {
 		if value < 0x20 || value == 0x7f {
 			return "", "", ErrGameDirectoryInput
 		}
 	}
+
 	return display, strings.ToLower(display), nil
 }
 
+// validateCreateGame checks the directory invariant before state changes, keeping invalid values off shared paths.
 func validateCreateGame(request CreateGameRequest) error {
 	if len(request.Description) > maximumGameDescriptionBytes || !utf8.ValidString(request.Description) ||
 		len(request.Password) > maximumGamePasswordBytes || request.Maximum < 1 || request.Maximum > maximumGamePlayers ||
 		request.CharacterDifference < 0 || request.CharacterDifference > 99 {
 		return ErrGameDirectoryInput
 	}
+
 	switch request.Difficulty {
 	case DifficultyNormal, DifficultyNightmare, DifficultyHell:
 		return nil
@@ -499,21 +624,30 @@ func validateCreateGame(request CreateGameRequest) error {
 	}
 }
 
+// validateGamePlayers checks the directory invariant before state changes, keeping invalid values off shared paths.
 func validateGamePlayers(players []GamePlayer) ([]GamePlayer, error) {
 	result := append([]GamePlayer(nil), players...)
+
 	seen := make(map[string]struct{}, len(result))
 	for _, player := range result {
-		if strings.TrimSpace(player.CharacterID) == "" || strings.TrimSpace(player.Name) == "" || strings.TrimSpace(player.Class) == "" || player.Level < 1 {
+		if strings.TrimSpace(player.CharacterID) == "" || strings.TrimSpace(player.Name) == "" ||
+			strings.TrimSpace(player.Class) == "" ||
+			player.Level < 1 {
 			return nil, ErrGameDirectoryInput
 		}
+
 		if _, exists := seen[player.CharacterID]; exists {
 			return nil, ErrGameDirectoryInput
 		}
+
 		seen[player.CharacterID] = struct{}{}
 	}
+
 	return result, nil
 }
 
+// gameDetail contains game detail within the directory boundary so callers do not duplicate its domain-specific
+// policy.
 func gameDetail(game *directoryGame) GameDetail {
 	return GameDetail{Entry: game.entry, Players: append([]GamePlayer(nil), game.players...)}
 }

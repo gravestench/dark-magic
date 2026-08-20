@@ -20,12 +20,15 @@ func TestOwnedTargetColdArmorFamilyRecordsAndLocalizedIntent(t *testing.T) {
 	if directory == "" {
 		t.Skip("set DARK_MAGIC_TEST_MPQ_DIRECTORY to the expansion 1.14d MPQ directory")
 	}
+
 	t.Setenv("MPQ_DIRECTORY", directory)
+
 	assets, err := content.FromEnvironment(content.Layer{Name: "d2legacy", FS: content.D2Legacy()})
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer assets.Close()
+	defer func() { _ = assets.Close() }()
+
 	store := recordstore.New(assets)
 	store.SetLogger(nil)
 
@@ -33,6 +36,7 @@ func TestOwnedTargetColdArmorFamilyRecordsAndLocalizedIntent(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+
 	wants := map[string]map[string]string{
 		"40": {
 			"skill": "Frozen Armor", "srvdofunc": "18", "aurastate": "frozenarmor",
@@ -60,13 +64,19 @@ func TestOwnedTargetColdArmorFamilyRecordsAndLocalizedIntent(t *testing.T) {
 		if row == nil {
 			t.Fatalf("owned Expansion 1.14d cold armor skill %s is missing", id)
 		}
+
 		for field, want := range fields {
 			if row[field] != want {
 				t.Fatalf("owned Expansion 1.14d %s %s = %q, want %q", row["skill"], field, row[field], want)
 			}
 		}
+
 		if !strings.Contains(row["auralencalc"], ".blvl") {
-			t.Fatalf("owned Expansion 1.14d %s duration no longer uses hard-point synergies: %q", row["skill"], row["auralencalc"])
+			t.Fatalf(
+				"owned Expansion 1.14d %s duration no longer uses hard-point synergies: %q",
+				row["skill"],
+				row["auralencalc"],
+			)
 		}
 	}
 
@@ -74,6 +84,7 @@ func TestOwnedTargetColdArmorFamilyRecordsAndLocalizedIntent(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+
 	for state, overlay := range map[string]string{
 		"frozenarmor": "frozenarmor", "shiverarmor": "shiverarmor", "chillingarmor": "chillarmor",
 	} {
@@ -87,6 +98,7 @@ func TestOwnedTargetColdArmorFamilyRecordsAndLocalizedIntent(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+
 	bolt := rowBy(missiles, "Missile", "chillingarmorbolt")
 	for field, want := range map[string]string{
 		"Skill": "Chilling Armor", "CelFile": "IceBolt", "pSrvDoFunc": "1", "CollideType": "3",
@@ -98,6 +110,7 @@ func TestOwnedTargetColdArmorFamilyRecordsAndLocalizedIntent(t *testing.T) {
 			t.Fatalf("owned Expansion 1.14d chillingarmorbolt %s = %#v, want %q", field, bolt, want)
 		}
 	}
+
 	if _, err := fs.Stat(assets, "data/global/missiles/IceBolt.dcc"); err != nil {
 		t.Fatalf("owned Expansion 1.14d Chilling Armor missile DCC: %v", err)
 	}
@@ -106,33 +119,41 @@ func TestOwnedTargetColdArmorFamilyRecordsAndLocalizedIntent(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+
 	locale := localization.New(assets, "English")
+
 	for skillID, name := range map[string]string{
 		"40": "Frozen Armor", "50": "Shiver Armor", "60": "Chilling Armor",
 	} {
 		skill := rowBy(skills, "Id", skillID)
 		descriptionID := skill["skilldesc"]
+
 		description := rowBy(descriptions, "skilldesc", descriptionID)
 		if description == nil {
 			t.Fatalf("owned Expansion 1.14d SkillDesc %s is missing", descriptionID)
 		}
+
 		localizedName, _, resolveErr := locale.Resolve(description["str name"])
 		if resolveErr != nil || localizedName != name {
 			t.Fatalf("owned English TBL %s name = %q, %v; want %q", descriptionID, localizedName, resolveErr, name)
 		}
+
 		long, _, resolveErr := locale.Resolve(description["str long"])
 		if resolveErr != nil || !strings.Contains(strings.ToLower(long), "defense") {
 			t.Fatalf("owned English TBL %s long description = %q, %v; want defense intent", descriptionID, long, resolveErr)
 		}
+
 		if description["dsc3texta1"] == "" || description["dsc3texta2"] == "" {
 			t.Fatalf("owned Expansion 1.14d SkillDesc %s no longer declares both family synergy labels", descriptionID)
 		}
+
 		for _, field := range []string{"dsc3texta1", "dsc3texta2"} {
 			if text, _, resolveErr := locale.Resolve(description[field]); resolveErr != nil || text == "" {
 				t.Fatalf("owned English TBL %s %s = %q, %v", descriptionID, field, text, resolveErr)
 			}
 		}
 	}
+
 	if text, _, resolveErr := locale.Resolve("Sksyn"); resolveErr != nil || text != "%s Receives Bonuses From:" {
 		t.Fatalf("owned English TBL Sksyn = %q, %v; want replacement-token synergy heading", text, resolveErr)
 	}

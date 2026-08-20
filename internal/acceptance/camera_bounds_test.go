@@ -8,25 +8,33 @@ import (
 	lua "github.com/yuin/gopher-lua"
 )
 
+// TestFiniteMapCameraCoversViewportAtBothEdges protects authored bounds and pointer projection at map edges.
 func TestFiniteMapCameraCoversViewportAtBothEdges(t *testing.T) {
 	t.Parallel()
 
 	path := filepath.Join(repositoryRoot(t), "internal/content/d2legacy/lua/d2legacy/presentation/camera_bounds.lua")
+
 	source, err := os.ReadFile(path)
 	if err != nil {
 		t.Fatal(err)
 	}
+
 	state := lua.NewState()
 	defer state.Close()
+
 	chunk, err := state.LoadString(string(source))
 	if err != nil {
 		t.Fatal(err)
 	}
+
 	state.Push(chunk)
+
 	if err := state.PCall(0, 1, nil); err != nil {
 		t.Fatal(err)
 	}
+
 	module := state.CheckTable(-1)
+
 	clamp, ok := module.RawGetString("clamp_center").(*lua.LFunction)
 	if !ok {
 		t.Fatal("camera bounds module has no clamp_center function")
@@ -38,11 +46,14 @@ func TestFiniteMapCameraCoversViewportAtBothEdges(t *testing.T) {
 		state.Push(lua.LNumber(center))
 		state.Push(lua.LNumber(content))
 		state.Push(lua.LNumber(viewport))
+
 		if err := state.PCall(3, 1, nil); err != nil {
 			t.Fatalf("%s: %v", name, err)
 		}
+
 		got := float64(state.CheckNumber(-1))
 		state.Pop(1)
+
 		if got != want {
 			t.Fatalf("%s: center = %v, want %v", name, got, want)
 		}
@@ -57,13 +68,16 @@ func TestFiniteMapCameraCoversViewportAtBothEdges(t *testing.T) {
 	if !ok {
 		t.Fatal("camera bounds module has no anchor_for_center function")
 	}
+
 	state.Push(anchor)
 	state.Push(lua.LNumber(800))
 	state.Push(lua.LNumber(1600))
 	state.Push(lua.LNumber(250))
+
 	if err := state.PCall(3, 1, nil); err != nil {
 		t.Fatal(err)
 	}
+
 	if got := float64(state.CheckNumber(-1)); got != 250 {
 		t.Fatalf("effective pointer-projection anchor = %v, want 250", got)
 	}

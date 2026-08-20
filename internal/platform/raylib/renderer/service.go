@@ -73,7 +73,8 @@ type BackendDiagnostics struct {
 	TextureUploadNS                                                 uint64
 }
 
-// BackendDiagnostics returns lock-free cumulative counters suitable for overlays.
+// BackendDiagnostics returns a lock-free snapshot suitable for overlays and profiling. Atomics let diagnostics sample
+// the owner-thread renderer without stalling frame production.
 func (s *Service) BackendDiagnostics() BackendDiagnostics {
 	return BackendDiagnostics{
 		Frames: s.frames.Load(), DrawCalls: s.drawCalls.Load(),
@@ -93,61 +94,25 @@ func (s *Service) BackendDiagnostics() BackendDiagnostics {
 // SubscribeOverlay registers owner-thread drawing after scene composition and
 // display quantization but before the back buffer is presented.
 func (s *Service) SubscribeOverlay(callback func()) func() {
-	if callback == nil {
-		return func() {}
-	}
-	var active atomic.Bool
-	active.Store(true)
-	wrapper := func() {
-		if active.Load() {
-			callback()
-		}
-	}
-	s.overlayMux.Lock()
-	s.overlayCallbacks = append(s.overlayCallbacks, wrapper)
-	s.overlaySnapshot.Store(append([]func(){}, s.overlayCallbacks...))
-	s.overlayMux.Unlock()
-	return func() { active.Store(false) }
+	return subscribeCallback(callback, &s.overlayMux, &s.overlayCallbacks, &s.overlaySnapshot)
 }
 
+// runOverlays invokes the immutable callback snapshot on the renderer owner thread. Cancelled wrappers remain harmless
+// in the snapshot, so frame rendering never contends with subscription mutation.
 func (s *Service) runOverlays() {
-	snapshot := s.overlaySnapshot.Load()
-	if snapshot == nil {
-		return
-	}
-	for _, callback := range snapshot.([]func()) {
-		callback()
-	}
+	runCallbackSnapshot(s.overlaySnapshot.Load())
 }
 
 // SubscribePostFrame registers owner-thread work after the fully composed frame
 // has been presented. Screenshot and visual-inspection tools belong here.
 func (s *Service) SubscribePostFrame(callback func()) func() {
-	if callback == nil {
-		return func() {}
-	}
-	var active atomic.Bool
-	active.Store(true)
-	wrapper := func() {
-		if active.Load() {
-			callback()
-		}
-	}
-	s.postFrameMux.Lock()
-	s.postFrameCallbacks = append(s.postFrameCallbacks, wrapper)
-	s.postFrameSnapshot.Store(append([]func(){}, s.postFrameCallbacks...))
-	s.postFrameMux.Unlock()
-	return func() { active.Store(false) }
+	return subscribeCallback(callback, &s.postFrameMux, &s.postFrameCallbacks, &s.postFrameSnapshot)
 }
 
+// runPostFrame invokes tools only after the presented frame is complete, ensuring captures never observe a partially
+// composed back buffer.
 func (s *Service) runPostFrame() {
-	snapshot := s.postFrameSnapshot.Load()
-	if snapshot == nil {
-		return
-	}
-	for _, callback := range snapshot.([]func()) {
-		callback()
-	}
+	runCallbackSnapshot(s.postFrameSnapshot.Load())
 }
 
 // OnFrame registers work that must run on the renderer thread, immediately
@@ -159,27 +124,56 @@ func (s *Service) OnFrame(callback func()) {
 // SubscribeFrame registers renderer-thread work and returns a safe idempotent
 // cancellation function.
 func (s *Service) SubscribeFrame(callback func()) func() {
+	return subscribeCallback(callback, &s.frameMux, &s.frameCallbacks, &s.frameSnapshot)
+}
+
+// subscribeCallback appends an immutable wrapper snapshot while making cancellation lock-free and idempotent. Keeping
+// old wrappers avoids modifying a callback slice concurrently with owner-thread iteration.
+func subscribeCallback(
+	callback func(),
+	mux *sync.Mutex,
+	callbacks *[]func(),
+	snapshot *atomic.Value,
+) func() {
 	if callback == nil {
 		return func() {}
 	}
+
 	var active atomic.Bool
 	active.Store(true)
+
 	wrapper := func() {
 		if active.Load() {
 			callback()
 		}
 	}
-	s.frameMux.Lock()
-	s.frameCallbacks = append(s.frameCallbacks, wrapper)
-	s.frameSnapshot.Store(append([]func(){}, s.frameCallbacks...))
-	s.frameMux.Unlock()
+
+	mux.Lock()
+
+	*callbacks = append(*callbacks, wrapper)
+	snapshot.Store(append([]func(){}, (*callbacks)...))
+	mux.Unlock()
+
 	return func() { active.Store(false) }
 }
 
+// runCallbackSnapshot invokes one already-published callback list. Nil represents a channel with no subscriptions yet.
+func runCallbackSnapshot(value any) {
+	if value == nil {
+		return
+	}
+
+	for _, callback := range value.([]func()) {
+		callback()
+	}
+}
+
+// SetLogger installs the renderer's structured diagnostic sink. Start supplies slog.Default only when this remains nil.
 func (s *Service) SetLogger(logger *slog.Logger) {
 	s.logger = logger
 }
 
+// Logger returns the currently configured logger without creating a fallback before lifecycle initialization.
 func (s *Service) Logger() *slog.Logger {
 	return s.logger
 }

@@ -12,39 +12,61 @@ import (
 	"github.com/gravestench/dark-magic/internal/game/simulation"
 )
 
+// TestReadGameRecoveryRequiresOwnerOnlyValidatedFile verifies that a valid
+// allocator handoff loads before broader filesystem permissions make it
+// ineligible as authoritative state.
 func TestReadGameRecoveryRequiresOwnerOnlyValidatedFile(t *testing.T) {
-	snapshot := gameecs.Snapshot{Version: gameecs.SnapshotVersion, Tick: 4}
-	checksum, err := simulation.CompositeChecksum(snapshot, nil)
-	if err != nil {
-		t.Fatal(err)
-	}
-	recovery, err := gamesession.NewRecoveryCheckpoint(simulation.Checkpoint{
-		Tick: 4, Checksum: checksum, Snapshot: &snapshot,
-	}, nil, nil, nil)
-	if err != nil {
-		t.Fatal(err)
-	}
-	handoff, err := realm.NewGameRecovery(recovery, []string{"player"})
-	if err != nil {
-		t.Fatal(err)
-	}
-	payload, err := json.Marshal(handoff)
-	if err != nil {
-		t.Fatal(err)
-	}
+	payload, expectedChecksum := validRecoveryPayload(t)
+
 	path := filepath.Join(t.TempDir(), "recovery.json")
 	if err := os.WriteFile(path, payload, 0o600); err != nil {
 		t.Fatal(err)
 	}
+
 	loaded, err := ReadGameRecovery(path)
-	if err != nil || loaded.Checkpoint.State.Tick != 4 || loaded.Checkpoint.Checksum != recovery.Checksum ||
+	if err != nil || loaded.Checkpoint.State.Tick != 4 ||
+		loaded.Checkpoint.Checksum != expectedChecksum ||
 		len(loaded.PlayerIDs) != 1 || loaded.PlayerIDs[0] != "player" {
 		t.Fatalf("loaded checkpoint=%#v error=%v", loaded, err)
 	}
+
 	if err := os.Chmod(path, 0o644); err != nil {
 		t.Fatal(err)
 	}
+
 	if _, err := ReadGameRecovery(path); err == nil {
 		t.Fatal("group/world-readable recovery checkpoint was accepted")
 	}
+}
+
+// validRecoveryPayload builds a semantically valid checkpoint through the
+// production constructors so the test isolates serverapp's file boundary.
+func validRecoveryPayload(t *testing.T) ([]byte, string) {
+	t.Helper()
+
+	snapshot := gameecs.Snapshot{Version: gameecs.SnapshotVersion, Tick: 4}
+
+	checksum, err := simulation.CompositeChecksum(snapshot, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	checkpoint := simulation.Checkpoint{Tick: 4, Checksum: checksum, Snapshot: &snapshot}
+
+	recovery, err := gamesession.NewRecoveryCheckpoint(checkpoint, nil, nil, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	handoff, err := realm.NewGameRecovery(recovery, []string{"player"})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	payload, err := json.Marshal(handoff)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	return payload, recovery.Checksum
 }

@@ -11,8 +11,12 @@ import (
 	d2save "github.com/gravestench/dark-magic/internal/mod/d2legacy/adapter/save"
 )
 
+// ErrProfileAdmission hides profile parsing and projection details behind the
+// stable admission failure contract expected by command startup.
 var ErrProfileAdmission = errors.New("server: invalid player-profile admission")
 
+// ProfileAdmission identifies the locally selected character and the
+// host-authoritative player identity and spawn destination assigned to it.
 type ProfileAdmission struct {
 	Path        string
 	PlayerID    string
@@ -26,21 +30,17 @@ func AdmitSelectedProfile(host *gameserver.Host, config ProfileAdmission) error 
 	if strings.TrimSpace(config.Path) == "" {
 		return nil
 	}
-	if host == nil || host.Session == nil || strings.TrimSpace(config.PlayerID) == "" {
-		return ErrProfileAdmission
+
+	if err := validateProfileAdmission(host, config); err != nil {
+		return err
 	}
-	profile, err := d2save.ReadProfileFile(config.Path)
+
+	_, character, err := readSelectedProfile(config.Path)
 	if err != nil {
-		return fmt.Errorf("%w: %v", ErrProfileAdmission, err)
+		return err
 	}
-	store, err := d2save.NewFromProfile(profile)
-	if err != nil {
-		return fmt.Errorf("%w: %v", ErrProfileAdmission, err)
-	}
-	character, selected := store.Selected()
-	if !selected {
-		return fmt.Errorf("%w: profile has no selected character", ErrProfileAdmission)
-	}
+	// The host supplies player identity, destination, and system authority;
+	// none of those trust decisions come from the player-controlled profile.
 	err = host.Session.SubmitNext(func(tick uint64) (simulation.Command, error) {
 		return playeradapter.AdmissionCommand(character, config.PlayerID, config.Destination,
 			"self-host:profile", 1, tick, simulation.AuthoritySystem)
@@ -48,6 +48,7 @@ func AdmitSelectedProfile(host *gameserver.Host, config ProfileAdmission) error 
 	if err != nil {
 		return fmt.Errorf("%w: submit entry: %v", ErrProfileAdmission, err)
 	}
+
 	return nil
 }
 
@@ -57,34 +58,68 @@ func PersistSelectedProfile(host *gameserver.Host, config ProfileAdmission) erro
 	if strings.TrimSpace(config.Path) == "" {
 		return nil
 	}
-	if host == nil || host.Session == nil || strings.TrimSpace(config.PlayerID) == "" {
-		return ErrProfileAdmission
+
+	if err := validateProfileAdmission(host, config); err != nil {
+		return err
 	}
-	profile, err := d2save.ReadProfileFile(config.Path)
+
+	profile, baseline, err := readSelectedProfile(config.Path)
 	if err != nil {
-		return fmt.Errorf("%w: %v", ErrProfileAdmission, err)
+		return err
 	}
-	store, err := d2save.NewFromProfile(profile)
-	if err != nil {
-		return fmt.Errorf("%w: %v", ErrProfileAdmission, err)
-	}
-	baseline, selected := store.Selected()
-	if !selected {
-		return fmt.Errorf("%w: profile has no selected character", ErrProfileAdmission)
-	}
+
 	checkpoint, err := host.Session.CanonicalCheckpoint()
 	if err != nil {
 		return err
 	}
+
 	character, err := playeradapter.ProjectCharacter(config.PlayerID, baseline, checkpoint)
 	if err != nil {
 		return fmt.Errorf("%w: project canonical character: %v", ErrProfileAdmission, err)
 	}
+
+	// Replace only the selected roster slot so unrelated local characters and
+	// profile metadata retain their original ordering and ownership.
 	for index := range profile.Characters {
 		if profile.Characters[index].ID == profile.Selected {
 			profile.Characters[index] = character
 			break
 		}
 	}
+
 	return d2save.WriteProfileFile(config.Path, profile)
+}
+
+// validateProfileAdmission rejects an unusable host before profile parsing;
+// an empty path remains an intentional no-op handled by each public operation.
+func validateProfileAdmission(host *gameserver.Host, config ProfileAdmission) error {
+	if host == nil || host.Session == nil || strings.TrimSpace(config.PlayerID) == "" {
+		return ErrProfileAdmission
+	}
+
+	return nil
+}
+
+// readSelectedProfile applies the same strict roster validation to admission
+// and persistence so neither path can silently choose a different character.
+func readSelectedProfile(path string) (d2save.Profile, d2save.Character, error) {
+	profile, err := d2save.ReadProfileFile(path)
+	if err != nil {
+		return d2save.Profile{}, d2save.Character{}, fmt.Errorf("%w: %v", ErrProfileAdmission, err)
+	}
+
+	store, err := d2save.NewFromProfile(profile)
+	if err != nil {
+		return d2save.Profile{}, d2save.Character{}, fmt.Errorf("%w: %v", ErrProfileAdmission, err)
+	}
+
+	character, selected := store.Selected()
+	if !selected {
+		return d2save.Profile{}, d2save.Character{}, fmt.Errorf(
+			"%w: profile has no selected character",
+			ErrProfileAdmission,
+		)
+	}
+
+	return profile, character, nil
 }

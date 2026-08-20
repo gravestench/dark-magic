@@ -27,14 +27,17 @@ func CommandIntentModule(controller *gamesession.IntentController) Module {
 					if err != nil {
 						state.RaiseError("command intent payload: %v", err)
 					}
+
 					if err := controller.Submit(state.CheckString(1), payload); err != nil {
 						state.RaiseError("%v", err)
 					}
+
 					return 0
 				},
 			})
 			module.RawSetString("api", lua.LNumber(1))
 			state.Push(module)
+
 			return 1
 		},
 	}

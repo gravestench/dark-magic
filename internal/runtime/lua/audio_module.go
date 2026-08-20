@@ -20,8 +20,11 @@ type ownedSound struct {
 	err   error
 }
 
+// luaPlayOptions translates the optional Lua table into mixer defaults. Missing fields deliberately retain the
+// mixer's normal SFX bus and full volume so callers can specify only the controls they need.
 func luaPlayOptions(state *lua.LState, index int) audio.PlayOptions {
 	options := audio.PlayOptions{Bus: "sfx", Volume: 1}
+
 	if table := state.OptTable(index, nil); table != nil {
 		for name, apply := range map[string]func(lua.LValue){
 			"bus":    func(value lua.LValue) { options.Bus = lua.LVAsString(value) },
@@ -36,9 +39,11 @@ func luaPlayOptions(state *lua.LState, index int) audio.PlayOptions {
 			}
 		}
 	}
+
 	return options
 }
 
+// release stops a scoped sound at most once and preserves the first stop error for repeated Lua or scope cleanup.
 func (s *ownedSound) release() error {
 	s.once.Do(func() { s.err = s.mixer.Stop(s.id) })
 	return s.err
@@ -46,111 +51,185 @@ func (s *ownedSound) release() error {
 
 // AudioModule exposes scoped archive-backed sound playback.
 func AudioModule(runtime *Runtime, mixer *audio.Mixer, source fs.FS) Module {
-	return Module{Name: "engine.audio/v1", Help: documentedModule("Play and control music, speech, ambience, and effects.", map[string]CommandHelp{
-		"diagnostics":     commandHelp("engine.audio.diagnostics()", "Return mixer and playback diagnostics."),
-		"exists":          commandHelp("engine.audio.exists(path)", "Report whether an audio asset exists."),
-		"play":            commandHelp("engine.audio.play(path [, options])", "Play an audio asset in the active scope."),
-		"play_persistent": commandHelp("engine.audio.play_persistent(path [, options])", "Play audio whose handle survives the active scene scope."),
-		"set_bus_volume":  commandHelp("engine.audio.set_bus_volume(bus, volume)", "Set the volume of a named mixer bus."),
-		"stop_group":      commandHelp("engine.audio.stop_group(group)", "Stop every active sound in a playback group."),
-	}, map[string]TypeHelp{audioSoundType: {Summary: "A scoped active sound handle.", Methods: map[string]CommandHelp{
-		"set_volume": commandHelp("sound:set_volume(volume)", "Set this sound's volume."),
-		"set_pan":    commandHelp("sound:set_pan(pan)", "Set this sound's stereo pan."),
-		"fade_to":    commandHelp("sound:fade_to(volume, milliseconds)", "Fade this sound to a target volume."),
-		"stop":       commandHelp("sound:stop()", "Stop and release this sound."),
-	}}}), Loader: func(state *lua.LState) int {
-		registerSoundType(state)
-		module := state.SetFuncs(state.NewTable(), map[string]lua.LGFunction{
-			"diagnostics": func(state *lua.LState) int {
-				diagnostics := mixer.Diagnostics()
-				result := state.NewTable()
-				result.RawSetString("active", lua.LNumber(diagnostics.Active))
-				result.RawSetString("pending", lua.LNumber(diagnostics.Pending))
-				result.RawSetString("slots", lua.LNumber(diagnostics.Slots))
-				buses := state.NewTable()
-				for bus, volume := range diagnostics.BusVolumes {
-					buses.RawSetString(bus, lua.LNumber(volume))
-				}
-				result.RawSetString("buses", buses)
-				state.Push(result)
-				return 1
+	return Module{
+		Name: "engine.audio/v1",
+		Help: documentedModule(
+			"Play and control music, speech, ambience, and effects.",
+			map[string]CommandHelp{
+				"diagnostics": commandHelp(
+					"engine.audio.diagnostics()",
+					"Return mixer and playback diagnostics.",
+				),
+				"exists": commandHelp(
+					"engine.audio.exists(path)",
+					"Report whether an audio asset exists.",
+				),
+				"play": commandHelp(
+					"engine.audio.play(path [, options])",
+					"Play an audio asset in the active scope.",
+				),
+				"play_persistent": commandHelp(
+					"engine.audio.play_persistent(path [, options])",
+					"Play audio whose handle survives the active scene scope.",
+				),
+				"set_bus_volume": commandHelp(
+					"engine.audio.set_bus_volume(bus, volume)",
+					"Set the volume of a named mixer bus.",
+				),
+				"stop_group": commandHelp(
+					"engine.audio.stop_group(group)",
+					"Stop every active sound in a playback group.",
+				),
 			},
-			"exists": func(state *lua.LState) int {
-				_, err := fs.Stat(source, state.CheckString(1))
-				state.Push(lua.LBool(err == nil))
-				return 1
+			map[string]TypeHelp{
+				audioSoundType: {
+					Summary: "A scoped active sound handle.",
+					Methods: map[string]CommandHelp{
+						"set_volume": commandHelp(
+							"sound:set_volume(volume)",
+							"Set this sound's volume.",
+						),
+						"set_pan": commandHelp(
+							"sound:set_pan(pan)",
+							"Set this sound's stereo pan.",
+						),
+						"fade_to": commandHelp(
+							"sound:fade_to(volume, milliseconds)",
+							"Fade this sound to a target volume.",
+						),
+						"stop": commandHelp("sound:stop()", "Stop and release this sound."),
+					},
+				},
 			},
-			"play": func(state *lua.LState) int {
-				scope, err := runtime.requireActiveScope()
-				if err != nil {
-					state.RaiseError("%v", err)
+		),
+		Loader: func(state *lua.LState) int {
+			registerSoundType(state)
+			module := state.SetFuncs(state.NewTable(), map[string]lua.LGFunction{
+				"diagnostics": func(state *lua.LState) int {
+					diagnostics := mixer.Diagnostics()
+					result := state.NewTable()
+					result.RawSetString("active", lua.LNumber(diagnostics.Active))
+					result.RawSetString("pending", lua.LNumber(diagnostics.Pending))
+					result.RawSetString("slots", lua.LNumber(diagnostics.Slots))
+
+					buses := state.NewTable()
+					for bus, volume := range diagnostics.BusVolumes {
+						buses.RawSetString(bus, lua.LNumber(volume))
+					}
+
+					result.RawSetString("buses", buses)
+					state.Push(result)
+
+					return 1
+				},
+				"exists": func(state *lua.LState) int {
+					_, err := fs.Stat(source, state.CheckString(1))
+					state.Push(lua.LBool(err == nil))
+
+					return 1
+				},
+				"play": func(state *lua.LState) int {
+					scope, err := runtime.requireActiveScope()
+					if err != nil {
+						state.RaiseError("%v", err)
+						return 0
+					}
+
+					fileName := state.CheckString(1)
+
+					data, err := fs.ReadFile(source, fileName)
+					if err != nil {
+						state.RaiseError("reading sound %q: %v", fileName, err)
+						return 0
+					}
+
+					format := strings.ToLower(filepath.Ext(fileName))
+					options := luaPlayOptions(state, 2)
+
+					id, err := mixer.PlayWithOptions(format, data, options)
+					if err != nil {
+						state.RaiseError("playing sound %q: %v", fileName, err)
+						return 0
+					}
+
+					sound := &ownedSound{mixer: mixer, id: id}
+					if err := scope.Add(sound.release); err != nil {
+						_ = sound.release()
+
+						state.RaiseError("owning sound %q: %v", fileName, err)
+
+						return 0
+					}
+
+					userData := state.NewUserData()
+					userData.Value = sound
+					state.SetMetatable(userData, state.GetTypeMetatable(audioSoundType))
+					state.Push(userData)
+
+					return 1
+				},
+				"play_persistent": func(state *lua.LState) int {
+					fileName := state.CheckString(1)
+
+					options := luaPlayOptions(state, 2)
+					if options.Group == "" {
+						state.ArgError(2, "persistent audio requires a group")
+						return 0
+					}
+
+					data, err := fs.ReadFile(source, fileName)
+					if err != nil {
+						state.RaiseError("reading persistent sound %q: %v", fileName, err)
+						return 0
+					}
+
+					if err := mixer.StopGroup(options.Group); err != nil {
+						state.RaiseError(
+							"replacing persistent audio group %q: %v",
+							options.Group,
+							err,
+						)
+
+						return 0
+					}
+
+					if _, err := mixer.PlayWithOptions(
+						strings.ToLower(filepath.Ext(fileName)),
+						data,
+						options,
+					); err != nil {
+						state.RaiseError("playing persistent sound %q: %v", fileName, err)
+					}
+
 					return 0
-				}
-				fileName := state.CheckString(1)
-				data, err := fs.ReadFile(source, fileName)
-				if err != nil {
-					state.RaiseError("reading sound %q: %v", fileName, err)
+				},
+				"set_bus_volume": func(state *lua.LState) int {
+					if err := mixer.SetBusVolume(
+						state.CheckString(1),
+						float32(state.CheckNumber(2)),
+					); err != nil {
+						state.RaiseError("setting bus volume: %v", err)
+					}
+
 					return 0
-				}
-				format := strings.ToLower(filepath.Ext(fileName))
-				options := luaPlayOptions(state, 2)
-				id, err := mixer.PlayWithOptions(format, data, options)
-				if err != nil {
-					state.RaiseError("playing sound %q: %v", fileName, err)
+				},
+				"stop_group": func(state *lua.LState) int {
+					if err := mixer.StopGroup(state.CheckString(1)); err != nil {
+						state.RaiseError("stopping audio group: %v", err)
+					}
+
 					return 0
-				}
-				sound := &ownedSound{mixer: mixer, id: id}
-				if err := scope.Add(sound.release); err != nil {
-					_ = sound.release()
-					state.RaiseError("owning sound %q: %v", fileName, err)
-					return 0
-				}
-				userData := state.NewUserData()
-				userData.Value = sound
-				state.SetMetatable(userData, state.GetTypeMetatable(audioSoundType))
-				state.Push(userData)
-				return 1
-			},
-			"play_persistent": func(state *lua.LState) int {
-				fileName := state.CheckString(1)
-				options := luaPlayOptions(state, 2)
-				if options.Group == "" {
-					state.ArgError(2, "persistent audio requires a group")
-					return 0
-				}
-				data, err := fs.ReadFile(source, fileName)
-				if err != nil {
-					state.RaiseError("reading persistent sound %q: %v", fileName, err)
-					return 0
-				}
-				if err := mixer.StopGroup(options.Group); err != nil {
-					state.RaiseError("replacing persistent audio group %q: %v", options.Group, err)
-					return 0
-				}
-				if _, err := mixer.PlayWithOptions(strings.ToLower(filepath.Ext(fileName)), data, options); err != nil {
-					state.RaiseError("playing persistent sound %q: %v", fileName, err)
-				}
-				return 0
-			},
-			"set_bus_volume": func(state *lua.LState) int {
-				if err := mixer.SetBusVolume(state.CheckString(1), float32(state.CheckNumber(2))); err != nil {
-					state.RaiseError("setting bus volume: %v", err)
-				}
-				return 0
-			},
-			"stop_group": func(state *lua.LState) int {
-				if err := mixer.StopGroup(state.CheckString(1)); err != nil {
-					state.RaiseError("stopping audio group: %v", err)
-				}
-				return 0
-			},
-		})
-		module.RawSetString("api", lua.LNumber(1))
-		state.Push(module)
-		return 1
-	}}
+				},
+			})
+			module.RawSetString("api", lua.LNumber(1))
+			state.Push(module)
+
+			return 1
+		},
+	}
 }
 
+// registerSoundType installs every sound method on one metatable before handles are returned to Lua.
 func registerSoundType(state *lua.LState) {
 	meta := state.NewTypeMetatable(audioSoundType)
 	state.SetField(meta, "__index", state.SetFuncs(state.NewTable(), map[string]lua.LGFunction{
@@ -159,6 +238,7 @@ func registerSoundType(state *lua.LState) {
 			if err := sound.mixer.SetVolume(sound.id, float32(state.CheckNumber(2))); err != nil {
 				state.RaiseError("setting sound volume: %v", err)
 			}
+
 			return 0
 		},
 		"set_pan": func(state *lua.LState) int {
@@ -166,30 +246,40 @@ func registerSoundType(state *lua.LState) {
 			if err := sound.mixer.SetPan(sound.id, float32(state.CheckNumber(2))); err != nil {
 				state.RaiseError("setting sound pan: %v", err)
 			}
+
 			return 0
 		},
 		"fade_to": func(state *lua.LState) int {
 			sound := checkSound(state, 1)
-			if err := sound.mixer.Fade(sound.id, float32(state.CheckNumber(2)), time.Duration(state.CheckNumber(3))*time.Millisecond); err != nil {
+			if err := sound.mixer.Fade(
+				sound.id,
+				float32(state.CheckNumber(2)),
+				time.Duration(state.CheckNumber(3))*time.Millisecond,
+			); err != nil {
 				state.RaiseError("fading sound: %v", err)
 			}
+
 			return 0
 		},
 		"stop": func(state *lua.LState) int {
 			if err := checkSound(state, 1).release(); err != nil {
 				state.RaiseError("stopping sound: %v", err)
 			}
+
 			return 0
 		},
 	}))
 }
 
+// checkSound validates check sound at the Lua boundary so invalid values fail before shared state can change.
 func checkSound(state *lua.LState, index int) *ownedSound {
 	userData := state.CheckUserData(index)
+
 	sound, ok := userData.Value.(*ownedSound)
 	if !ok {
 		state.ArgError(index, "engine.audio/v1 sound expected")
 		return nil
 	}
+
 	return sound
 }
