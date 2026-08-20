@@ -54,41 +54,42 @@ type Appearance struct {
 	Components map[string]string `json:"components,omitempty"`
 }
 
+// Create adds a character record without changing the active selection.
+// The store checks only opaque identity; callers must apply the owning mod's class and progression policy first.
 func (s *Store) Create(character Character) error {
-	// This store is deliberately policy-free. The owning mod validates and
-	// normalizes its record before crossing this persistence boundary.
-	if character.ID == "" {
-		return errors.New("persistence: record ID is required")
-	}
-	character = cloneCharacter(character)
-	s.mu.Lock()
-	defer s.mu.Unlock()
-	for _, existing := range s.entries {
-		if existing.ID == character.ID {
-			return fmt.Errorf("persistence: character %q already exists", character.ID)
-		}
-	}
-	s.entries = append(s.entries, character)
-	return nil
+	return s.add(character, false)
 }
 
 // CreateSelected atomically adds a character and makes it the active profile
 // choice. Frontend creation uses this operation so an older selection cannot
 // survive between persistence and launching a game session.
 func (s *Store) CreateSelected(character Character) error {
+	return s.add(character, true)
+}
+
+// add performs duplicate validation, insertion, and optional selection under one lock.
+// Cloning before the lock keeps caller-owned maps outside the roster's synchronized state.
+func (s *Store) add(character Character, selectCharacter bool) error {
 	if character.ID == "" {
 		return errors.New("persistence: record ID is required")
 	}
+
 	character = cloneCharacter(character)
+
 	s.mu.Lock()
 	defer s.mu.Unlock()
+
 	for _, existing := range s.entries {
 		if existing.ID == character.ID {
 			return fmt.Errorf("persistence: character %q already exists", character.ID)
 		}
 	}
+
 	s.entries = append(s.entries, character)
-	s.selected = character.ID
+	if selectCharacter {
+		s.selected = character.ID
+	}
+
 	return nil
 }
 
@@ -109,59 +110,74 @@ func New(entries ...Character) *Store {
 	for index, entry := range entries {
 		copyEntries[index] = cloneCharacter(entry)
 	}
+
 	return &Store{entries: copyEntries}
 }
 
+// Characters returns a deep roster snapshot so callers cannot mutate stored stats or appearance components.
 func (s *Store) Characters() []Character {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
+
 	result := make([]Character, len(s.entries))
 	for index, entry := range s.entries {
 		result[index] = cloneCharacter(entry)
 	}
+
 	return result
 }
 
+// Select changes the active opaque identity only when that character exists in the roster.
 func (s *Store) Select(id string) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
+
 	for _, character := range s.entries {
 		if character.ID == id {
 			s.selected = id
 			return nil
 		}
 	}
+
 	return errors.New("persistence: unknown character")
 }
 
 // Delete removes one character identity and clears the active selection when
-// it refers to that character. Save-file persistence remains a Store concern;
-// presentation code only requests deletion by opaque ID.
+// it refers to that character. The Store mutates only its in-memory roster;
+// callers decide when that snapshot should be written to durable storage.
 func (s *Store) Delete(id string) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
+
 	for index, character := range s.entries {
 		if character.ID != id {
 			continue
 		}
+
 		copy(s.entries[index:], s.entries[index+1:])
+
 		s.entries = s.entries[:len(s.entries)-1]
 		if s.selected == id {
 			s.selected = ""
 		}
+
 		return nil
 	}
+
 	return errors.New("persistence: unknown character")
 }
 
+// Selected returns a deep snapshot of the active character, or false when the roster has no active selection.
 func (s *Store) Selected() (Character, bool) {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
+
 	for _, character := range s.entries {
 		if character.ID == s.selected {
 			return cloneCharacter(character), true
 		}
 	}
+
 	return Character{}, false
 }
 
@@ -172,34 +188,45 @@ func (s *Store) UpdateSelected(character Character) error {
 	if character.ID == "" {
 		return errors.New("persistence: record ID is required")
 	}
+
 	character = cloneCharacter(character)
+
 	s.mu.Lock()
 	defer s.mu.Unlock()
+
 	if s.selected == "" || character.ID != s.selected {
 		return errors.New("persistence: updated character is not selected")
 	}
+
 	for index := range s.entries {
 		if s.entries[index].ID == s.selected {
 			s.entries[index] = character
 			return nil
 		}
 	}
+
 	return errors.New("persistence: selected character is absent")
 }
 
+// cloneCharacter deep-copies optional pointer and map fields so Store snapshots never alias caller-owned state.
 func cloneCharacter(character Character) Character {
 	if character.Stats != nil {
 		stats := *character.Stats
 		character.Stats = &stats
 	}
+
 	if character.Appearance == nil {
 		return character
 	}
+
 	appearance := *character.Appearance
+
 	appearance.Components = make(map[string]string, len(character.Appearance.Components))
 	for component, path := range character.Appearance.Components {
 		appearance.Components[component] = path
 	}
+
 	character.Appearance = &appearance
+
 	return character
 }

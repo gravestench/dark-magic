@@ -7,14 +7,19 @@ import (
 
 type fixtureLocale map[string]string
 
+// Resolve implements the layered localization contract for unit fixtures and
+// keeps missing keys visible to report construction.
 func (locale fixtureLocale) Resolve(key string) (string, string, error) {
 	value, found := locale[key]
 	if !found {
 		return key, "", errors.New("missing")
 	}
+
 	return value, "patchstring.tbl", nil
 }
 
+// TestBuildJoinsTooltipTextTokensAndHardLevelModifiers verifies localization and
+// formula evidence retain deterministic column order and replacement tokens.
 func TestBuildJoinsTooltipTextTokensAndHardLevelModifiers(t *testing.T) {
 	skills := []map[string]string{
 		{"Id": "40", "skill": "Frozen Armor", "skilldesc": "frozen armor", "auralencalc": "skill('Shiver Armor'.blvl)"},
@@ -25,23 +30,28 @@ func TestBuildJoinsTooltipTextTokensAndHardLevelModifiers(t *testing.T) {
 		"skilldesc": "frozen armor", "str name": "skillname40", "dsc3texta2": "skillname50",
 		"dsc3textb2": "Secplev2", "dsc3calca2": "skill('Chilling Armor'.blvl) * par7",
 	}}
+
 	report, err := Build([]int{40}, skills, descriptions, fixtureLocale{
 		"skillname40": "Frozen Armor", "skillname50": "Shiver Armor", "Secplev2": "+%d seconds per level",
 	})
 	if err != nil {
 		t.Fatal(err)
 	}
+
 	skill := report.Skills[0]
 	if len(skill.Localization) != 3 || skill.Localization[0].Text != "Shiver Armor" ||
 		len(skill.Localization[1].ReplacementTokens) != 1 || skill.Localization[1].ReplacementTokens[0] != "%d" {
 		t.Fatalf("localization = %#v", skill.Localization)
 	}
+
 	if len(skill.CrossSkillModifiers) != 2 || skill.CrossSkillModifiers[0].ReferencedID != 50 ||
 		skill.CrossSkillModifiers[1].ReferencedID != 60 || skill.CrossSkillModifiers[1].Selector != "blvl" {
 		t.Fatalf("modifiers = %#v", skill.CrossSkillModifiers)
 	}
 }
 
+// TestBuildReportsGenericCrossSkillFormulaSelectors ensures arbitrary selectors
+// from both source tables remain explicit evidence.
 func TestBuildReportsGenericCrossSkillFormulaSelectors(t *testing.T) {
 	skills := []map[string]string{
 		{"Id": "99", "skill": "Prayer", "skilldesc": "prayer"},
@@ -51,10 +61,12 @@ func TestBuildReportsGenericCrossSkillFormulaSelectors(t *testing.T) {
 		{"skilldesc": "prayer", "str name": "prayer"},
 		{"skilldesc": "cleansing", "str name": "cleansing", "desccalca1": "skill('Prayer'.edmn)"},
 	}
+
 	report, err := Build([]int{109}, skills, descriptions, fixtureLocale{"cleansing": "Cleansing"})
 	if err != nil {
 		t.Fatal(err)
 	}
+
 	modifiers := report.Skills[0].CrossSkillModifiers
 	if len(modifiers) != 2 || modifiers[0].ReferencedID != 99 || modifiers[0].Selector != "edns" ||
 		modifiers[1].ReferencedID != 99 || modifiers[1].Selector != "edmn" {
@@ -62,12 +74,15 @@ func TestBuildReportsGenericCrossSkillFormulaSelectors(t *testing.T) {
 	}
 }
 
+// TestBuildKeepsMissingLocalizationVisible ensures unresolved keys are marked
+// missing rather than disappearing from the evidence report.
 func TestBuildKeepsMissingLocalizationVisible(t *testing.T) {
 	report, err := Build([]int{0}, []map[string]string{{"Id": "0", "skill": "Attack", "skilldesc": "attack"}},
 		[]map[string]string{{"skilldesc": "attack", "str long": "missing"}}, fixtureLocale{})
 	if err != nil {
 		t.Fatal(err)
 	}
+
 	if !report.Skills[0].Localization[0].Missing {
 		t.Fatal("missing localization key was hidden")
 	}

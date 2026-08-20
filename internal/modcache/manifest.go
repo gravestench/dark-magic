@@ -48,87 +48,130 @@ type Dependency struct {
 	Version string `json:"version,omitempty"`
 }
 
+// ReadManifest decodes the bounded package manifest with unknown-field and
+// trailing-data rejection, preventing ambiguous metadata from entering locks.
 func ReadManifest(source fs.FS) (Manifest, error) {
 	file, err := source.Open(manifestPath)
 	if err != nil {
 		return Manifest{}, fmt.Errorf("%w: read %s: %v", ErrInvalidManifest, manifestPath, err)
 	}
+
 	data, readErr := io.ReadAll(io.LimitReader(file, maxManifestBytes+1))
+
 	closeErr := file.Close()
 	if readErr != nil || closeErr != nil {
 		return Manifest{}, fmt.Errorf("%w: read %s: %v", ErrInvalidManifest, manifestPath, errors.Join(readErr, closeErr))
 	}
+
 	if len(data) > maxManifestBytes {
 		return Manifest{}, fmt.Errorf("%w: %s exceeds %d bytes", ErrInvalidManifest, manifestPath, maxManifestBytes)
 	}
+
 	var manifest Manifest
+
 	decoder := json.NewDecoder(bytes.NewReader(data))
 	decoder.DisallowUnknownFields()
+
 	if err := decoder.Decode(&manifest); err != nil {
 		return Manifest{}, fmt.Errorf("%w: decode %s: %v", ErrInvalidManifest, manifestPath, err)
 	}
+
 	var trailing any
 	if err := decoder.Decode(&trailing); !errors.Is(err, io.EOF) {
 		return Manifest{}, fmt.Errorf("%w: trailing %s data", ErrInvalidManifest, manifestPath)
 	}
+
 	if err := ValidateManifest(manifest); err != nil {
 		return Manifest{}, err
 	}
+
 	return manifest, nil
 }
 
+// ValidateManifest enforces package identity, dependency, namespace, and export
+// invariants before a package can influence resolution or virtual filesystem
+// layout.
 func ValidateManifest(manifest Manifest) error {
 	if manifest.Schema != ManifestSchema || !validID(manifest.ID) || strings.TrimSpace(manifest.Name) == "" ||
 		strings.TrimSpace(manifest.Version) == "" || manifest.EngineAPI != EngineAPI ||
 		(manifest.Kind != "game" && manifest.Kind != "extension") {
 		return ErrInvalidManifest
 	}
+
 	seenDependencies := make(map[string]struct{}, len(manifest.Dependencies))
 	for _, dependency := range manifest.Dependencies {
 		if !validID(dependency.ID) || dependency.ID == manifest.ID {
 			return fmt.Errorf("%w: invalid dependency %q", ErrInvalidManifest, dependency.ID)
 		}
+
 		if _, duplicate := seenDependencies[dependency.ID]; duplicate {
 			return fmt.Errorf("%w: duplicate dependency %q", ErrInvalidManifest, dependency.ID)
 		}
+
 		seenDependencies[dependency.ID] = struct{}{}
 	}
+
 	seenEntrypoints := make(map[string]struct{})
-	for _, component := range append(append([]string(nil), manifest.Entrypoints.ClientComponents...), manifest.Entrypoints.AuthorityComponents...) {
+
+	for _, component := range manifestEntrypoints(manifest) {
 		if !validID(component) || !strings.HasPrefix(component, manifest.ID+".") {
 			return fmt.Errorf("%w: invalid component %q", ErrInvalidManifest, component)
 		}
+
 		if _, duplicate := seenEntrypoints[component]; duplicate {
 			return fmt.Errorf("%w: duplicate component %q", ErrInvalidManifest, component)
 		}
+
 		seenEntrypoints[component] = struct{}{}
 	}
+
 	seenRoots := make(map[string]struct{}, len(manifest.ContentRoots))
 	for _, root := range manifest.ContentRoots {
 		if !validID(root) || strings.ContainsRune(root, '.') || reservedContentRoot(root) {
 			return fmt.Errorf("%w: invalid content root %q", ErrInvalidManifest, root)
 		}
+
 		if _, duplicate := seenRoots[root]; duplicate {
 			return fmt.Errorf("%w: duplicate content root %q", ErrInvalidManifest, root)
 		}
+
 		seenRoots[root] = struct{}{}
 	}
+
 	return nil
 }
 
+// manifestEntrypoints returns a new combined slice so validation never mutates
+// either caller-owned entrypoint list through append reuse.
+func manifestEntrypoints(manifest Manifest) []string {
+	client := manifest.Entrypoints.ClientComponents
+	authority := manifest.Entrypoints.AuthorityComponents
+	result := make([]string, 0, len(client)+len(authority))
+	result = append(result, client...)
+
+	return append(result, authority...)
+}
+
+// reservedContentRoot protects private executable and metadata namespaces from
+// being projected into the shared content root.
 func reservedContentRoot(root string) bool {
 	return root == "components" || root == "lua" || root == "mods"
 }
 
+// validID accepts the portable package/component identifier grammar used in
+// manifests, profiles, locks, and virtual paths.
 func validID(value string) bool {
 	if value == "" || len(value) > 128 {
 		return false
 	}
+
 	for index, character := range value {
 		if unicode.IsLower(character) || unicode.IsDigit(character) || (index > 0 && strings.ContainsRune("._-", character)) {
 			continue
 		}
+
 		return false
 	}
+
 	return true
 }

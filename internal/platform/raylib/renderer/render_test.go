@@ -8,84 +8,116 @@ import (
 	rl "github.com/gen2brain/raylib-go/raylib"
 )
 
+// TestGetAllPixelDataConvertsModelsAndRespectsBounds verifies the generic upload path honors non-zero image origins and
+// produces renderer-ready RGBA colors.
 func TestGetAllPixelDataConvertsModelsAndRespectsBounds(t *testing.T) {
 	img := image.NewNRGBA(image.Rect(4, 7, 6, 8))
 	img.SetNRGBA(4, 7, color.NRGBA{R: 10, G: 20, B: 30, A: 255})
 	img.SetNRGBA(5, 7, color.NRGBA{R: 40, G: 50, B: 60, A: 255})
+
 	pixels := getAllPixelData(img)
 	if len(pixels) != 2 {
 		t.Fatalf("pixel count = %d, want 2", len(pixels))
 	}
+
 	if pixels[0] != (color.RGBA{R: 10, G: 20, B: 30, A: 255}) {
 		t.Fatalf("first pixel = %#v", pixels[0])
 	}
 }
 
+// TestContiguousRGBAUsesDecodedBuffer verifies that tightly packed RGBA images use their existing bytes without an
+// allocation or color conversion.
 func TestContiguousRGBAUsesDecodedBuffer(t *testing.T) {
 	img := image.NewRGBA(image.Rect(4, 7, 6, 9))
 	img.SetRGBA(4, 7, color.RGBA{R: 10, G: 20, B: 30, A: 255})
+
 	pixels, ok := contiguousRGBA(img)
 	if !ok {
 		t.Fatal("contiguous RGBA image did not use direct upload path")
 	}
+
 	if len(pixels) != 16 || pixels[0] != 10 || pixels[3] != 255 {
 		t.Fatalf("pixels = %v", pixels)
 	}
+
 	pixels[1] = 99
+
 	if got := img.RGBAAt(4, 7).G; got != 99 {
 		t.Fatalf("direct buffer did not alias source: green = %d", got)
 	}
 }
 
+// TestContiguousNRGBAUsesDecodedVideoBuffer verifies that decoded video frames preserve their straight-alpha bytes on
+// the direct upload path.
 func TestContiguousNRGBAUsesDecodedVideoBuffer(t *testing.T) {
 	img := image.NewNRGBA(image.Rect(0, 0, 2, 2))
 	img.SetNRGBA(0, 0, color.NRGBA{R: 10, G: 20, B: 30, A: 40})
+
 	pixels, ok := contiguousRGBA(img)
 	if !ok || len(pixels) != 16 {
 		t.Fatalf("contiguous NRGBA = %d bytes, %v", len(pixels), ok)
 	}
+
 	if pixels[0] != 10 || pixels[3] != 40 {
 		t.Fatalf("NRGBA bytes were converted: %v", pixels[:4])
 	}
 }
 
+// TestContiguousRGBARejectsPaddedSubimage verifies that row-strided views fall back to safe conversion instead of
+// uploading parent-image padding as visible pixels.
 func TestContiguousRGBARejectsPaddedSubimage(t *testing.T) {
 	parent := image.NewRGBA(image.Rect(0, 0, 4, 4))
+
 	subimage := parent.SubImage(image.Rect(1, 1, 3, 3))
 	if _, ok := contiguousRGBA(subimage); ok {
 		t.Fatal("padded subimage unexpectedly used direct upload path")
 	}
 }
 
+// TestIntersectClipPreservesParentAndChildBounds verifies half-open intersection geometry used by recursive scissoring.
 func TestIntersectClipPreservesParentAndChildBounds(t *testing.T) {
 	parent := rl.NewRectangle(10, 10, 100, 80)
 	child := rl.NewRectangle(50, 0, 100, 40)
 	got := intersectClip(&parent, &child)
+
 	want := rl.NewRectangle(50, 10, 60, 30)
 	if *got != want {
 		t.Fatalf("intersection = %#v, want %#v", *got, want)
 	}
 }
 
+// TestLeafCullingUsesLogicalViewport verifies that completely hidden leaves are skipped while edge-overlapping nodes
+// continue to render.
 func TestLeafCullingUsesLogicalViewport(t *testing.T) {
-	node := &node{image: image.NewRGBA(image.Rect(0, 0, 20, 10)), origin: rl.Vector2{X: .5, Y: .5}, local: rl.MatrixIdentity(), world: rl.MatrixIdentity()}
+	node := &node{
+		image:  image.NewRGBA(image.Rect(0, 0, 20, 10)),
+		origin: rl.Vector2{X: .5, Y: .5},
+		local:  rl.MatrixIdentity(),
+		world:  rl.MatrixIdentity(),
+	}
 	node.SetPosition(110, 50)
 	node.UpdateWorldMatrix(rl.MatrixIdentity(), false)
+
 	if !node.outside(100, 100) {
 		t.Fatal("offscreen leaf was not culled")
 	}
+
 	node.SetPosition(95, 50)
 	node.UpdateWorldMatrix(rl.MatrixIdentity(), false)
+
 	if node.outside(100, 100) {
 		t.Fatal("partially visible leaf was culled")
 	}
 }
 
+// BenchmarkTexturePixelPreparation compares direct decoded-buffer uploads with the generic color-conversion fallback.
 func BenchmarkTexturePixelPreparation(b *testing.B) {
 	img := image.NewRGBA(image.Rect(0, 0, 800, 600))
 	video := image.NewNRGBA(image.Rect(0, 0, 800, 600))
+
 	b.Run("direct-rgba", func(b *testing.B) {
 		b.ReportAllocs()
+
 		for range b.N {
 			pixels, ok := contiguousRGBA(img)
 			if !ok || len(pixels) == 0 {
@@ -95,6 +127,7 @@ func BenchmarkTexturePixelPreparation(b *testing.B) {
 	})
 	b.Run("direct-nrgba-video", func(b *testing.B) {
 		b.ReportAllocs()
+
 		for range b.N {
 			pixels, ok := contiguousRGBA(video)
 			if !ok || len(pixels) == 0 {
@@ -104,6 +137,7 @@ func BenchmarkTexturePixelPreparation(b *testing.B) {
 	})
 	b.Run("generic-conversion", func(b *testing.B) {
 		b.ReportAllocs()
+
 		for range b.N {
 			if pixels := getAllPixelData(img); len(pixels) == 0 {
 				b.Fatal("conversion returned no pixels")
@@ -112,12 +146,19 @@ func BenchmarkTexturePixelPreparation(b *testing.B) {
 	})
 }
 
+// BenchmarkNodeBoundsCulling tracks allocation and CPU regressions in the per-node viewport rejection path.
 func BenchmarkNodeBoundsCulling(b *testing.B) {
-	node := &node{image: image.NewRGBA(image.Rect(0, 0, 160, 160)), origin: rl.Vector2{X: .5, Y: .5}, local: rl.MatrixIdentity(), world: rl.MatrixIdentity()}
+	node := &node{
+		image:  image.NewRGBA(image.Rect(0, 0, 160, 160)),
+		origin: rl.Vector2{X: .5, Y: .5},
+		local:  rl.MatrixIdentity(),
+		world:  rl.MatrixIdentity(),
+	}
 	node.SetPosition(400, 300)
 	node.SetRotation(0)
 	node.UpdateWorldMatrix(rl.MatrixIdentity(), false)
 	b.ReportAllocs()
+
 	for b.Loop() {
 		if node.outside(800, 600) {
 			b.Fatal("visible node was culled")

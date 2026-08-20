@@ -8,8 +8,9 @@ import (
 	rl "github.com/gen2brain/raylib-go/raylib"
 )
 
+// getTexture returns a shared GPU texture by stable key, uploading and accounting for it only on a cache miss. Cache
+// insertion owns future eviction, while the returned isNew flag lets callers account for first use separately.
 func (s *Service) getTexture(key string, img image.Image) (texture rl.Texture2D, isNew bool) {
-
 	bounds := img.Bounds()
 	numBytes := bounds.Dx() * bounds.Dy() * 4 // RGBA
 
@@ -17,9 +18,11 @@ func (s *Service) getTexture(key string, img image.Image) (texture rl.Texture2D,
 	if !exists {
 		started := time.Now()
 		cached = loadTexture(img)
+
 		s.textureUploadNS.Add(uint64(time.Since(started)))
 		s.textureUploads.Add(1)
 		s.textureUploadBytes.Add(uint64(numBytes))
+
 		if err := s.cache.Insert(key, cached, numBytes); err != nil {
 			s.logger.Error("caching texture", "key", key, "error", err)
 		}
@@ -42,6 +45,7 @@ func loadTexture(img image.Image) rl.Texture2D {
 		texture := rl.LoadTextureFromImage(native)
 		configurePixelArtTexture(texture)
 		runtime.KeepAlive(pixels)
+
 		return texture
 	}
 
@@ -49,8 +53,10 @@ func loadTexture(img image.Image) rl.Texture2D {
 	// the former call site, release the temporary C image after GPU upload.
 	native := rl.NewImageFromImage(img)
 	defer rl.UnloadImage(native)
+
 	texture := rl.LoadTextureFromImage(native)
 	configurePixelArtTexture(texture)
+
 	return texture
 }
 
@@ -64,6 +70,7 @@ func configurePixelArtTexture(texture rl.Texture2D) {
 	if !rl.IsTextureValid(texture) {
 		return
 	}
+
 	rl.SetTextureFilter(texture, rl.FilterPoint)
 	rl.SetTextureWrap(texture, rl.WrapClamp)
 }

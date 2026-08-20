@@ -18,72 +18,118 @@ func ExpandHost(name string) (string, error) {
 	if err != nil {
 		return "", err
 	}
+
 	expanded, err = expandDollarEnvironment(expanded)
 	if err != nil {
 		return "", err
 	}
+
 	if expanded != name {
 		expanded = filepath.FromSlash(strings.ReplaceAll(expanded, `\`, "/"))
 	}
+
+	return expandHomeAlias(name, expanded)
+}
+
+// expandHomeAlias resolves only the current user's home directory. Rejecting
+// named homes keeps results portable because Go exposes no cross-platform user
+// database lookup with shell-compatible semantics.
+func expandHomeAlias(original string, expanded string) (string, error) {
 	if expanded == "" || expanded[0] != '~' {
 		return expanded, nil
 	}
+
 	if expanded != "~" && !strings.HasPrefix(expanded, "~/") && !strings.HasPrefix(expanded, `~\`) {
-		return "", fmt.Errorf("paths: named home directories are unsupported in %q", name)
+		return "", fmt.Errorf("paths: named home directories are unsupported in %q", original)
 	}
+
 	home, err := os.UserHomeDir()
 	if err != nil {
 		return "", fmt.Errorf("paths: resolve home directory: %w", err)
 	}
+
 	if expanded == "~" {
 		return home, nil
 	}
+
 	parts := strings.FieldsFunc(expanded[2:], func(r rune) bool { return r == '/' || r == '\\' })
+
 	return filepath.Join(append([]string{home}, parts...)...), nil
 }
 
+// expandDollarEnvironment applies os.Expand while recording the first missing
+// variable, turning silent empty substitutions into actionable path errors.
 func expandDollarEnvironment(name string) (string, error) {
 	var missing string
+
 	expanded := os.Expand(name, func(key string) string {
 		value, exists := os.LookupEnv(key)
 		if !exists && missing == "" {
 			missing = key
 		}
+
 		return value
 	})
+
 	if missing != "" {
 		return "", fmt.Errorf("paths: environment variable %q is not set", missing)
 	}
+
 	return expanded, nil
 }
 
+// expandPercentEnvironment supports Windows-style variables on every platform
+// without treating unmatched or syntactically invalid percent pairs as aliases.
 func expandPercentEnvironment(name string) (string, error) {
 	var result strings.Builder
+
 	for index := 0; index < len(name); {
 		if name[index] != '%' {
 			result.WriteByte(name[index])
 			index++
+
 			continue
 		}
+
 		end := strings.IndexByte(name[index+1:], '%')
 		if end < 0 {
 			result.WriteByte(name[index])
 			index++
+
 			continue
 		}
+
 		end += index + 1
+
 		key := name[index+1 : end]
-		if key == "" || strings.IndexFunc(key, func(r rune) bool { return r != '_' && !unicode.IsLetter(r) && !unicode.IsDigit(r) }) >= 0 {
+		if !validEnvironmentKey(key) {
 			result.WriteString(name[index : end+1])
 			index = end + 1
+
 			continue
 		}
+
 		value, exists := os.LookupEnv(key)
 		if !exists {
 			return "", fmt.Errorf("paths: environment variable %q is not set", key)
 		}
+
 		result.WriteString(value)
+
 		index = end + 1
 	}
+
 	return result.String(), nil
+}
+
+// validEnvironmentKey limits percent expansion to portable environment names;
+// punctuation remains literal so ordinary paths containing percent signs work.
+func validEnvironmentKey(key string) bool {
+	if key == "" {
+		return false
+	}
+
+	return strings.IndexFunc(key, func(character rune) bool {
+		return character != '_' && !unicode.IsLetter(character) && !unicode.IsDigit(character)
+	}) < 0
 }

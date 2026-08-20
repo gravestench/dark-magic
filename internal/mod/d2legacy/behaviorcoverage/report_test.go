@@ -5,6 +5,8 @@ import (
 	"testing"
 )
 
+// TestBuildGroupsSignaturesWithoutInferringCoverage proves identical table
+// signatures do not grant implementation status without manifest evidence.
 func TestBuildGroupsSignaturesWithoutInferringCoverage(t *testing.T) {
 	manifest := Manifest{
 		Schema: Schema, Version: 1, Target: Target,
@@ -21,36 +23,46 @@ func TestBuildGroupsSignaturesWithoutInferringCoverage(t *testing.T) {
 		{"Missile": "similar", "pSrvDoFunc": "1"},
 		{"Missile": "reviewed", "pSrvDoFunc": "1"},
 	}
+
 	report, err := Build(manifest, skills, missiles, Sources{SkillsLayer: "patch", MissilesLayer: "patch"})
 	if err != nil {
 		t.Fatal(err)
 	}
+
 	if report.Summary.SkillRows != 3 || report.Summary.BehaviorGroups != 2 ||
 		report.Summary.ImplementedSkills != 1 || report.Summary.MissingSkills != 2 {
 		t.Fatalf("unexpected summary: %+v", report.Summary)
 	}
+
 	var shared BehaviorGroup
+
 	for _, group := range report.Behaviors {
 		if len(group.MissileServerDoFunctions) == 1 && group.MissileServerDoFunctions[0] == "1" {
 			shared = group
 		}
 	}
+
 	if len(shared.Consumers) != 2 || shared.Consumers[0].SkillID != 36 || shared.Consumers[1].SkillID != 901 {
 		t.Fatalf("shared signature consumers are not deterministically sorted: %+v", shared.Consumers)
 	}
+
 	if shared.Consumers[0].MissingFamily || shared.Consumers[0].ImplementationFamily != "missile.straight" {
 		t.Fatalf("reviewed skill lost declaration: %+v", shared.Consumers[0])
 	}
+
 	if !shared.Consumers[1].MissingFamily || shared.Consumers[1].ImplementationFamily != "" ||
 		shared.Consumers[1].EvidenceStatus != "missing-implementation-family" {
 		t.Fatalf("similar signature was implicitly admitted: %+v", shared.Consumers[1])
 	}
 }
 
+// TestDecodeManifestRejectsNonTargetAndUnknownFields keeps the coverage manifest
+// strict so stale targets and hidden declarations cannot enter a report.
 func TestDecodeManifestRejectsNonTargetAndUnknownFields(t *testing.T) {
 	for _, input := range []string{
 		`{"schema":"d2legacy.skill_behavior_coverage/v1","version":1,"target":"classic","implementations":[]}`,
-		`{"schema":"d2legacy.skill_behavior_coverage/v1","version":1,"target":"diablo-ii-lod-1.14d-expansion","implementations":[],"legacy":true}`,
+		`{"schema":"d2legacy.skill_behavior_coverage/v1","version":1,` +
+			`"target":"diablo-ii-lod-1.14d-expansion","implementations":[],"legacy":true}`,
 	} {
 		if _, err := DecodeManifest(strings.NewReader(input)); err == nil {
 			t.Fatalf("DecodeManifest accepted unsupported input: %s", input)
@@ -58,6 +70,8 @@ func TestDecodeManifestRejectsNonTargetAndUnknownFields(t *testing.T) {
 	}
 }
 
+// TestBuildRejectsMissingDeclaredSkill ensures manifest evidence must correspond
+// to the mounted target table rather than an absent edition-specific skill.
 func TestBuildRejectsMissingDeclaredSkill(t *testing.T) {
 	manifest := Manifest{
 		Schema: Schema, Version: 1, Target: Target,
