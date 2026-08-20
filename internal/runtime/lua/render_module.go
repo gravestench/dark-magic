@@ -2473,6 +2473,10 @@ func (r *RenderCapability) Module() Module {
 							"node:set_world_collision_region(world, left, top, right, bottom)",
 							"Render a bounded authoritative subtile collision diagnostic and return map-pixel geometry.",
 						),
+						"set_world_collision_pixel_region": commandHelp(
+							"node:set_world_collision_pixel_region(world, left, top, right, bottom)",
+							"Render or update one fixed map-pixel collision chunk and return its clipped geometry.",
+						),
 						"set_world_tile_region": commandHelp(
 							"node:set_world_tile_region(world, left, top, right, bottom)",
 							"Render bounded authoritative tile/subtile projection geometry and return map-pixel geometry.",
@@ -3548,6 +3552,28 @@ func registerRenderNodeType(state *lua.LState) {
 			decoded, bounds := maprender.CollisionRegionImage(world, region)
 			if err := node.setImage(decoded); err != nil {
 				state.RaiseError("updating world collision diagnostic: %v", err)
+				return 0
+			}
+
+			state.Push(lua.LNumber(bounds.Min.X))
+			state.Push(lua.LNumber(bounds.Min.Y))
+			state.Push(lua.LNumber(bounds.Dx()))
+			state.Push(lua.LNumber(bounds.Dy()))
+
+			return 4
+		},
+		"set_world_collision_pixel_region": func(state *lua.LState) int {
+			node := checkRenderNode(state, 1)
+			world := checkWorldMap(state, 2)
+			region := image.Rect(
+				state.CheckInt(3),
+				state.CheckInt(4),
+				state.CheckInt(5),
+				state.CheckInt(6),
+			)
+			decoded, bounds := maprender.CollisionPixelRegionImage(world, region)
+			if err := node.updateImage(decoded); err != nil {
+				state.RaiseError("updating world collision pixel chunk: %v", err)
 				return 0
 			}
 

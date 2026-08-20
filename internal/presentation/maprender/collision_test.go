@@ -43,6 +43,24 @@ func TestCollisionRegionUsesAuthoritativeMapCanvasCoordinates(t *testing.T) {
 	}
 }
 
+// TestCollisionPixelRegionKeepsTextureBounded protects the editor toggle from
+// regressing to one enormous isometric bounding texture or thousands of
+// per-cell texture publications.
+func TestCollisionPixelRegionKeepsTextureBounded(t *testing.T) {
+	mapData, err := world.NewOpenMap(500, 500)
+	if err != nil {
+		t.Fatal(err)
+	}
+	region := image.Rect(384, 768, 768, 1152)
+	pixels, bounds := CollisionPixelRegionImage(mapData, region)
+	if bounds != region {
+		t.Fatalf("bounds = %v, want %v", bounds, region)
+	}
+	if pixels.Bounds().Dx() != 384 || pixels.Bounds().Dy() != 384 {
+		t.Fatalf("pixel chunk = %v, want 384x384", pixels.Bounds())
+	}
+}
+
 // TestTileRegionIsBoundedAndContainsGeometry ensures diagnostic allocation stays local without clipping its outlines.
 func TestTileRegionIsBoundedAndContainsGeometry(t *testing.T) {
 	mapData := &world.Map{WidthTiles: 100, HeightTiles: 100, WidthSubtiles: 500, HeightSubtiles: 500}

@@ -45,6 +45,7 @@ local canvas_center_x = (canvas.left + canvas.right) / 2
 local canvas_center_y = (canvas.top + canvas.bottom) / 2
 local zoom_step = 0.05
 local map_chunk_size = 384
+local collision_chunk_size = 384
 
 local tools = {
     {id="pan", label="PAN", hint="Drag the map; hold Space for temporary pan"},
@@ -295,9 +296,11 @@ function map_editor:clear_preview()
         if node:exists() then node:destroy() end
     end
     self.collision_nodes = {}
+    self.collision_visible_signature = nil
     self:clear_grid()
     self:clear_selection()
     self:clear_hover()
+    self:clear_brush_hover()
 end
 
 -- Recreate retained chrome on resize while preserving the authoritative Go
@@ -367,10 +370,6 @@ end
 
 local function map_chunk_key(column, row)
     return tostring(column) .. ":" .. tostring(row)
-end
-
-local function dirty_cell_key(x, y)
-    return tostring(x) .. ":" .. tostring(y)
 end
 
 -- Mark only spatial chunks that can contain graphics owned by edited cells.
@@ -447,7 +446,7 @@ function map_editor:clear_selection()
     for _, node in ipairs(self.selection_nodes or {}) do
         if node:exists() then node:destroy() end
     end
-    self.selection_nodes, self.hover_nodes = {}, {}
+    self.selection_nodes, self.selected_point = {}, nil
 end
 
 -- Draw one isometric DS1 cell outline into a caller-owned retained-node list.
@@ -476,6 +475,7 @@ end
 -- Highlight the committed PICK selection independently from transient pointer hover.
 function map_editor:highlight_selection(point)
     self:clear_selection()
+    if self.tool ~= "pick" then return end
     self.selected_point = point
     if not point then return end
     local layer = layers[self.layer_index]
@@ -506,6 +506,9 @@ function map_editor:hover_pick(point)
     self:clear_hover()
     self.hover_key = key
     if not point then return end
+    local selected = self.selected_cell
+    if selected and selected.kind == layer.kind
+        and selected.point.x == point.x and selected.point.y == point.y then return end
 
     local ok, cell = pcall(editor.cell, point.x, point.y)
     local value = ok and active_cell_value(cell, layer.kind) or nil
@@ -513,6 +516,44 @@ function map_editor:hover_pick(point)
 
     local colors = {floor={84, 201, 141}, wall={241, 190, 77}, shadow={174, 126, 222}}
     outline_tile(self, point, colors[layer.kind], 2, 196, 9190, self.hover_nodes)
+end
+
+-- Remove the live paint/erase footprint independently from PICK feedback.
+function map_editor:clear_brush_hover()
+    for _, node in ipairs(self.brush_hover_nodes or {}) do
+        if node:exists() then node:destroy() end
+    end
+    self.brush_hover_nodes, self.brush_hover_key = {}, nil
+end
+
+-- Preview the cell that a stroke will modify. Auto Draw can reconcile the
+-- four cardinal neighbors, so those possible secondary edits receive a dimmer
+-- outline while the direct target keeps a strong double edge.
+function map_editor:hover_brush(point)
+    local layer = layers[self.layer_index]
+    local brush = self.brush or {}
+    local key = point and table.concat({
+        point.x, point.y, layer.kind, self.tool, tostring(self.auto_draw),
+        brush.orientation or 0, brush.style or 0, brush.sequence or 0,
+    }, ":") or ""
+    if key == self.brush_hover_key then return end
+    self:clear_brush_hover()
+    self.brush_hover_key = key
+    if not point then return end
+
+    local direct = self.tool == "erase" and {238, 76, 74} or {72, 220, 190}
+    outline_tile(self, point, direct, 9, 72, 9180, self.brush_hover_nodes)
+    outline_tile(self, point, direct, 3, 244, 9182, self.brush_hover_nodes)
+
+    if not self.auto_draw or self.tool ~= "paint" or not brush.source_path then return end
+    for _, offset in ipairs({{-1, 0}, {1, 0}, {0, -1}, {0, 1}}) do
+        local neighbor = {x=point.x + offset[1], y=point.y + offset[2]}
+        if neighbor.x >= 0 and neighbor.y >= 0
+            and neighbor.x < self.summary.width and neighbor.y < self.summary.height then
+            outline_tile(self, neighbor, {241, 190, 77}, 7, 48, 9178, self.brush_hover_nodes)
+            outline_tile(self, neighbor, {241, 190, 77}, 2, 168, 9181, self.brush_hover_nodes)
+        end
+    end
 end
 
 -- Release every retained debug-grid segment as one toggleable group.
@@ -567,54 +608,95 @@ function map_editor:toggle_grid()
     self:set_message(message, "white")
 end
 
--- Keep collision diagnostics in one retained node per authored cell. Edits
--- replace only returned dirty cells; toggling or panning merely changes node visibility.
+local function collision_chunk_key(column, row)
+    return tostring(column) .. ":" .. tostring(row)
+end
+
+-- Keep collision diagnostics in fixed map-pixel chunks. The former
+-- per-cell toggle performed thousands of Lua-to-Go texture publications in a
+-- single update and could exceed the scene deadline on town maps.
 function map_editor:refresh_collision_nodes(points)
     self.collision_nodes = self.collision_nodes or {}
     if not self.map_visibility or not self.map_visibility.collision
         or not self.preview_world or not self.chunk_set or not self.summary then
         for _, node in pairs(self.collision_nodes) do node:set_visible(false) end
+        self.collision_visible_signature = nil
         return
     end
 
     local targets = {}
     if points then
-        for _, point in ipairs(points) do targets[dirty_cell_key(point.x, point.y)] = point end
+        for _, point in ipairs(points) do
+            local pixel_x, pixel_y = self.preview_world:subtile_to_pixel(point.x * 5, point.y * 5)
+            local first_column = math.max(0, math.floor((pixel_x - 160) / collision_chunk_size))
+            local last_column = math.min(math.ceil(self.chunk_set.width / collision_chunk_size) - 1,
+                math.floor((pixel_x + 160) / collision_chunk_size))
+            local first_row = math.max(0, math.floor((pixel_y - 80) / collision_chunk_size))
+            local last_row = math.min(math.ceil(self.chunk_set.height / collision_chunk_size) - 1,
+                math.floor((pixel_y + 80) / collision_chunk_size))
+            for row = first_row, last_row do
+                for column = first_column, last_column do
+                    targets[collision_chunk_key(column, row)] = {column=column, row=row}
+                end
+            end
+        end
     else
         local map_left = (canvas.left - (canvas_center_x + self.pan_x)) / self.zoom + self.chunk_set.width / 2
         local map_top = (canvas.top - (canvas_center_y + self.pan_y)) / self.zoom + self.chunk_set.height / 2
         local map_right = (canvas.right - (canvas_center_x + self.pan_x)) / self.zoom + self.chunk_set.width / 2
         local map_bottom = (canvas.bottom - (canvas_center_y + self.pan_y)) / self.zoom + self.chunk_set.height / 2
-        for y = 0, self.summary.height - 1 do
-            for x = 0, self.summary.width - 1 do
-                local pixel_x, pixel_y = self.preview_world:subtile_to_pixel(x * 5, y * 5)
-                if pixel_x >= map_left - 160 and pixel_x <= map_right + 160
-                    and pixel_y >= map_top - 80 and pixel_y <= map_bottom + 80 then
-                    targets[dirty_cell_key(x, y)] = {x=x, y=y}
-                end
+        local first_column = math.max(0, math.floor(map_left / collision_chunk_size))
+        local last_column = math.min(math.ceil(self.chunk_set.width / collision_chunk_size) - 1,
+            math.floor(map_right / collision_chunk_size))
+        local first_row = math.max(0, math.floor(map_top / collision_chunk_size))
+        local last_row = math.min(math.ceil(self.chunk_set.height / collision_chunk_size) - 1,
+            math.floor(map_bottom / collision_chunk_size))
+        local signature = table.concat({first_column, last_column, first_row, last_row}, ":")
+        if signature == self.collision_visible_signature then return end
+        self.collision_visible_signature = signature
+        for row = first_row, last_row do
+            for column = first_column, last_column do
+                targets[collision_chunk_key(column, row)] = {column=column, row=row}
             end
         end
     end
 
-    for key, point in pairs(targets) do
+    local failure
+    for key, chunk in pairs(targets) do
         local node = self.collision_nodes[key]
         if not node then
             node = render.create("hud", self.map_root)
             node:set_z(9050)
             self.collision_nodes[key] = node
         end
-        local left, top, width, height = node:set_world_collision_region(
-            self.preview_world, point.x * 5, point.y * 5, (point.x + 1) * 5, (point.y + 1) * 5
+        local first_x = chunk.column * collision_chunk_size
+        local first_y = chunk.row * collision_chunk_size
+        local last_x = math.min(first_x + collision_chunk_size, self.chunk_set.width)
+        local last_y = math.min(first_y + collision_chunk_size, self.chunk_set.height)
+        local ok, left, top, width, height = pcall(
+            node.set_world_collision_pixel_region,
+            node,
+            self.preview_world,
+            first_x,
+            first_y,
+            last_x,
+            last_y
         )
-        node:set_position(left - self.chunk_set.width / 2 + width / 2,
-            top - self.chunk_set.height / 2 + height / 2)
-        node:set_visible(true)
+        if ok then
+            node:set_position(left - self.chunk_set.width / 2 + width / 2,
+                top - self.chunk_set.height / 2 + height / 2)
+            node:set_visible(true)
+        else
+            node:set_visible(false)
+            failure = left
+        end
     end
     if not points then
         for key, node in pairs(self.collision_nodes) do
             if not targets[key] then node:set_visible(false) end
         end
     end
+    if failure then self:set_message("Collision overlay unavailable: " .. tostring(failure), "red") end
 end
 
 -- Render the map as a small grid of flattened spatial textures. Chunk nodes are
@@ -713,6 +795,8 @@ function map_editor:open(path)
     self.path, self.summary = path, summary
     self.selected_cell = nil
     self:clear_selection()
+    self:clear_hover()
+    self:clear_brush_hover()
     if not self.palette_override then
         self:set_palette(clamp(summary.act or 1, 1, #palettes), false, true)
     end
@@ -920,6 +1004,7 @@ end
 
 -- Inspect the active layer at one cell and synchronize the brush to its DT1 tile.
 function map_editor:sample_at(point)
+    self:clear_hover()
     local ok, cell = pcall(editor.cell, point.x, point.y)
     if not ok then self:set_message(tostring(cell), "red"); return end
     local layer = layers[self.layer_index]
@@ -1005,9 +1090,20 @@ function map_editor:refresh_selected_preview()
     if self.selected_visibility.collision and self.preview_world then
         local node = render.create("hud", self.selected_preview_root)
         local point = selected.point
-        local _, _, width, height = node:set_world_collision_region(
-            self.preview_world, point.x * 5, point.y * 5, (point.x + 1) * 5, (point.y + 1) * 5
+        local loaded, _, _, width, height = pcall(
+            node.set_world_collision_region,
+            node,
+            self.preview_world,
+            point.x * 5,
+            point.y * 5,
+            (point.x + 1) * 5,
+            (point.y + 1) * 5
         )
+        if not loaded then
+            node:destroy()
+            self:set_message("Selected collision overlay is unavailable.", "red")
+            return
+        end
         local scale = math.min(
             1,
             available_width / math.max(1, width),
@@ -1261,7 +1357,11 @@ function map_editor:click_chrome(pointer_x, pointer_y)
     end
     for index, tool in ipairs(tools) do
         if self.tool_boxes[index]:contains(pointer_x, pointer_y) then
-            if self.tool == "pick" and tool.id ~= "pick" then self:clear_hover() end
+            if self.tool == "pick" and tool.id ~= "pick" then
+                self:clear_hover()
+                self:clear_selection()
+            end
+            self:clear_brush_hover()
             self.tool = tool.id
             self:refresh_chrome()
             self:set_message(tool.hint, "white")
@@ -1279,10 +1379,11 @@ function map_editor:click_chrome(pointer_x, pointer_y)
             self:refresh_chrome()
             if self.inspector_mode == "selected" then
                 self:refresh_selected_preview()
+            elseif layer.kind == "collision" then
+                self:refresh_collision_nodes()
             else
                 self:invalidate_all_chunks()
                 self:refresh_visible_chunks()
-                self:refresh_collision_nodes()
             end
             return true
         end
@@ -1739,7 +1840,9 @@ function map_editor:create()
     self.map_visibility = {floor=true, wall=true, shadow=true, collision=false}
     self.selected_visibility = {floor=true, wall=true, shadow=true, collision=false}
     self.grid_visible, self.grid_nodes = true, {}
-    self.selection_nodes, self.selected_preview_nodes, self.collision_nodes = {}, {}, {}
+    self.selection_nodes, self.hover_nodes, self.brush_hover_nodes = {}, {}, {}
+    self.selected_preview_nodes, self.collision_nodes = {}, {}
+    self.collision_visible_signature = nil
     self.dragging, self.panning, self.stroke_active = false, false, false
     self:position_map()
     self:set_message("Ready", "white")
@@ -1775,10 +1878,16 @@ function map_editor:update()
     local temporary_pan = input.down("space")
     local pointer_in_inspector = pointer_x >= self.inspector_left and pointer_x < self.inspector_right
         and pointer_y >= layout.tileset_heading and pointer_y < canvas.bottom
-    if self.tool == "pick" and not temporary_pan and pointer_in_canvas and self.summary then
-        self:hover_pick(self:point_at(pointer_x, pointer_y))
+    local hover_point = pointer_in_canvas and self.summary and self:point_at(pointer_x, pointer_y) or nil
+    if self.tool == "pick" and not temporary_pan then
+        self:clear_brush_hover()
+        self:hover_pick(hover_point)
+    elseif (self.tool == "paint" or self.tool == "erase") and not temporary_pan then
+        self:clear_hover()
+        self:hover_brush(hover_point)
     else
         self:clear_hover()
+        self:clear_brush_hover()
     end
     local _, scroll_y = input.scroll()
     if pointer_in_canvas and scroll_y ~= 0 then

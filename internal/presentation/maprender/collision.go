@@ -3,9 +3,74 @@ package maprender
 import (
 	"image"
 	"image/color"
+	"math"
 
 	"github.com/gravestench/dark-magic/internal/game/world"
 )
+
+// CollisionPixelRegionImage rasterizes collision diamonds into a bounded map-
+// pixel chunk. Pixel chunks keep diagnostic texture dimensions fixed even for
+// large isometric maps; subtile-region bounds otherwise grow quadratically as
+// both map axes contribute to the enclosing rectangle.
+func CollisionPixelRegionImage(mapData *world.Map, region image.Rectangle) (*image.RGBA, image.Rectangle) {
+	mapBounds := image.Rect(
+		0,
+		0,
+		(mapData.WidthTiles+mapData.HeightTiles)*world.TilePixelWidth/2+world.PreviewMargin*2,
+		(mapData.WidthTiles+mapData.HeightTiles)*world.TilePixelHeight/2+world.PreviewMargin*2,
+	)
+	region = region.Intersect(mapBounds)
+	if region.Empty() {
+		return image.NewRGBA(image.Rect(0, 0, 1, 1)), image.Rect(0, 0, 1, 1)
+	}
+
+	halfWidth := world.TilePixelWidth / (world.SubtilesPerTile * 2)
+	halfHeight := world.TilePixelHeight / (world.SubtilesPerTile * 2)
+	search := image.Rect(
+		region.Min.X-halfWidth,
+		region.Min.Y-halfHeight,
+		region.Max.X+halfWidth,
+		region.Max.Y+halfHeight,
+	)
+	minX, minY := mapData.PixelToSubtile(float64(search.Min.X), float64(search.Min.Y))
+	maxX, maxY := minX, minY
+	for _, point := range []image.Point{
+		{X: search.Max.X, Y: search.Min.Y},
+		search.Max,
+		{X: search.Min.X, Y: search.Max.Y},
+	} {
+		x, y := mapData.PixelToSubtile(float64(point.X), float64(point.Y))
+		minX, minY = math.Min(minX, x), math.Min(minY, y)
+		maxX, maxY = math.Max(maxX, x), math.Max(maxY, y)
+	}
+	firstX := max(0, int(math.Floor(minX))-1)
+	firstY := max(0, int(math.Floor(minY))-1)
+	lastX := min(mapData.WidthSubtiles, int(math.Ceil(maxX))+2)
+	lastY := min(mapData.HeightSubtiles, int(math.Ceil(maxY))+2)
+
+	result := image.NewRGBA(image.Rect(0, 0, region.Dx(), region.Dy()))
+	for y := firstY; y < lastY; y++ {
+		for x := firstX; x < lastX; x++ {
+			flags, _ := mapData.FlagsAt(x, y)
+			shade, visible := collisionColor(flags)
+			if !visible {
+				continue
+			}
+
+			centerX, centerY := mapData.SubtileToPixel(float64(x), float64(y))
+			fillDiamond(
+				result,
+				int(centerX)-region.Min.X,
+				int(centerY)-region.Min.Y,
+				halfWidth,
+				halfHeight,
+				shade,
+			)
+		}
+	}
+
+	return result, region
+}
 
 // CollisionImage creates an explicitly diagnostic overlay in the same logical
 // canvas as Compose. Production map rendering never calls this full-image path.
