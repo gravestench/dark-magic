@@ -61,6 +61,7 @@ func (s *Store) ValidateLink(spec LinkSpec) ([]LinkDiagnostic, error) {
 	if err != nil {
 		return nil, err
 	}
+
 	targetRows, err := s.Load(spec.TargetTable)
 	if err != nil {
 		return nil, err
@@ -70,6 +71,7 @@ func (s *Store) ValidateLink(spec LinkSpec) ([]LinkDiagnostic, error) {
 	provenance, _ := s.Source(spec.SourceTable)
 
 	var diagnostics []LinkDiagnostic
+
 	for ordinal, row := range sourceRows {
 		diagnostic, unresolved := unresolvedLinkDiagnostic(spec, provenance, targets, ordinal, row)
 		if unresolved {

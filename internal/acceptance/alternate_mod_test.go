@@ -18,14 +18,23 @@ import (
 // first-party d2legacy package.
 func TestGenericHostBootsAnAlternateModWithoutD2Legacy(t *testing.T) {
 	ctx := context.Background()
+
 	engine := gameecs.New()
-	defer engine.Close()
+
+	defer func() {
+		if err := engine.Close(); err != nil {
+			t.Errorf("close ECS engine: %v", err)
+		}
+	}()
+
 	runtime := modruntime.New()
 	state := simulation.NewStateStore()
+
 	streams := simulation.NewRandomStreams(41)
 	if err := streams.Register("example.boot"); err != nil {
 		t.Fatal(err)
 	}
+
 	content := fstest.MapFS{
 		"lua/example/boot.lua": {Data: []byte(`
 local ecs = require("engine.ecs/v1")
@@ -43,6 +52,7 @@ return {entity=entity:id()}
 	if err := runtime.RegisterInstaller(modruntime.ContentRequire(content, "lua")); err != nil {
 		t.Fatal(err)
 	}
+
 	for _, module := range []modruntime.Module{
 		modruntime.DeterministicModule(), modruntime.AuthorityStateModule(state),
 		modruntime.AuthorityRandomModule(streams), modruntime.NewECSCapability(runtime, engine).Module(),
@@ -51,35 +61,50 @@ return {entity=entity:id()}
 			t.Fatal(err)
 		}
 	}
+
 	if err := runtime.Start(ctx); err != nil {
 		t.Fatal(err)
 	}
-	defer runtime.Stop(ctx)
+
+	defer func() {
+		if err := runtime.Stop(ctx); err != nil {
+			t.Errorf("stop alternate-mod runtime: %v", err)
+		}
+	}()
+
 	if err := runtime.Run(ctx, func(vm *lua.LState) error {
-		if err := vm.CallByParam(lua.P{Fn: vm.GetGlobal("require"), NRet: 1, Protect: true}, lua.LString("example.boot")); err != nil {
+		call := lua.P{Fn: vm.GetGlobal("require"), NRet: 1, Protect: true}
+		if err := vm.CallByParam(call, lua.LString("example.boot")); err != nil {
 			return err
 		}
+
 		vm.Pop(1)
+
 		return nil
 	}); err != nil {
 		t.Fatal(err)
 	}
+
 	if _, found := state.Read("example.counter"); !found {
 		t.Fatal("alternate mod state was not registered")
 	}
+
 	if _, found := akara.GetDynamicStore(engine.World(), "example.identity"); !found {
 		t.Fatal("alternate mod ECS component was not registered")
 	}
+
 	if got := runtime.ModuleNames(); containsString(got, "d2legacy") {
 		t.Fatalf("generic host loaded d2legacy capability: %v", got)
 	}
 }
 
+// containsString recognizes an exact module name or its dotted child namespace.
 func containsString(values []string, fragment string) bool {
 	for _, value := range values {
 		if value == fragment || len(value) >= len(fragment) && value[:len(fragment)] == fragment {
 			return true
 		}
 	}
+
 	return false
 }

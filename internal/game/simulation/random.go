@@ -26,6 +26,7 @@ type Stream struct {
 // hashing keeps one domain's draws from perturbing another domain's sequence.
 func NewStream(seed uint64, name string) *Stream {
 	hash := sha256.New()
+
 	var encoded [8]byte
 	binary.LittleEndian.PutUint64(encoded[:], seed)
 	_, _ = hash.Write(encoded[:])
@@ -50,6 +51,7 @@ func (stream *Stream) Uint64() uint64 {
 	value := stream.state
 	value = (value ^ (value >> 30)) * 0xbf58476d1ce4e5b9
 	value = (value ^ (value >> 27)) * 0x94d049bb133111eb
+
 	return value ^ (value >> 31)
 }
 
@@ -63,6 +65,7 @@ func (stream *Stream) Uint64n(limit uint64) uint64 {
 	// Rejection sampling discards the short remainder at the bottom of the
 	// uint64 range, giving every accepted residue the same number of sources.
 	threshold := -limit % limit
+
 	for {
 		value := stream.Uint64()
 		if value >= threshold {
@@ -111,7 +114,9 @@ func (registry *RandomStreams) Register(name string) error {
 	if _, exists := registry.streams[name]; exists {
 		return fmt.Errorf("%w: purpose %q is already registered", ErrRandomStream, name)
 	}
+
 	registry.streams[name] = NewStream(registry.seed, name)
+
 	return nil
 }
 
@@ -128,6 +133,7 @@ func (registry *RandomStreams) Uint64n(name string, limit uint64) (uint64, error
 	if !found {
 		return 0, fmt.Errorf("%w: unknown purpose %q", ErrRandomStream, name)
 	}
+
 	return stream.Uint64n(limit), nil
 }
 
@@ -141,6 +147,7 @@ func (registry *RandomStreams) SnapshotState() ([]byte, error) {
 	for name, stream := range registry.streams {
 		states[name] = stream.State()
 	}
+
 	return json.Marshal(randomStreamsArchive{Seed: registry.seed, Streams: states})
 }
 
@@ -166,8 +173,10 @@ func (registry *RandomStreams) RestoreState(data []byte) error {
 		if !found {
 			return fmt.Errorf("%w: purpose %q is not registered by checkpoint", ErrRandomStream, name)
 		}
+
 		registry.streams[name] = RestoreStream(state)
 	}
+
 	return nil
 }
 

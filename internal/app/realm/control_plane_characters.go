@@ -28,6 +28,7 @@ func (control *ControlPlane) ListCharacters(
 	if err != nil {
 		return nil, err
 	}
+
 	return control.characters.List(ctx, principal.accountID)
 }
 
@@ -39,6 +40,7 @@ func (control *ControlPlane) CreateCharacter(
 	request CreateCharacterRequest,
 ) (record CharacterRecord, err error) {
 	request.Expansion = true
+
 	event := AuditEvent{
 		Operation:     AuditCharacterCreate,
 		CharacterName: strings.TrimSpace(request.Name),
@@ -54,6 +56,7 @@ func (control *ControlPlane) CreateCharacter(
 	if err != nil {
 		return CharacterRecord{}, err
 	}
+
 	event.AccountID = principal.accountID
 	event.AccountName = principal.name
 	event.SessionID = principal.sessionID
@@ -62,6 +65,7 @@ func (control *ControlPlane) CreateCharacter(
 	if err != nil {
 		return CharacterRecord{}, err
 	}
+
 	if len(existing) >= maximumRealmCharacters {
 		return CharacterRecord{}, ErrCharacterLimit
 	}
@@ -93,9 +97,11 @@ func (control *ControlPlane) CreateCharacter(
 	if err := control.characters.Create(ctx, record); err != nil {
 		return CharacterRecord{}, err
 	}
+
 	if err := control.accounts.SelectCharacter(ctx, token, character.ID); err != nil {
 		return CharacterRecord{}, err
 	}
+
 	return cloneCharacterRecord(record), nil
 }
 
@@ -116,6 +122,7 @@ func (control *ControlPlane) DeleteCharacter(
 	if err != nil {
 		return err
 	}
+
 	event.AccountID = principal.accountID
 	event.AccountName = principal.name
 	event.SessionID = principal.sessionID
@@ -143,6 +150,7 @@ func (control *ControlPlane) SelectCharacter(
 	if err != nil {
 		return CharacterRecord{}, err
 	}
+
 	event.AccountID = principal.accountID
 	event.AccountName = principal.name
 	event.SessionID = principal.sessionID
@@ -151,9 +159,11 @@ func (control *ControlPlane) SelectCharacter(
 	if err != nil {
 		return CharacterRecord{}, err
 	}
+
 	if err := control.accounts.SelectCharacter(ctx, token, record.Character.ID); err != nil {
 		return CharacterRecord{}, err
 	}
+
 	return record, nil
 }
 
@@ -167,10 +177,12 @@ func (control *ControlPlane) SelectedCharacter(
 	if err != nil {
 		return CharacterRecord{}, err
 	}
+
 	characterID, err := control.accounts.SelectedCharacter(ctx, token)
 	if err != nil {
 		return CharacterRecord{}, err
 	}
+
 	return control.characters.Get(ctx, principal.accountID, characterID)
 }
 
@@ -178,6 +190,7 @@ func (control *ControlPlane) SelectedCharacter(
 // copies appearance data before it enters shared channel state.
 func presenceFromCharacter(record CharacterRecord) CharacterPresence {
 	character := record.Character
+
 	return CharacterPresence{
 		CharacterID: character.ID,
 		Name:        character.Name,

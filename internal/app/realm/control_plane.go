@@ -69,6 +69,7 @@ var ErrGameUnavailable = errors.New("realm: game service unavailable")
 // an allocator is explicitly supplied.
 func NewControlPlane(config ControlPlaneConfig) (*ControlPlane, error) {
 	accounts := config.Accounts
+
 	var err error
 	if accounts == nil {
 		accounts, err = NewAccounts(config.SessionLifetime)
@@ -114,13 +115,16 @@ func NewControlPlane(config ControlPlaneConfig) (*ControlPlane, error) {
 	}
 
 	var admissions *Admissions
+
 	if config.Allocator != nil {
 		if config.LeaseLifetime <= 0 {
 			config.LeaseLifetime = 2 * time.Minute
 		}
+
 		if config.TicketLifetime <= 0 {
 			config.TicketLifetime = 30 * time.Second
 		}
+
 		admissions, err = NewAdmissionsWithMemberships(
 			config.Allocator,
 			characters,
@@ -136,6 +140,7 @@ func NewControlPlane(config ControlPlaneConfig) (*ControlPlane, error) {
 	if config.CheckpointInterval <= 0 {
 		config.CheckpointInterval = 15 * time.Second
 	}
+
 	if config.PresenceTimeout <= 0 {
 		config.PresenceTimeout = 30 * time.Second
 	}
@@ -168,5 +173,6 @@ func (control *ControlPlane) Version() string {
 	if control == nil {
 		return ""
 	}
+
 	return control.version
 }

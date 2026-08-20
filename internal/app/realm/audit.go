@@ -63,6 +63,7 @@ type AuditSink interface {
 
 type AuditSinkFunc func(context.Context, AuditEvent)
 
+// Record contains record within the audit boundary so callers do not duplicate its domain-specific policy.
 func (function AuditSinkFunc) Record(ctx context.Context, event AuditEvent) {
 	if function != nil {
 		function(ctx, event)
@@ -80,9 +81,11 @@ func NewAuditFanout(sinks ...AuditSink) AuditSink {
 			filtered = append(filtered, sink)
 		}
 	}
+
 	return filtered
 }
 
+// Record contains record within the audit boundary so callers do not duplicate its domain-specific policy.
 func (fanout auditFanout) Record(ctx context.Context, event AuditEvent) {
 	for _, sink := range fanout {
 		sink.Record(ctx, event)
@@ -100,15 +103,18 @@ func NewSlogAuditSink(logger *slog.Logger) AuditSink {
 	return slogAuditSink{logger: logger}
 }
 
+// Record contains record within the audit boundary so callers do not duplicate its domain-specific policy.
 func (sink slogAuditSink) Record(ctx context.Context, event AuditEvent) {
 	logger := sink.logger
 	if logger == nil {
 		logger = slog.Default()
 	}
+
 	level := slog.LevelInfo
 	if event.Outcome != "success" {
 		level = slog.LevelWarn
 	}
+
 	attributes := []slog.Attr{
 		slog.String("audit_version", event.Version),
 		slog.String("operation", event.Operation),
@@ -124,34 +130,43 @@ func (sink slogAuditSink) Record(ctx context.Context, event AuditEvent) {
 	attributes = appendAuditString(attributes, "channel", event.Channel)
 	attributes = appendAuditString(attributes, "game_id", event.GameID)
 	attributes = appendAuditString(attributes, "game_name", event.GameName)
+
 	attributes = appendAuditString(attributes, "game_reference", event.GameReference)
 	if event.MessageBytes > 0 {
 		attributes = append(attributes, slog.Int("message_bytes", event.MessageBytes))
 	}
+
 	logger.LogAttrs(ctx, level, "realm audit", attributes...)
 }
 
+// appendAuditString contains append audit string within the audit boundary so callers do not duplicate its
+// domain-specific policy.
 func appendAuditString(attributes []slog.Attr, key, value string) []slog.Attr {
 	if value == "" {
 		return attributes
 	}
+
 	return append(attributes, slog.String(key, value))
 }
 
+// recordAudit contains record audit within the audit boundary so callers do not duplicate its domain-specific policy.
 func (control *ControlPlane) recordAudit(ctx context.Context, event AuditEvent, err error) {
 	if control == nil || control.audit == nil {
 		return
 	}
+
 	event.Version = RealmAuditVersion
 	event.ClientAddress = auditClientAddress(ctx)
 	event.Outcome, event.ErrorCode = auditResult(err)
 	control.audit.Record(ctx, event)
 }
 
+// auditResult contains audit result within the audit boundary so callers do not duplicate its domain-specific policy.
 func auditResult(err error) (string, string) {
 	if err == nil {
 		return "success", ""
 	}
+
 	switch {
 	case errors.Is(err, ErrRealmSession), errors.Is(err, ErrAccountCredentials), errors.Is(err, ErrAccountUnverified):
 		return "denied", "unauthorized"
@@ -171,8 +186,12 @@ func auditResult(err error) (string, string) {
 		return "denied", "ownership"
 	case errors.Is(err, ErrCharacterLeased):
 		return "denied", "leased"
-	case errors.Is(err, ErrAccountInput), errors.Is(err, ErrAccountChallenge), errors.Is(err, ErrCharacterInput), errors.Is(err, ErrChannelInput),
-		errors.Is(err, ErrGameDirectoryInput), errors.Is(err, ErrHTTPInput):
+	case errors.Is(err, ErrAccountInput),
+		errors.Is(err, ErrAccountChallenge),
+		errors.Is(err, ErrCharacterInput),
+		errors.Is(err, ErrChannelInput),
+		errors.Is(err, ErrGameDirectoryInput),
+		errors.Is(err, ErrHTTPInput):
 		return "denied", "invalid_input"
 	case errors.Is(err, context.Canceled):
 		return "failed", "canceled"
@@ -187,18 +206,25 @@ func auditResult(err error) (string, string) {
 
 type auditContextKey struct{}
 
+// withAuditClientAddress contains with audit client address within the audit boundary so callers do not duplicate its
+// domain-specific policy.
 func withAuditClientAddress(ctx context.Context, remoteAddress string) context.Context {
 	address := strings.TrimSpace(remoteAddress)
 	if host, _, err := net.SplitHostPort(address); err == nil {
 		address = host
 	}
+
 	return context.WithValue(ctx, auditContextKey{}, address)
 }
 
+// auditClientAddress contains audit client address within the audit boundary so callers do not duplicate its
+// domain-specific policy.
 func auditClientAddress(ctx context.Context) string {
 	if ctx == nil {
 		return ""
 	}
+
 	address, _ := ctx.Value(auditContextKey{}).(string)
+
 	return address
 }

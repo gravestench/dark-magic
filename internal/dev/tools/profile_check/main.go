@@ -14,6 +14,7 @@ import (
 func main() {
 	profileDirectory := flag.String("profile-dir", "./profiles/acceptance", "profiling artifact directory")
 	budgetPath := flag.String("budgets", "./docs/profile-budgets.json", "scene budget JSON")
+
 	flag.Parse()
 
 	if err := check(*profileDirectory, *budgetPath); err != nil {

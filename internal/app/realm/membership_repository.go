@@ -54,32 +54,44 @@ type MembershipRepository interface {
 	AbandonGame(context.Context, string) error
 }
 
+// ActivePlayerIDs contains active player ids within the membership repository boundary so callers do not duplicate its
+// domain-specific policy.
 func (store *MemoryMemberships) ActivePlayerIDs(ctx context.Context, gameID string) ([]string, error) {
 	return store.playerIDs(ctx, gameID, false)
 }
 
+// DrainPlayerIDs contains drain player ids within the membership repository boundary so callers do not duplicate its
+// domain-specific policy.
 func (store *MemoryMemberships) DrainPlayerIDs(ctx context.Context, gameID string) ([]string, error) {
 	return store.playerIDs(ctx, gameID, true)
 }
 
+// playerIDs coordinates player ids through the owning membership repository synchronization boundary so shared state
+// is published only after a complete transition.
 func (store *MemoryMemberships) playerIDs(ctx context.Context, gameID string, includeDeparted bool) ([]string, error) {
 	if err := contextErr(ctx); err != nil {
 		return nil, err
 	}
+
 	gameID = strings.TrimSpace(gameID)
 	if store == nil || gameID == "" {
 		return nil, ErrMembership
 	}
+
 	store.mu.Lock()
 	defer store.mu.Unlock()
+
 	result := make([]string, 0)
+
 	for _, record := range store.records {
 		if record.GameID == gameID && (record.State == MembershipActive ||
 			(includeDeparted && record.State == MembershipDeparted)) {
 			result = append(result, record.PlayerID)
 		}
 	}
+
 	sort.Strings(result)
+
 	return result, nil
 }
 
@@ -89,205 +101,293 @@ type MemoryMemberships struct {
 	records    map[string]MembershipRecord
 }
 
+// NewMemoryMemberships constructs the membership repository boundary and validates dependencies before callers can
+// publish or mutate shared state.
 func NewMemoryMemberships(characters CharacterRepository) (*MemoryMemberships, error) {
 	if characters == nil {
 		return nil, ErrMembership
 	}
+
 	return &MemoryMemberships{characters: characters, records: make(map[string]MembershipRecord)}, nil
 }
 
+// Admit coordinates admit through the owning membership repository synchronization boundary so shared state is
+// published only after a complete transition.
 func (store *MemoryMemberships) Admit(ctx context.Context, record MembershipRecord) error {
 	if err := validateActiveMembership(record); err != nil {
 		return err
 	}
+
 	if err := contextErr(ctx); err != nil {
 		return err
 	}
+
 	store.mu.Lock()
 	defer store.mu.Unlock()
+
 	for key, existing := range store.records {
 		if existing.GameID == record.GameID &&
 			existing.Baseline.Character.ID == record.Baseline.Character.ID {
 			if existing.State == MembershipActive {
 				return ErrCharacterLeased
 			}
+
 			delete(store.records, key)
 		}
 	}
+
 	key := membershipKey(record.GameID, record.PlayerID)
 	if _, exists := store.records[key]; exists {
 		return ErrMembership
 	}
+
 	record.State = MembershipActive
 	store.records[key] = cloneMembershipRecord(record)
+
 	return nil
 }
 
+// Cancel coordinates cancel through the owning membership repository synchronization boundary so shared state is
+// published only after a complete transition.
 func (store *MemoryMemberships) Cancel(ctx context.Context, gameID, playerID string) error {
 	if err := contextErr(ctx); err != nil {
 		return err
 	}
+
 	store.mu.Lock()
 	defer store.mu.Unlock()
+
 	key := membershipKey(gameID, playerID)
+
 	record, found := store.records[key]
 	if !found {
 		return nil
 	}
+
 	if record.State != MembershipActive {
 		return ErrMembership
 	}
+
 	delete(store.records, key)
+
 	return nil
 }
 
-func (store *MemoryMemberships) Depart(ctx context.Context, wanted MembershipRecord, character d2save.Character) (departureReceipt, error) {
+// Depart coordinates depart through the owning membership repository synchronization boundary so shared state is
+// published only after a complete transition.
+func (store *MemoryMemberships) Depart(
+	ctx context.Context,
+	wanted MembershipRecord,
+	character d2save.Character,
+) (departureReceipt, error) {
 	if err := contextErr(ctx); err != nil {
 		return departureReceipt{}, err
 	}
+
 	store.mu.Lock()
 	defer store.mu.Unlock()
+
 	key := membershipKey(wanted.GameID, wanted.PlayerID)
+
 	record, found := store.records[key]
 	if !found {
 		return departureReceipt{}, ErrMembership
 	}
+
 	if record.State == MembershipDeparted && record.Departure != nil {
 		return cloneDepartureReceipt(*record.Departure), nil
 	}
+
 	if record.State != MembershipActive || !sameMembership(record, wanted) {
 		return departureReceipt{}, ErrMembership
 	}
+
 	committed, err := store.characters.Commit(ctx, record.Lease, character)
 	if err != nil {
 		return departureReceipt{}, err
 	}
+
 	receipt := departureReceipt{Record: committed, PlayerID: record.PlayerID}
 	record.State, record.Departure = MembershipDeparted, &receipt
 	store.records[key] = cloneMembershipRecord(record)
+
 	return cloneDepartureReceipt(receipt), nil
 }
 
-func (store *MemoryMemberships) MarkWorkerRemoved(ctx context.Context, gameID, playerID string) (departureReceipt, error) {
+// MarkWorkerRemoved coordinates mark worker removed through the owning membership repository synchronization boundary
+// so shared state is published only after a complete transition.
+func (store *MemoryMemberships) MarkWorkerRemoved(
+	ctx context.Context,
+	gameID, playerID string,
+) (departureReceipt, error) {
 	if err := contextErr(ctx); err != nil {
 		return departureReceipt{}, err
 	}
+
 	store.mu.Lock()
 	defer store.mu.Unlock()
+
 	key := membershipKey(gameID, playerID)
+
 	record, found := store.records[key]
 	if !found || record.State != MembershipDeparted || record.Departure == nil {
 		return departureReceipt{}, ErrMembership
 	}
+
 	record.Departure.WorkerRemoved = true
 	store.records[key] = cloneMembershipRecord(record)
+
 	return cloneDepartureReceipt(*record.Departure), nil
 }
 
+// ByAccount coordinates by account through the owning membership repository synchronization boundary so shared state
+// is published only after a complete transition.
 func (store *MemoryMemberships) ByAccount(ctx context.Context, gameID, accountID string) (MembershipRecord, error) {
 	if err := contextErr(ctx); err != nil {
 		return MembershipRecord{}, err
 	}
+
 	store.mu.Lock()
 	defer store.mu.Unlock()
+
 	for _, record := range store.records {
 		if record.GameID == strings.TrimSpace(gameID) && record.AccountID == strings.TrimSpace(accountID) {
 			return cloneMembershipRecord(record), nil
 		}
 	}
+
 	return MembershipRecord{}, ErrMembership
 }
 
+// ByCharacter coordinates by character through the owning membership repository synchronization boundary so shared
+// state is published only after a complete transition.
 func (store *MemoryMemberships) ByCharacter(ctx context.Context, gameID, characterID string) (MembershipRecord, error) {
 	if err := contextErr(ctx); err != nil {
 		return MembershipRecord{}, err
 	}
+
 	store.mu.Lock()
 	defer store.mu.Unlock()
+
 	for _, record := range store.records {
 		if record.GameID == strings.TrimSpace(gameID) &&
 			record.Baseline.Character.ID == strings.TrimSpace(characterID) {
 			return cloneMembershipRecord(record), nil
 		}
 	}
+
 	return MembershipRecord{}, ErrMembership
 }
 
+// ByPlayer coordinates by player through the owning membership repository synchronization boundary so shared state is
+// published only after a complete transition.
 func (store *MemoryMemberships) ByPlayer(ctx context.Context, gameID, playerID string) (MembershipRecord, error) {
 	if err := contextErr(ctx); err != nil {
 		return MembershipRecord{}, err
 	}
+
 	store.mu.Lock()
 	defer store.mu.Unlock()
+
 	record, found := store.records[membershipKey(gameID, playerID)]
 	if !found {
 		return MembershipRecord{}, ErrMembership
 	}
+
 	return cloneMembershipRecord(record), nil
 }
 
-func (store *MemoryMemberships) ResumeGame(ctx context.Context, gameID string, lifetime time.Duration) ([]MembershipRecord, error) {
+// ResumeGame coordinates resume game through the owning membership repository synchronization boundary so shared state
+// is published only after a complete transition.
+func (store *MemoryMemberships) ResumeGame(
+	ctx context.Context,
+	gameID string,
+	lifetime time.Duration,
+) ([]MembershipRecord, error) {
 	if err := contextErr(ctx); err != nil {
 		return nil, err
 	}
+
 	gameID = strings.TrimSpace(gameID)
 	if store == nil || gameID == "" || lifetime <= 0 {
 		return nil, ErrMembership
 	}
+
 	store.mu.Lock()
 	candidates := make([]MembershipRecord, 0)
+
 	for _, record := range store.records {
 		if record.GameID != gameID || record.State != MembershipActive {
 			continue
 		}
+
 		candidates = append(candidates, cloneMembershipRecord(record))
 	}
 	store.mu.Unlock()
+
 	result := make([]MembershipRecord, 0, len(candidates))
 	for _, record := range candidates {
 		previousToken := record.Lease.Token
+
 		renewed, err := store.characters.Renew(ctx, record.Lease, lifetime)
 		if err != nil {
 			return nil, err
 		}
+
 		record.Lease = renewed
+
 		store.mu.Lock()
 		key := membershipKey(record.GameID, record.PlayerID)
+
 		current, found := store.records[key]
 		if !found || current.State != MembershipActive || current.Lease.Token != previousToken {
 			store.mu.Unlock()
 			return nil, ErrMembership
 		}
+
 		store.records[key] = cloneMembershipRecord(record)
 		store.mu.Unlock()
+
 		result = append(result, cloneMembershipRecord(record))
 	}
+
 	sort.Slice(result, func(i, j int) bool { return result[i].PlayerID < result[j].PlayerID })
+
 	return result, nil
 }
 
+// AbandonGame coordinates abandon game through the owning membership repository synchronization boundary so shared
+// state is published only after a complete transition.
 func (store *MemoryMemberships) AbandonGame(ctx context.Context, gameID string) error {
 	if err := contextErr(ctx); err != nil {
 		return err
 	}
+
 	store.mu.Lock()
 	defer store.mu.Unlock()
+
 	for key, record := range store.records {
 		if record.GameID != strings.TrimSpace(gameID) {
 			continue
 		}
+
 		if record.State == MembershipActive {
 			record.State = MembershipAbandoned
 			record.Lease = CharacterLease{}
 		}
+
 		if record.State == MembershipDeparted && record.Departure != nil {
 			record.Departure.WorkerRemoved = true
 		}
+
 		store.records[key] = record
 	}
+
 	return nil
 }
 
+// validateActiveMembership checks the membership repository invariant before state changes, keeping invalid values off
+// shared paths.
 func validateActiveMembership(record MembershipRecord) error {
 	if strings.TrimSpace(record.GameID) == "" || strings.TrimSpace(record.PlayerID) == "" ||
 		strings.TrimSpace(record.AccountID) == "" || strings.TrimSpace(record.Baseline.Character.ID) == "" ||
@@ -295,27 +395,37 @@ func validateActiveMembership(record MembershipRecord) error {
 		record.Lease.CharacterID != record.Baseline.Character.ID || record.Lease.Revision != record.Baseline.Revision {
 		return ErrMembership
 	}
+
 	return nil
 }
 
+// sameMembership checks the membership repository invariant before state changes, keeping invalid values off shared
+// paths.
 func sameMembership(current, wanted MembershipRecord) bool {
 	return current.GameID == wanted.GameID && current.PlayerID == wanted.PlayerID &&
 		current.AccountID == wanted.AccountID && sameLease(&current.Lease, wanted.Lease)
 }
 
+// membershipKey contains membership key within the membership repository boundary so callers do not duplicate its
+// domain-specific policy.
 func membershipKey(gameID, playerID string) string {
 	return strings.TrimSpace(gameID) + "\x00" + strings.TrimSpace(playerID)
 }
 
+// cloneMembershipRecord returns an independent membership repository value so callers cannot mutate repository-owned
+// state through a returned record.
 func cloneMembershipRecord(record MembershipRecord) MembershipRecord {
 	record.Baseline = cloneCharacterRecord(record.Baseline)
 	if record.Departure != nil {
 		receipt := cloneDepartureReceipt(*record.Departure)
 		record.Departure = &receipt
 	}
+
 	return record
 }
 
+// cloneDepartureReceipt returns an independent membership repository value so callers cannot mutate repository-owned
+// state through a returned record.
 func cloneDepartureReceipt(receipt departureReceipt) departureReceipt {
 	receipt.Record = cloneCharacterRecord(receipt.Record)
 	return receipt

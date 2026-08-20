@@ -19,9 +19,11 @@ func (control *ControlPlane) Signup(
 			AccountName: firstNonEmpty(account.Name, strings.TrimSpace(request.Name)),
 		}, err)
 	}()
+
 	if control == nil || control.accountLifecycle == nil {
 		return Account{}, ErrAccountInput
 	}
+
 	return control.accountLifecycle.Signup(ctx, request)
 }
 
@@ -38,9 +40,11 @@ func (control *ControlPlane) VerifyEmail(
 			AccountName: account.Name,
 		}, err)
 	}()
+
 	if control == nil || control.accountLifecycle == nil {
 		return Account{}, ErrAccountChallenge
 	}
+
 	return control.accountLifecycle.VerifyEmail(ctx, challenge)
 }
 
@@ -50,9 +54,11 @@ func (control *ControlPlane) BeginPasswordRecovery(ctx context.Context, email st
 	defer func() {
 		control.recordAudit(ctx, AuditEvent{Operation: AuditAccountRecoveryBegin}, err)
 	}()
+
 	if control == nil || control.accountLifecycle == nil {
 		return ErrAccountInput
 	}
+
 	return control.accountLifecycle.BeginPasswordRecovery(ctx, email)
 }
 
@@ -66,9 +72,11 @@ func (control *ControlPlane) CompletePasswordRecovery(
 	defer func() {
 		control.recordAudit(ctx, AuditEvent{Operation: AuditAccountRecoveryComplete}, err)
 	}()
+
 	if control == nil || control.accountLifecycle == nil {
 		return ErrAccountChallenge
 	}
+
 	return control.accountLifecycle.CompletePasswordRecovery(ctx, challenge, password)
 }
 
@@ -86,9 +94,11 @@ func (control *ControlPlane) CreateAccount(
 			AccountName: firstNonEmpty(account.Name, strings.TrimSpace(name)),
 		}, err)
 	}()
+
 	if control == nil || control.accounts == nil {
 		return Account{}, ErrAccountInput
 	}
+
 	return control.accounts.Create(ctx, name, password)
 }
 
@@ -107,9 +117,11 @@ func (control *ControlPlane) Authenticate(
 			SessionID:   session.ID,
 		}, err)
 	}()
+
 	if control == nil || control.accounts == nil {
 		return RealmSession{}, ErrAccountCredentials
 	}
+
 	return control.accounts.Authenticate(ctx, name, password)
 }
 
@@ -124,6 +136,7 @@ func (control *ControlPlane) Logout(ctx context.Context, token string) (err erro
 	if err != nil {
 		return err
 	}
+
 	event.AccountID = principal.accountID
 	event.AccountName = principal.name
 	event.SessionID = principal.sessionID
@@ -132,6 +145,7 @@ func (control *ControlPlane) Logout(ctx context.Context, token string) (err erro
 	if errors.Is(leaveErr, ErrChannelMember) {
 		leaveErr = nil
 	}
+
 	return errors.Join(leaveErr, control.accounts.Logout(ctx, token))
 }
 
@@ -148,9 +162,11 @@ func (control *ControlPlane) authorize(
 		control.characters == nil {
 		return AuthenticatedPrincipal{}, ErrRealmSession
 	}
+
 	if _, err := control.PruneExpiredSessions(ctx); err != nil {
 		return AuthenticatedPrincipal{}, err
 	}
+
 	return control.accounts.Authorize(ctx, token)
 }
 
@@ -165,21 +181,25 @@ func (control *ControlPlane) PruneExpiredSessions(ctx context.Context) (int, err
 	if err != nil {
 		return 0, err
 	}
+
 	for _, principal := range expired {
 		leaveErr := control.channels.Leave(ctx, principal)
 		if errors.Is(leaveErr, ErrChannelMember) {
 			leaveErr = nil
 		}
+
 		control.recordAudit(ctx, AuditEvent{
 			Operation:   AuditAccountExpire,
 			AccountID:   principal.accountID,
 			AccountName: principal.name,
 			SessionID:   principal.sessionID,
 		}, leaveErr)
+
 		if leaveErr != nil {
 			return 0, leaveErr
 		}
 	}
+
 	return len(expired), nil
 }
 
@@ -191,5 +211,6 @@ func firstNonEmpty(values ...string) string {
 			return value
 		}
 	}
+
 	return ""
 }

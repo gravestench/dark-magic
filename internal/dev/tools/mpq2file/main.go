@@ -28,8 +28,10 @@ func main() {
 	if err != nil {
 		fatal(err)
 	}
-	// Register ownership as soon as the source opens. fatal exits directly, so only normal completion runs this cleanup.
-	defer content.Close(source)
+	// Preserve the CLI contract: source-close failures cannot invalidate asset bytes already written to the destination.
+	defer func() {
+		_ = content.Close(source)
+	}()
 
 	data, err := fs.ReadFile(source, config.assetPath)
 	if err != nil {

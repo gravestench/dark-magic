@@ -53,15 +53,18 @@ type MailOutbox interface {
 	RetryMail(context.Context, string, string, string, time.Time) error
 }
 
+// normalizeEmail checks the account lifecycle invariant before state changes, keeping invalid values off shared paths.
 func normalizeEmail(value string) (string, string, error) {
 	display := strings.TrimSpace(value)
 	if display == "" || len(display) > maximumEmailBytes {
 		return "", "", ErrAccountInput
 	}
+
 	parsed, err := mail.ParseAddress(display)
 	if err != nil || parsed.Address != display || strings.Count(display, "@") != 1 {
 		return "", "", ErrAccountInput
 	}
+
 	local, domain, found := strings.Cut(display, "@")
 	if !found || local == "" || domain == "" {
 		return "", "", ErrAccountInput
@@ -71,11 +74,15 @@ func normalizeEmail(value string) (string, string, error) {
 	return display, strings.ToLower(local + "@" + domain), nil
 }
 
+// accountActionURL contains account action url within the account lifecycle boundary so callers do not duplicate its
+// domain-specific policy.
 func accountActionURL(baseURL, path, token string) (string, error) {
 	base, err := url.Parse(strings.TrimSpace(baseURL))
 	if err != nil || base.Scheme != "https" || base.Host == "" {
 		return "", ErrAccountInput
 	}
+
 	reference := &url.URL{Path: path, RawQuery: url.Values{"token": {token}}.Encode()}
+
 	return base.ResolveReference(reference).String(), nil
 }

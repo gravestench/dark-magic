@@ -21,10 +21,13 @@ type HTTPServer struct {
 	operatorToken string
 }
 
+// NewHTTPHandler constructs the http boundary and validates dependencies before callers can publish or mutate shared
+// state.
 func NewHTTPHandler(control *ControlPlane) (http.Handler, error) {
 	if control == nil {
 		return nil, errors.New("realm: HTTP handler requires a control plane")
 	}
+
 	server := &HTTPServer{control: control}
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET /v1/status", server.status)
@@ -50,10 +53,12 @@ func NewHTTPHandler(control *ControlPlane) (http.Handler, error) {
 	mux.HandleFunc("POST /v1/games/join", server.joinGame)
 	mux.HandleFunc("POST /v1/games/reconnect", server.reconnectGame)
 	mux.HandleFunc("POST /v1/games/leave", server.leaveGame)
+
 	withAuditContext := http.HandlerFunc(func(writer http.ResponseWriter, request *http.Request) {
 		ctx := withAuditClientAddress(request.Context(), request.RemoteAddr)
 		mux.ServeHTTP(writer, request.WithContext(ctx))
 	})
+
 	return http.MaxBytesHandler(withAuditContext, maximumRealmRequestBytes), nil
 }
 
@@ -64,33 +69,42 @@ func NewOperatorHTTPHandler(control *ControlPlane, operatorToken string) (http.H
 	if control == nil || len(operatorToken) < 32 {
 		return nil, errors.New("realm: operator HTTP handler requires a control plane and 32-byte token")
 	}
+
 	server := &HTTPServer{control: control, operatorToken: operatorToken}
 	mux := http.NewServeMux()
 	mux.HandleFunc("POST /v1/operator/games/drain", server.operatorDrainGame)
+
 	withAuditContext := http.HandlerFunc(func(writer http.ResponseWriter, request *http.Request) {
 		ctx := withAuditClientAddress(request.Context(), request.RemoteAddr)
 		mux.ServeHTTP(writer, request.WithContext(ctx))
 	})
+
 	return http.MaxBytesHandler(withAuditContext, maximumRealmRequestBytes), nil
 }
 
+// operatorDrainGame handles operator drain game at the http boundary so authentication, bounded decoding, and error
+// translation stay centralized.
 func (server *HTTPServer) operatorDrainGame(writer http.ResponseWriter, request *http.Request) {
 	if !validOperatorBearer(request.Header.Get("Authorization"), server.operatorToken) {
 		writeResponse(writer, nil, ErrOperatorAuthentication)
 		return
 	}
+
 	var input struct {
 		GameID string `json:"game_id"`
 	}
 	if !decodeRequest(writer, request, &input) {
 		return
 	}
+
 	value, err := server.control.DrainGame(request.Context(), input.GameID)
 	writeResponse(writer, value, err)
 }
 
+// validOperatorBearer checks the http invariant before state changes, keeping invalid values off shared paths.
 func validOperatorBearer(header, token string) bool {
 	scheme, candidate, found := strings.Cut(header, " ")
+
 	return found && token != "" && strings.EqualFold(scheme, "Bearer") &&
 		hmac.Equal([]byte(strings.TrimSpace(candidate)), []byte(token))
 }
@@ -102,81 +116,119 @@ type ServiceInfo struct {
 	Version string `json:"version"`
 }
 
+// status handles status at the http boundary so authentication, bounded decoding, and error translation stay
+// centralized.
 func (server *HTTPServer) status(writer http.ResponseWriter, _ *http.Request) {
 	writeResponse(writer, ServiceInfo{Version: server.control.Version()}, nil)
 }
 
+// createAccount handles create account at the http boundary so authentication, bounded decoding, and error translation
+// stay centralized.
 func (server *HTTPServer) createAccount(writer http.ResponseWriter, request *http.Request) {
 	var input struct{ Name, Email, Password string }
 	if !decodeRequest(writer, request, &input) {
 		return
 	}
-	var value Account
-	var err error
+
+	var (
+		value Account
+		err   error
+	)
 	if server.control.accountLifecycle != nil {
-		value, err = server.control.Signup(request.Context(), SignupRequest{Name: input.Name, Email: input.Email, Password: input.Password})
+		value, err = server.control.Signup(
+			request.Context(),
+			SignupRequest{Name: input.Name, Email: input.Email, Password: input.Password},
+		)
 	} else {
 		value, err = server.control.CreateAccount(request.Context(), input.Name, input.Password)
 	}
+
 	writeResponse(writer, value, err)
 }
 
+// verifyAccount handles verify account at the http boundary so authentication, bounded decoding, and error translation
+// stay centralized.
 func (server *HTTPServer) verifyAccount(writer http.ResponseWriter, request *http.Request) {
 	var input struct{ Token string }
 	if !decodeRequest(writer, request, &input) {
 		return
 	}
+
 	value, err := server.control.VerifyEmail(request.Context(), input.Token)
 	writeResponse(writer, value, err)
 }
 
+// beginAccountRecovery handles begin account recovery at the http boundary so authentication, bounded decoding, and
+// error translation stay centralized.
 func (server *HTTPServer) beginAccountRecovery(writer http.ResponseWriter, request *http.Request) {
 	var input struct{ Email string }
 	if !decodeRequest(writer, request, &input) {
 		return
 	}
+
 	writeResponse(writer, struct{}{}, server.control.BeginPasswordRecovery(request.Context(), input.Email))
 }
 
+// completeAccountRecovery handles complete account recovery at the http boundary so authentication, bounded decoding,
+// and error translation stay centralized.
 func (server *HTTPServer) completeAccountRecovery(writer http.ResponseWriter, request *http.Request) {
 	var input struct{ Token, Password string }
 	if !decodeRequest(writer, request, &input) {
 		return
 	}
-	writeResponse(writer, struct{}{}, server.control.CompletePasswordRecovery(request.Context(), input.Token, input.Password))
+
+	writeResponse(
+		writer,
+		struct{}{},
+		server.control.CompletePasswordRecovery(request.Context(), input.Token, input.Password),
+	)
 }
 
+// authenticate handles authenticate at the http boundary so authentication, bounded decoding, and error translation
+// stay centralized.
 func (server *HTTPServer) authenticate(writer http.ResponseWriter, request *http.Request) {
 	var input struct{ Name, Password string }
 	if !decodeRequest(writer, request, &input) {
 		return
 	}
+
 	value, err := server.control.Authenticate(request.Context(), input.Name, input.Password)
 	writeResponse(writer, value, err)
 }
 
+// logout handles logout at the http boundary so authentication, bounded decoding, and error translation stay
+// centralized.
 func (server *HTTPServer) logout(writer http.ResponseWriter, request *http.Request) {
 	writeResponse(writer, struct{}{}, server.control.Logout(request.Context(), bearerToken(request)))
 }
 
+// listCharacters handles list characters at the http boundary so authentication, bounded decoding, and error
+// translation stay centralized.
 func (server *HTTPServer) listCharacters(writer http.ResponseWriter, request *http.Request) {
 	value, err := server.control.ListCharacters(request.Context(), bearerToken(request))
+
 	result := make([]CharacterSummary, len(value))
 	for index, record := range value {
 		result[index] = publicCharacter(record)
 	}
+
 	writeResponse(writer, result, err)
 }
 
+// createCharacter handles create character at the http boundary so authentication, bounded decoding, and error
+// translation stay centralized.
 func (server *HTTPServer) createCharacter(writer http.ResponseWriter, request *http.Request) {
 	var input CreateCharacterRequest
 	if !decodeRequest(writer, request, &input) {
 		return
 	}
+
 	value, err := server.control.CreateCharacter(request.Context(), bearerToken(request), input)
 	writeResponse(writer, publicCharacter(value), err)
 }
 
+// deleteCharacter handles delete character at the http boundary so authentication, bounded decoding, and error
+// translation stay centralized.
 func (server *HTTPServer) deleteCharacter(writer http.ResponseWriter, request *http.Request) {
 	var input struct {
 		CharacterID string `json:"character_id"`
@@ -184,9 +236,16 @@ func (server *HTTPServer) deleteCharacter(writer http.ResponseWriter, request *h
 	if !decodeRequest(writer, request, &input) {
 		return
 	}
-	writeResponse(writer, struct{}{}, server.control.DeleteCharacter(request.Context(), bearerToken(request), input.CharacterID))
+
+	writeResponse(
+		writer,
+		struct{}{},
+		server.control.DeleteCharacter(request.Context(), bearerToken(request), input.CharacterID),
+	)
 }
 
+// selectCharacter handles select character at the http boundary so authentication, bounded decoding, and error
+// translation stay centralized.
 func (server *HTTPServer) selectCharacter(writer http.ResponseWriter, request *http.Request) {
 	var input struct {
 		CharacterID string `json:"character_id"`
@@ -194,15 +253,20 @@ func (server *HTTPServer) selectCharacter(writer http.ResponseWriter, request *h
 	if !decodeRequest(writer, request, &input) {
 		return
 	}
+
 	value, err := server.control.SelectCharacter(request.Context(), bearerToken(request), input.CharacterID)
 	writeResponse(writer, publicCharacter(value), err)
 }
 
+// selectedCharacter handles selected character at the http boundary so authentication, bounded decoding, and error
+// translation stay centralized.
 func (server *HTTPServer) selectedCharacter(writer http.ResponseWriter, request *http.Request) {
 	value, err := server.control.SelectedCharacter(request.Context(), bearerToken(request))
 	writeResponse(writer, publicCharacter(value), err)
 }
 
+// joinChannel handles join channel at the http boundary so authentication, bounded decoding, and error translation
+// stay centralized.
 func (server *HTTPServer) joinChannel(writer http.ResponseWriter, request *http.Request) {
 	var input struct {
 		Channel string `json:"channel"`
@@ -210,30 +274,50 @@ func (server *HTTPServer) joinChannel(writer http.ResponseWriter, request *http.
 	if !decodeRequest(writer, request, &input) {
 		return
 	}
+
 	value, err := server.control.JoinChannel(request.Context(), bearerToken(request), input.Channel)
 	writeResponse(writer, value, err)
 }
 
+// channel handles channel at the http boundary so authentication, bounded decoding, and error translation stay
+// centralized.
 func (server *HTTPServer) channel(writer http.ResponseWriter, request *http.Request) {
 	value, err := server.control.ChannelView(request.Context(), bearerToken(request))
 	writeResponse(writer, value, err)
 }
 
+// channelEvents handles channel events at the http boundary so authentication, bounded decoding, and error translation
+// stay centralized.
 func (server *HTTPServer) channelEvents(writer http.ResponseWriter, request *http.Request) {
-	var after uint64
-	var limit int
-	if _, err := fmt.Sscan(request.URL.Query().Get("after"), &after); request.URL.Query().Get("after") != "" && err != nil {
+	var (
+		after uint64
+		limit int
+	)
+
+	if _, err := fmt.Sscan(
+		request.URL.Query().Get("after"),
+		&after,
+	); request.URL.Query().Get("after") != "" &&
+		err != nil {
 		writeResponse(writer, nil, ErrHTTPInput)
 		return
 	}
-	if _, err := fmt.Sscan(request.URL.Query().Get("limit"), &limit); request.URL.Query().Get("limit") != "" && err != nil {
+
+	if _, err := fmt.Sscan(
+		request.URL.Query().Get("limit"),
+		&limit,
+	); request.URL.Query().Get("limit") != "" &&
+		err != nil {
 		writeResponse(writer, nil, ErrHTTPInput)
 		return
 	}
+
 	value, err := server.control.ChannelEvents(request.Context(), bearerToken(request), after, limit)
 	writeResponse(writer, value, err)
 }
 
+// sendMessage handles send message at the http boundary so authentication, bounded decoding, and error translation
+// stay centralized.
 func (server *HTTPServer) sendMessage(writer http.ResponseWriter, request *http.Request) {
 	var input struct {
 		Message string `json:"message"`
@@ -241,38 +325,51 @@ func (server *HTTPServer) sendMessage(writer http.ResponseWriter, request *http.
 	if !decodeRequest(writer, request, &input) {
 		return
 	}
+
 	value, err := server.control.SendChannelMessage(request.Context(), bearerToken(request), input.Message)
 	writeResponse(writer, value, err)
 }
 
+// listGames handles list games at the http boundary so authentication, bounded decoding, and error translation stay
+// centralized.
 func (server *HTTPServer) listGames(writer http.ResponseWriter, request *http.Request) {
 	value, err := server.control.ListGames(request.Context(), bearerToken(request), GameFilter{})
 	writeResponse(writer, value, err)
 }
 
+// createGame handles create game at the http boundary so authentication, bounded decoding, and error translation stay
+// centralized.
 func (server *HTTPServer) createGame(writer http.ResponseWriter, request *http.Request) {
 	var input CreateGameRequest
 	if !decodeRequest(writer, request, &input) {
 		return
 	}
+
 	value, err := server.control.CreateGame(request.Context(), bearerToken(request), input)
 	writeResponse(writer, value, err)
 }
 
+// gameDetail handles game detail at the http boundary so authentication, bounded decoding, and error translation stay
+// centralized.
 func (server *HTTPServer) gameDetail(writer http.ResponseWriter, request *http.Request) {
 	value, err := server.control.GameDetail(request.Context(), bearerToken(request), request.URL.Query().Get("reference"))
 	writeResponse(writer, value, err)
 }
 
+// resolveGame handles resolve game at the http boundary so authentication, bounded decoding, and error translation
+// stay centralized.
 func (server *HTTPServer) resolveGame(writer http.ResponseWriter, request *http.Request) {
 	var input struct{ Reference, Password string }
 	if !decodeRequest(writer, request, &input) {
 		return
 	}
+
 	value, err := server.control.ResolveGameJoin(request.Context(), bearerToken(request), input.Reference, input.Password)
 	writeResponse(writer, map[string]string{"game_id": value}, err)
 }
 
+// joinGame handles join game at the http boundary so authentication, bounded decoding, and error translation stay
+// centralized.
 func (server *HTTPServer) joinGame(writer http.ResponseWriter, request *http.Request) {
 	var input struct {
 		Reference string `json:"reference"`
@@ -281,10 +378,13 @@ func (server *HTTPServer) joinGame(writer http.ResponseWriter, request *http.Req
 	if !decodeRequest(writer, request, &input) {
 		return
 	}
+
 	value, err := server.control.JoinGame(request.Context(), bearerToken(request), input.Reference, input.Password)
 	writeResponse(writer, value, err)
 }
 
+// reconnectGame handles reconnect game at the http boundary so authentication, bounded decoding, and error translation
+// stay centralized.
 func (server *HTTPServer) reconnectGame(writer http.ResponseWriter, request *http.Request) {
 	var input struct {
 		GameID string `json:"game_id"`
@@ -292,10 +392,13 @@ func (server *HTTPServer) reconnectGame(writer http.ResponseWriter, request *htt
 	if !decodeRequest(writer, request, &input) {
 		return
 	}
+
 	value, err := server.control.ReconnectGame(request.Context(), bearerToken(request), input.GameID)
 	writeResponse(writer, value, err)
 }
 
+// leaveGame handles leave game at the http boundary so authentication, bounded decoding, and error translation stay
+// centralized.
 func (server *HTTPServer) leaveGame(writer http.ResponseWriter, request *http.Request) {
 	var input struct {
 		GameID string `json:"game_id"`
@@ -303,6 +406,7 @@ func (server *HTTPServer) leaveGame(writer http.ResponseWriter, request *http.Re
 	if !decodeRequest(writer, request, &input) {
 		return
 	}
+
 	value, err := server.control.LeaveGame(request.Context(), bearerToken(request), input.GameID)
 	writeResponse(writer, publicCharacter(value), err)
 }
@@ -319,35 +423,48 @@ type realmHTTPError struct {
 	Message string `json:"message"`
 }
 
+// decodeRequest decodes the http representation at one boundary so malformed data fails before it becomes shared
+// state.
 func decodeRequest(writer http.ResponseWriter, request *http.Request, destination any) bool {
 	decoder := json.NewDecoder(request.Body)
 	decoder.DisallowUnknownFields()
+
 	if err := decoder.Decode(destination); err != nil || decoder.Decode(&struct{}{}) != io.EOF {
 		writeResponse(writer, nil, ErrHTTPInput)
 		return false
 	}
+
 	return true
 }
 
+// bearerToken handles bearer token at the http boundary so authentication, bounded decoding, and error translation
+// stay centralized.
 func bearerToken(request *http.Request) string {
 	scheme, token, found := strings.Cut(request.Header.Get("Authorization"), " ")
 	if !found || !strings.EqualFold(scheme, "Bearer") {
 		return ""
 	}
+
 	return strings.TrimSpace(token)
 }
 
+// writeResponse emits the canonical http representation so persisted and transported values retain one stable shape.
 func writeResponse(writer http.ResponseWriter, value any, err error) {
 	writer.Header().Set("Content-Type", "application/json")
+
 	if err != nil {
 		status, code := realmHTTPStatus(err)
 		writer.WriteHeader(status)
 		_ = json.NewEncoder(writer).Encode(map[string]any{"error": realmHTTPError{Code: code, Message: code}})
+
 		return
 	}
+
 	_ = json.NewEncoder(writer).Encode(map[string]any{"data": value})
 }
 
+// realmHTTPStatus handles realm httpstatus at the http boundary so authentication, bounded decoding, and error
+// translation stay centralized.
 func realmHTTPStatus(err error) (int, string) {
 	switch {
 	case errors.Is(err, ErrRealmSession), errors.Is(err, ErrAccountCredentials), errors.Is(err, ErrOperatorAuthentication):
@@ -374,7 +491,10 @@ func realmHTTPStatus(err error) (int, string) {
 		return http.StatusForbidden, "level_restricted"
 	case errors.Is(err, ErrGameUnavailable), errors.Is(err, ErrWorker), errors.Is(err, ErrAdmission):
 		return http.StatusServiceUnavailable, "unavailable"
-	case errors.Is(err, ErrAccountInput), errors.Is(err, ErrCharacterInput), errors.Is(err, ErrGameDirectoryInput), errors.Is(err, ErrHTTPInput):
+	case errors.Is(err, ErrAccountInput),
+		errors.Is(err, ErrCharacterInput),
+		errors.Is(err, ErrGameDirectoryInput),
+		errors.Is(err, ErrHTTPInput):
 		return http.StatusBadRequest, "invalid_input"
 	default:
 		return http.StatusInternalServerError, "internal"
@@ -389,196 +509,344 @@ type RealmClient struct {
 	token string
 }
 
+// NewRealmClient constructs the http boundary and validates dependencies before callers can publish or mutate shared
+// state.
 func NewRealmClient(endpoint string, client *http.Client) (*RealmClient, error) {
 	base, err := url.Parse(strings.TrimRight(strings.TrimSpace(endpoint), "/"))
 	if err != nil || (base.Scheme != "http" && base.Scheme != "https") || base.Host == "" {
 		return nil, ErrHTTPInput
 	}
+
 	if client == nil {
 		client = http.DefaultClient
 	}
+
 	return &RealmClient{base: base, http: client}, nil
 }
 
+// ServiceInfo handles service info at the http boundary so authentication, bounded decoding, and error translation
+// stay centralized.
 func (client *RealmClient) ServiceInfo(ctx context.Context) (ServiceInfo, error) {
 	var result ServiceInfo
+
 	err := client.call(ctx, http.MethodGet, "/v1/status", nil, &result)
+
 	return result, err
 }
 
+// CreateAccount handles create account at the http boundary so authentication, bounded decoding, and error translation
+// stay centralized.
 func (client *RealmClient) CreateAccount(ctx context.Context, name, password string) (Account, error) {
 	var result Account
-	err := client.call(ctx, http.MethodPost, "/v1/accounts", map[string]string{"name": name, "password": password}, &result)
+
+	err := client.call(
+		ctx,
+		http.MethodPost,
+		"/v1/accounts",
+		map[string]string{"name": name, "password": password},
+		&result,
+	)
+
 	return result, err
 }
 
+// Signup handles signup at the http boundary so authentication, bounded decoding, and error translation stay
+// centralized.
 func (client *RealmClient) Signup(ctx context.Context, name, email, password string) (Account, error) {
 	var result Account
+
 	err := client.call(ctx, http.MethodPost, "/v1/accounts",
 		map[string]string{"name": name, "email": email, "password": password}, &result)
+
 	return result, err
 }
 
+// VerifyEmail handles verify email at the http boundary so authentication, bounded decoding, and error translation
+// stay centralized.
 func (client *RealmClient) VerifyEmail(ctx context.Context, token string) (Account, error) {
 	var result Account
+
 	err := client.call(ctx, http.MethodPost, "/v1/accounts/verify", map[string]string{"token": token}, &result)
+
 	return result, err
 }
 
+// BeginPasswordRecovery handles begin password recovery at the http boundary so authentication, bounded decoding, and
+// error translation stay centralized.
 func (client *RealmClient) BeginPasswordRecovery(ctx context.Context, email string) error {
 	return client.call(ctx, http.MethodPost, "/v1/accounts/recovery", map[string]string{"email": email}, nil)
 }
 
+// CompletePasswordRecovery handles complete password recovery at the http boundary so authentication, bounded
+// decoding, and error translation stay centralized.
 func (client *RealmClient) CompletePasswordRecovery(ctx context.Context, token, password string) error {
 	return client.call(ctx, http.MethodPost, "/v1/accounts/recovery/complete",
 		map[string]string{"token": token, "password": password}, nil)
 }
 
+// Authenticate handles authenticate at the http boundary so authentication, bounded decoding, and error translation
+// stay centralized.
 func (client *RealmClient) Authenticate(ctx context.Context, name, password string) (RealmSession, error) {
 	var result RealmSession
-	if err := client.call(ctx, http.MethodPost, "/v1/sessions", map[string]string{"name": name, "password": password}, &result); err != nil {
+	if err := client.call(
+		ctx,
+		http.MethodPost,
+		"/v1/sessions",
+		map[string]string{"name": name, "password": password},
+		&result,
+	); err != nil {
 		return RealmSession{}, err
 	}
+
 	client.token = result.Token
+
 	return result, nil
 }
+
+// Logout handles logout at the http boundary so authentication, bounded decoding, and error translation stay
+// centralized.
 func (client *RealmClient) Logout(ctx context.Context) error {
 	if client.token == "" {
 		return nil
 	}
+
 	if err := client.call(ctx, http.MethodDelete, "/v1/session", nil, nil); err != nil {
 		return err
 	}
+
 	client.token = ""
+
 	return nil
 }
+
+// ListCharacters handles list characters at the http boundary so authentication, bounded decoding, and error
+// translation stay centralized.
 func (client *RealmClient) ListCharacters(ctx context.Context) ([]CharacterSummary, error) {
 	var result []CharacterSummary
+
 	err := client.call(ctx, http.MethodGet, "/v1/characters", nil, &result)
+
 	return result, err
 }
-func (client *RealmClient) CreateCharacter(ctx context.Context, request CreateCharacterRequest) (CharacterSummary, error) {
+
+// CreateCharacter handles create character at the http boundary so authentication, bounded decoding, and error
+// translation stay centralized.
+func (client *RealmClient) CreateCharacter(
+	ctx context.Context,
+	request CreateCharacterRequest,
+) (CharacterSummary, error) {
 	var result CharacterSummary
+
 	err := client.call(ctx, http.MethodPost, "/v1/characters", request, &result)
+
 	return result, err
 }
+
+// DeleteCharacter handles delete character at the http boundary so authentication, bounded decoding, and error
+// translation stay centralized.
 func (client *RealmClient) DeleteCharacter(ctx context.Context, id string) error {
 	return client.call(ctx, http.MethodDelete, "/v1/characters", map[string]string{"character_id": id}, nil)
 }
+
+// SelectCharacter handles select character at the http boundary so authentication, bounded decoding, and error
+// translation stay centralized.
 func (client *RealmClient) SelectCharacter(ctx context.Context, id string) (CharacterSummary, error) {
 	var result CharacterSummary
+
 	err := client.call(ctx, http.MethodPost, "/v1/characters/select", map[string]string{"character_id": id}, &result)
+
 	return result, err
 }
+
+// JoinChannel handles join channel at the http boundary so authentication, bounded decoding, and error translation
+// stay centralized.
 func (client *RealmClient) JoinChannel(ctx context.Context, channel string) (ChannelView, error) {
 	var result ChannelView
+
 	err := client.call(ctx, http.MethodPost, "/v1/channels/join", map[string]string{"channel": channel}, &result)
+
 	return result, err
 }
+
+// Channel handles channel at the http boundary so authentication, bounded decoding, and error translation stay
+// centralized.
 func (client *RealmClient) Channel(ctx context.Context) (ChannelView, error) {
 	var result ChannelView
+
 	err := client.call(ctx, http.MethodGet, "/v1/channel", nil, &result)
+
 	return result, err
 }
+
+// ChannelEvents handles channel events at the http boundary so authentication, bounded decoding, and error translation
+// stay centralized.
 func (client *RealmClient) ChannelEvents(ctx context.Context, after uint64, limit int) ([]ChatEvent, error) {
 	var result []ChatEvent
+
 	query := url.Values{"after": {strconv.FormatUint(after, 10)}, "limit": {strconv.Itoa(limit)}}
 	err := client.call(ctx, http.MethodGet, "/v1/channel/events?"+query.Encode(), nil, &result)
+
 	return result, err
 }
+
+// SendMessage handles send message at the http boundary so authentication, bounded decoding, and error translation
+// stay centralized.
 func (client *RealmClient) SendMessage(ctx context.Context, message string) (ChatEvent, error) {
 	var result ChatEvent
+
 	err := client.call(ctx, http.MethodPost, "/v1/channel/messages", map[string]string{"message": message}, &result)
+
 	return result, err
 }
+
+// ListGames handles list games at the http boundary so authentication, bounded decoding, and error translation stay
+// centralized.
 func (client *RealmClient) ListGames(ctx context.Context) ([]GameDirectoryEntry, error) {
 	var result []GameDirectoryEntry
+
 	err := client.call(ctx, http.MethodGet, "/v1/games", nil, &result)
+
 	return result, err
 }
+
+// GameDetail handles game detail at the http boundary so authentication, bounded decoding, and error translation stay
+// centralized.
 func (client *RealmClient) GameDetail(ctx context.Context, reference string) (GameDetail, error) {
 	var result GameDetail
+
 	query := url.Values{"reference": {reference}}
 	err := client.call(ctx, http.MethodGet, "/v1/games/detail?"+query.Encode(), nil, &result)
+
 	return result, err
 }
+
+// CreateGame handles create game at the http boundary so authentication, bounded decoding, and error translation stay
+// centralized.
 func (client *RealmClient) CreateGame(ctx context.Context, request CreateGameRequest) (GameHandoff, error) {
 	var result GameHandoff
+
 	err := client.call(ctx, http.MethodPost, "/v1/games", request, &result)
+
 	return result, err
 }
+
+// ResolveGame handles resolve game at the http boundary so authentication, bounded decoding, and error translation
+// stay centralized.
 func (client *RealmClient) ResolveGame(ctx context.Context, reference, password string) (string, error) {
 	var result map[string]string
-	err := client.call(ctx, http.MethodPost, "/v1/games/resolve", map[string]string{"reference": reference, "password": password}, &result)
+
+	err := client.call(
+		ctx,
+		http.MethodPost,
+		"/v1/games/resolve",
+		map[string]string{"reference": reference, "password": password},
+		&result,
+	)
+
 	return result["game_id"], err
 }
 
+// JoinGame handles join game at the http boundary so authentication, bounded decoding, and error translation stay
+// centralized.
 func (client *RealmClient) JoinGame(ctx context.Context, reference, password string) (GameHandoff, error) {
 	var result GameHandoff
-	err := client.call(ctx, http.MethodPost, "/v1/games/join", map[string]string{"reference": reference, "password": password}, &result)
+
+	err := client.call(
+		ctx,
+		http.MethodPost,
+		"/v1/games/join",
+		map[string]string{"reference": reference, "password": password},
+		&result,
+	)
+
 	return result, err
 }
 
+// ReconnectGame handles reconnect game at the http boundary so authentication, bounded decoding, and error translation
+// stay centralized.
 func (client *RealmClient) ReconnectGame(ctx context.Context, gameID string) (GameHandoff, error) {
 	var result GameHandoff
+
 	err := client.call(ctx, http.MethodPost, "/v1/games/reconnect", map[string]string{"game_id": gameID}, &result)
+
 	return result, err
 }
 
+// LeaveGame handles leave game at the http boundary so authentication, bounded decoding, and error translation stay
+// centralized.
 func (client *RealmClient) LeaveGame(ctx context.Context, gameID string) (CharacterSummary, error) {
 	var result CharacterSummary
+
 	err := client.call(ctx, http.MethodPost, "/v1/games/leave", map[string]string{"game_id": gameID}, &result)
+
 	return result, err
 }
 
+// call emits the canonical http representation so persisted and transported values retain one stable shape.
 func (client *RealmClient) call(ctx context.Context, method, path string, input, output any) error {
 	var body io.Reader
+
 	if input != nil {
 		data, err := json.Marshal(input)
 		if err != nil {
 			return err
 		}
+
 		body = bytes.NewReader(data)
 	}
+
 	relative, err := url.Parse(path)
 	if err != nil {
 		return err
 	}
+
 	request, err := http.NewRequestWithContext(ctx, method, client.base.ResolveReference(relative).String(), body)
 	if err != nil {
 		return err
 	}
+
 	request.Header.Set("Accept", "application/json")
+
 	if input != nil {
 		request.Header.Set("Content-Type", "application/json")
 	}
+
 	if client.token != "" {
 		request.Header.Set("Authorization", "Bearer "+client.token)
 	}
+
 	response, err := client.http.Do(request)
 	if err != nil {
 		return err
 	}
-	defer response.Body.Close()
+	defer func() { _ = response.Body.Close() }()
+
 	data, err := io.ReadAll(io.LimitReader(response.Body, maximumRealmRequestBytes+1))
 	if err != nil || len(data) > maximumRealmRequestBytes {
 		return ErrHTTPInput
 	}
+
 	var envelope httpEnvelope
 	if json.Unmarshal(data, &envelope) != nil {
 		return ErrHTTPInput
 	}
+
 	if envelope.Error != nil {
 		return realmHTTPCodeError(envelope.Error.Code)
 	}
+
 	if output == nil {
 		return nil
 	}
+
 	return json.Unmarshal(envelope.Data, output)
 }
 
+// realmHTTPCodeError handles realm httpcode error at the http boundary so authentication, bounded decoding, and error
+// translation stay centralized.
 func realmHTTPCodeError(code string) error {
 	var cause error
+
 	switch code {
 	case "unauthorized":
 		cause = ErrAccountCredentials
@@ -607,5 +875,6 @@ func realmHTTPCodeError(code string) error {
 	default:
 		cause = errors.New("realm: request failed")
 	}
+
 	return fmt.Errorf("%w: %s", cause, code)
 }

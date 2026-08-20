@@ -14,6 +14,7 @@ import (
 // main keeps process concerns at the boundary so capture validation and analysis remain independently testable.
 func main() {
 	inputPath := flag.String("input", "", "sanitized owned-runtime party-XP probe JSON")
+
 	flag.Parse()
 
 	if *inputPath == "" {

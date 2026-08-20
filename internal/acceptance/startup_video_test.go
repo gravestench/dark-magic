@@ -32,12 +32,16 @@ type startupVideoBackend struct {
 	playbacks []*startupPlayback
 }
 
+// Available enables the startup sequence so tests exercise playback rather than fallback navigation.
 func (*startupVideoBackend) Available() bool { return true }
 
+// Play records authored movie order and returns controllable playback state to the harness.
 func (b *startupVideoBackend) Play(_ fs.FS, path string) (video.Playback, error) {
 	playback := &startupPlayback{snapshot: video.Snapshot{State: video.Playing}}
+
 	b.paths = append(b.paths, path)
 	b.playbacks = append(b.playbacks, playback)
+
 	return playback, nil
 }
 
@@ -46,20 +50,25 @@ type startupPlayback struct {
 	stops    int
 }
 
+// Snapshot exposes the state currently selected by the test scenario.
 func (p *startupPlayback) Snapshot() video.Snapshot { return p.snapshot }
 
+// Stop records lifecycle ownership and moves playback to the terminal stopped state.
 func (p *startupPlayback) Stop() error {
 	p.stops++
 	p.snapshot.State = video.Stopped
+
 	return nil
 }
 
+// TestStartupVideoSequenceCompletionFailureAndSkip protects movie ordering and the routes after terminal states.
 func TestStartupVideoSequenceCompletionFailureAndSkip(t *testing.T) {
 	t.Run("failed movie follows skip policy and sequence continues", func(t *testing.T) {
 		harness := newStartupHarness(t)
 		harness.backend.playbacks[0].snapshot = video.Snapshot{State: video.Failed, Error: "decode failed"}
 		harness.update(t)
 		harness.assertPaths(t, blizzardMovie, blizzardNorthMovie)
+
 		if harness.backend.playbacks[0].stops != 1 {
 			t.Fatalf("failed playback stop calls = %d", harness.backend.playbacks[0].stops)
 		}
@@ -67,6 +76,7 @@ func TestStartupVideoSequenceCompletionFailureAndSkip(t *testing.T) {
 		harness.backend.playbacks[1].snapshot = video.Snapshot{State: video.Complete}
 		harness.update(t)
 		assertStack(t, harness.navigator, "title")
+
 		if harness.backend.playbacks[1].stops != 1 {
 			t.Fatalf("completed playback stop calls = %d", harness.backend.playbacks[1].stops)
 		}
@@ -80,6 +90,7 @@ func TestStartupVideoSequenceCompletionFailureAndSkip(t *testing.T) {
 
 		harness.skip(t)
 		assertStack(t, harness.navigator, "title")
+
 		for index, playback := range harness.backend.playbacks {
 			if playback.stops != 1 {
 				t.Fatalf("playback %d stop calls = %d", index, playback.stops)
@@ -118,6 +129,7 @@ func TestStartupVideoSequenceCompletionFailureAndSkip(t *testing.T) {
 		harness.action(t, "down")    // Move dialog focus from the field to OK.
 		harness.action(t, "confirm") // Accept after the authored walk is complete.
 		assertStack(t, harness.navigator, "game_loading")
+
 		selected, ok := harness.saves.Selected()
 		if !ok || selected.Name != "Hero" || selected.Class != "Sorceress" {
 			t.Fatalf("created selection = %#v, selected=%v", selected, ok)
@@ -138,6 +150,7 @@ func TestStartupVideoSequenceCompletionFailureAndSkip(t *testing.T) {
 		for range 3 {
 			harness.action(t, "down")
 		}
+
 		harness.action(t, "confirm")
 		assertStack(t, harness.navigator, "character_select")
 		harness.action(t, "confirm") // Confirm the focused Yes action.
@@ -154,17 +167,21 @@ type startupHarness struct {
 	saves     *d2save.Store
 }
 
+// newStartupHarness creates the empty-save variant used by startup and character-creation scenarios.
 func newStartupHarness(t *testing.T) *startupHarness {
 	return newStartupHarnessWithSaves(t)
 }
 
+// newStartupHarnessWithSaves assembles the real Lua scene graph around controllable video and save adapters.
 func newStartupHarnessWithSaves(t *testing.T, entries ...d2save.Character) *startupHarness {
 	t.Helper()
+
 	ctx := context.Background()
 	videos := fstest.MapFS{
 		blizzardMovie:      {Data: []byte("BIK")},
 		blizzardNorthMovie: {Data: []byte("BIK")},
 	}
+
 	contentFS, err := content.New(
 		content.Layer{Name: "videos", FS: videos},
 		content.Layer{Name: "darkmagic", FS: content.D2Legacy()},
@@ -172,6 +189,7 @@ func newStartupHarnessWithSaves(t *testing.T, entries ...d2save.Character) *star
 	if err != nil {
 		t.Fatal(err)
 	}
+
 	runtime := modruntime.New()
 	// This acceptance harness boots the complete presentation registry. The Go
 	// race detector can make that cold Lua module load exceed the runtime's
@@ -180,19 +198,27 @@ func newStartupHarnessWithSaves(t *testing.T, entries ...d2save.Character) *star
 	if err := runtime.SetExecutionBudget(10 * time.Second); err != nil {
 		t.Fatal(err)
 	}
+
 	navigator := navigation.New()
 	scenes := modruntime.NewScenes(runtime, navigator)
 	backend := &startupVideoBackend{}
-	var input inputstate.Store
-	var composer render.Composer
-	var mixer audio.Mixer
+
+	var (
+		input    inputstate.Store
+		composer render.Composer
+		mixer    audio.Mixer
+	)
+
 	simulation := modruntime.NewSimulation(scene.New(1, 100, 100))
 	loading := acceptanceLoadingCoordinator()
 	saves := d2save.New(entries...)
+
 	t.Cleanup(loading.Close)
+
 	if err := runtime.RegisterInstaller(modruntime.ContentRequire(contentFS, "lua")); err != nil {
 		t.Fatal(err)
 	}
+
 	for _, module := range []modruntime.Module{
 		modruntime.AppModule("test", func() {}),
 		modruntime.VFSModule(contentFS),
@@ -214,46 +240,62 @@ func newStartupHarnessWithSaves(t *testing.T, entries ...d2save.Character) *star
 			t.Fatal(err)
 		}
 	}
+
 	if err := runtime.Start(ctx); err != nil {
 		t.Fatal(err)
 	}
+
 	t.Cleanup(func() {
 		if err := runtime.Stop(ctx); err != nil {
 			t.Errorf("stop runtime: %v", err)
 		}
 	})
+
 	manager := host.NewManager()
+
 	boot, err := modruntime.LoadDefinition(ctx, runtime, contentFS, "boot.lua")
 	if err != nil {
 		t.Fatal(err)
 	}
+
 	if err := manager.Register(boot.Managed()); err != nil {
 		t.Fatal(err)
 	}
+
 	if err := manager.Enable(ctx, boot.ID); err != nil {
 		t.Fatal(err)
 	}
+
 	if err := scenes.Flush(ctx); err != nil {
 		t.Fatal(err)
 	}
-	harness := &startupHarness{runtime: runtime, scenes: scenes, navigator: navigator, input: &input, backend: backend, saves: saves}
+
+	harness := &startupHarness{
+		runtime: runtime, scenes: scenes, navigator: navigator,
+		input: &input, backend: backend, saves: saves,
+	}
 	assertStack(t, navigator, "loading")
 	harness.assertPaths(t, blizzardMovie)
+
 	return harness
 }
 
+// update advances one presentation frame, matching the cadence used by interactive scenes.
 func (h *startupHarness) update(t *testing.T) {
 	t.Helper()
 	h.updateFor(t, time.Second/60)
 }
 
+// updateFor advances a caller-selected interval for authored animation boundary tests.
 func (h *startupHarness) updateFor(t *testing.T, elapsed time.Duration) {
 	t.Helper()
+
 	if err := h.scenes.Update(context.Background(), elapsed); err != nil {
 		t.Fatal(err)
 	}
 }
 
+// action publishes one pressed edge and then clears it so later updates cannot repeat the command.
 func (h *startupHarness) action(t *testing.T, name string) {
 	t.Helper()
 	publishAction(h.input, name)
@@ -261,6 +303,7 @@ func (h *startupHarness) action(t *testing.T, name string) {
 	h.input.Publish(inputstate.Frame{})
 }
 
+// skip exercises the dedicated startup-video action and restores a neutral input frame afterward.
 func (h *startupHarness) skip(t *testing.T) {
 	t.Helper()
 	publishAction(h.input, "skip")
@@ -268,11 +311,14 @@ func (h *startupHarness) skip(t *testing.T) {
 	h.input.Publish(inputstate.Frame{})
 }
 
+// assertPaths checks both movie order and count because retries would otherwise look like correct ordering.
 func (h *startupHarness) assertPaths(t *testing.T, paths ...string) {
 	t.Helper()
+
 	if len(h.backend.paths) != len(paths) {
 		t.Fatalf("played paths = %v, want %v", h.backend.paths, paths)
 	}
+
 	for index := range paths {
 		if h.backend.paths[index] != paths[index] {
 			t.Fatalf("played paths = %v, want %v", h.backend.paths, paths)

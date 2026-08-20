@@ -26,6 +26,7 @@ func (control *ControlPlane) JoinChannel(
 	if err != nil {
 		return ChannelView{}, err
 	}
+
 	event.AccountID = principal.accountID
 	event.AccountName = principal.name
 	event.SessionID = principal.sessionID
@@ -34,10 +35,12 @@ func (control *ControlPlane) JoinChannel(
 	if err != nil {
 		return ChannelView{}, err
 	}
+
 	record, err := control.characters.Get(ctx, principal.accountID, characterID)
 	if err != nil {
 		return ChannelView{}, err
 	}
+
 	event.CharacterID = record.Character.ID
 	event.CharacterName = record.Character.Name
 
@@ -54,6 +57,7 @@ func (control *ControlPlane) ChannelView(
 	if err != nil {
 		return ChannelView{}, err
 	}
+
 	return control.channels.View(ctx, principal)
 }
 
@@ -77,6 +81,7 @@ func (control *ControlPlane) SendChannelMessage(
 	if err != nil {
 		return ChatEvent{}, err
 	}
+
 	event.AccountID = principal.accountID
 	event.AccountName = principal.name
 	event.SessionID = principal.sessionID
@@ -96,6 +101,7 @@ func (control *ControlPlane) ChannelEvents(
 	if err != nil {
 		return nil, err
 	}
+
 	return control.channels.EventsAfter(ctx, principal, after, limit)
 }
 
@@ -105,5 +111,6 @@ func (control *ControlPlane) PruneInactivePresence(ctx context.Context) (int, er
 	if control == nil || control.channels == nil || control.presenceTimeout <= 0 {
 		return 0, ErrChannelInput
 	}
+
 	return control.channels.PruneInactive(ctx, time.Now().UTC().Add(-control.presenceTimeout))
 }

@@ -13,6 +13,8 @@ type LocalSequencer struct {
 	sequence map[string]uint64
 }
 
+// NewLocalSequencer creates per-player counters for commands produced outside networking, preventing one local
+// producer identity from consuming another identity's sequence numbers.
 func NewLocalSequencer() *LocalSequencer {
 	return &LocalSequencer{sequence: make(map[string]uint64)}
 }

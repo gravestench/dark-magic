@@ -53,28 +53,35 @@ func TestRetiredPublicPackagesCannotReturn(t *testing.T) {
 		"github.com/gravestench/dark-magic/internal/capture":          {},
 		"github.com/gravestench/dark-magic/internal/profiling":        {},
 	}
+
 	err := filepath.WalkDir(root, func(path string, entry fs.DirEntry, err error) error {
 		if err != nil {
 			return err
 		}
+
 		if entry.IsDir() && (entry.Name() == ".git" || entry.Name() == "dist") {
 			return filepath.SkipDir
 		}
+
 		if entry.IsDir() || !strings.HasSuffix(entry.Name(), ".go") {
 			return nil
 		}
+
 		file, err := parser.ParseFile(token.NewFileSet(), path, nil, parser.ImportsOnly)
 		if err != nil {
 			return err
 		}
+
 		for _, imported := range file.Imports {
 			name, err := strconv.Unquote(imported.Path.Value)
 			if err != nil {
 				return err
 			}
+
 			if _, rejected := forbidden[name]; rejected {
 				t.Errorf("%s imports retired public package %s", path, name)
 			}
+
 			if strings.Contains(name, "servicemesh") {
 				t.Errorf("%s imports retired service-mesh package %s", path, name)
 			}
@@ -89,6 +96,7 @@ func TestRetiredPublicPackagesCannotReturn(t *testing.T) {
 				t.Errorf("%s couples typed game data to engine/runtime package %s", path, name)
 			}
 		}
+
 		return nil
 	})
 	if err != nil {
@@ -101,39 +109,49 @@ func TestRetiredPublicPackagesCannotReturn(t *testing.T) {
 // developer tools, presentation, or runtime composition.
 func TestDependencyDirection(t *testing.T) {
 	root := repositoryRoot(t)
+
 	err := filepath.WalkDir(filepath.Join(root, "internal"), func(path string, entry fs.DirEntry, err error) error {
 		if err != nil {
 			return err
 		}
+
 		if entry.IsDir() || !strings.HasSuffix(entry.Name(), ".go") || strings.HasSuffix(entry.Name(), "_test.go") {
 			return nil
 		}
+
 		file, err := parser.ParseFile(token.NewFileSet(), path, nil, parser.ImportsOnly)
 		if err != nil {
 			return err
 		}
+
 		relative, err := filepath.Rel(root, path)
 		if err != nil {
 			return err
 		}
+
 		packagePath := filepath.ToSlash(filepath.Dir(relative))
+
 		for _, imported := range file.Imports {
 			name, err := strconv.Unquote(imported.Path.Value)
 			if err != nil {
 				return err
 			}
+
 			const projectInternal = "github.com/gravestench/dark-magic/internal/"
 			if !strings.HasPrefix(name, projectInternal) {
 				continue
 			}
+
 			dependency := strings.TrimPrefix(name, "github.com/gravestench/dark-magic/")
 			if !strings.HasPrefix(packagePath, "internal/dev") && strings.HasPrefix(dependency, "internal/dev/") {
 				t.Errorf("%s imports developer-only package %s", relative, dependency)
 			}
+
 			if forbiddenLayerImport(packagePath, dependency) {
 				t.Errorf("%s points outward from %s to %s", relative, packagePath, dependency)
 			}
 		}
+
 		return nil
 	})
 	if err != nil {
@@ -146,12 +164,14 @@ func TestDependencyDirection(t *testing.T) {
 // schema; d2legacy owns which records form its game and which are required.
 func TestGameDataHasNoGlobalD2Catalog(t *testing.T) {
 	root := repositoryRoot(t)
+
 	retired := filepath.Join(root, "internal", "game", "data", "catalog")
 	if entries, err := os.ReadDir(retired); err == nil && len(entries) != 0 {
 		t.Fatalf("retired global game-data catalog returned: %s", retired)
 	} else if err != nil && !errors.Is(err, fs.ErrNotExist) {
 		t.Fatal(err)
 	}
+
 	for _, relative := range []string{"internal/game/data/typed", "internal/game/data/store"} {
 		searchRoot := filepath.Join(root, filepath.FromSlash(relative))
 
@@ -159,21 +179,25 @@ func TestGameDataHasNoGlobalD2Catalog(t *testing.T) {
 			if err != nil || entry.IsDir() || !strings.HasSuffix(path, ".go") {
 				return err
 			}
+
 			file, err := parser.ParseFile(token.NewFileSet(), path, nil, 0)
 			if err != nil {
 				return err
 			}
+
 			for _, declaration := range file.Decls {
 				typeDecl, ok := declaration.(*ast.GenDecl)
 				if !ok || typeDecl.Tok != token.TYPE {
 					continue
 				}
+
 				for _, spec := range typeDecl.Specs {
 					if named, ok := spec.(*ast.TypeSpec); ok && (named.Name.Name == "Catalog" || named.Name.Name == "Snapshot") {
 						t.Errorf("%s restores global %s composition", path, named.Name.Name)
 					}
 				}
 			}
+
 			return nil
 		})
 		if err != nil {
@@ -186,22 +210,27 @@ func TestGameDataHasNoGlobalD2Catalog(t *testing.T) {
 // or methods would let Diablo-specific interpretation leak out of d2legacy and into generic storage.
 func TestD2ModelsRemainPassiveSchemas(t *testing.T) {
 	root := filepath.Join(repositoryRoot(t), "internal", "game", "data", "model")
+
 	err := filepath.WalkDir(root, func(path string, entry fs.DirEntry, err error) error {
 		if err != nil || entry.IsDir() || !strings.HasSuffix(path, ".go") || strings.HasSuffix(path, "_test.go") {
 			return err
 		}
+
 		file, err := parser.ParseFile(token.NewFileSet(), path, nil, 0)
 		if err != nil {
 			return err
 		}
+
 		for _, declaration := range file.Decls {
 			if function, ok := declaration.(*ast.FuncDecl); ok {
 				t.Errorf("%s contains behavior %s; move D2 interpretation to d2legacy", path, function.Name.Name)
 			}
+
 			if values, ok := declaration.(*ast.GenDecl); ok && (values.Tok == token.CONST || values.Tok == token.VAR) {
 				t.Errorf("%s contains interpreted values; keep raw schemas here and move D2 vocabulary to d2legacy", path)
 			}
 		}
+
 		return nil
 	})
 	if err != nil {
@@ -217,9 +246,11 @@ func forbiddenLayerImport(packagePath, dependency string) bool {
 			return strings.HasPrefix(dependency, "internal/")
 		}
 	}
+
 	if packagePath == "internal/content" || strings.HasPrefix(packagePath, "internal/content/") {
 		return strings.HasPrefix(dependency, "internal/") && dependency != "internal/paths"
 	}
+
 	if strings.HasPrefix(packagePath, "internal/game/") {
 		return hasAnyPrefix(
 			dependency,
@@ -230,12 +261,15 @@ func forbiddenLayerImport(packagePath, dependency string) bool {
 			"internal/runtime/",
 		)
 	}
+
 	if strings.HasPrefix(packagePath, "internal/presentation/") {
 		return hasAnyPrefix(dependency, "internal/app/", "internal/dev/", "internal/platform/", "internal/runtime/")
 	}
+
 	if strings.HasPrefix(packagePath, "internal/platform/") {
 		return hasAnyPrefix(dependency, "internal/app/", "internal/dev/", "internal/runtime/")
 	}
+
 	return false
 }
 
@@ -247,6 +281,7 @@ func hasAnyPrefix(value string, prefixes ...string) bool {
 			return true
 		}
 	}
+
 	return false
 }
 
@@ -254,10 +289,12 @@ func hasAnyPrefix(value string, prefixes ...string) bool {
 // helpers would invite application behavior to depend on executable entry points.
 func TestCommandRemainsCompositionOnly(t *testing.T) {
 	root := repositoryRoot(t)
+
 	err := filepath.WalkDir(filepath.Join(root, "cmd"), func(path string, entry fs.DirEntry, err error) error {
 		if err != nil {
 			return err
 		}
+
 		if entry.IsDir() || !strings.HasSuffix(entry.Name(), ".go") || strings.HasSuffix(entry.Name(), "_test.go") {
 			return nil
 		}
@@ -266,6 +303,7 @@ func TestCommandRemainsCompositionOnly(t *testing.T) {
 		if err != nil {
 			return err
 		}
+
 		for _, declaration := range file.Decls {
 			function, ok := declaration.(*ast.FuncDecl)
 			if !ok {
@@ -280,6 +318,7 @@ func TestCommandRemainsCompositionOnly(t *testing.T) {
 				t.Errorf("command function %s lacks a documentation comment", function.Name.Name)
 			}
 		}
+
 		return nil
 	})
 	if err != nil {
@@ -304,6 +343,7 @@ func TestRetiredDeveloperDirectoriesCannotReturn(t *testing.T) {
 			t.Errorf("retired developer directory exists: %s", relative)
 			continue
 		}
+
 		if !errors.Is(err, fs.ErrNotExist) {
 			t.Errorf("inspect retired developer directory %s: %v", relative, err)
 		}
@@ -315,10 +355,12 @@ func TestRetiredDeveloperDirectoriesCannotReturn(t *testing.T) {
 func TestLegacyRendererObjectAPIAndWorldAdapterCannotReturn(t *testing.T) {
 	root := repositoryRoot(t)
 	world := filepath.Join(root, "internal", "platform", "raylib", "world")
+
 	files, err := filepath.Glob(filepath.Join(world, "*.go"))
 	if err != nil {
 		t.Fatal(err)
 	}
+
 	if len(files) != 0 {
 		t.Fatalf("retired direct-renderable world adapter has Go files: %v", files)
 	}
@@ -331,14 +373,17 @@ func TestLegacyRendererObjectAPIAndWorldAdapterCannotReturn(t *testing.T) {
 		"ProvidesTextures":    true,
 		"ManagesCameras":      true,
 	}
+
 	err = filepath.WalkDir(renderer, func(path string, entry fs.DirEntry, err error) error {
 		if err != nil || entry.IsDir() || !strings.HasSuffix(path, ".go") {
 			return err
 		}
+
 		file, err := parser.ParseFile(token.NewFileSet(), path, nil, 0)
 		if err != nil {
 			return err
 		}
+
 		ast.Inspect(file, func(candidate ast.Node) bool {
 			switch candidate := candidate.(type) {
 			case *ast.TypeSpec:
@@ -350,8 +395,10 @@ func TestLegacyRendererObjectAPIAndWorldAdapterCannotReturn(t *testing.T) {
 					t.Errorf("%s restores retired renderer constructor %s", path, candidate.Name.Name)
 				}
 			}
+
 			return true
 		})
+
 		return nil
 	})
 	if err != nil {
@@ -368,13 +415,16 @@ func TestNoAccidentalPublicGoPackages(t *testing.T) {
 	} else if err != nil {
 		t.Fatal(err)
 	}
+
 	err := filepath.WalkDir(pkgRoot, func(path string, entry fs.DirEntry, err error) error {
 		if err != nil {
 			return err
 		}
+
 		if !entry.IsDir() && strings.HasSuffix(entry.Name(), ".go") {
 			t.Errorf("public Go source requires an explicit compatibility commitment: %s", path)
 		}
+
 		return nil
 	})
 	if err != nil {
@@ -386,9 +436,11 @@ func TestNoAccidentalPublicGoPackages(t *testing.T) {
 // directory, allowing architecture tests to run consistently from any package or CI command.
 func repositoryRoot(t *testing.T) string {
 	t.Helper()
+
 	_, filename, _, ok := runtime.Caller(0)
 	if !ok {
 		t.Fatal("locate architecture test")
 	}
+
 	return filepath.Clean(filepath.Join(filepath.Dir(filename), "..", ".."))
 }

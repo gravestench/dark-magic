@@ -44,6 +44,7 @@ func (control *ControlPlane) LeaveGame(
 	if err != nil {
 		return CharacterRecord{}, err
 	}
+
 	event.AccountID = principal.accountID
 	event.AccountName = principal.name
 	event.SessionID = principal.sessionID
@@ -57,6 +58,7 @@ func (control *ControlPlane) LeaveGame(
 	if err != nil {
 		return CharacterRecord{}, err
 	}
+
 	if completed, found, lookupErr := control.departure(ctx, gameID, characterID); lookupErr != nil {
 		return CharacterRecord{}, lookupErr
 	} else if found {
@@ -66,6 +68,7 @@ func (control *ControlPlane) LeaveGame(
 	if control.allocator == nil || control.admissions == nil {
 		return CharacterRecord{}, ErrGameUnavailable
 	}
+
 	playerID, baseline, err := control.admissions.CharacterMembership(
 		gameID,
 		principal.accountID,
@@ -74,6 +77,7 @@ func (control *ControlPlane) LeaveGame(
 	if err != nil {
 		return CharacterRecord{}, err
 	}
+
 	event.CharacterID = baseline.Character.ID
 	event.CharacterName = baseline.Character.Name
 
@@ -81,11 +85,14 @@ func (control *ControlPlane) LeaveGame(
 	if record.Character.ID == "" {
 		return CharacterRecord{}, commitErr
 	}
+
 	membership, receiptErr := control.membershipStore.ByCharacter(ctx, gameID, characterID)
 	if receiptErr != nil || membership.Departure == nil {
 		return record, errors.Join(commitErr, receiptErr, ErrMembership)
 	}
+
 	receipt := cloneDepartureReceipt(*membership.Departure)
+
 	return record, control.completeDeparture(ctx, gameID, principal.accountID, receipt)
 }
 
@@ -105,9 +112,11 @@ func (control *ControlPlane) completeDeparture(
 		if !found {
 			return ErrGameNotFound
 		}
+
 		if err := worker.RemoveCharacter(cleanupCtx, receipt.PlayerID); err != nil {
 			return err
 		}
+
 		updated, err := control.membershipStore.MarkWorkerRemoved(
 			cleanupCtx,
 			gameID,
@@ -116,6 +125,7 @@ func (control *ControlPlane) completeDeparture(
 		if err != nil {
 			return err
 		}
+
 		receipt = updated
 	}
 
@@ -123,12 +133,15 @@ func (control *ControlPlane) completeDeparture(
 	if errors.Is(rosterErr, ErrGameNotFound) || errors.Is(rosterErr, ErrCharacterNotFound) {
 		return nil
 	}
+
 	if rosterErr != nil {
 		return rosterErr
 	}
+
 	if detail.Entry.Players == 0 {
 		return control.removeAllocatedGame(cleanupCtx, gameID, true, nil)
 	}
+
 	return nil
 }
 
@@ -143,6 +156,7 @@ func (control *ControlPlane) DrainGame(
 ) (result GameDrainResult, err error) {
 	gameID = strings.TrimSpace(gameID)
 	result.GameID = gameID
+
 	event := AuditEvent{Operation: AuditGameDrain, GameID: gameID}
 	defer func() { control.recordAudit(ctx, event, err) }()
 
@@ -153,13 +167,16 @@ func (control *ControlPlane) DrainGame(
 		gameID == "" {
 		return result, ErrGameUnavailable
 	}
+
 	if err := control.games.BeginDrain(ctx, gameID); err != nil {
 		return result, err
 	}
+
 	players, err := control.membershipStore.DrainPlayerIDs(ctx, gameID)
 	if err != nil {
 		return result, err
 	}
+
 	if len(players) == 0 {
 		err = control.removeAllocatedGame(ctx, gameID, true, nil)
 		return result, err
@@ -170,13 +187,16 @@ func (control *ControlPlane) DrainGame(
 		if lookupErr != nil {
 			return result, lookupErr
 		}
+
 		if err := control.reconcileExpiredPlayer(ctx, gameID, playerID); err != nil {
 			return result, err
 		}
+
 		if membership.State == MembershipActive {
 			result.CommittedCharacters++
 		}
 	}
+
 	return result, nil
 }
 
@@ -197,25 +217,31 @@ func (control *ControlPlane) reconcileExpiredPlayer(
 	defer control.departureFlowMu.Unlock()
 
 	accountID, baseline, membershipErr := control.admissions.PlayerMembership(gameID, playerID)
+
 	receiptAccountID, receipt, completed, receiptErr := control.departureByPlayer(ctx, gameID, playerID)
 	if receiptErr != nil {
 		return receiptErr
 	}
+
 	if membershipErr != nil && !completed {
 		return membershipErr
 	}
+
 	if completed {
 		accountID = receiptAccountID
 	}
+
 	if !completed {
 		record, commitErr := control.admissions.LeaveCanonicalMembership(ctx, gameID, playerID)
 		if record.Character.ID == "" {
 			return commitErr
 		}
+
 		membership, durableErr := control.membershipStore.ByPlayer(ctx, gameID, playerID)
 		if durableErr != nil || membership.Departure == nil {
 			return errors.Join(commitErr, durableErr, ErrMembership)
 		}
+
 		receipt = cloneDepartureReceipt(*membership.Departure)
 	}
 
@@ -248,12 +274,15 @@ func (control *ControlPlane) departure(
 	if errors.Is(err, ErrMembership) {
 		return departureReceipt{}, false, nil
 	}
+
 	if err != nil {
 		return departureReceipt{}, false, err
 	}
+
 	if record.State != MembershipDeparted || record.Departure == nil {
 		return departureReceipt{}, false, nil
 	}
+
 	return cloneDepartureReceipt(*record.Departure), true, nil
 }
 
@@ -268,11 +297,14 @@ func (control *ControlPlane) departureByPlayer(
 	if errors.Is(err, ErrMembership) {
 		return "", departureReceipt{}, false, nil
 	}
+
 	if err != nil {
 		return "", departureReceipt{}, false, err
 	}
+
 	if record.State != MembershipDeparted || record.Departure == nil {
 		return "", departureReceipt{}, false, nil
 	}
+
 	return record.AccountID, cloneDepartureReceipt(*record.Departure), true, nil
 }

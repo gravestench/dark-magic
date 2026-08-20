@@ -16,78 +16,134 @@ func (control *ControlPlane) ReconcileGames(ctx context.Context) (int, error) {
 	}
 
 	reconciled := 0
+
 	var result error
+
 	gameIDs, listErr := control.games.gameIDs(ctx)
 	if listErr != nil {
 		return 0, listErr
 	}
+
 	for _, gameID := range gameIDs {
-		worker, found := control.allocator.Game(gameID)
-		healthy := found
-		var status WorkerStatus
-		if found {
-			var err error
-			status, err = worker.Status(ctx)
-			healthy = err == nil && status.Ready
-		}
+		worker, status, healthy := control.gameHealth(ctx, gameID)
+
 		if healthy {
-			control.clearHealthFailure(gameID)
-			result = errors.Join(result, control.allocations.Healthy(ctx, gameID))
-			result = errors.Join(result, control.checkpointGame(ctx, gameID, worker))
-			_, renewErr := control.admissions.RenewGameMemberships(ctx, gameID)
-			result = errors.Join(result, renewErr)
-			for _, playerID := range status.ExpiredPlayers {
-				result = errors.Join(result, control.reconcileExpiredPlayer(ctx, gameID, playerID))
-			}
+			result = errors.Join(result, control.maintainHealthyGame(ctx, gameID, worker, status))
+
 			continue
 		}
+
 		if control.noteHealthFailure(gameID) < workerFailureThreshold {
 			continue
 		}
 
-		control.departureFlowMu.Lock()
-		cleanupCtx, cancel := context.WithTimeout(context.WithoutCancel(ctx), 5*time.Second)
-		if _, directoryErr := control.games.admissionDetail(
-			cleanupCtx,
-			gameID,
-		); errors.Is(directoryErr, ErrGameNotFound) {
-			cancel()
-			control.departureFlowMu.Unlock()
-			control.clearHealthFailure(gameID)
-			continue
-		}
-
-		restoreCtx, stopRestore := context.WithTimeout(context.WithoutCancel(ctx), 45*time.Second)
-		restoreErr := control.restoreAllocatedGame(restoreCtx, gameID)
-		stopRestore()
-		if restoreErr == nil {
-			cancel()
-			control.departureFlowMu.Unlock()
-			control.recordAudit(ctx, AuditEvent{Operation: AuditGameRestore, GameID: gameID}, nil)
-			control.clearHealthFailure(gameID)
-			reconciled++
-			continue
-		}
-
-		err := control.admissions.AbandonGame(cleanupCtx, gameID)
-		if releaseErr := control.allocator.Release(cleanupCtx, gameID); releaseErr != nil &&
-			!errors.Is(releaseErr, ErrGameNotFound) {
-			err = errors.Join(err, releaseErr)
-		}
-		err = errors.Join(err, control.games.Remove(cleanupCtx, gameID))
-		err = errors.Join(
-			err,
-			control.allocations.Fail(cleanupCtx, gameID, errors.Join(ErrWorker, err)),
-		)
-		cancel()
-		control.departureFlowMu.Unlock()
-
-		control.recordAudit(ctx, AuditEvent{Operation: AuditGameReconcile, GameID: gameID}, err)
-		control.clearHealthFailure(gameID)
+		handled, err := control.reconcileFailedGame(ctx, gameID)
 		result = errors.Join(result, err)
-		reconciled++
+
+		if handled {
+			reconciled++
+		}
 	}
+
 	return reconciled, result
+}
+
+// gameHealth samples a worker once so readiness and expired-player data come from the same status observation.
+func (control *ControlPlane) gameHealth(
+	ctx context.Context,
+	gameID string,
+) (WorkerClient, WorkerStatus, bool) {
+	worker, found := control.allocator.Game(gameID)
+	if !found {
+		return nil, WorkerStatus{}, false
+	}
+
+	status, err := worker.Status(ctx)
+
+	return worker, status, err == nil && status.Ready
+}
+
+// maintainHealthyGame renews every healthy-game responsibility before processing expirations. Joining failures lets
+// maintenance continue for other players and games while preserving every failure for the caller.
+func (control *ControlPlane) maintainHealthyGame(
+	ctx context.Context,
+	gameID string,
+	worker WorkerClient,
+	status WorkerStatus,
+) error {
+	control.clearHealthFailure(gameID)
+
+	result := errors.Join(
+		control.allocations.Healthy(ctx, gameID),
+		control.checkpointGame(ctx, gameID, worker),
+	)
+
+	_, renewErr := control.admissions.RenewGameMemberships(ctx, gameID)
+	result = errors.Join(result, renewErr)
+
+	for _, playerID := range status.ExpiredPlayers {
+		result = errors.Join(result, control.reconcileExpiredPlayer(ctx, gameID, playerID))
+	}
+
+	return result
+}
+
+// reconcileFailedGame serializes restore and fail-closed cleanup with departure handling. Its independent bounded
+// contexts let cleanup finish even when the maintenance request that detected the failure is canceled.
+func (control *ControlPlane) reconcileFailedGame(ctx context.Context, gameID string) (bool, error) {
+	control.departureFlowMu.Lock()
+
+	cleanupCtx, cancelCleanup := context.WithTimeout(context.WithoutCancel(ctx), 5*time.Second)
+
+	if _, err := control.games.admissionDetail(cleanupCtx, gameID); errors.Is(err, ErrGameNotFound) {
+		cancelCleanup()
+		control.departureFlowMu.Unlock()
+		control.clearHealthFailure(gameID)
+
+		return false, nil
+	}
+
+	restoreCtx, cancelRestore := context.WithTimeout(context.WithoutCancel(ctx), 45*time.Second)
+	restoreErr := control.restoreAllocatedGame(restoreCtx, gameID)
+
+	cancelRestore()
+
+	if restoreErr == nil {
+		cancelCleanup()
+		control.departureFlowMu.Unlock()
+		control.recordAudit(ctx, AuditEvent{Operation: AuditGameRestore, GameID: gameID}, nil)
+		control.clearHealthFailure(gameID)
+
+		return true, nil
+	}
+
+	err := control.failUnrestorableGame(cleanupCtx, gameID)
+
+	cancelCleanup()
+	control.departureFlowMu.Unlock()
+
+	control.recordAudit(ctx, AuditEvent{Operation: AuditGameReconcile, GameID: gameID}, err)
+	control.clearHealthFailure(gameID)
+
+	return true, err
+}
+
+// failUnrestorableGame removes volatile and durable game state in the original fail-closed order. Allocation failure
+// records the accumulated cleanup error so operators can diagnose incomplete retirement.
+func (control *ControlPlane) failUnrestorableGame(ctx context.Context, gameID string) error {
+	err := control.admissions.AbandonGame(ctx, gameID)
+
+	if releaseErr := control.allocator.Release(ctx, gameID); releaseErr != nil &&
+		!errors.Is(releaseErr, ErrGameNotFound) {
+		err = errors.Join(err, releaseErr)
+	}
+
+	err = errors.Join(err, control.games.Remove(ctx, gameID))
+
+	return errors.Join(
+		err,
+		control.allocations.Fail(ctx, gameID, errors.Join(ErrWorker, err)),
+	)
 }
 
 // restoreAllocatedGame replaces a failed live worker from the checkpoint tied
@@ -100,22 +156,27 @@ func (control *ControlPlane) restoreAllocatedGame(
 	if !supported {
 		return ErrWorker
 	}
+
 	allocation, err := control.allocations.Get(ctx, gameID)
 	if err != nil || allocation.State != AllocationReady {
 		return errors.Join(err, ErrAllocationRecord)
 	}
+
 	checkpoint, err := control.checkpoints.Latest(ctx, gameID)
 	if err != nil || checkpoint.AllocationID != allocation.AllocationID {
 		return errors.Join(err, ErrGameCheckpoint)
 	}
+
 	players, err := control.membershipStore.ActivePlayerIDs(ctx, gameID)
 	if err != nil || len(players) == 0 {
 		return errors.Join(err, ErrMembership)
 	}
+
 	recovery, err := NewGameRecovery(checkpoint.Checkpoint, players)
 	if err != nil {
 		return err
 	}
+
 	if releaseErr := control.allocator.Release(ctx, gameID); releaseErr != nil &&
 		!errors.Is(releaseErr, ErrGameNotFound) {
 		return releaseErr
@@ -128,11 +189,13 @@ func (control *ControlPlane) restoreAllocatedGame(
 	if err != nil {
 		return err
 	}
+
 	installed := true
 	defer func() {
 		if err != nil && installed {
 			cleanupCtx, cancel := context.WithTimeout(context.WithoutCancel(ctx), 5*time.Second)
 			err = errors.Join(err, control.allocator.Release(cleanupCtx, gameID))
+
 			cancel()
 		}
 	}()
@@ -141,7 +204,9 @@ func (control *ControlPlane) restoreAllocatedGame(
 	if err != nil {
 		return err
 	}
+
 	wantHash, wantErr := allocation.Runtime.Digest()
+
 	gotHash, gotErr := description.Runtime.Digest()
 	if wantErr != nil ||
 		gotErr != nil ||
@@ -152,6 +217,7 @@ func (control *ControlPlane) restoreAllocatedGame(
 		replacement.GameID != gameID {
 		return ErrWorker
 	}
+
 	if _, err = control.allocations.RestoreReady(
 		ctx,
 		gameID,
@@ -161,6 +227,7 @@ func (control *ControlPlane) restoreAllocatedGame(
 	); err != nil {
 		return err
 	}
+
 	if err = control.admissions.ReplaceGame(
 		gameID,
 		replacement.Tickets,
@@ -174,6 +241,7 @@ func (control *ControlPlane) restoreAllocatedGame(
 	control.checkpointMu.Unlock()
 	_ = control.checkpointGame(ctx, gameID, replacement.Worker)
 	installed = false
+
 	return nil
 }
 
@@ -189,10 +257,13 @@ func (control *ControlPlane) checkpointGame(
 	if control == nil || control.allocations == nil || control.checkpoints == nil || worker == nil {
 		return ErrGameUnavailable
 	}
+
 	now := time.Now().UTC()
+
 	control.checkpointMu.Lock()
 	last := control.lastCheckpoint[gameID]
 	control.checkpointMu.Unlock()
+
 	if !last.IsZero() && now.Sub(last) < control.checkpointInterval {
 		return nil
 	}
@@ -201,14 +272,17 @@ func (control *ControlPlane) checkpointGame(
 	if err != nil || allocation.State != AllocationReady {
 		return errors.Join(err, ErrAllocationRecord)
 	}
+
 	identityHash, err := allocation.Runtime.Digest()
 	if err != nil {
 		return ErrAllocationRecord
 	}
+
 	checkpoint, err := worker.Checkpoint(ctx)
 	if err != nil {
 		return err
 	}
+
 	record, err := NewGameCheckpoint(
 		gameID,
 		allocation.AllocationID,
@@ -218,12 +292,14 @@ func (control *ControlPlane) checkpointGame(
 	if err != nil {
 		return err
 	}
+
 	_, err = control.checkpoints.Save(ctx, record)
 	if err == nil {
 		control.checkpointMu.Lock()
 		control.lastCheckpoint[gameID] = now
 		control.checkpointMu.Unlock()
 	}
+
 	return err
 }
 
@@ -240,29 +316,38 @@ func (control *ControlPlane) RecoverInterruptedGames(ctx context.Context) (int, 
 		control.characters == nil {
 		return 0, ErrGameUnavailable
 	}
+
 	records, err := control.allocations.Active(ctx)
 	if err != nil {
 		return 0, err
 	}
 
 	recovered := 0
+
 	var result error
+
 	for _, record := range records {
 		recoveryCtx, stopRecovery := context.WithTimeout(context.WithoutCancel(ctx), 45*time.Second)
 		recoveryErr := control.restoreInterruptedGame(recoveryCtx, record)
+
 		stopRecovery()
+
 		if recoveryErr == nil {
 			control.recordAudit(
 				ctx,
 				AuditEvent{Operation: AuditGameRestore, GameID: record.GameID},
 				nil,
 			)
+
 			recovered++
+
 			continue
 		}
 
 		cleanupCtx, cancel := context.WithTimeout(context.WithoutCancel(ctx), 5*time.Second)
+
 		var cleanupErr error
+
 		if control.allocator != nil {
 			if _, found := control.allocator.Game(record.GameID); found {
 				cleanupErr = errors.Join(
@@ -271,8 +356,10 @@ func (control *ControlPlane) RecoverInterruptedGames(ctx context.Context) (int, 
 				)
 			}
 		}
+
 		_, leaseErr := control.characters.ReleaseGame(cleanupCtx, record.GameID)
 		cleanupErr = errors.Join(cleanupErr, leaseErr)
+
 		cleanupErr = errors.Join(
 			cleanupErr,
 			control.membershipStore.AbandonGame(cleanupCtx, record.GameID),
@@ -281,6 +368,7 @@ func (control *ControlPlane) RecoverInterruptedGames(ctx context.Context) (int, 
 			!errors.Is(directoryErr, ErrGameNotFound) {
 			cleanupErr = errors.Join(cleanupErr, directoryErr)
 		}
+
 		cause := errors.Join(
 			errors.New("realm: allocation interrupted by Realm restart"),
 			recoveryErr,
@@ -290,6 +378,7 @@ func (control *ControlPlane) RecoverInterruptedGames(ctx context.Context) (int, 
 			cleanupErr,
 			control.allocations.Fail(cleanupCtx, record.GameID, cause),
 		)
+
 		cancel()
 
 		control.recordAudit(
@@ -300,6 +389,7 @@ func (control *ControlPlane) RecoverInterruptedGames(ctx context.Context) (int, 
 		result = errors.Join(result, cleanupErr)
 		recovered++
 	}
+
 	return recovered, result
 }
 
@@ -310,26 +400,32 @@ func (control *ControlPlane) restoreInterruptedGame(
 	record AllocationRecord,
 ) (err error) {
 	fencer, canFence := control.allocator.(GameFencer)
+
 	restorer, canRestore := control.allocator.(GameRestorer)
 	if !canFence || !canRestore || record.State != AllocationReady {
 		return ErrWorker
 	}
+
 	checkpoint, err := control.checkpoints.Latest(ctx, record.GameID)
 	if err != nil || checkpoint.AllocationID != record.AllocationID {
 		return errors.Join(err, ErrGameCheckpoint)
 	}
+
 	players, err := control.membershipStore.ActivePlayerIDs(ctx, record.GameID)
 	if err != nil || len(players) == 0 {
 		return errors.Join(err, ErrMembership)
 	}
+
 	recovery, err := NewGameRecovery(checkpoint.Checkpoint, players)
 	if err != nil {
 		return err
 	}
+
 	spec := GameSpec{GameID: record.GameID, AllocationID: record.AllocationID}
 	if err := fencer.Fence(ctx, spec); err != nil {
 		return err
 	}
+
 	replacement, err := restorer.Restore(ctx, spec, recovery)
 	if err != nil {
 		return err
@@ -340,6 +436,7 @@ func (control *ControlPlane) restoreInterruptedGame(
 		if err != nil && installed {
 			cleanupCtx, cancel := context.WithTimeout(context.WithoutCancel(ctx), 5*time.Second)
 			err = errors.Join(err, control.allocator.Release(cleanupCtx, record.GameID))
+
 			cancel()
 		}
 	}()
@@ -348,7 +445,9 @@ func (control *ControlPlane) restoreInterruptedGame(
 	if err != nil {
 		return err
 	}
+
 	wantHash, wantErr := record.Runtime.Digest()
+
 	gotHash, gotErr := description.Runtime.Digest()
 	if wantErr != nil ||
 		gotErr != nil ||
@@ -359,6 +458,7 @@ func (control *ControlPlane) restoreInterruptedGame(
 		replacement.AllocationID != record.AllocationID {
 		return ErrWorker
 	}
+
 	if _, err = control.allocations.RestoreReady(
 		ctx,
 		record.GameID,
@@ -368,6 +468,7 @@ func (control *ControlPlane) restoreInterruptedGame(
 	); err != nil {
 		return err
 	}
+
 	if _, err = control.admissions.ResumeGame(
 		ctx,
 		record.GameID,
@@ -382,6 +483,7 @@ func (control *ControlPlane) restoreInterruptedGame(
 	control.checkpointMu.Unlock()
 	_ = control.checkpointGame(ctx, record.GameID, replacement.Worker)
 	installed = false
+
 	return nil
 }
 
@@ -390,7 +492,9 @@ func (control *ControlPlane) restoreInterruptedGame(
 func (control *ControlPlane) noteHealthFailure(gameID string) int {
 	control.lifecycleMu.Lock()
 	defer control.lifecycleMu.Unlock()
+
 	control.healthFailures[gameID]++
+
 	return control.healthFailures[gameID]
 }
 
@@ -399,5 +503,6 @@ func (control *ControlPlane) noteHealthFailure(gameID string) int {
 func (control *ControlPlane) clearHealthFailure(gameID string) {
 	control.lifecycleMu.Lock()
 	defer control.lifecycleMu.Unlock()
+
 	delete(control.healthFailures, gameID)
 }

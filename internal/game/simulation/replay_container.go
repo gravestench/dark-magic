@@ -63,25 +63,33 @@ type replayContainerHeader struct {
 	Version uint32 `json:"version"`
 }
 
+// withDefaults fills only omitted limits, preserving explicit negative values for validation.
 func (limits ReplayContainerLimits) withDefaults() ReplayContainerLimits {
 	if limits.MaxBytes == 0 {
 		limits.MaxBytes = 64 << 20
 	}
+
 	if limits.MaxManifests == 0 {
 		limits.MaxManifests = 64
 	}
+
 	if limits.MaxCommands == 0 {
 		limits.MaxCommands = 1_000_000
 	}
+
 	if limits.MaxCheckpoints == 0 {
 		limits.MaxCheckpoints = 100_000
 	}
+
 	if limits.MaxEvents == 0 {
 		limits.MaxEvents = 1_000_000
 	}
+
 	return limits
 }
 
+// NewReplayContainer stamps replay evidence with the current envelope identity so encoding cannot inherit an older
+// format or version from caller-owned state.
 func NewReplayContainer(replay Replay) ReplayContainer {
 	return ReplayContainer{
 		Format:  ReplayContainerFormat,
@@ -90,42 +98,53 @@ func NewReplayContainer(replay Replay) ReplayContainer {
 	}
 }
 
+// EncodeReplayContainer validates and integrity-seals one bounded JSON record.
 func EncodeReplayContainer(destination io.Writer, container ReplayContainer) error {
 	if destination == nil {
 		return fmt.Errorf("%w: destination is required", ErrReplayContainer)
 	}
+
 	limits := ReplayContainerLimits{}.withDefaults()
 	if err := validateReplayContainer(container, limits); err != nil {
 		return err
 	}
+
 	integrity, err := replayContainerIntegrity(container)
 	if err != nil {
 		return err
 	}
+
 	container.Integrity = integrity
+
 	encoded, err := json.Marshal(container)
 	if err != nil {
 		return fmt.Errorf("%w: encode: %v", ErrReplayContainer, err)
 	}
+
 	if int64(len(encoded)+1) > limits.MaxBytes {
 		return fmt.Errorf("%w: encoded input exceeds %d bytes", ErrReplayContainer, limits.MaxBytes)
 	}
+
 	if _, err := destination.Write(append(encoded, '\n')); err != nil {
 		return fmt.Errorf("%w: write: %v", ErrReplayContainer, err)
 	}
+
 	return nil
 }
 
+// DecodeReplayContainer accepts only the current envelope version and refuses implicit migration.
 func DecodeReplayContainer(source io.Reader, limits ReplayContainerLimits) (ReplayContainer, error) {
 	return DecodeReplayContainerWithMigrations(source, limits, nil)
 }
 
+// DecodeReplayContainerWithMigrations bounds input before applying explicit one-version migrations.
 func DecodeReplayContainerWithMigrations(source io.Reader, limits ReplayContainerLimits,
 	migrations map[uint32]ReplayContainerMigration,
 ) (ReplayContainer, error) {
 	if source == nil {
 		return ReplayContainer{}, fmt.Errorf("%w: source is required", ErrReplayContainer)
 	}
+
 	limits = limits.withDefaults()
 	if limits.MaxBytes <= 0 || limits.MaxManifests < 0 || limits.MaxCommands < 0 ||
 		limits.MaxCheckpoints < 0 || limits.MaxEvents < 0 {
@@ -136,125 +155,162 @@ func DecodeReplayContainerWithMigrations(source io.Reader, limits ReplayContaine
 	if err != nil {
 		return ReplayContainer{}, fmt.Errorf("%w: read: %v", ErrReplayContainer, err)
 	}
+
 	if int64(len(data)) > limits.MaxBytes {
 		return ReplayContainer{}, fmt.Errorf("%w: input exceeds %d bytes", ErrReplayContainer, limits.MaxBytes)
 	}
+
 	data, err = migrateReplayContainer(data, limits, migrations)
 	if err != nil {
 		return ReplayContainer{}, err
 	}
+
 	decoder := json.NewDecoder(bytes.NewReader(data))
 	decoder.DisallowUnknownFields()
+
 	var container ReplayContainer
 	if err := decoder.Decode(&container); err != nil {
 		return ReplayContainer{}, fmt.Errorf("%w: decode: %v", ErrReplayContainer, err)
 	}
+
 	if decoder.Decode(&struct{}{}) != io.EOF {
 		return ReplayContainer{}, fmt.Errorf("%w: trailing data", ErrReplayContainer)
 	}
+
 	if err := validateReplayContainer(container, limits); err != nil {
 		return ReplayContainer{}, err
 	}
+
 	want, err := replayContainerIntegrity(container)
 	if err != nil {
 		return ReplayContainer{}, err
 	}
+
 	if container.Integrity == "" || container.Integrity != want {
 		return ReplayContainer{}, fmt.Errorf("%w: integrity mismatch", ErrReplayContainer)
 	}
+
 	return container, nil
 }
 
+// replayContainerIntegrity hashes the envelope with its integrity field cleared.
 func replayContainerIntegrity(container ReplayContainer) (string, error) {
 	container.Integrity = ""
+
 	encoded, err := json.Marshal(container)
 	if err != nil {
 		return "", fmt.Errorf("%w: integrity encoding: %v", ErrReplayContainer, err)
 	}
+
 	return fmt.Sprintf("sha256:%x", sha256.Sum256(encoded)), nil
 }
 
+// migrateReplayContainer applies each registered migration in sequence and rechecks its header.
 func migrateReplayContainer(data []byte, limits ReplayContainerLimits,
 	migrations map[uint32]ReplayContainerMigration,
 ) ([]byte, error) {
 	var header replayContainerHeader
+
 	headerDecoder := json.NewDecoder(bytes.NewReader(data))
 	if err := headerDecoder.Decode(&header); err != nil {
 		return nil, fmt.Errorf("%w: header: %v", ErrReplayContainer, err)
 	}
+
 	if headerDecoder.Decode(&struct{}{}) != io.EOF {
 		return nil, fmt.Errorf("%w: trailing data", ErrReplayContainer)
 	}
+
 	if header.Format != ReplayContainerFormat {
 		return nil, fmt.Errorf("%w: format %q", ErrReplayContainer, header.Format)
 	}
+
 	if header.Version > ReplayContainerVersion {
 		return nil, fmt.Errorf("%w: future version %d", ErrReplayMigration, header.Version)
 	}
+
 	for header.Version < ReplayContainerVersion {
 		migration := migrations[header.Version]
 		if migration == nil {
 			return nil, fmt.Errorf("%w: no migration from version %d", ErrReplayMigration, header.Version)
 		}
+
+		// Give migration code its own bytes so an unsuccessful migration cannot
+		// mutate the last validated representation used for diagnostics.
 		migrated, err := migration(append(json.RawMessage(nil), data...))
 		if err != nil {
 			return nil, fmt.Errorf("%w: version %d: %v", ErrReplayMigration, header.Version, err)
 		}
+
 		if int64(len(migrated)) > limits.MaxBytes {
 			return nil, fmt.Errorf("%w: migrated input exceeds %d bytes", ErrReplayContainer, limits.MaxBytes)
 		}
+
 		var next replayContainerHeader
 		if err := json.Unmarshal(migrated, &next); err != nil {
 			return nil, fmt.Errorf("%w: migrated header: %v", ErrReplayContainer, err)
 		}
+
 		if next.Format != ReplayContainerFormat || next.Version != header.Version+1 {
 			return nil, fmt.Errorf("%w: migration from version %d must produce version %d",
 				ErrReplayMigration, header.Version, header.Version+1)
 		}
+
 		data, header = append([]byte(nil), migrated...), next
 	}
+
 	return data, nil
 }
 
+// validateReplayContainer enforces format, size, JSON, and event-order contracts before use.
 func validateReplayContainer(container ReplayContainer, limits ReplayContainerLimits) error {
 	if container.Format != ReplayContainerFormat {
 		return fmt.Errorf("%w: format %q", ErrReplayContainer, container.Format)
 	}
+
 	if container.Version != ReplayContainerVersion {
 		return fmt.Errorf("%w: version %d to %d", ErrReplayMigration,
 			container.Version, ReplayContainerVersion)
 	}
+
 	if container.Replay.Version != ReplayVersion || container.Replay.StepNanos <= 0 {
 		return fmt.Errorf("%w: embedded replay header", ErrReplayContainer)
 	}
+
 	if len(container.Manifests) > limits.MaxManifests {
 		return fmt.Errorf("%w: %d manifests exceed %d", ErrReplayContainer,
 			len(container.Manifests), limits.MaxManifests)
 	}
+
 	if len(container.Replay.Commands) > limits.MaxCommands {
 		return fmt.Errorf("%w: %d commands exceed %d", ErrReplayContainer,
 			len(container.Replay.Commands), limits.MaxCommands)
 	}
+
 	if len(container.Replay.Checkpoints) > limits.MaxCheckpoints {
 		return fmt.Errorf("%w: %d checkpoints exceed %d", ErrReplayContainer,
 			len(container.Replay.Checkpoints), limits.MaxCheckpoints)
 	}
+
 	if len(container.Events) > limits.MaxEvents {
 		return fmt.Errorf("%w: %d events exceed %d", ErrReplayContainer,
 			len(container.Events), limits.MaxEvents)
 	}
+
 	for name, manifest := range container.Manifests {
 		if strings.TrimSpace(name) == "" || strings.TrimSpace(manifest.Schema) == "" || !json.Valid(manifest.Data) {
 			return fmt.Errorf("%w: manifest %q", ErrReplayContainer, name)
 		}
 	}
+
 	for index, event := range container.Events {
 		if strings.TrimSpace(event.Kind) == "" || !json.Valid(event.Payload) {
 			return fmt.Errorf("%w: event %d", ErrReplayContainer, index)
 		}
+
 		if index > 0 && event.Tick < container.Events[index-1].Tick {
 			return fmt.Errorf("%w: event ticks are not ordered", ErrReplayContainer)
 		}
 	}
+
 	return nil
 }

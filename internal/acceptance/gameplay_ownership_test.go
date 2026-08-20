@@ -26,6 +26,7 @@ type ownershipRule struct {
 func TestGameplayOwnershipInventoryIsExhaustive(t *testing.T) {
 	root := repositoryRoot(t)
 	rules := readOwnershipRules(t, filepath.Join(root, "docs", "architecture", "gameplay-ownership.tsv"))
+
 	roots := []string{
 		"internal/game",
 		"internal/runtime/lua",
@@ -33,27 +34,34 @@ func TestGameplayOwnershipInventoryIsExhaustive(t *testing.T) {
 	}
 	for _, relativeRoot := range roots {
 		absoluteRoot := filepath.Join(root, filepath.FromSlash(relativeRoot))
+
 		err := filepath.WalkDir(absoluteRoot, func(path string, entry os.DirEntry, err error) error {
 			if err != nil {
 				return err
 			}
+
 			if entry.IsDir() || !isProductionOwnershipFile(path) {
 				return nil
 			}
+
 			relative, err := filepath.Rel(root, path)
 			if err != nil {
 				return err
 			}
+
 			relative = filepath.ToSlash(relative)
 			matches := 0
+
 			for _, rule := range rules {
 				if strings.HasPrefix(relative, rule.prefix) {
 					matches++
 				}
 			}
+
 			if matches != 1 {
 				t.Errorf("%s matches %d ownership rules; every production file needs exactly one destination", relative, matches)
 			}
+
 			return nil
 		})
 		if err != nil {
@@ -69,48 +77,65 @@ func TestGameplayOwnershipInventoryIsExhaustive(t *testing.T) {
 func TestMigratedGameplayCoverageInventoryHasNoUnknownStatus(t *testing.T) {
 	root := repositoryRoot(t)
 	path := filepath.Join(root, "docs", "architecture", "d2legacy-test-coverage.tsv")
+
 	file, err := os.Open(path)
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer file.Close()
+
+	defer func() {
+		if err := file.Close(); err != nil {
+			t.Errorf("close coverage inventory: %v", err)
+		}
+	}()
+
 	seen := map[string]bool{}
 	allowed := map[string]bool{
 		"covered": true, "partial": true, "pending": true, "transitional": true,
 	}
+
 	scanner := bufio.NewScanner(file)
 	for scanner.Scan() {
 		line := strings.TrimSpace(scanner.Text())
 		if line == "" || strings.HasPrefix(line, "#") {
 			continue
 		}
+
 		fields := strings.Split(line, "\t")
 		if len(fields) != 4 {
 			t.Fatalf("invalid coverage row %q", line)
 		}
+
 		if seen[fields[0]] {
 			t.Errorf("duplicate coverage family %q", fields[0])
 		}
+
 		seen[fields[0]] = true
 		if !allowed[fields[2]] {
 			t.Errorf("coverage family %q has unknown status %q", fields[0], fields[2])
 		}
+
 		evidence := strings.SplitN(fields[1], "#", 2)
 		if len(evidence) != 2 || evidence[1] == "" {
 			t.Errorf("coverage family %q must name evidence as path#case-or-test", fields[0])
 			continue
 		}
+
 		evidencePath := filepath.Join(root, filepath.FromSlash(evidence[0]))
+
 		data, err := os.ReadFile(evidencePath)
 		if err != nil {
 			t.Errorf("coverage evidence %q is missing: %v", evidence[0], err)
 			continue
 		}
+
 		text := string(data)
+
 		expectedDeclaration := "func " + evidence[1] + "("
 		if strings.HasSuffix(evidence[0], ".lua") {
 			expectedDeclaration = `test.case("` + evidence[1] + `"`
 		}
+
 		if !strings.Contains(text, expectedDeclaration) {
 			t.Errorf("coverage evidence %q does not declare case or test %q", evidence[0], evidence[1])
 		}
@@ -118,6 +143,7 @@ func TestMigratedGameplayCoverageInventoryHasNoUnknownStatus(t *testing.T) {
 		// metadata by TestLuaSuites. This inventory check only handles file/status
 		// validity and Go test evidence, which cannot be loaded as Lua metadata.
 	}
+
 	if err := scanner.Err(); err != nil {
 		t.Fatal(err)
 	}
@@ -130,35 +156,49 @@ func TestMigratedGameplayCoverageInventoryHasNoUnknownStatus(t *testing.T) {
 func TestD2LegacyLuaTestsStayReadable(t *testing.T) {
 	root := repositoryRoot(t)
 	luaRoot := filepath.Join(root, "internal", "content", "d2legacy", "lua", "d2legacy")
+
 	err := filepath.WalkDir(luaRoot, func(path string, entry os.DirEntry, err error) error {
 		if err != nil || entry.IsDir() {
 			return err
 		}
+
 		relative, _ := filepath.Rel(luaRoot, path)
 		relative = filepath.ToSlash(relative)
 		isSuite := strings.HasSuffix(path, "_test.lua")
+
 		isSupport := strings.HasPrefix(relative, "tests/") && strings.HasSuffix(path, ".lua")
 		if !isSuite && !isSupport {
 			return nil
 		}
+
 		file, err := os.Open(path)
 		if err != nil {
 			return err
 		}
-		defer file.Close()
+
 		scanner := bufio.NewScanner(file)
+
 		line := 0
 		for scanner.Scan() {
 			line++
+
 			text := scanner.Text()
 			if strings.ContainsRune(text, '\t') {
 				t.Errorf("%s:%d uses a tab; d2legacy Lua uses four spaces", relative, line)
 			}
+
 			if len(text) > 120 {
 				t.Errorf("%s:%d is %d columns; split fixtures and expressions for readability", relative, line, len(text))
 			}
 		}
-		return scanner.Err()
+
+		if err := scanner.Err(); err != nil {
+			_ = file.Close()
+
+			return err
+		}
+
+		return file.Close()
 	})
 	if err != nil {
 		t.Fatal(err)
@@ -171,17 +211,21 @@ func TestD2LegacyLuaTestsStayReadable(t *testing.T) {
 func TestD2LegacyLuaTestArchitecture(t *testing.T) {
 	root := repositoryRoot(t)
 	luaRoot := filepath.Join(root, "internal", "content", "d2legacy", "lua", "d2legacy")
+
 	err := filepath.WalkDir(luaRoot, func(path string, entry os.DirEntry, err error) error {
 		if err != nil || entry.IsDir() || !strings.HasSuffix(path, ".lua") {
 			return err
 		}
+
 		data, err := os.ReadFile(path)
 		if err != nil {
 			return err
 		}
+
 		text := string(data)
 		relative, _ := filepath.Rel(luaRoot, path)
 		relative = filepath.ToSlash(relative)
+
 		if strings.HasSuffix(path, "_test.lua") {
 			for _, required := range []string{
 				`require("d2legacy.tests/v1")`, "return test.suite(", "profile = ", "tier = ",
@@ -191,6 +235,7 @@ func TestD2LegacyLuaTestArchitecture(t *testing.T) {
 					t.Errorf("%s bypasses the versioned Lua test API; missing %q", relative, required)
 				}
 			}
+
 			for _, forbidden := range []string{
 				"initial_data_json", "records_json", "payload = [[", "tests = ", "run = function", " assert(",
 				"package.loaded",
@@ -200,11 +245,14 @@ func TestD2LegacyLuaTestArchitecture(t *testing.T) {
 					t.Errorf("%s uses %q; use structured Lua tables so the harness owns serialization", relative, forbidden)
 				}
 			}
+
 			return nil
 		}
+
 		if !strings.HasPrefix(relative, "tests/") && strings.Contains(text, "d2legacy.tests") {
 			t.Errorf("production module %s imports test-only support", relative)
 		}
+
 		return nil
 	})
 	if err != nil {
@@ -213,10 +261,12 @@ func TestD2LegacyLuaTestArchitecture(t *testing.T) {
 
 	for _, relativeRoot := range []string{"internal/mod/d2legacy", "internal/acceptance"} {
 		goRoot := filepath.Join(root, filepath.FromSlash(relativeRoot))
+
 		err = filepath.WalkDir(goRoot, func(path string, entry os.DirEntry, err error) error {
 			if err != nil || entry.IsDir() || !strings.HasSuffix(path, "_test.go") {
 				return err
 			}
+
 			if path == filepath.Join(root, "internal", "acceptance", "gameplay_ownership_test.go") {
 				return nil
 			}
@@ -226,20 +276,25 @@ func TestD2LegacyLuaTestArchitecture(t *testing.T) {
 				path == filepath.Join(root, "internal", "acceptance", "runtime_management_test.go") {
 				return nil
 			}
+
 			fileSet := token.NewFileSet()
+
 			file, err := parser.ParseFile(fileSet, path, nil, 0)
 			if err != nil {
 				return err
 			}
+
 			ast.Inspect(file, func(node ast.Node) bool {
 				literal, ok := node.(*ast.BasicLit)
 				if !ok || literal.Kind != token.STRING {
 					return true
 				}
+
 				value, err := strconv.Unquote(literal.Value)
 				if err != nil || !looksLikeEmbeddedLua(value) {
 					return true
 				}
+
 				relative, _ := filepath.Rel(root, path)
 				position := fileSet.Position(literal.Pos())
 				t.Errorf(
@@ -247,8 +302,10 @@ func TestD2LegacyLuaTestArchitecture(t *testing.T) {
 					filepath.ToSlash(relative),
 					position.Line,
 				)
+
 				return true
 			})
+
 			return nil
 		})
 		if err != nil {
@@ -261,11 +318,13 @@ func TestD2LegacyLuaTestArchitecture(t *testing.T) {
 // contain one Lua keyword. Embedded scenarios belong in checked-in Lua fixtures.
 func looksLikeEmbeddedLua(value string) bool {
 	signals := 0
+
 	for _, marker := range []string{"local ", "function", "require(", "return ", "end", "~=", " then"} {
 		if strings.Contains(value, marker) {
 			signals++
 		}
 	}
+
 	return signals >= 2
 }
 
@@ -279,13 +338,16 @@ func TestLuaNamespacesDescribeOwnership(t *testing.T) {
 			if err != nil || entry.IsDir() {
 				return err
 			}
+
 			if extension := filepath.Ext(path); extension != ".go" && extension != ".lua" {
 				return nil
 			}
+
 			data, err := os.ReadFile(path)
 			if err != nil {
 				return err
 			}
+
 			text := string(data)
 			retiredShort := "d" + "m."
 			retiredModShort := "d" + "2."
@@ -301,6 +363,7 @@ func TestLuaNamespacesDescribeOwnership(t *testing.T) {
 				relative, _ := filepath.Rel(root, path)
 				t.Errorf("%s uses a retired Lua namespace; use engine.* or d2legacy.*", filepath.ToSlash(relative))
 			}
+
 			return nil
 		})
 		if err != nil {
@@ -319,18 +382,22 @@ func TestD2LegacyContentRetiresShimIdentity(t *testing.T) {
 			if err != nil || entry.IsDir() || strings.HasSuffix(path, "_test.go") {
 				return err
 			}
+
 			if extension := filepath.Ext(path); extension != ".go" && extension != ".lua" && extension != ".md" {
 				return nil
 			}
+
 			data, err := os.ReadFile(path)
 			if err != nil {
 				return err
 			}
+
 			retired := "s" + "him"
 			if strings.Contains(strings.ToLower(string(data)), retired) {
 				relative, _ := filepath.Rel(root, path)
 				t.Errorf("%s uses retired first-party content terminology; use d2legacy", filepath.ToSlash(relative))
 			}
+
 			return nil
 		})
 		if err != nil {
@@ -364,10 +431,12 @@ func TestClientDoesNotReinstallMigratedD2Policy(t *testing.T) {
 		if filepath.Ext(path) != ".go" || strings.HasSuffix(path, "_test.go") {
 			return nil
 		}
+
 		data, err := os.ReadFile(path)
 		if err != nil {
 			return err
 		}
+
 		text := string(data)
 
 		relative, err := filepath.Rel(root, path)
@@ -401,10 +470,12 @@ func TestWorldTransitionPolicyStaysInD2LegacyLua(t *testing.T) {
 			if err != nil || entry.IsDir() || !strings.HasSuffix(path, ".go") || strings.HasSuffix(path, "_test.go") {
 				return err
 			}
+
 			data, err := os.ReadFile(path)
 			if err != nil {
 				return err
 			}
+
 			for _, forbidden := range []string{
 				"system.world.transition", "transitionAuthority", "transitionSource",
 				"act1-town:exit-", "town-entry", "NewActOneTownMoorSeam",
@@ -414,6 +485,7 @@ func TestWorldTransitionPolicyStaysInD2LegacyLua(t *testing.T) {
 					t.Errorf("%s restores native D2 transition policy through %q", filepath.ToSlash(relative), forbidden)
 				}
 			}
+
 			return nil
 		})
 		if err != nil {
@@ -433,6 +505,7 @@ func TestD2MapTilePolicyStaysInD2LegacyLua(t *testing.T) {
 			if err != nil || entry.IsDir() || !strings.HasSuffix(path, ".go") || strings.HasSuffix(path, "_test.go") {
 				return err
 			}
+
 			data, err := os.ReadFile(path)
 			if err != nil {
 				return err
@@ -450,6 +523,7 @@ func TestD2MapTilePolicyStaysInD2LegacyLua(t *testing.T) {
 					t.Errorf("%s restores native D2 map-tile policy through %q", filepath.ToSlash(relative), forbidden)
 				}
 			}
+
 			return nil
 		})
 		if err != nil {
@@ -465,36 +539,46 @@ func TestGameplayMechanismsDoNotGainPolicyDependencies(t *testing.T) {
 	root := repositoryRoot(t)
 	rules := readOwnershipRules(t, filepath.Join(root, "docs", "architecture", "gameplay-ownership.tsv"))
 	debt := readDependencyDebt(t, filepath.Join(root, "docs", "architecture", "gameplay-dependency-debt.tsv"))
+
 	const projectPrefix = "github.com/gravestench/dark-magic/"
 
 	for _, rule := range rules {
 		if rule.class != "mechanism" {
 			continue
 		}
+
 		mechanismRoot := filepath.Join(root, filepath.FromSlash(strings.TrimSuffix(rule.prefix, "/")))
+
 		err := filepath.WalkDir(mechanismRoot, func(path string, entry os.DirEntry, err error) error {
 			if err != nil || entry.IsDir() || !strings.HasSuffix(path, ".go") || strings.HasSuffix(path, "_test.go") {
 				return err
 			}
+
 			file, err := parser.ParseFile(token.NewFileSet(), path, nil, parser.ImportsOnly)
 			if err != nil {
 				return err
 			}
+
 			importer, err := filepath.Rel(root, path)
 			if err != nil {
 				return err
 			}
+
 			importer = filepath.ToSlash(importer)
+
 			for _, imported := range file.Imports {
 				name, err := strconv.Unquote(imported.Path.Value)
 				if err != nil || !strings.HasPrefix(name, projectPrefix) {
 					continue
 				}
+
 				dependency := strings.TrimPrefix(name, projectPrefix)
+
 				dependencyClass := ownershipClassForPath(rules, dependency+"/")
 				if dependencyClass != "d2-policy" && dependencyClass != "transitional" {
 					continue
 				}
+
 				edge := importer + "\t" + dependency
 				if _, allowed := debt[edge]; !allowed {
 					t.Errorf(
@@ -504,14 +588,17 @@ func TestGameplayMechanismsDoNotGainPolicyDependencies(t *testing.T) {
 						dependencyClass,
 					)
 				}
+
 				delete(debt, edge)
 			}
+
 			return nil
 		})
 		if err != nil {
 			t.Fatal(err)
 		}
 	}
+
 	for edge := range debt {
 		t.Errorf("stale gameplay dependency debt %s; remove the resolved exception", edge)
 	}
@@ -522,7 +609,9 @@ func TestGameplayMechanismsDoNotGainPolicyDependencies(t *testing.T) {
 // dependency arrow can never point back from the engine into the bundled mod.
 func TestGenericEngineDoesNotImportFirstPartyMod(t *testing.T) {
 	root := repositoryRoot(t)
+
 	const projectPrefix = "github.com/gravestench/dark-magic/"
+
 	for _, relativeRoot := range []string{"internal/game", "internal/runtime/lua"} {
 		searchRoot := filepath.Join(root, filepath.FromSlash(relativeRoot))
 
@@ -530,10 +619,12 @@ func TestGenericEngineDoesNotImportFirstPartyMod(t *testing.T) {
 			if err != nil || entry.IsDir() || !strings.HasSuffix(path, ".go") || strings.HasSuffix(path, "_test.go") {
 				return err
 			}
+
 			file, err := parser.ParseFile(token.NewFileSet(), path, nil, parser.ImportsOnly)
 			if err != nil {
 				return err
 			}
+
 			for _, imported := range file.Imports {
 				name, err := strconv.Unquote(imported.Path.Value)
 				if err == nil && strings.HasPrefix(name, projectPrefix+"internal/mod/d2legacy") {
@@ -541,6 +632,7 @@ func TestGenericEngineDoesNotImportFirstPartyMod(t *testing.T) {
 					t.Errorf("%s imports first-party mod package %s", filepath.ToSlash(relative), name)
 				}
 			}
+
 			return nil
 		})
 		if err != nil {
@@ -576,10 +668,12 @@ func TestGenericEngineDoesNotNameD2Policy(t *testing.T) {
 			if err != nil || entry.IsDir() || !strings.HasSuffix(path, ".go") || strings.HasSuffix(path, "_test.go") {
 				return err
 			}
+
 			data, err := os.ReadFile(path)
 			if err != nil {
 				return err
 			}
+
 			lower := strings.ToLower(string(data))
 			for _, token := range forbidden {
 				if strings.Contains(lower, token) {
@@ -591,6 +685,7 @@ func TestGenericEngineDoesNotNameD2Policy(t *testing.T) {
 					)
 				}
 			}
+
 			return nil
 		})
 		if err != nil {
@@ -603,31 +698,43 @@ func TestGenericEngineDoesNotNameD2Policy(t *testing.T) {
 // so later architectural failures refer to trusted rule data.
 func readOwnershipRules(t *testing.T, path string) []ownershipRule {
 	t.Helper()
+
 	file, err := os.Open(path)
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer file.Close()
+
+	defer func() {
+		if err := file.Close(); err != nil {
+			t.Errorf("close ownership inventory: %v", err)
+		}
+	}()
 
 	var rules []ownershipRule
+
 	scanner := bufio.NewScanner(file)
 	for scanner.Scan() {
 		line := strings.TrimSpace(scanner.Text())
 		if line == "" || strings.HasPrefix(line, "#") {
 			continue
 		}
+
 		fields := strings.Split(line, "\t")
 		if len(fields) != 4 {
 			t.Fatalf("%s contains malformed rule %q", path, line)
 		}
+
 		rules = append(rules, ownershipRule{prefix: fields[0], class: fields[1], destination: fields[2]})
 	}
+
 	if err := scanner.Err(); err != nil {
 		t.Fatal(err)
 	}
+
 	if len(rules) == 0 {
 		t.Fatal("gameplay ownership inventory has no rules")
 	}
+
 	return rules
 }
 
@@ -635,28 +742,39 @@ func readOwnershipRules(t *testing.T, path string) []ownershipRule {
 // not an allowlist for newly introduced violations.
 func readDependencyDebt(t *testing.T, path string) map[string]struct{} {
 	t.Helper()
+
 	file, err := os.Open(path)
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer file.Close()
+
+	defer func() {
+		if err := file.Close(); err != nil {
+			t.Errorf("close dependency-debt inventory: %v", err)
+		}
+	}()
 
 	debt := make(map[string]struct{})
+
 	scanner := bufio.NewScanner(file)
 	for scanner.Scan() {
 		line := strings.TrimSpace(scanner.Text())
 		if line == "" || strings.HasPrefix(line, "#") {
 			continue
 		}
+
 		fields := strings.Split(line, "\t")
 		if len(fields) != 3 {
 			t.Fatalf("%s contains malformed debt %q", path, line)
 		}
+
 		debt[fields[0]+"\t"+fields[1]] = struct{}{}
 	}
+
 	if err := scanner.Err(); err != nil {
 		t.Fatal(err)
 	}
+
 	return debt
 }
 
@@ -668,6 +786,7 @@ func ownershipClassForPath(rules []ownershipRule, path string) string {
 			return rule.class
 		}
 	}
+
 	return ""
 }
 
@@ -677,8 +796,10 @@ func isProductionOwnershipFile(path string) bool {
 	if strings.HasSuffix(path, "_test.go") || strings.HasSuffix(path, "_test.lua") {
 		return false
 	}
+
 	if strings.Contains(filepath.ToSlash(path), "/lua/d2legacy/tests/") {
 		return false
 	}
+
 	return strings.HasSuffix(path, ".go") || strings.HasSuffix(path, ".lua")
 }

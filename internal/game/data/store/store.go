@@ -27,12 +27,15 @@ func (s *Store) canonicalPath(path string) string {
 	if s == nil {
 		return path
 	}
+
 	s.mu.RLock()
 	canonical := s.canonical[strings.ToLower(path)]
 	s.mu.RUnlock()
+
 	if canonical != "" {
 		return canonical
 	}
+
 	return path
 }
 
@@ -42,14 +45,18 @@ type Provenance struct {
 	Path  string
 }
 
-// Source reports the winning immutable source for a pinned table.
+// Source reports the winning immutable source for a pinned table. A false result means the store has no pinned
+// provenance for that path, so callers must not attribute the bytes to a package layer.
 func (s *Store) Source(path string) (Provenance, bool) {
 	if s == nil {
 		return Provenance{}, false
 	}
+
 	s.mu.RLock()
 	defer s.mu.RUnlock()
+
 	value, found := s.provenance[s.canonicalPathLocked(path)]
+
 	return value, found
 }
 
@@ -59,21 +66,25 @@ func (s *Store) canonicalPathLocked(path string) string {
 	if canonical := s.canonical[strings.ToLower(path)]; canonical != "" {
 		return canonical
 	}
+
 	return path
 }
 
-// GenerationID identifies an immutable pinned authoritative view. Ordinary
-// development stores return an empty ID and must not be attached to a Session.
+// GenerationID identifies an immutable pinned authoritative view. Reloadable stores created by New return an empty ID,
+// so callers that require a reproducible session identity must use Pin.
 func (s *Store) GenerationID() string {
 	if s == nil {
 		return ""
 	}
+
 	s.mu.RLock()
 	defer s.mu.RUnlock()
+
 	return s.generationID
 }
 
-// New constructs a record store over source.
+// New constructs a reloadable store over source. It deliberately has no generation identity or pinned provenance;
+// callers that need a frozen, reproducible record view must use Pin.
 func New(source fs.FS) *Store {
 	return &Store{
 		source:    source,
@@ -97,12 +108,15 @@ func (s *Store) Read(path string) ([]byte, error) {
 	if s == nil || s.source == nil {
 		return nil, fmt.Errorf("recordstore: no content source")
 	}
+
 	requested := path
 	path = s.canonicalPath(path)
+
 	data, err := fs.ReadFile(s.source, path)
 	if err != nil {
 		return nil, fmt.Errorf("recordstore: read %q: %w", requested, err)
 	}
+
 	return bytes.Clone(data), nil
 }
 
@@ -112,16 +126,20 @@ func (s *Store) Open(path string) (fs.File, error) {
 	if s == nil || s.source == nil {
 		return nil, fmt.Errorf("recordstore: no content source")
 	}
+
 	requested := path
 	path = s.canonicalPath(path)
+
 	file, err := s.source.Open(path)
 	if err != nil {
 		return nil, fmt.Errorf("recordstore: open %q: %w", requested, err)
 	}
+
 	return file, nil
 }
 
-// Load returns a defensive copy of a TSV table.
+// Load returns a defensive copy of a TSV table. Copying lets callers transform rows freely without corrupting the
+// shared cache observed by later loads.
 func (s *Store) Load(path string) ([]map[string]string, error) {
 	requested := path
 	path = s.canonicalPath(path)
@@ -163,7 +181,10 @@ func (s *Store) loadUncachedRows(requested, path string) ([]map[string]string, e
 	if err != nil {
 		return nil, fmt.Errorf("recordstore: open %q: %w", requested, err)
 	}
-	defer file.Close()
+	// Preserve Load's error contract: parsing is synchronous, and close remains best-effort after the stream is consumed.
+	defer func() {
+		_ = file.Close()
+	}()
 
 	rows, err := parseTSV(file)
 	if err != nil {
@@ -178,12 +199,14 @@ func (s *Store) loadUncachedRows(requested, path string) ([]map[string]string, e
 func (s *Store) cacheLoadedRows(path string, rows []map[string]string) ([]map[string]string, bool, *slog.Logger) {
 	s.mu.Lock()
 	loaded := false
+
 	if existing, cached := s.cache[path]; cached {
 		rows = existing
 	} else {
 		s.cache[path] = rows
 		loaded = true
 	}
+
 	logger := s.logger
 	s.mu.Unlock()
 
@@ -211,14 +234,17 @@ func (s *Store) resolveSource(path string) (string, string) {
 	if !ok {
 		return "filesystem", path
 	}
+
 	layer, resolvedPath, err := resolver.ResolveSource(path)
 	if err != nil {
 		return "unresolved", path
 	}
+
 	return layer, resolvedPath
 }
 
-// Invalidate removes one cached table so its next access reloads layered content.
+// Invalidate removes one cached table so its next access observes the current layered content without disturbing
+// unrelated cached tables.
 func (s *Store) Invalidate(path string) {
 	path = s.canonicalPath(path)
 	s.mu.Lock()
@@ -234,11 +260,12 @@ func (s *Store) InvalidateAll() {
 	s.mu.Unlock()
 }
 
-// Loaded reports whether path is cached.
+// Loaded reports whether path is cached without triggering source I/O, allowing callers to inspect cache state safely.
 func (s *Store) Loaded(path string) bool {
 	path = s.canonicalPath(path)
 	s.mu.RLock()
 	_, exists := s.cache[path]
 	s.mu.RUnlock()
+
 	return exists
 }

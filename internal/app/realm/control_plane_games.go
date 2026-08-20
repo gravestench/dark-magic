@@ -37,6 +37,7 @@ func (control *ControlPlane) CreateGame(
 	if err != nil {
 		return GameHandoff{}, err
 	}
+
 	event.AccountID = principal.accountID
 	event.AccountName = principal.name
 	event.SessionID = principal.sessionID
@@ -45,6 +46,7 @@ func (control *ControlPlane) CreateGame(
 	if control.allocator == nil || control.admissions == nil {
 		return GameHandoff{}, ErrGameUnavailable
 	}
+
 	detail, err := control.games.Create(ctx, principal, request)
 	if err != nil {
 		return GameHandoff{}, err
@@ -54,6 +56,7 @@ func (control *ControlPlane) CreateGame(
 	if _, err := control.allocations.Request(ctx, detail.Entry.GameID, allocationID); err != nil {
 		cleanupCtx, cancel := context.WithTimeout(context.WithoutCancel(ctx), 5*time.Second)
 		defer cancel()
+
 		return GameHandoff{}, errors.Join(err, control.games.Remove(cleanupCtx, detail.Entry.GameID))
 	}
 
@@ -67,14 +70,17 @@ func (control *ControlPlane) CreateGame(
 	if err != nil {
 		cleanupCtx, cancel := context.WithTimeout(context.WithoutCancel(ctx), 5*time.Second)
 		defer cancel()
+
 		return GameHandoff{}, errors.Join(
 			err,
 			control.allocations.Fail(cleanupCtx, detail.Entry.GameID, err),
 			control.games.Remove(cleanupCtx, detail.Entry.GameID),
 		)
 	}
+
 	if allocation.AllocationID != allocationID || allocation.Worker == nil {
 		err = ErrWorker
+
 		return GameHandoff{}, errors.Join(
 			err,
 			control.removeAllocatedGame(ctx, detail.Entry.GameID, false, err),
@@ -88,6 +94,7 @@ func (control *ControlPlane) CreateGame(
 			control.removeAllocatedGame(ctx, detail.Entry.GameID, false, err),
 		)
 	}
+
 	if _, err := control.allocations.Ready(
 		ctx,
 		detail.Entry.GameID,
@@ -99,6 +106,7 @@ func (control *ControlPlane) CreateGame(
 			control.removeAllocatedGame(ctx, detail.Entry.GameID, false, err),
 		)
 	}
+
 	if err := control.admissions.RegisterGame(
 		detail.Entry.GameID,
 		allocation.Tickets,
@@ -117,6 +125,7 @@ func (control *ControlPlane) CreateGame(
 			control.removeAllocatedGame(ctx, detail.Entry.GameID, true, err),
 		)
 	}
+
 	return handoff, nil
 }
 
@@ -129,6 +138,7 @@ func (control *ControlPlane) ListGames(
 	if _, err := control.authorize(ctx, token); err != nil {
 		return nil, err
 	}
+
 	return control.games.List(ctx, filter)
 }
 
@@ -142,6 +152,7 @@ func (control *ControlPlane) GameDetail(
 	if _, err := control.authorize(ctx, token); err != nil {
 		return GameDetail{}, err
 	}
+
 	return control.games.Detail(ctx, reference)
 }
 
@@ -166,6 +177,7 @@ func (control *ControlPlane) ResolveGameJoin(
 	if err != nil {
 		return "", err
 	}
+
 	event.AccountID = principal.accountID
 	event.AccountName = principal.name
 	event.SessionID = principal.sessionID
@@ -194,6 +206,7 @@ func (control *ControlPlane) JoinGame(
 	if err != nil {
 		return GameHandoff{}, err
 	}
+
 	event.AccountID = principal.accountID
 	event.AccountName = principal.name
 	event.SessionID = principal.sessionID
@@ -202,15 +215,19 @@ func (control *ControlPlane) JoinGame(
 	if control.allocator == nil || control.admissions == nil {
 		return GameHandoff{}, ErrGameUnavailable
 	}
+
 	gameID, err := control.games.ResolveJoin(ctx, reference, password)
 	if err != nil {
 		return GameHandoff{}, err
 	}
+
 	detail, err := control.games.admissionDetail(ctx, gameID)
 	if err != nil {
 		return GameHandoff{}, err
 	}
+
 	handoff, err = control.joinResolvedGame(ctx, token, principal, detail)
+
 	return handoff, err
 }
 
@@ -230,10 +247,12 @@ func (control *ControlPlane) ReconnectGame(
 	if control == nil || control.admissions == nil {
 		return GameHandoff{}, ErrGameUnavailable
 	}
+
 	principal, err := control.authorize(ctx, token)
 	if err != nil {
 		return GameHandoff{}, err
 	}
+
 	event.AccountID = principal.accountID
 	event.AccountName = principal.name
 	event.SessionID = principal.sessionID
@@ -242,10 +261,12 @@ func (control *ControlPlane) ReconnectGame(
 	if err != nil {
 		return GameHandoff{}, err
 	}
+
 	characterID, err := control.accounts.SelectedCharacter(ctx, token)
 	if err != nil {
 		return GameHandoff{}, err
 	}
+
 	assignment, err := control.admissions.ReconnectAssignment(
 		ctx,
 		detail.Entry.GameID,
@@ -255,6 +276,7 @@ func (control *ControlPlane) ReconnectGame(
 	if err != nil {
 		return GameHandoff{}, err
 	}
+
 	event.CharacterID = characterID
 
 	return GameHandoff{Game: detail, Assignment: assignment}, nil
@@ -272,10 +294,12 @@ func (control *ControlPlane) addSelectedCharacterToAudit(
 	if selectedErr != nil {
 		return
 	}
+
 	record, recordErr := control.characters.Get(ctx, principal.accountID, characterID)
 	if recordErr != nil {
 		return
 	}
+
 	event.CharacterID = record.Character.ID
 	event.CharacterName = record.Character.Name
 }
@@ -292,25 +316,30 @@ func (control *ControlPlane) joinResolvedGame(
 	if err != nil {
 		return GameHandoff{}, err
 	}
+
 	record, err := control.characters.Get(ctx, principal.accountID, characterID)
 	if err != nil {
 		return GameHandoff{}, err
 	}
+
 	if record.Character.Expansion != detail.Entry.Expansion ||
 		record.Character.Hardcore != detail.Entry.Hardcore {
 		return GameHandoff{}, ErrGameDirectoryInput
 	}
+
 	if detail.Entry.CharacterDifference > 0 && len(detail.Players) > 0 {
 		difference := record.Character.Level - detail.Players[0].Level
 		if difference < 0 {
 			difference = -difference
 		}
+
 		if difference > detail.Entry.CharacterDifference {
 			return GameHandoff{}, ErrGameLevelRange
 		}
 	}
 
 	playerID := uuid.New().String()
+
 	reservation, err := control.games.ReservePlayer(ctx, detail.Entry.GameID, GamePlayer{
 		CharacterID: record.Character.ID,
 		Name:        record.Character.Name,
@@ -320,6 +349,7 @@ func (control *ControlPlane) joinResolvedGame(
 	if err != nil {
 		return GameHandoff{}, err
 	}
+
 	assignment, err := control.admissions.Join(ctx, JoinRequest{
 		AccountID:   principal.accountID,
 		CharacterID: record.Character.ID,
@@ -330,11 +360,13 @@ func (control *ControlPlane) joinResolvedGame(
 	if err != nil {
 		cleanupCtx, cancel := context.WithTimeout(context.WithoutCancel(ctx), 5*time.Second)
 		defer cancel()
+
 		return GameHandoff{}, errors.Join(err, control.games.CancelPlayer(cleanupCtx, reservation))
 	}
 
 	cleanupCtx, cancel := context.WithTimeout(context.WithoutCancel(ctx), 5*time.Second)
 	defer cancel()
+
 	updated, err := control.games.CommitPlayer(cleanupCtx, reservation)
 	if err != nil {
 		return GameHandoff{}, errors.Join(
@@ -348,6 +380,7 @@ func (control *ControlPlane) joinResolvedGame(
 	// Presence cleanup is subordinate to the committed admission; maintenance
 	// will remove it later if this best-effort leave fails.
 	_ = control.channels.Leave(cleanupCtx, principal)
+
 	return GameHandoff{Game: updated, Assignment: assignment}, nil
 }
 
@@ -367,6 +400,7 @@ func (control *ControlPlane) removeAllocatedGame(
 	if registered {
 		result = errors.Join(result, control.admissions.UnregisterGame(gameID))
 	}
+
 	result = errors.Join(result, control.allocator.Release(cleanupCtx, gameID))
 	result = errors.Join(result, control.games.Remove(cleanupCtx, gameID))
 
@@ -381,5 +415,6 @@ func (control *ControlPlane) removeAllocatedGame(
 	} else {
 		result = errors.Join(result, control.allocations.Fail(cleanupCtx, gameID, errors.Join(cause, result)))
 	}
+
 	return result
 }

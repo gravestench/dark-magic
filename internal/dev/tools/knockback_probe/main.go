@@ -14,6 +14,7 @@ import (
 // return errors and remain directly testable without intercepting os.Exit.
 func main() {
 	inputPath := flag.String("input", "", "sanitized owned-runtime knockback probe JSON")
+
 	flag.Parse()
 
 	if *inputPath == "" {
@@ -25,7 +26,10 @@ func main() {
 	if err != nil {
 		fatal(err)
 	}
-	defer file.Close()
+	// The input is read-only, so a close failure cannot invalidate the report or alter established CLI output.
+	defer func() {
+		_ = file.Close()
+	}()
 
 	result, err := analyze(file)
 	if err != nil {
@@ -34,6 +38,7 @@ func main() {
 
 	encoder := json.NewEncoder(os.Stdout)
 	encoder.SetIndent("", "  ")
+
 	if err := encoder.Encode(result); err != nil {
 		fatal(err)
 	}

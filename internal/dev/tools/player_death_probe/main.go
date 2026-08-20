@@ -14,6 +14,7 @@ import (
 // main keeps operating-system concerns at the command boundary so capture analysis remains deterministic and testable.
 func main() {
 	inputPath := flag.String("input", "", "sanitized owned-runtime player-death probe JSON")
+
 	flag.Parse()
 
 	if *inputPath == "" {
@@ -25,8 +26,10 @@ func main() {
 	if err != nil {
 		fatal(err)
 	}
-	// Analysis consumes the file synchronously; deferring closure keeps ownership visible without changing error output.
-	defer file.Close()
+	// The input is read-only, so a close failure cannot invalidate the report or alter established CLI output.
+	defer func() {
+		_ = file.Close()
+	}()
 
 	result, err := analyze(file)
 	if err != nil {
@@ -35,6 +38,7 @@ func main() {
 
 	encoder := json.NewEncoder(os.Stdout)
 	encoder.SetIndent("", "  ")
+
 	if err := encoder.Encode(result); err != nil {
 		fatal(err)
 	}

@@ -61,111 +61,169 @@ type Admissions struct {
 	entrySequences  map[string]uint64
 }
 
-func NewAdmissions(workers WorkerRegistry, characters CharacterRepository, leaseLifetime, ticketLifetime time.Duration) (*Admissions, error) {
+// NewAdmissions constructs the admission boundary and validates dependencies before callers can publish or mutate
+// shared state.
+func NewAdmissions(
+	workers WorkerRegistry,
+	characters CharacterRepository,
+	leaseLifetime, ticketLifetime time.Duration,
+) (*Admissions, error) {
 	memberships, err := NewMemoryMemberships(characters)
 	if err != nil {
 		return nil, err
 	}
+
 	return NewAdmissionsWithMemberships(workers, characters, memberships, leaseLifetime, ticketLifetime)
 }
 
-func NewAdmissionsWithMemberships(workers WorkerRegistry, characters CharacterRepository, memberships MembershipRepository, leaseLifetime, ticketLifetime time.Duration) (*Admissions, error) {
-	if workers == nil || characters == nil || memberships == nil || leaseLifetime <= 0 || ticketLifetime <= 0 || ticketLifetime > leaseLifetime {
+// NewAdmissionsWithMemberships constructs the admission boundary and validates dependencies before callers can publish
+// or mutate shared state.
+func NewAdmissionsWithMemberships(
+	workers WorkerRegistry,
+	characters CharacterRepository,
+	memberships MembershipRepository,
+	leaseLifetime, ticketLifetime time.Duration,
+) (*Admissions, error) {
+	if workers == nil || characters == nil || memberships == nil || leaseLifetime <= 0 || ticketLifetime <= 0 ||
+		ticketLifetime > leaseLifetime {
 		return nil, errors.New("realm: admissions require workers, characters, and bounded lifetimes")
 	}
-	return &Admissions{workers: workers, characters: characters, membershipStore: memberships, leaseLifetime: leaseLifetime, ticketLifetime: ticketLifetime,
-		now: time.Now, games: make(map[string]admissionGame), memberships: make(map[string]characterMembership),
-		entrySequences: make(map[string]uint64)}, nil
+
+	return &Admissions{
+		workers:         workers,
+		characters:      characters,
+		membershipStore: memberships,
+		leaseLifetime:   leaseLifetime,
+		ticketLifetime:  ticketLifetime,
+		now:             time.Now,
+		games:           make(map[string]admissionGame),
+		memberships:     make(map[string]characterMembership),
+		entrySequences:  make(map[string]uint64),
+	}, nil
 }
 
+// RegisterGame coordinates register game through the owning admission synchronization boundary so shared state is
+// published only after a complete transition.
 func (admissions *Admissions) RegisterGame(gameID string, tickets TicketIssuer, endpoint GameEndpoint) error {
 	gameID = strings.TrimSpace(gameID)
-	if gameID == "" || tickets == nil || strings.TrimSpace(endpoint.Address) == "" || strings.TrimSpace(endpoint.TLSFingerprint) == "" {
+	if gameID == "" || tickets == nil || strings.TrimSpace(endpoint.Address) == "" ||
+		strings.TrimSpace(endpoint.TLSFingerprint) == "" {
 		return ErrAdmission
 	}
+
 	if _, found := admissions.workers.Game(gameID); !found {
 		return ErrGameNotFound
 	}
+
 	admissions.mu.Lock()
 	defer admissions.mu.Unlock()
+
 	if _, exists := admissions.games[gameID]; exists {
 		return ErrGameExists
 	}
+
 	admissions.games[gameID] = admissionGame{tickets: tickets, endpoint: endpoint}
+
 	return nil
 }
 
+// ReplaceGame coordinates replace game through the owning admission synchronization boundary so shared state is
+// published only after a complete transition.
 func (admissions *Admissions) ReplaceGame(gameID string, tickets TicketIssuer, endpoint GameEndpoint) error {
 	gameID = strings.TrimSpace(gameID)
 	if admissions == nil || gameID == "" || tickets == nil || strings.TrimSpace(endpoint.Address) == "" ||
 		strings.TrimSpace(endpoint.TLSFingerprint) == "" {
 		return ErrAdmission
 	}
+
 	if _, found := admissions.workers.Game(gameID); !found {
 		return ErrGameNotFound
 	}
+
 	admissions.mu.Lock()
 	defer admissions.mu.Unlock()
+
 	if _, exists := admissions.games[gameID]; !exists {
 		return ErrGameNotFound
 	}
+
 	admissions.games[gameID] = admissionGame{tickets: tickets, endpoint: endpoint}
+
 	return nil
 }
 
 // ResumeGame rebuilds Admissions' process-local index after durable authority
 // recovery. It must run before public traffic begins. The repository rotates
 // durable lease secrets first; only the newly returned raw tokens enter memory.
-func (admissions *Admissions) ResumeGame(ctx context.Context, gameID string, tickets TicketIssuer, endpoint GameEndpoint) ([]MembershipRecord, error) {
+func (admissions *Admissions) ResumeGame(
+	ctx context.Context,
+	gameID string,
+	tickets TicketIssuer,
+	endpoint GameEndpoint,
+) ([]MembershipRecord, error) {
 	gameID = strings.TrimSpace(gameID)
 	if admissions == nil || ctx == nil || gameID == "" || tickets == nil ||
 		strings.TrimSpace(endpoint.Address) == "" || strings.TrimSpace(endpoint.TLSFingerprint) == "" {
 		return nil, ErrAdmission
 	}
+
 	if _, found := admissions.workers.Game(gameID); !found {
 		return nil, ErrGameNotFound
 	}
+
 	admissions.entryMu.Lock()
 	defer admissions.entryMu.Unlock()
+
 	admissions.mu.RLock()
 	_, gameExists := admissions.games[gameID]
 	admissions.mu.RUnlock()
+
 	if gameExists {
 		return nil, ErrGameExists
 	}
+
 	records, err := admissions.membershipStore.ResumeGame(ctx, gameID, admissions.leaseLifetime)
 	if err != nil {
 		return nil, err
 	}
+
 	indexed := make(map[string]characterMembership, len(records))
 	for _, record := range records {
 		if record.GameID != gameID || record.State != MembershipActive || validateActiveMembership(record) != nil {
 			return nil, ErrMembership
 		}
+
 		membershipID := membershipKey(gameID, record.PlayerID)
 		if _, exists := indexed[membershipID]; exists {
 			return nil, ErrMembership
 		}
+
 		indexed[membershipID] = characterMembership{lease: record.Lease, baseline: record.Baseline}
 	}
+
 	admissions.mu.Lock()
 	defer admissions.mu.Unlock()
+
 	if _, exists := admissions.games[gameID]; exists {
 		return nil, ErrGameExists
 	}
+
 	for membershipID := range indexed {
 		if _, exists := admissions.memberships[membershipID]; exists {
 			return nil, ErrMembership
 		}
 	}
+
 	admissions.games[gameID] = admissionGame{tickets: tickets, endpoint: endpoint}
 	for membershipID, membership := range indexed {
 		admissions.memberships[membershipID] = membership
 	}
+
 	result := make([]MembershipRecord, len(records))
 	for index, record := range records {
 		result[index] = cloneMembershipRecord(record)
 	}
+
 	return result, nil
 }
 
@@ -173,114 +231,172 @@ func (admissions *Admissions) ResumeGame(ctx context.Context, gameID string, tic
 // admitted durable membership. This is used when a replacement worker has the
 // canonical player entity but the old transport credential and endpoint are no
 // longer valid.
-func (admissions *Admissions) ReconnectAssignment(ctx context.Context, gameID, accountID, characterID string) (JoinAssignment, error) {
-	gameID, accountID, characterID = strings.TrimSpace(gameID), strings.TrimSpace(accountID), strings.TrimSpace(characterID)
+func (admissions *Admissions) ReconnectAssignment(
+	ctx context.Context,
+	gameID, accountID, characterID string,
+) (JoinAssignment, error) {
+	gameID, accountID, characterID = strings.TrimSpace(
+		gameID,
+	), strings.TrimSpace(
+		accountID,
+	), strings.TrimSpace(
+		characterID,
+	)
 	if admissions == nil || ctx == nil || gameID == "" || accountID == "" || characterID == "" {
 		return JoinAssignment{}, ErrAdmission
 	}
+
 	admissions.mu.RLock()
 	game, configured := admissions.games[gameID]
-	var playerID string
-	var membership characterMembership
+
+	var (
+		playerID   string
+		membership characterMembership
+	)
+
 	for membershipID, candidate := range admissions.memberships {
 		if candidate.lease.GameID == gameID && candidate.baseline.AccountID == accountID &&
 			candidate.baseline.Character.ID == characterID {
 			playerID = strings.TrimPrefix(membershipID, gameID+"\x00")
 			membership = candidate
+
 			break
 		}
 	}
+
 	admissions.mu.RUnlock()
+
 	if !configured || playerID == "" {
 		return JoinAssignment{}, ErrLease
 	}
+
 	worker, found := admissions.workers.Game(gameID)
 	if !found {
 		return JoinAssignment{}, ErrGameNotFound
 	}
+
 	description, err := worker.Describe(ctx)
 	if err != nil {
 		return JoinAssignment{}, err
 	}
+
 	identityHash, err := description.Runtime.Digest()
-	if err != nil || identityHash != description.IdentityHash || membership.baseline.Compatibility.IdentityHash != identityHash {
+	if err != nil || identityHash != description.IdentityHash ||
+		membership.baseline.Compatibility.IdentityHash != identityHash {
 		return JoinAssignment{}, errors.Join(ErrWorker, err)
 	}
+
 	principal := AdmissionPrincipal{AccountID: accountID, CharacterID: membership.baseline.Character.ID,
 		PlayerID: playerID, CharacterRevision: membership.baseline.Revision, RuntimeIdentityHash: identityHash}
+
 	ticket, err := game.tickets.Issue(ctx, principal, admissions.ticketLifetime)
 	if err != nil {
 		return JoinAssignment{}, err
 	}
+
 	return JoinAssignment{GameID: gameID, Endpoint: game.endpoint, Ticket: ticket,
 		CharacterRevision: membership.baseline.Revision, Runtime: cloneRuntimeIdentity(description.Runtime)}, nil
 }
 
+// UnregisterGame coordinates unregister game through the owning admission synchronization boundary so shared state is
+// published only after a complete transition.
 func (admissions *Admissions) UnregisterGame(gameID string) error {
 	gameID = strings.TrimSpace(gameID)
 	if admissions == nil || gameID == "" {
 		return ErrAdmission
 	}
+
 	admissions.mu.Lock()
 	defer admissions.mu.Unlock()
+
 	if _, found := admissions.games[gameID]; !found {
 		return ErrGameNotFound
 	}
+
 	for membershipID := range admissions.memberships {
 		if strings.HasPrefix(membershipID, gameID+"\x00") {
 			return ErrCharacterLeased
 		}
 	}
+
 	delete(admissions.games, gameID)
+
 	return nil
 }
 
+// Join leases the canonical character, validates it against the worker runtime, issues a one-use ticket, and publishes
+// membership only after worker and durable admission both succeed. Every later failure unwinds the ticket and lease so
+// a partial admission cannot strand character ownership.
 func (admissions *Admissions) Join(ctx context.Context, request JoinRequest) (JoinAssignment, error) {
-	if ctx == nil || strings.TrimSpace(request.AccountID) == "" || strings.TrimSpace(request.CharacterID) == "" || strings.TrimSpace(request.PlayerID) == "" || strings.TrimSpace(request.GameID) == "" {
+	if ctx == nil || strings.TrimSpace(request.AccountID) == "" || strings.TrimSpace(request.CharacterID) == "" ||
+		strings.TrimSpace(request.PlayerID) == "" ||
+		strings.TrimSpace(request.GameID) == "" {
 		return JoinAssignment{}, ErrAdmission
 	}
+
 	worker, found := admissions.workers.Game(request.GameID)
 	if !found {
 		return JoinAssignment{}, ErrGameNotFound
 	}
+
 	admissions.mu.RLock()
 	game, configured := admissions.games[request.GameID]
 	admissions.mu.RUnlock()
+
 	if !configured {
 		return JoinAssignment{}, ErrAdmission
 	}
+
 	membershipID := request.GameID + "\x00" + request.PlayerID
+
 	admissions.mu.RLock()
 	_, alreadyJoined := admissions.memberships[membershipID]
 	admissions.mu.RUnlock()
+
 	if alreadyJoined {
 		return JoinAssignment{}, ErrCharacterLeased
 	}
-	record, lease, err := admissions.characters.Acquire(ctx, request.AccountID, request.CharacterID, request.GameID, admissions.leaseLifetime)
+
+	record, lease, err := admissions.characters.Acquire(
+		ctx,
+		request.AccountID,
+		request.CharacterID,
+		request.GameID,
+		admissions.leaseLifetime,
+	)
 	if err != nil {
 		return JoinAssignment{}, err
 	}
+
 	rollback := func(cause error, ticket string) (JoinAssignment, error) {
+		// Admission cleanup must survive caller cancellation, but remains bounded so a failed worker cannot hang the realm.
 		cleanupCtx, cancel := context.WithTimeout(context.WithoutCancel(ctx), 5*time.Second)
 		defer cancel()
+
 		if ticket != "" {
 			cause = errors.Join(cause, game.tickets.Revoke(cleanupCtx, ticket))
 		}
+
 		cause = errors.Join(cause, admissions.characters.Release(cleanupCtx, lease))
+
 		return JoinAssignment{}, fmt.Errorf("%w: %v", ErrAdmission, cause)
 	}
+
 	description, err := worker.Describe(ctx)
 	if err != nil {
 		return rollback(err, "")
 	}
+
 	identityHash, err := description.Runtime.Digest()
 	if err != nil || identityHash != description.IdentityHash {
 		return rollback(errors.Join(ErrWorker, err), "")
 	}
+
 	expectedCompatibility := gamesession.DurableCompatibility{CharacterID: record.Character.ID,
 		ModID: description.Runtime.Recipe.Packages.Base.ID, ContractVersion: description.Runtime.Recipe.EngineAPI,
 		IdentityHash: description.IdentityHash}
 	if emptyCompatibility(record.Compatibility) {
+		// The first authoritative admission binds compatibility; subsequent games must match it exactly.
 		record, err = admissions.characters.BindCompatibility(ctx, lease, expectedCompatibility)
 		if err != nil {
 			return rollback(err, "")
@@ -288,39 +404,58 @@ func (admissions *Admissions) Join(ctx context.Context, request JoinRequest) (Jo
 	} else if record.Compatibility != expectedCompatibility {
 		return rollback(gamesession.ErrCompatibility, "")
 	}
+
 	destination := request.Destination
+	// Prefer the worker's entry destination only when it passes the same geometry validation as client input.
 	if _, err := playeradapter.NewDestination(description.EntryDestination.X, description.EntryDestination.Y,
 		description.EntryDestination.Width, description.EntryDestination.Height, description.EntryDestination.Act,
 		description.EntryDestination.LevelID); err == nil {
 		destination = description.EntryDestination
 	}
-	principal := AdmissionPrincipal{AccountID: request.AccountID, CharacterID: request.CharacterID, PlayerID: request.PlayerID,
-		CharacterRevision: record.Revision, RuntimeIdentityHash: description.IdentityHash}
+
+	principal := AdmissionPrincipal{
+		AccountID:           request.AccountID,
+		CharacterID:         request.CharacterID,
+		PlayerID:            request.PlayerID,
+		CharacterRevision:   record.Revision,
+		RuntimeIdentityHash: description.IdentityHash,
+	}
+
 	ticket, err := game.tickets.Issue(ctx, principal, admissions.ticketLifetime)
 	if err != nil {
 		return rollback(err, "")
 	}
+
 	admissions.entryMu.Lock()
 	defer admissions.entryMu.Unlock()
+
+	// Entry sequence allocation and worker submission are serialized together, preventing duplicate actor sequences.
 	actor := "realm:entry:" + request.PlayerID
+
 	sequence := admissions.entrySequences[request.GameID+"\x00"+actor] + 1
 	if err := worker.AdmitCharacter(ctx, WorkerAdmission{Character: record.Character, Compatibility: record.Compatibility,
 		PlayerID: request.PlayerID, Destination: destination, Actor: actor, Sequence: sequence,
 		ClaimDeadline: admissions.now().Add(admissions.ticketLifetime)}); err != nil {
 		return rollback(err, ticket)
 	}
+
 	membership := characterMembership{lease: lease, baseline: record, ticket: ticket}
 	if err := admissions.membershipStore.Admit(ctx, MembershipRecord{GameID: request.GameID, PlayerID: request.PlayerID,
 		AccountID: request.AccountID, Baseline: record, Lease: lease, State: MembershipActive}); err != nil {
 		cleanupCtx, cancel := context.WithTimeout(context.WithoutCancel(ctx), 5*time.Second)
 		removeErr := worker.RemoveCharacter(cleanupCtx, request.PlayerID)
+
 		cancel()
+
 		return rollback(errors.Join(err, removeErr), ticket)
 	}
+
+	// Publish volatile lookup state last; before this point every failure path can still roll back cleanly.
 	admissions.entrySequences[request.GameID+"\x00"+actor] = sequence
 	admissions.mu.Lock()
 	admissions.memberships[membershipID] = membership
 	admissions.mu.Unlock()
+
 	return JoinAssignment{GameID: request.GameID, Endpoint: game.endpoint, Ticket: ticket,
 		CharacterRevision: record.Revision, Runtime: cloneRuntimeIdentity(description.Runtime)}, nil
 }
@@ -332,57 +467,74 @@ func (admissions *Admissions) CancelMembership(ctx context.Context, gameID, play
 	if admissions == nil || ctx == nil {
 		return ErrAdmission
 	}
+
 	gameID, playerID = strings.TrimSpace(gameID), strings.TrimSpace(playerID)
 	membershipID := gameID + "\x00" + playerID
+
 	admissions.mu.RLock()
 	membership, found := admissions.memberships[membershipID]
 	game, configured := admissions.games[gameID]
 	admissions.mu.RUnlock()
+
 	if !found || !configured {
 		return ErrLease
 	}
+
 	worker, found := admissions.workers.Game(gameID)
 	if !found {
 		return ErrGameNotFound
 	}
+
 	cleanupCtx, cancel := context.WithTimeout(context.WithoutCancel(ctx), 5*time.Second)
 	defer cancel()
+
 	var revokeErr error
 	if membership.ticket != "" {
 		revokeErr = game.tickets.Revoke(cleanupCtx, membership.ticket)
 	}
+
 	if err := worker.RemoveCharacter(cleanupCtx, playerID); err != nil {
 		return errors.Join(revokeErr, err)
 	}
+
 	admissions.mu.Lock()
 	if current, exists := admissions.memberships[membershipID]; exists && current.lease.Token == membership.lease.Token {
 		delete(admissions.memberships, membershipID)
 	}
 	admissions.mu.Unlock()
+
 	return errors.Join(revokeErr, admissions.characters.Release(cleanupCtx, membership.lease),
 		admissions.membershipStore.Cancel(cleanupCtx, gameID, playerID))
 }
 
+// RenewMembership coordinates renew membership through the owning admission synchronization boundary so shared state
+// is published only after a complete transition.
 func (admissions *Admissions) RenewMembership(ctx context.Context, gameID, playerID string) (CharacterLease, error) {
 	membershipID := strings.TrimSpace(gameID) + "\x00" + strings.TrimSpace(playerID)
+
 	admissions.mu.RLock()
 	membership, found := admissions.memberships[membershipID]
 	admissions.mu.RUnlock()
+
 	if !found {
 		return CharacterLease{}, ErrLease
 	}
+
 	renewed, err := admissions.characters.Renew(ctx, membership.lease, admissions.leaseLifetime)
 	if err != nil {
 		return CharacterLease{}, err
 	}
+
 	admissions.mu.Lock()
 	if current, exists := admissions.memberships[membershipID]; !exists || current.lease.Token != membership.lease.Token {
 		admissions.mu.Unlock()
 		return CharacterLease{}, ErrLease
 	}
+
 	membership.lease = renewed
 	admissions.memberships[membershipID] = membership
 	admissions.mu.Unlock()
+
 	return renewed, nil
 }
 
@@ -393,27 +545,36 @@ func (admissions *Admissions) RenewGameMemberships(ctx context.Context, gameID s
 	if admissions == nil || ctx == nil {
 		return 0, ErrAdmission
 	}
+
 	admissions.entryMu.Lock()
 	defer admissions.entryMu.Unlock()
+
 	gameID = strings.TrimSpace(gameID)
 	now := admissions.now()
 	admissions.mu.RLock()
+
 	memberships := make(map[string]characterMembership)
 	for membershipID, membership := range admissions.memberships {
 		if membership.lease.GameID == gameID && membership.lease.ExpiresAt.Sub(now) <= admissions.leaseLifetime/2 {
 			memberships[membershipID] = membership
 		}
 	}
+
 	admissions.mu.RUnlock()
+
 	renewedCount := 0
+
 	var result error
+
 	for membershipID, membership := range memberships {
 		renewed, err := admissions.characters.Renew(ctx, membership.lease, admissions.leaseLifetime)
 		if err != nil {
 			result = errors.Join(result, err)
 			continue
 		}
+
 		admissions.mu.Lock()
+
 		current, exists := admissions.memberships[membershipID]
 		if exists && current.lease.Token == membership.lease.Token {
 			current.lease = renewed
@@ -422,78 +583,111 @@ func (admissions *Admissions) RenewGameMemberships(ctx context.Context, gameID s
 		}
 		admissions.mu.Unlock()
 	}
+
 	return renewedCount, result
 }
 
 // CommitMembership is the trusted worker-to-realm persistence boundary. The
 // opaque lease stays inside Admissions and is never included in JoinAssignment.
-func (admissions *Admissions) CommitMembership(ctx context.Context, gameID, playerID string, character d2save.Character) (CharacterRecord, error) {
+func (admissions *Admissions) CommitMembership(
+	ctx context.Context,
+	gameID, playerID string,
+	character d2save.Character,
+) (CharacterRecord, error) {
 	membershipID := strings.TrimSpace(gameID) + "\x00" + strings.TrimSpace(playerID)
+
 	admissions.mu.RLock()
 	membership, found := admissions.memberships[membershipID]
 	admissions.mu.RUnlock()
+
 	if !found {
 		return CharacterRecord{}, ErrLease
 	}
+
 	receipt, err := admissions.membershipStore.Depart(ctx, MembershipRecord{GameID: gameID, PlayerID: playerID,
 		AccountID: membership.baseline.AccountID, Baseline: membership.baseline, Lease: membership.lease,
 		State: MembershipActive}, character)
 	if err != nil {
 		return CharacterRecord{}, err
 	}
+
 	admissions.mu.Lock()
 	if current, exists := admissions.memberships[membershipID]; !exists || current.lease.Token != membership.lease.Token {
 		admissions.mu.Unlock()
 		return CharacterRecord{}, ErrLease
 	}
+
 	delete(admissions.memberships, membershipID)
 	admissions.mu.Unlock()
+
 	return receipt.Record, nil
 }
 
 // CommitCanonicalMembership projects the worker's canonical checkpoint into
 // the leased durable baseline, then commits it through the realm-only lease.
-func (admissions *Admissions) CommitCanonicalMembership(ctx context.Context, gameID, playerID string) (CharacterRecord, error) {
+func (admissions *Admissions) CommitCanonicalMembership(
+	ctx context.Context,
+	gameID, playerID string,
+) (CharacterRecord, error) {
 	gameID, playerID = strings.TrimSpace(gameID), strings.TrimSpace(playerID)
 	membershipID := gameID + "\x00" + playerID
+
 	admissions.mu.RLock()
 	membership, found := admissions.memberships[membershipID]
 	admissions.mu.RUnlock()
+
 	if !found {
 		return CharacterRecord{}, ErrLease
 	}
+
 	worker, found := admissions.workers.Game(gameID)
 	if !found {
 		return CharacterRecord{}, ErrGameNotFound
 	}
+
 	character, err := worker.ProjectCharacter(ctx, playerID, membership.baseline.Character)
 	if err != nil {
 		return CharacterRecord{}, err
 	}
+
 	return admissions.CommitMembership(ctx, gameID, playerID, character)
 }
 
 // CharacterMembership resolves only Realm-owned membership state. Both the
 // account and selected character come from an authenticated Realm session;
 // clients never supply a player ID.
-func (admissions *Admissions) CharacterMembership(gameID, accountID, characterID string) (string, CharacterRecord, error) {
+func (admissions *Admissions) CharacterMembership(
+	gameID, accountID, characterID string,
+) (string, CharacterRecord, error) {
 	if admissions == nil {
 		return "", CharacterRecord{}, ErrLease
 	}
-	gameID, accountID, characterID = strings.TrimSpace(gameID), strings.TrimSpace(accountID), strings.TrimSpace(characterID)
+
+	gameID, accountID, characterID = strings.TrimSpace(
+		gameID,
+	), strings.TrimSpace(
+		accountID,
+	), strings.TrimSpace(
+		characterID,
+	)
+
 	admissions.mu.RLock()
 	defer admissions.mu.RUnlock()
+
 	for membershipID, membership := range admissions.memberships {
 		if membership.lease.GameID != gameID || membership.baseline.AccountID != accountID ||
 			membership.baseline.Character.ID != characterID {
 			continue
 		}
+
 		_, playerID, found := strings.Cut(membershipID, "\x00")
 		if !found || playerID == "" {
 			return "", CharacterRecord{}, ErrLease
 		}
+
 		return playerID, cloneCharacterRecord(membership.baseline), nil
 	}
+
 	return "", CharacterRecord{}, ErrLease
 }
 
@@ -504,16 +698,20 @@ func (admissions *Admissions) PlayerMembership(gameID, playerID string) (string,
 	if admissions == nil {
 		return "", CharacterRecord{}, ErrAdmission
 	}
+
 	gameID, playerID = strings.TrimSpace(gameID), strings.TrimSpace(playerID)
 	if gameID == "" || playerID == "" {
 		return "", CharacterRecord{}, ErrAdmission
 	}
+
 	admissions.mu.RLock()
 	membership, found := admissions.memberships[gameID+"\x00"+playerID]
 	admissions.mu.RUnlock()
+
 	if !found {
 		return "", CharacterRecord{}, ErrLease
 	}
+
 	return membership.baseline.AccountID, cloneCharacterRecord(membership.baseline), nil
 }
 
@@ -521,41 +719,54 @@ func (admissions *Admissions) PlayerMembership(gameID, playerID string) (string,
 // sequence. Once Commit succeeds, the durable character and lease are safe
 // even if worker removal reports an error; callers must still remove the public
 // roster and may drain an empty or unhealthy allocation.
-func (admissions *Admissions) LeaveCanonicalMembership(ctx context.Context, gameID, playerID string) (CharacterRecord, error) {
+func (admissions *Admissions) LeaveCanonicalMembership(
+	ctx context.Context,
+	gameID, playerID string,
+) (CharacterRecord, error) {
 	if admissions == nil || ctx == nil {
 		return CharacterRecord{}, ErrAdmission
 	}
+
 	admissions.entryMu.Lock()
 	defer admissions.entryMu.Unlock()
+
 	gameID, playerID = strings.TrimSpace(gameID), strings.TrimSpace(playerID)
 	membershipID := gameID + "\x00" + playerID
+
 	admissions.mu.RLock()
 	membership, found := admissions.memberships[membershipID]
 	admissions.mu.RUnlock()
+
 	if !found {
 		return CharacterRecord{}, ErrLease
 	}
+
 	worker, found := admissions.workers.Game(gameID)
 	if !found {
 		return CharacterRecord{}, ErrGameNotFound
 	}
+
 	character, err := worker.ProjectCharacter(ctx, playerID, membership.baseline.Character)
 	if err != nil {
 		return CharacterRecord{}, err
 	}
+
 	receipt, err := admissions.membershipStore.Depart(ctx, MembershipRecord{GameID: gameID, PlayerID: playerID,
 		AccountID: membership.baseline.AccountID, Baseline: membership.baseline, Lease: membership.lease,
 		State: MembershipActive}, character)
 	if err != nil {
 		return CharacterRecord{}, err
 	}
+
 	admissions.mu.Lock()
 	if current, exists := admissions.memberships[membershipID]; !exists || current.lease.Token != membership.lease.Token {
 		admissions.mu.Unlock()
 		return CharacterRecord{}, ErrLease
 	}
+
 	delete(admissions.memberships, membershipID)
 	admissions.mu.Unlock()
+
 	return receipt.Record, nil
 }
 
@@ -566,44 +777,61 @@ func (admissions *Admissions) AbandonGame(ctx context.Context, gameID string) er
 	if admissions == nil || ctx == nil {
 		return ErrAdmission
 	}
+
 	admissions.entryMu.Lock()
 	defer admissions.entryMu.Unlock()
+
 	gameID = strings.TrimSpace(gameID)
+
 	admissions.mu.Lock()
 	if _, found := admissions.games[gameID]; !found {
 		admissions.mu.Unlock()
 		return ErrGameNotFound
 	}
+
 	var leases []CharacterLease
+
 	for membershipID, membership := range admissions.memberships {
 		if membership.lease.GameID == gameID {
 			leases = append(leases, membership.lease)
+
 			delete(admissions.memberships, membershipID)
 		}
 	}
+
 	delete(admissions.games, gameID)
 	admissions.mu.Unlock()
+
 	var result error
 	for _, lease := range leases {
 		result = errors.Join(result, admissions.characters.Release(ctx, lease))
 	}
+
 	result = errors.Join(result, admissions.membershipStore.AbandonGame(ctx, gameID))
+
 	return result
 }
 
+// cloneRuntimeIdentity returns an independent admission value so callers cannot mutate repository-owned state through
+// a returned record.
 func cloneRuntimeIdentity(identity simulation.RuntimeIdentity) simulation.RuntimeIdentity {
 	identity.Recipe.Packages.Extensions = append([]simulation.RuntimePackage(nil), identity.Recipe.Packages.Extensions...)
 	identity.Recipe.CapabilityVersions = cloneStrings(identity.Recipe.CapabilityVersions)
+
 	return identity
 }
 
+// cloneStrings returns an independent admission value so callers cannot mutate repository-owned state through a
+// returned record.
 func cloneStrings(values map[string]string) map[string]string {
 	if values == nil {
 		return nil
 	}
+
 	result := make(map[string]string, len(values))
 	for key, value := range values {
 		result[key] = value
 	}
+
 	return result
 }

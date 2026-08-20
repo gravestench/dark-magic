@@ -131,6 +131,7 @@ func includeRequiredUnlistedPaths(source generationSource, paths []string) ([]st
 		if _, found := listed[strings.ToLower(name)]; found {
 			continue
 		}
+
 		if _, statErr := fs.Stat(source, name); statErr == nil {
 			paths = append(paths, name)
 			listed[strings.ToLower(name)] = struct{}{}
@@ -171,6 +172,7 @@ func snapshotGeneration(
 		if readErr != nil {
 			return nil, Generation{}, fmt.Errorf("recordstore: pin %q: %w", name, readErr)
 		}
+
 		layer, resolvedPath, resolveErr := source.ResolveSource(name)
 		if resolveErr != nil {
 			return nil, Generation{}, fmt.Errorf("recordstore: resolve %q: %w", name, resolveErr)
@@ -219,6 +221,7 @@ func newPinnedStore(files fstest.MapFS, generation Generation) (*Store, error) {
 				file.Path,
 			)
 		}
+
 		pinned.canonical[folded] = file.Path
 		pinned.provenance[file.Path] = Provenance{Layer: file.Source, Path: file.SourcePath}
 	}
