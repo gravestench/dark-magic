@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"image"
 	"image/color"
+	"image/draw"
 	"io/fs"
 	"sort"
 	"sync"
@@ -56,6 +57,29 @@ type TileSet struct {
 	palette        color.Palette
 	buckets        map[[2]int][]int
 	visibilityPool sync.Pool
+}
+
+// TileVisibility selects the authored presentation families baked into one
+// editor chunk. Lower and upper walls intentionally share one switch because
+// DS1 exposes them as one authoring family.
+type TileVisibility struct {
+	Floor  bool
+	Wall   bool
+	Shadow bool
+}
+
+// Includes reports whether one world presentation layer belongs in a chunk.
+func (visibility TileVisibility) Includes(layer world.TileLayer) bool {
+	switch layer {
+	case world.LayerFloor:
+		return visibility.Floor
+	case world.LayerLowerWall, world.LayerUpperWall, world.LayerRoof:
+		return visibility.Wall
+	case world.LayerShadow:
+		return visibility.Shadow
+	default:
+		return false
+	}
 }
 
 type visibilityScratch struct {
@@ -219,6 +243,64 @@ func (set *TileSet) MaterializeGraphic(index int) (image.Image, error) {
 	graphic.once.Do(func() { set.decodeTileGraphic(graphic) })
 
 	return graphic.pixels, graphic.err
+}
+
+// ComposeRegion flattens one spatial editor chunk in canonical depth order.
+// The caller supplies the graphic loader so immutable DT1 pictures can remain
+// cached across mutable editor snapshots. Neighboring regions never overlap;
+// tiles crossing a boundary are clipped into each region and reconstruct the
+// same complete map without one retained node per placement.
+func (set *TileSet) ComposeRegion(
+	region image.Rectangle,
+	visibility TileVisibility,
+	loadGraphic func(index int, graphic *TileGraphic) (image.Image, error),
+) (*image.RGBA, image.Rectangle, error) {
+	if set == nil || loadGraphic == nil {
+		return nil, image.Rectangle{}, fmt.Errorf("maprender: tile set and graphic loader are required")
+	}
+
+	region = region.Intersect(image.Rect(0, 0, set.Width, set.Height))
+	if region.Empty() {
+		return image.NewRGBA(image.Rect(0, 0, 1, 1)), image.Rect(0, 0, 1, 1), nil
+	}
+
+	indexes := set.Visible(region, nil)
+	sort.SliceStable(indexes, func(left, right int) bool {
+		leftDraw, rightDraw := set.Draws[indexes[left]], set.Draws[indexes[right]]
+		if leftDraw.Depth != rightDraw.Depth {
+			return leftDraw.Depth < rightDraw.Depth
+		}
+
+		return indexes[left] < indexes[right]
+	})
+
+	result := image.NewRGBA(image.Rect(0, 0, region.Dx(), region.Dy()))
+	for _, index := range indexes {
+		placement := set.Draws[index]
+		if !visibility.Includes(placement.Layer) || placement.Graphic < 0 ||
+			placement.Graphic >= len(set.Graphics) {
+			continue
+		}
+
+		pixels, err := loadGraphic(placement.Graphic, set.Graphics[placement.Graphic])
+		if err != nil {
+			return nil, image.Rectangle{}, err
+		}
+		if pixels == nil {
+			continue
+		}
+
+		clipped := placement.Bounds.Intersect(region)
+		if clipped.Empty() {
+			continue
+		}
+
+		target := clipped.Sub(region.Min)
+		sourcePoint := pixels.Bounds().Min.Add(clipped.Min.Sub(placement.Bounds.Min))
+		draw.Draw(result, target, pixels, sourcePoint, draw.Over)
+	}
+
+	return result, region, nil
 }
 
 // decodeTileGraphic owns the open/decode/close sequence cached by MaterializeGraphic's sync.Once.

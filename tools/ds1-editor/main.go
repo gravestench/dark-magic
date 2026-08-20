@@ -56,6 +56,7 @@ func run() int {
 		"environment file (overrides the default ds1-editor.env selection)",
 	)
 	output := flag.String("output", outputDefault, "directory where edited DS1 copies are written")
+	initialMap := flag.String("open", "", "mounted DS1 path to open immediately")
 	windowSize := flag.String("window-size", windowDefault, "initial editor window size as WIDTHxHEIGHT")
 	fullscreen := flag.Bool("fullscreen", fullscreenDefault, "use a maximized borderless editor window")
 	mods := flag.String(
@@ -98,6 +99,7 @@ func run() int {
 		ReadOnlyRoots:      roots,
 		WindowWidth:        width,
 		WindowHeight:       height,
+		InitialMap:         *initialMap,
 		Borderless:         *fullscreen,
 		OutputPalette:      *palette,
 		DisableNativeAudio: !*nativeAudio,

@@ -26,24 +26,25 @@ local palettes = {
 }
 
 local layout = {
-    canvas_top=116,
-    toolbar_top=52,
-    toolbar_bottom=100,
-    document_meta_top=68,
-    tool_top=124,
-    layer_top=124,
-    mode_top=178,
-    auto_top=220,
-    tileset_heading=272,
-    tileset_rows=298,
-    physical_heading=424,
-    tile_top=452,
+    canvas_top=144,
+    toolbar_top=64,
+    toolbar_bottom=128,
+    document_meta_top=84,
+    tool_top=160,
+    layer_top=160,
+    mode_top=232,
+    auto_top=288,
+    tileset_heading=352,
+    tileset_rows=382,
+    physical_heading=510,
+    tile_top=542,
 }
 
 local canvas = {left=66, top=layout.canvas_top, right=554, bottom=564}
 local canvas_center_x = (canvas.left + canvas.right) / 2
 local canvas_center_y = (canvas.top + canvas.bottom) / 2
 local zoom_step = 0.05
+local map_chunk_size = 384
 
 local tools = {
     {id="pan", label="PAN", hint="Drag the map; hold Space for temporary pan"},
@@ -64,12 +65,6 @@ local visibility_layers = {
     {kind="shadow", sheet="authoring", icon="shadow"},
     {kind="collision", sheet="utility", icon="collision"},
 }
-
-local function presentation_kind(layer_name)
-    if layer_name == "floor" then return "floor" end
-    if layer_name == "shadow" then return "shadow" end
-    return "wall"
-end
 
 -- Test pointer coordinates against one half-open UI rectangle.
 local function in_rect(x, y, rect)
@@ -109,10 +104,10 @@ end
 -- Native-resolution mode supplies these dimensions directly from the drawable
 -- surface, not from a scaled 800×600 render target.
 local function layout_canvas(width, height)
-    local inspector_width = clamp(math.floor(width * 0.27), 300, 380)
-    local left, top = 72, layout.canvas_top
-    local right = math.max(left + 360, width - inspector_width - 12)
-    return {left=left, top=top, right=right, bottom=height - 72}, right + 6, width - 8
+    local inspector_width = clamp(math.floor(width * 0.25), 360, 408)
+    local left, top = 96, layout.canvas_top
+    local right = math.max(left + 360, width - inspector_width - 16)
+    return {left=left, top=top, right=right, bottom=height - 72}, right + 8, width - 8
 end
 
 -- Create a solid retained rectangle for canvas and content-card backgrounds.
@@ -137,8 +132,7 @@ local function label(parent, value, x, y, width, alignment, style, z)
     return node
 end
 
--- Build an icon-only control on a fixed authored plate. The plate dimensions
--- reserve eight native pixels around the 32px DC6 frame on every side.
+-- Build an icon-only control on the mockup's fixed 64px authored plate.
 local function icon_button(parent, rect, sheet, name, z, icon_x)
     local control = ui.icon_button(parent, {
         left=rect.left,
@@ -342,10 +336,14 @@ function map_editor:fit()
     self:position_map()
 end
 
--- Queue a lightweight placement index. Individual DT1 graphics stay shared;
--- painting replaces only retained nodes whose authored cells actually changed.
+-- Queue only the lightweight placement index. DT1 pixels remain lazy and are
+-- decoded when one visible composite chunk first needs them.
 function map_editor:queue_preview(fit, dirty_points)
     if not self.summary then return end
+    if self.preview_job then
+        render.preload_release(self.preview_job)
+        self.preview_job = nil
+    end
     local ok, world = pcall(editor.preview, dirty_points)
     if not ok then
         self:set_message(tostring(world), "red")
@@ -354,32 +352,42 @@ function map_editor:queue_preview(fit, dirty_points)
     self.preview_world = world
     self.pending_fit = fit == true
     self.pending_dirty = dirty_points
-    self.preview_job = render.preload({{kind="world_tiles", world=world, palette=self.palette}})
+    self.preview_job = render.preload({{kind="world_tile_index", world=world, palette=self.palette}})
     self:set_message(dirty_points and "Updating changed map tiles…" or "Indexing map tiles…", "gold")
 end
 
--- Identify one authored placement across immutable preview revisions. Ordinal
--- distinguishes paired north-corner graphics and multiple records in one layer.
-local function tile_key(draw)
-    return string.format("%d:%d:%s:%d", draw.tile_x, draw.tile_y,
-        draw.layer_name or tostring(draw.layer), draw.ordinal or 0)
+local function map_chunk_key(column, row)
+    return tostring(column) .. ":" .. tostring(row)
 end
 
 local function dirty_cell_key(x, y)
     return tostring(x) .. ":" .. tostring(y)
 end
 
--- Discard only placements owned by explicitly dirty authored cells. Every
--- unrelated node, including overlapping walls in neighboring cells, survives.
-function map_editor:apply_tile_delta(points)
-    local dirty = {}
-    for _, point in ipairs(points or {}) do dirty[dirty_cell_key(point.x, point.y)] = true end
-    for key, retained in pairs(self.chunk_nodes) do
-        if dirty[dirty_cell_key(retained.tile_x, retained.tile_y)] then
-            if retained.node:exists() then retained.node:destroy() end
-            self.chunk_nodes[key] = nil
+-- Mark only spatial chunks that can contain graphics owned by edited cells.
+-- The generous upward reach covers tall wall and roof sprites while retaining
+-- every unrelated chunk and its GPU texture.
+function map_editor:invalidate_dirty_chunks(points)
+    if not self.preview_world or not self.chunk_set then return end
+    for _, point in ipairs(points or {}) do
+        local pixel_x, pixel_y = self.preview_world:subtile_to_pixel(point.x * 5, point.y * 5)
+        local first_column = math.floor((pixel_x - 192) / map_chunk_size)
+        local last_column = math.floor((pixel_x + 192) / map_chunk_size)
+        local first_row = math.floor((pixel_y - 640) / map_chunk_size)
+        local last_row = math.floor((pixel_y + 160) / map_chunk_size)
+        for row = first_row, last_row do
+            for column = first_column, last_column do
+                local retained = self.chunk_nodes[map_chunk_key(column, row)]
+                if retained then retained.dirty = true end
+            end
         end
     end
+    self.visible_pending = true
+end
+
+function map_editor:invalidate_all_chunks()
+    for _, retained in pairs(self.chunk_nodes) do retained.dirty = true end
+    self.visible_signature, self.visible_pending = nil, true
 end
 
 -- Publish completed background preview work and stream its visible chunks.
@@ -404,12 +412,12 @@ function map_editor:finish_preview()
             self:set_message(tostring(chunk_set), "red")
             return
         end
-        if self.pending_dirty and self.chunk_set then
-            self:apply_tile_delta(self.pending_dirty)
-        else
+        local incremental = self.pending_dirty and self.chunk_set
+        if not incremental then
             self:clear_preview()
         end
         self.chunk_set = chunk_set
+        if incremental then self:invalidate_dirty_chunks(self.pending_dirty) end
         self.visible_pending = true
         if self.pending_fit then self:fit() else self:position_map() end
         self:refresh_collision_nodes(self.pending_dirty)
@@ -600,73 +608,86 @@ function map_editor:refresh_collision_nodes(points)
     end
 end
 
--- Stream only viewport-visible placement nodes. Each node borrows one shared
--- DT1 graphic, so an edit can replace one authored cell without rasterizing or
--- uploading the surrounding map again.
+-- Render the map as a small grid of flattened spatial textures. Chunk nodes are
+-- retained while visible; a paint stroke updates only chunks intersecting its
+-- edited cells, and panning inside the same chunk range performs no work.
 function map_editor:refresh_visible_chunks()
     if not self.chunk_set then return end
     local map_left = (canvas.left - (canvas_center_x + self.pan_x)) / self.zoom + self.chunk_set.width / 2
     local map_top = (canvas.top - (canvas_center_y + self.pan_y)) / self.zoom + self.chunk_set.height / 2
     local map_right = (canvas.right - (canvas_center_x + self.pan_x)) / self.zoom + self.chunk_set.width / 2
     local map_bottom = (canvas.bottom - (canvas_center_y + self.pan_y)) / self.zoom + self.chunk_set.height / 2
-    local signature = table.concat({
-        tostring(math.floor(map_left)), tostring(math.floor(map_top)),
-        tostring(math.ceil(map_right)), tostring(math.ceil(map_bottom)),
-        tostring(self.map_visibility.floor), tostring(self.map_visibility.wall),
-        tostring(self.map_visibility.shadow),
-    }, ":")
+    local first_column = math.max(0, math.floor(map_left / map_chunk_size))
+    local last_column = math.min(math.ceil(self.chunk_set.width / map_chunk_size) - 1,
+        math.floor(map_right / map_chunk_size))
+    local first_row = math.max(0, math.floor(map_top / map_chunk_size))
+    local last_row = math.min(math.ceil(self.chunk_set.height / map_chunk_size) - 1,
+        math.floor(map_bottom / map_chunk_size))
+    local signature = table.concat({first_column, first_row, last_column, last_row}, ":")
     if self.visible_signature == signature and not self.visible_pending then return end
 
-    local ok, draw_order = pcall(
-        render.world_tile_view,
-        self.preview_world,
-        self.palette,
-        math.floor(map_left - 96),
-        math.floor(map_top - 384),
-        math.ceil(map_right + 96),
-        math.ceil(map_bottom + 96)
-    )
-    if not ok then
-        self:set_message(tostring(draw_order), "red")
-        return
-    end
-
-    local visible, admitted = {}, 0
-    local remaining = 0
-    local tile_publish_budget = 96
-    for _, draw in ipairs(draw_order) do
-        local key = tile_key(draw)
-        local layer_visible = self.map_visibility[presentation_kind(draw.layer_name)]
-        visible[key] = layer_visible
-        local retained = self.chunk_nodes[key]
-        if retained and layer_visible then
-            retained.node:set_visible(true)
-        elseif layer_visible and admitted < tile_publish_budget then
-            local created = render.create("hud", self.map_root)
-            local ok, x, y, width, height = pcall(function()
-                return created:set_world_tile(self.preview_world, self.palette, draw.index)
-            end)
-            if not ok then
-                created:destroy()
-                self:set_message(tostring(x), "red")
-            else
-                created:set_position(x - self.chunk_set.width / 2 + width / 2,
-                    y - self.chunk_set.height / 2 + height / 2)
-                created:set_z(draw.depth)
-                self.chunk_nodes[key] = {
-                    node=created, tile_x=draw.tile_x, tile_y=draw.tile_y,
+    local visible, admitted, remaining = {}, 0, 0
+    local chunk_publish_budget = 4
+    for row = first_row, last_row do
+        for column = first_column, last_column do
+            local key = map_chunk_key(column, row)
+            visible[key] = true
+            local retained = self.chunk_nodes[key]
+            if not retained then
+                retained = {
+                    node=render.create("hud", self.map_root),
+                    column=column,
+                    row=row,
+                    dirty=true,
                 }
-                admitted = admitted + 1
+                retained.node:set_z(0)
+                self.chunk_nodes[key] = retained
             end
-        elseif layer_visible then
-            remaining = remaining + 1
+
+            if retained.dirty and admitted < chunk_publish_budget then
+                local left, top = column * map_chunk_size, row * map_chunk_size
+                local right = math.min(left + map_chunk_size, self.chunk_set.width)
+                local bottom = math.min(top + map_chunk_size, self.chunk_set.height)
+                local ok, x, y, width, height = pcall(function()
+                    return retained.node:set_world_composite_region(
+                        self.preview_world,
+                        self.palette,
+                        left,
+                        top,
+                        right,
+                        bottom,
+                        self.map_visibility.floor,
+                        self.map_visibility.wall,
+                        self.map_visibility.shadow
+                    )
+                end)
+                if ok then
+                    retained.node:set_position(
+                        x - self.chunk_set.width / 2 + width / 2,
+                        y - self.chunk_set.height / 2 + height / 2
+                    )
+                    retained.dirty = false
+                    admitted = admitted + 1
+                else
+                    self:set_message(tostring(x), "red")
+                    retained.node:destroy()
+                    self.chunk_nodes[key] = nil
+                end
+            elseif retained.dirty then
+                remaining = remaining + 1
+            end
         end
     end
+
     for key, retained in pairs(self.chunk_nodes) do
-        if not visible[key] then retained.node:set_visible(false) end
+        if not visible[key] then
+            retained.node:destroy()
+            self.chunk_nodes[key] = nil
+        end
     end
+
     if remaining > 0 then
-        self:set_message("Publishing " .. tostring(remaining) .. " visible map tiles…", "gold")
+        self:set_message("Publishing " .. tostring(remaining) .. " visible map chunks…", "gold")
     elseif next(self.chunk_nodes) then
         self:set_message("Ready. Paint, pick, erase, or pan — every stroke is undoable.", "green")
     end
@@ -1186,6 +1207,7 @@ function map_editor:click_chrome(pointer_x, pointer_y)
             if self.inspector_mode == "selected" then
                 self:refresh_selected_preview()
             else
+                self:invalidate_all_chunks()
                 self:refresh_visible_chunks()
                 self:refresh_collision_nodes()
             end
@@ -1194,8 +1216,8 @@ function map_editor:click_chrome(pointer_x, pointer_y)
     end
     if self.inspector_mode == "library" then
         for row, control in ipairs(self.tileset_rows) do
-            local top = layout.tileset_rows + (row - 1) * 27
-            local rect = {left=self.inspector_left + 18, top=top, right=self.inspector_right - 18, bottom=top + 25}
+            local top = layout.tileset_rows + (row - 1) * 32
+            local rect = {left=self.inspector_left + 18, top=top, right=self.inspector_right - 18, bottom=top + 30}
             if control.box:exists() and in_rect(pointer_x, pointer_y, rect) then
                 self:select_tileset(self.tileset_scroll + row); return true
             end
@@ -1226,54 +1248,13 @@ function map_editor:create()
     canvas_center_y = (canvas.top + canvas.bottom) / 2
     self.root = render.create("hud")
     box(self.root, {left=0,top=0,right=self.surface_width,bottom=self.surface_height}, {11, 16, 24, 255}, -20)
-    ui.grand_chrome(self.root, {
-        left=4,
-        top=4,
-        width=self.surface_width - 8,
-        height=self.surface_height - 8,
-        z=30,
-        seed=11,
-    })
-    ui.frame(self.root, {
-        left=8,
-        top=44,
-        width=self.surface_width - 16,
-        height=64,
-        state="panel",
-        z=10,
-    })
     box(self.root, {left=canvas.left,top=canvas.top,right=canvas.right,bottom=canvas.bottom}, {6, 10, 15, 255}, -15)
-    ui.chrome(self.root, {
-        left=canvas.left - 4,
-        top=canvas.top - 4,
-        width=canvas.right - canvas.left + 8,
-        height=canvas.bottom - canvas.top + 8,
-        z=9,
-        seed=21,
-    })
-    ui.tool_tray(self.root, {
-        left=8,
-        top=canvas.top,
-        width=60,
-        height=canvas.bottom - canvas.top,
-        z=10,
-        seed=31,
-    })
-    ui.frame(self.root, {
-        left=self.inspector_left,
-        top=canvas.top,
-        width=self.inspector_right - self.inspector_left,
-        height=canvas.bottom - canvas.top,
-        state="panel",
-        z=10,
-    })
-    ui.frame(self.root, {
-        left=56,
-        top=self.surface_height - 68,
-        width=self.surface_width - 112,
-        height=60,
-        z=10,
-        seed=41,
+    self.workspace = ui.workspace(self.root, {
+        width=self.surface_width,
+        height=self.surface_height,
+        canvas=canvas,
+        inspector_left=self.inspector_left,
+        inspector_right=self.inspector_right,
     })
 
     self.map_root = render.create("hud", self.root)
@@ -1286,9 +1267,9 @@ function map_editor:create()
     self.title = label(
         self.root,
         "",
-        16,
-        8,
-        self.surface_width - 32,
+        96,
+        18,
+        self.surface_width - 192,
         "center",
         "font_lab_color",
         40
@@ -1316,7 +1297,7 @@ function map_editor:create()
     self.status = label(
         self.root,
         "",
-        120,
+        80,
         self.surface_height - 49,
         math.max(240, self.surface_width - 820),
         "left",
@@ -1336,11 +1317,11 @@ function map_editor:create()
 
     self.top_buttons = {}
     for index, value in ipairs({"OPEN", "SAVE", "UNDO", "REDO", "TILES", "GRID"}) do
-        local positions = {{88,136},{140,188},{192,240},{244,292},{296,344},{348,396}}
+        local left = 88 + (index - 1) * 72
         local rect = {
-            left=positions[index][1],
+            left=left,
             top=layout.toolbar_top,
-            right=positions[index][2],
+            right=left + 64,
             bottom=layout.toolbar_bottom,
         }
         local top_icon_names = {"open", "save", "undo", "redo", "inspector", "grid"}
@@ -1353,8 +1334,8 @@ function map_editor:create()
     end
 
     self.palette_button = ui.dropdown(self.root, {
-        left=408,
-        top=layout.toolbar_top,
+        left=616,
+        top=layout.toolbar_top + 8,
         label="PALETTE: ACT I",
         text_style="font_lab_caption",
         state="idle",
@@ -1363,8 +1344,8 @@ function map_editor:create()
     self.palette_options = {}
     for index, palette in ipairs(palettes) do
         local button = ui.button(self.root, {
-            left=408,
-            top=layout.toolbar_bottom + 4 + (index - 1) * 40,
+            left=616,
+            top=layout.toolbar_bottom + 4 + (index - 1) * 48,
             label=palette.label,
             text_style="font_lab_caption",
             width=self.palette_button.width,
@@ -1377,15 +1358,15 @@ function map_editor:create()
 
     self.tool_boxes = {}
     for index, tool in ipairs(tools) do
-        local top = layout.tool_top + (index - 1) * 54
-        local rect = {left=12, top=top, right=60, bottom=top + 48}
+        local top = layout.tool_top + (index - 1) * 72
+        local rect = {left=16, top=top, right=80, bottom=top + 64}
         self.tool_boxes[index] = icon_button(self.root, rect, "authoring", tool.id, 20)
     end
 
     self.layer_boxes = {}
     for index, layer in ipairs(visibility_layers) do
-        local left = self.inspector_left + 16 + (index - 1) * 54
-        local rect = {left=left, top=layout.layer_top, right=left + 48, bottom=layout.layer_top + 48}
+        local left = self.inspector_left + 16 + (index - 1) * 72
+        local rect = {left=left, top=layout.layer_top, right=left + 64, bottom=layout.layer_top + 64}
         self.layer_boxes[index] = icon_button(self.root, rect, layer.sheet, layer.icon, 20)
     end
     self.mode_boxes = {}
@@ -1406,8 +1387,8 @@ function map_editor:create()
     local auto_rect = {
         left=self.inspector_left + 12,
         top=layout.auto_top,
-        right=self.inspector_left + 168,
-        bottom=layout.auto_top + 40,
+        right=self.inspector_left + 188,
+        bottom=layout.auto_top + 48,
     }
     self.auto_button = ui.button(self.root, {
         left=auto_rect.left, top=auto_rect.top, width=auto_rect.right - auto_rect.left,
@@ -1436,8 +1417,8 @@ function map_editor:create()
     )
     self.tileset_rows = {}
     for row = 1, 4 do
-        local top = layout.tileset_rows + (row - 1) * 27
-        local rect = {left=self.inspector_left + 18, top=top, right=self.inspector_right - 18, bottom=top + 25}
+        local top = layout.tileset_rows + (row - 1) * 32
+        local rect = {left=self.inspector_left + 18, top=top, right=self.inspector_right - 18, bottom=top + 30}
         self.tileset_rows[row] = {
             box=ui.well(self.library_root, {
                 left=rect.left, top=rect.top, width=rect.right - rect.left,
@@ -1473,13 +1454,13 @@ function map_editor:create()
         1
     )
     self.tile_columns = self.inspector_right - self.inspector_left >= 300 and 3 or 2
-    local tile_gap, tile_top = 5, layout.tile_top
+    local tile_gap, tile_top = 8, layout.tile_top
     local tile_width = math.floor(
         (self.inspector_right - self.inspector_left - 36 - tile_gap * (self.tile_columns - 1))
         / self.tile_columns
     )
-    local tile_height = 80
-    local tile_rows = math.max(2, math.floor((canvas.bottom - tile_top - 8) / (tile_height + tile_gap)))
+    local tile_height = 96
+    local tile_rows = math.max(1, math.floor((canvas.bottom - tile_top - 8) / (tile_height + tile_gap)))
     self.tile_cells = {}
     for slot = 1, tile_rows * self.tile_columns do
         local column, row = (slot - 1) % self.tile_columns, math.floor((slot - 1) / self.tile_columns)
@@ -1487,7 +1468,7 @@ function map_editor:create()
         local top = tile_top + row * (tile_height + tile_gap)
         local rect = {left=left, top=top, right=left + tile_width, bottom=top + tile_height}
         local preview = render.create("hud", self.library_root)
-        preview:set_position((rect.left + rect.right) / 2, rect.top + 28)
+        preview:set_position((rect.left + rect.right) / 2, rect.top + 36)
         preview:set_z(2)
         self.tile_cells[slot] = {
             box=ui.recess(self.library_root, {
@@ -1623,6 +1604,9 @@ function map_editor:create()
     self:set_message("Ready", "white")
     self:set_inspector_mode("library")
     self:refresh_selected_view()
+    if map_editor.initial_path and map_editor.initial_path ~= "" then
+        self:open(map_editor.initial_path)
+    end
     self:refresh_chrome()
 end
 

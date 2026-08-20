@@ -409,6 +409,14 @@ func (p *assetPreloader) load(request AssetPreloadRequest) error {
 		}
 
 		return nil
+	case "world_tile_index":
+		if request.World == nil {
+			return fmt.Errorf("world map is required")
+		}
+
+		_, err := p.cache.loadWorldTiles(p.assets, request.World, request.Palette)
+
+		return err
 	case "world_tile":
 		if request.World == nil {
 			return fmt.Errorf("world map is required")
@@ -571,5 +579,6 @@ func luaPreloadRequests(state *lua.LState, index int) ([]AssetPreloadRequest, er
 // isWorldPreloadKind keeps singular and plural compatibility aliases together
 // so every world request follows the same required-map validation.
 func isWorldPreloadKind(kind string) bool {
-	return kind == "world_chunks" || kind == "world_chunk" || kind == "world_tiles" || kind == "world_tile"
+	return kind == "world_chunks" || kind == "world_chunk" || kind == "world_tiles" ||
+		kind == "world_tile_index" || kind == "world_tile"
 }

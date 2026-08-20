@@ -414,39 +414,39 @@
       "sizes": {
         "button_hover_center": [
           16,
-          40
+          48
         ],
         "button_hover_left": [
           24,
-          40
+          48
         ],
         "button_hover_right": [
           24,
-          40
+          48
         ],
         "button_idle_center": [
           16,
-          40
+          48
         ],
         "button_idle_left": [
           24,
-          40
+          48
         ],
         "button_idle_right": [
           24,
-          40
+          48
         ],
         "button_pressed_center": [
           16,
-          40
+          48
         ],
         "button_pressed_left": [
           24,
-          40
+          48
         ],
         "button_pressed_right": [
           24,
-          40
+          48
         ],
         "checkbox_hover": [
           24,
@@ -466,27 +466,27 @@
         ],
         "dropdown_hover_center": [
           16,
-          40
+          48
         ],
         "dropdown_hover_left": [
           24,
-          40
+          48
         ],
         "dropdown_hover_right": [
           32,
-          40
+          48
         ],
         "dropdown_idle_center": [
           16,
-          40
+          48
         ],
         "dropdown_idle_left": [
           24,
-          40
+          48
         ],
         "dropdown_idle_right": [
           32,
-          40
+          48
         ],
         "grand_bottom": [
           32,
@@ -525,24 +525,24 @@
           64
         ],
         "icon_disabled": [
-          48,
-          48
+          64,
+          64
         ],
         "icon_hover": [
-          48,
-          48
+          64,
+          64
         ],
         "icon_idle": [
-          48,
-          48
+          64,
+          64
         ],
         "icon_pressed": [
-          48,
-          48
+          64,
+          64
         ],
         "icon_selected": [
-          48,
-          48
+          64,
+          64
         ],
         "ornament": [
           48,
@@ -646,31 +646,31 @@
         ],
         "tab_center": [
           16,
-          36
+          48
         ],
         "tab_left": [
           24,
-          36
+          48
         ],
         "tab_right": [
           24,
-          36
+          48
         ],
         "tool_idle": [
-          44,
-          44
+          64,
+          64
         ],
         "well_center": [
           16,
-          28
+          32
         ],
         "well_left": [
           16,
-          28
+          32
         ],
         "well_right": [
           16,
-          28
+          32
         ]
       }
     },

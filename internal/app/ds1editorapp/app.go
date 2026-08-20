@@ -11,6 +11,7 @@ import (
 	"os"
 	"os/signal"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"syscall"
 	"testing/fstest"
@@ -35,6 +36,7 @@ type Options struct {
 	ReadOnlyRoots      []string
 	WindowWidth        int
 	WindowHeight       int
+	InitialMap         string
 	Borderless         bool
 	OutputPalette      string
 	DisableNativeAudio bool
@@ -203,8 +205,9 @@ func (app *application) startHost() error {
 // startEditorScene loads the one synthetic bootstrap that enters the namespaced authoring screen.
 // Deferring this until the first frame gives resize and high-DPI state time to settle.
 func (app *application) startEditorScene() error {
+	bootstrap := fmt.Sprintf(editorBootstrap, strconv.Quote(app.options.InitialMap))
 	definition, err := modruntime.LoadDefinition(app.ctx, app.scripts, fstest.MapFS{
-		"editor.lua": &fstest.MapFile{Data: []byte(editorBootstrap)},
+		"editor.lua": &fstest.MapFile{Data: []byte(bootstrap)},
 	}, "editor.lua")
 	if err != nil {
 		return fmt.Errorf("load DS1 editor scene: %w", err)
@@ -285,6 +288,7 @@ const editorBootstrap = `
 local scenes = require("engine.scene/v1")
 local cursor = require("ds1editor.ui.cursor")
 local editor = require("ds1editor.screens.map_editor")
+editor.initial_path = %s
 return {
   id = "tools.ds1_editor",
   start = function()

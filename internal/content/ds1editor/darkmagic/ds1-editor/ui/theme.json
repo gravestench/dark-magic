@@ -8,18 +8,18 @@
     "sky": "data/global/Palette/Sky/Pal.pl2"
   },
   "composition": {
-    "panel_corner": 32,
-    "button_height": 40,
+    "panel_corner": 20,
+    "button_height": 48,
     "button_inset_left": 18,
     "button_inset_right": 18,
     "button_inset_top": 10,
     "button_inset_bottom": 9,
     "button_min_width": 64,
     "content_gap": 8,
-    "icon_plate_size": 48,
+    "icon_plate_size": 64,
     "icon_content_size": 32,
-    "icon_inset": 8,
-    "row_height": 28,
+    "icon_inset": 16,
+    "row_height": 32,
     "section_height": 32
   },
   "fonts": {

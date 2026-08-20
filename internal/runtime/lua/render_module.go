@@ -1747,6 +1747,21 @@ func (n *ownedRenderNode) setImage(decoded image.Image) error {
 	return err
 }
 
+// updateImage preserves a node's private texture resource across editor chunk
+// refreshes. Painting can therefore replace one localized pixel surface with
+// one ordered texture update instead of destroying and recreating both the
+// resource and retained node.
+func (n *ownedRenderNode) updateImage(decoded image.Image) error {
+	if decoded == nil {
+		return errors.New("render node image is required")
+	}
+	if n.resource == (render.ResourceID{}) || n.resourceRelease != nil || len(n.owned) > 0 {
+		return n.setImage(decoded)
+	}
+
+	return n.composer.UpdateTexture(n.resource, decoded)
+}
+
 // setSharedImage applies shared image through the capability boundary so validation completes before shared
 // state changes.
 func (n *ownedRenderNode) setSharedImage(key string, decoded image.Image) error {
@@ -2449,6 +2464,10 @@ func (r *RenderCapability) Module() Module {
 						"set_world_tile": commandHelp(
 							"node:set_world_tile(world, palette, draw_index)",
 							"Render one placement borrowing a shared immutable DT1 texture.",
+						),
+						"set_world_composite_region": commandHelp(
+							"node:set_world_composite_region(world, palette, left, top, right, bottom, floor, wall, shadow)",
+							"Render or update one flattened editor chunk using lazy shared DT1 graphics.",
 						),
 						"set_world_collision_region": commandHelp(
 							"node:set_world_collision_region(world, left, top, right, bottom)",
@@ -3561,6 +3580,70 @@ func registerRenderNodeType(state *lua.LState) {
 			state.Push(lua.LNumber(bounds.Dy()))
 
 			return 4
+		},
+		"set_world_composite_region": func(state *lua.LState) int {
+			node := checkRenderNode(state, 1)
+			if node.assets == nil {
+				state.RaiseError("render asset filesystem is unavailable")
+				return 0
+			}
+
+			world := checkWorldMap(state, 2)
+			palette := state.CheckString(3)
+			region := image.Rect(
+				state.CheckInt(4),
+				state.CheckInt(5),
+				state.CheckInt(6),
+				state.CheckInt(7),
+			)
+			visibility := maprender.TileVisibility{
+				Floor:  state.OptBool(8, true),
+				Wall:   state.OptBool(9, true),
+				Shadow: state.OptBool(10, true),
+			}
+
+			set, err := node.cache.loadWorldTiles(node.assets, world, palette)
+			if err != nil {
+				state.RaiseError("indexing editor map chunks: %v", err)
+				return 0
+			}
+
+			decoded, bounds, err := set.ComposeRegion(
+				region,
+				visibility,
+				func(_ int, graphic *maprender.TileGraphic) (image.Image, error) {
+					prepared, loadErr := node.cache.loadDT1Tile(
+						node.assets,
+						graphic.Path,
+						palette,
+						graphic.Index,
+						"composite",
+					)
+					if loadErr != nil {
+						return nil, loadErr
+					}
+
+					return prepared.image, nil
+				},
+			)
+			if err != nil {
+				state.RaiseError("composing editor map chunk: %v", err)
+				return 0
+			}
+
+			if err := node.updateImage(decoded); err != nil {
+				state.RaiseError("updating editor map chunk: %v", err)
+				return 0
+			}
+
+			state.Push(lua.LNumber(bounds.Min.X))
+			state.Push(lua.LNumber(bounds.Min.Y))
+			state.Push(lua.LNumber(bounds.Dx()))
+			state.Push(lua.LNumber(bounds.Dy()))
+			state.Push(lua.LNumber(set.Width))
+			state.Push(lua.LNumber(set.Height))
+
+			return 6
 		},
 		"set_ds1_collision": func(state *lua.LState) int {
 			node := checkRenderNode(state, 1)

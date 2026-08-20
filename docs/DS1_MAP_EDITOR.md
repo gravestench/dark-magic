@@ -14,8 +14,12 @@ MPQ_DIRECTORY="~/d2_english_mpq" \
 go run ./tools/ds1-editor \
   --mods none \
   --window-size 1600x1000 \
+  --open data/global/tiles/act1/town/townE1.ds1 \
   --output "~/my-d2-mod"
 ```
+
+`--open` is optional; it opens a mounted DS1 immediately and is useful for
+repeatable profiling or for a project-specific editor shortcut.
 
 `--output` defaults to a user configuration directory and is the only place the
 tool may save. The mounted game
@@ -33,9 +37,9 @@ The application is its own composition and content package. It starts the
 generic Lua capability host, but registers only display, data, VFS, input,
 render, scene, and map-editor modules. It neither installs nor executes the
 `d2legacy` Lua package. Editor Lua lives under the private `ds1editor.*`
-namespace, while its generated 32×32 DC6 sprites and palette are exported only
-beneath `darkmagic/ds1-editor/` in the layered VFS. Diablo II archives remain a
-read-only data/font/tile dependency.
+namespace, while its generated native-pixel DC6 component atlas and palette are
+exported only beneath `darkmagic/ds1-editor/` in the layered VFS. Diablo II
+archives remain a read-only data/font/tile dependency.
 
 Run `make ds1-editor-assets` to rebuild the embedded DC6 sheets and frame
 manifest from the generated source sheets in `tools/ds1-editor/assets/source`.
@@ -47,8 +51,10 @@ manifest from the generated source sheets in `tools/ds1-editor/assets/source`.
    concrete tile thumbnails by every DT1 declared by that DS1; scroll either
    list to browse it.
 3. Use **PAINT** to draw, **PICK** to sample a map cell, **ERASE** to clear the
-   active layer, and **PAN** (or right-drag) to navigate.
-4. Scroll to zoom; `Space` fits the map. `Home` and `End` make small zoom
+   active layer, and **PAN** (or right-drag) to navigate. Hold `Space` while
+   primary-dragging for temporary pan; the arrow keys pan without changing the
+   selected tool.
+4. Scroll to zoom around the pointer. `Home` and `End` make small zoom
    adjustments.
 5. Save with **SAVE** or `Ctrl+S`. Use `Ctrl+Z` and `Ctrl+Y` to undo and redo
 whole gestures.
