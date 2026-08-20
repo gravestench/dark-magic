@@ -49,5 +49,11 @@ type Backend interface {
 // compiled or configured. Lua can detect it and apply explicit failure policy.
 type Unavailable struct{}
 
-func (Unavailable) Available() bool                      { return false }
-func (Unavailable) Play(fs.FS, string) (Playback, error) { return nil, ErrUnavailable }
+// Available is always false so capability checks select an authored fallback.
+func (Unavailable) Available() bool { return false }
+
+// Play returns the sentinel unavailable error without reading content or
+// acquiring playback resources.
+func (Unavailable) Play(fs.FS, string) (Playback, error) {
+	return nil, ErrUnavailable
+}

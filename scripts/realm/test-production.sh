@@ -6,6 +6,8 @@
 set -eu
 umask 077
 
+# realm_test_usage explains the redistributable account journey separately from the optional asset-backed worker
+# journey, so operators know which guarantees their invocation will exercise.
 realm_test_usage() {
     cat <<'EOF'
 Usage: scripts/realm/test-production.sh
@@ -57,6 +59,8 @@ realm_test_operator_origin="https://$realm_test_operator_listen"
 realm_test_database_url="postgres://realm:dark-magic-production-test@127.0.0.1:$realm_test_port/realm?sslmode=disable"
 realm_test_passed=0
 
+# realm_test_cleanup always stops processes launched with this test's isolated configuration. Successful runs discard
+# their temporary credentials and data, while failures retain the same directory to make diagnosis reproducible.
 realm_test_cleanup() {
     DARK_MAGIC_CONFIG_DIR="$realm_test_config" "$realm_test_script_dir/down.sh" >/dev/null 2>&1 || true
     if [ "$realm_test_mailpit_started" -eq 1 ]; then
@@ -74,258 +78,326 @@ realm_test_cleanup() {
 }
 trap realm_test_cleanup EXIT HUP INT TERM
 
-for realm_test_tool in go curl psql; do
-    command -v "$realm_test_tool" >/dev/null 2>&1 || {
-        printf '%s\n' "realm production test: required command is unavailable: $realm_test_tool" >&2
+# realm_test_prepare_environment validates optional modes before generating configuration or starting dependencies.
+# Keeping this phase side-effect-light ensures a bad MPQ path or Mailpit flag cannot leave services behind.
+realm_test_prepare_environment() {
+    for realm_test_tool in go curl psql; do
+        command -v "$realm_test_tool" >/dev/null 2>&1 || {
+            printf '%s\n' "realm production test: required command is unavailable: $realm_test_tool" >&2
+            exit 1
+        }
+    done
+
+    if [ "$realm_test_mailpit" = 1 ]; then
+        command -v "$realm_test_container_cli" >/dev/null 2>&1 || {
+            printf '%s\n' "realm production test: Mailpit mode requires $realm_test_container_cli" >&2
+            exit 1
+        }
+    elif [ "$realm_test_mailpit" != 0 ]; then
+        printf '%s\n' 'realm production test: DARK_MAGIC_REALM_TEST_MAILPIT must be 0 or 1' >&2
+        exit 1
+    fi
+
+    cd "$realm_test_repository"
+    [ -z "$realm_test_mpq" ] || [ -d "$realm_test_mpq" ] || {
+        printf '%s\n' "realm production test: MPQ directory is unavailable: $realm_test_mpq" >&2
         exit 1
     }
-done
-if [ "$realm_test_mailpit" = 1 ]; then
-    command -v "$realm_test_container_cli" >/dev/null 2>&1 || {
-        printf '%s\n' "realm production test: Mailpit mode requires $realm_test_container_cli" >&2
+
+    DARK_MAGIC_CONFIG_DIR="$realm_test_config" go run ./internal/dev/tools/env_config --role realm \
+        --set MPQ_DIRECTORY="$realm_test_mpq" \
+        --set DARK_MAGIC_REALM_LISTEN="$realm_test_listen" \
+        --set DARK_MAGIC_REALM_OPERATOR_LISTEN="$realm_test_operator_listen" \
+        --set DARK_MAGIC_REALM_ACCOUNT_URL="$realm_test_origin" \
+        --set DARK_MAGIC_REALM_RUNTIME_DIR="$realm_test_runtime" \
+        --set DARK_MAGIC_REALM_DATA="$realm_test_root/data" \
+        --set DARK_MAGIC_REALM_POSTGRES_PORT="$realm_test_port" \
+        --set DARK_MAGIC_REALM_POSTGRES_PASSWORD=dark-magic-production-test \
+        --set DARK_MAGIC_REALM_POSTGRES_URL="$realm_test_database_url" \
+        --set DARK_MAGIC_REALM_ACCOUNT_MAIL_MODE=disabled \
+        --set DARK_MAGIC_REALM_CHECKPOINT_INTERVAL=250ms \
+        --set DARK_MAGIC_REALM_DISABLE_WORKERS="$realm_test_disable_workers" >/dev/null
+}
+
+realm_test_prepare_environment
+
+# realm_test_verify_composition starts the real command composition root and verifies listener isolation, database
+# initialization, and repository-level PostgreSQL behavior before disposable fixtures are reset for the user journey.
+realm_test_verify_composition() {
+    DARK_MAGIC_CONFIG_DIR="$realm_test_config" "$realm_test_script_dir/up.sh"
+
+    realm_test_status=$(curl --silent --insecure --output /dev/null --write-out '%{http_code}' \
+        "$realm_test_origin/v1/status")
+    [ "$realm_test_status" = 200 ] || {
+        printf '%s\n' "realm production test: status endpoint returned $realm_test_status" >&2
         exit 1
     }
-elif [ "$realm_test_mailpit" != 0 ]; then
-    printf '%s\n' 'realm production test: DARK_MAGIC_REALM_TEST_MAILPIT must be 0 or 1' >&2
-    exit 1
-fi
 
-cd "$realm_test_repository"
-[ -z "$realm_test_mpq" ] || [ -d "$realm_test_mpq" ] || {
-    printf '%s\n' "realm production test: MPQ directory is unavailable: $realm_test_mpq" >&2
-    exit 1
-}
-DARK_MAGIC_CONFIG_DIR="$realm_test_config" go run ./internal/dev/tools/env_config --role realm \
-    --set MPQ_DIRECTORY="$realm_test_mpq" \
-    --set DARK_MAGIC_REALM_LISTEN="$realm_test_listen" \
-	--set DARK_MAGIC_REALM_OPERATOR_LISTEN="$realm_test_operator_listen" \
-    --set DARK_MAGIC_REALM_ACCOUNT_URL="$realm_test_origin" \
-    --set DARK_MAGIC_REALM_RUNTIME_DIR="$realm_test_runtime" \
-    --set DARK_MAGIC_REALM_DATA="$realm_test_root/data" \
-    --set DARK_MAGIC_REALM_POSTGRES_PORT="$realm_test_port" \
-    --set DARK_MAGIC_REALM_POSTGRES_PASSWORD=dark-magic-production-test \
-    --set DARK_MAGIC_REALM_POSTGRES_URL="$realm_test_database_url" \
-    --set DARK_MAGIC_REALM_ACCOUNT_MAIL_MODE=disabled \
-    --set DARK_MAGIC_REALM_CHECKPOINT_INTERVAL=250ms \
-    --set DARK_MAGIC_REALM_DISABLE_WORKERS="$realm_test_disable_workers" >/dev/null
+    # The privileged lifecycle API must not exist on the player-facing listener.
+    realm_test_status=$(curl --silent --insecure --output /dev/null --write-out '%{http_code}' \
+        -H 'Content-Type: application/json' --data '{"game_id":"missing"}' \
+        "$realm_test_origin/v1/operator/games/drain")
+    [ "$realm_test_status" = 404 ] || {
+        printf '%s\n' \
+            "realm production test: operator route leaked onto public listener (status $realm_test_status)" >&2
+        exit 1
+    }
 
-DARK_MAGIC_CONFIG_DIR="$realm_test_config" "$realm_test_script_dir/up.sh"
+    realm_test_status=$(curl --silent --insecure --output /dev/null --write-out '%{http_code}' \
+        -H 'Content-Type: application/json' -H 'Authorization: Bearer invalid' \
+        --data '{"game_id":"missing"}' "$realm_test_operator_origin/v1/operator/games/drain")
+    [ "$realm_test_status" = 401 ] || {
+        printf '%s\n' \
+            "realm production test: operator listener accepted an invalid credential (status $realm_test_status)" >&2
+        exit 1
+    }
 
-realm_test_status=$(curl --silent --insecure --output /dev/null --write-out '%{http_code}' "$realm_test_origin/v1/status")
-[ "$realm_test_status" = 200 ] || {
-    printf '%s\n' "realm production test: status endpoint returned $realm_test_status" >&2
-    exit 1
-}
+    realm_test_operator_header="$realm_test_root/operator-header"
+    realm_test_operator_token=$(tr -d '\r\n' < "$realm_test_runtime/operator-token")
+    printf 'Authorization: Bearer %s\n' "$realm_test_operator_token" > "$realm_test_operator_header"
+    unset realm_test_operator_token
 
-# The privileged lifecycle API must not exist on the player-facing listener.
-realm_test_status=$(curl --silent --insecure --output /dev/null --write-out '%{http_code}' \
-    -H 'Content-Type: application/json' --data '{"game_id":"missing"}' \
-    "$realm_test_origin/v1/operator/games/drain")
-[ "$realm_test_status" = 404 ] || {
-    printf '%s\n' "realm production test: operator route leaked onto public listener (status $realm_test_status)" >&2
-    exit 1
-}
-realm_test_status=$(curl --silent --insecure --output /dev/null --write-out '%{http_code}' \
-    -H 'Content-Type: application/json' -H 'Authorization: Bearer invalid' \
-    --data '{"game_id":"missing"}' "$realm_test_operator_origin/v1/operator/games/drain")
-[ "$realm_test_status" = 401 ] || {
-    printf '%s\n' "realm production test: operator listener accepted an invalid credential (status $realm_test_status)" >&2
-    exit 1
-}
-realm_test_operator_header="$realm_test_root/operator-header"
-printf 'Authorization: Bearer %s\n' "$(tr -d '\r\n' < "$realm_test_runtime/operator-token")" > "$realm_test_operator_header"
-realm_test_status=$(curl --silent --insecure --output /dev/null --write-out '%{http_code}' \
-    -H 'Content-Type: application/json' -H "@$realm_test_operator_header" \
-    --data '{"game_id":"missing"}' "$realm_test_operator_origin/v1/operator/games/drain")
-realm_test_operator_missing_status=404
-[ "$realm_test_disable_workers" -eq 0 ] || realm_test_operator_missing_status=503
-[ "$realm_test_status" = "$realm_test_operator_missing_status" ] || {
-    printf '%s\n' "realm production test: authenticated operator request returned $realm_test_status" >&2
-    exit 1
+    realm_test_status=$(curl --silent --insecure --output /dev/null --write-out '%{http_code}' \
+        -H 'Content-Type: application/json' -H "@$realm_test_operator_header" \
+        --data '{"game_id":"missing"}' "$realm_test_operator_origin/v1/operator/games/drain")
+    realm_test_operator_missing_status=404
+    [ "$realm_test_disable_workers" -eq 0 ] || realm_test_operator_missing_status=503
+    [ "$realm_test_status" = "$realm_test_operator_missing_status" ] || {
+        printf '%s\n' "realm production test: authenticated operator request returned $realm_test_status" >&2
+        exit 1
+    }
+
+    realm_test_schema_tables=$(psql "$realm_test_database_url" -X -A -t -v ON_ERROR_STOP=1 -c \
+        "SELECT count(*) FROM information_schema.tables \
+            WHERE table_schema = 'public' \
+            AND table_name IN ( \
+                'realm_accounts', \
+                'realm_characters', \
+                'realm_games', \
+                'realm_game_checkpoints', \
+                'realm_mail_outbox' \
+            )")
+    [ "$realm_test_schema_tables" = 5 ] || {
+        printf '%s\n' "realm production test: PostgreSQL schema was not initialized" >&2
+        exit 1
+    }
+
+    DARK_MAGIC_TEST_POSTGRES="$realm_test_database_url" GOCACHE="${GOCACHE:-/tmp/dark-magic-realm-go-build}" \
+        go test ./internal/app/realm -run '^TestPostgres' -count=1
 }
 
-realm_test_schema_tables=$(psql "$realm_test_database_url" -X -A -t -v ON_ERROR_STOP=1 \
-	-c "SELECT count(*) FROM information_schema.tables WHERE table_schema = 'public' AND table_name IN ('realm_accounts', 'realm_characters', 'realm_games', 'realm_game_checkpoints', 'realm_mail_outbox')")
-[ "$realm_test_schema_tables" = 5 ] || {
-    printf '%s\n' "realm production test: PostgreSQL schema was not initialized" >&2
-    exit 1
+realm_test_verify_composition
+
+# realm_test_prepare_account_journey removes repository fixtures before enabling
+# mail delivery. This ordering prevents the mail worker and PostgreSQL tests from
+# racing to claim the same outbox row.
+realm_test_prepare_account_journey() {
+    psql "$realm_test_database_url" -X -v ON_ERROR_STOP=1 -c 'DROP SCHEMA public CASCADE' >/dev/null
+    psql "$realm_test_database_url" -X -v ON_ERROR_STOP=1 -c 'CREATE SCHEMA public' >/dev/null
+    DARK_MAGIC_CONFIG_DIR="$realm_test_config" "$realm_test_script_dir/down.sh"
+
+    if [ "$realm_test_mailpit" -eq 1 ]; then
+        DARK_MAGIC_REALM_MAILPIT_NAME="$realm_test_mailpit_name" \
+        DARK_MAGIC_REALM_CONTAINER_CLI="$realm_test_container_cli" \
+        DARK_MAGIC_REALM_MAILPIT_SMTP_PORT="$realm_test_mailpit_smtp_port" \
+        DARK_MAGIC_REALM_MAILPIT_HTTP_PORT="$realm_test_mailpit_http_port" \
+            "$realm_test_script_dir/mailpit-up.sh"
+        realm_test_mailpit_started=1
+        DARK_MAGIC_CONFIG_DIR="$realm_test_config" go run ./internal/dev/tools/env_config --role realm \
+            --set DARK_MAGIC_REALM_ACCOUNT_MAIL_MODE=smtp \
+            --set DARK_MAGIC_REALM_SMTP_ADDRESS="127.0.0.1:$realm_test_mailpit_smtp_port" \
+            --set DARK_MAGIC_REALM_SMTP_FROM=realm@example.test >/dev/null
+    else
+        DARK_MAGIC_CONFIG_DIR="$realm_test_config" go run ./internal/dev/tools/env_config --role realm \
+            --set DARK_MAGIC_REALM_ACCOUNT_MAIL_MODE=auto-verify >/dev/null
+    fi
+
+    DARK_MAGIC_CONFIG_DIR="$realm_test_config" "$realm_test_script_dir/up.sh" --no-build
 }
 
-DARK_MAGIC_TEST_POSTGRES="$realm_test_database_url" GOCACHE="${GOCACHE:-/tmp/dark-magic-realm-go-build}" \
-    go test ./internal/app/realm -run '^TestPostgres' -count=1
+realm_test_prepare_account_journey
 
-# Repository tests intentionally claim and complete outbox jobs themselves.
-# They also use durable game fixtures. Reset this disposable pre-production
-# schema before the end-to-end journey so fixture state cannot masquerade as a
-# player session. Enable the mail worker only after the reset so it cannot race
-# a repository test for the same outbox row.
-psql "$realm_test_database_url" -X -v ON_ERROR_STOP=1 -c 'DROP SCHEMA public CASCADE' >/dev/null
-psql "$realm_test_database_url" -X -v ON_ERROR_STOP=1 -c 'CREATE SCHEMA public' >/dev/null
-DARK_MAGIC_CONFIG_DIR="$realm_test_config" "$realm_test_script_dir/down.sh"
-if [ "$realm_test_mailpit" -eq 1 ]; then
-    DARK_MAGIC_REALM_MAILPIT_NAME="$realm_test_mailpit_name" \
-    DARK_MAGIC_REALM_CONTAINER_CLI="$realm_test_container_cli" \
-    DARK_MAGIC_REALM_MAILPIT_SMTP_PORT="$realm_test_mailpit_smtp_port" \
-    DARK_MAGIC_REALM_MAILPIT_HTTP_PORT="$realm_test_mailpit_http_port" \
-        "$realm_test_script_dir/mailpit-up.sh"
-    realm_test_mailpit_started=1
-    DARK_MAGIC_CONFIG_DIR="$realm_test_config" go run ./internal/dev/tools/env_config --role realm \
-        --set DARK_MAGIC_REALM_ACCOUNT_MAIL_MODE=smtp \
-        --set DARK_MAGIC_REALM_SMTP_ADDRESS="127.0.0.1:$realm_test_mailpit_smtp_port" \
-        --set DARK_MAGIC_REALM_SMTP_FROM=realm@example.test >/dev/null
-else
-    DARK_MAGIC_CONFIG_DIR="$realm_test_config" go run ./internal/dev/tools/env_config --role realm \
-        --set DARK_MAGIC_REALM_ACCOUNT_MAIL_MODE=auto-verify >/dev/null
-fi
-DARK_MAGIC_CONFIG_DIR="$realm_test_config" "$realm_test_script_dir/up.sh" --no-build
+# realm_test_create_and_verify_account submits signup and, in Mailpit mode,
+# follows the browser form and CSRF boundary. Auto-verify is proven by the login
+# at the start of the password-recovery phase.
+realm_test_create_and_verify_account() {
+    realm_test_suffix="$(date -u '+%s')_$$"
+    realm_test_name="Smoke_$realm_test_suffix"
+    realm_test_email="smoke_$realm_test_suffix@example.test"
+    realm_test_old_password=old-production-password
+    realm_test_new_password=new-production-password
 
-realm_test_suffix="$(date -u '+%s')_$$"
-realm_test_name="Smoke_$realm_test_suffix"
-realm_test_email="smoke_$realm_test_suffix@example.test"
-realm_test_old_password=old-production-password
-realm_test_new_password=new-production-password
+    # Fixture values are generated locally and contain no JSON metacharacters;
+    # printf keeps the request body byte-for-byte stable without a long line.
+    realm_test_signup_payload=$(printf '{"name":"%s","email":"%s","password":"%s"}' \
+        "$realm_test_name" "$realm_test_email" "$realm_test_old_password")
 
-realm_test_status=$(curl --silent --insecure --output /dev/null --write-out '%{http_code}' \
-    -H 'Content-Type: application/json' \
-    --data "{\"name\":\"$realm_test_name\",\"email\":\"$realm_test_email\",\"password\":\"$realm_test_old_password\"}" \
-    "$realm_test_origin/v1/accounts")
-[ "$realm_test_status" = 200 ] || {
-    printf '%s\n' "realm production test: signup returned $realm_test_status" >&2
-    exit 1
+    realm_test_status=$(curl --silent --insecure --output /dev/null --write-out '%{http_code}' \
+        -H 'Content-Type: application/json' \
+        --data "$realm_test_signup_payload" \
+        "$realm_test_origin/v1/accounts")
+    [ "$realm_test_status" = 200 ] || {
+        printf '%s\n' "realm production test: signup returned $realm_test_status" >&2
+        exit 1
+    }
+
+    if [ "$realm_test_mailpit" -eq 1 ]; then
+        realm_test_verification_url=
+        realm_test_attempt=0
+        while [ "$realm_test_attempt" -lt 60 ] && [ -z "$realm_test_verification_url" ]; do
+            realm_test_message=$(curl --silent --get \
+                --data-urlencode "query=to:$realm_test_email" \
+                "http://127.0.0.1:$realm_test_mailpit_http_port/view/latest.txt" || true)
+            realm_test_verification_url=$(printf '%s\n' "$realm_test_message" | \
+                sed -n 's#.*\(https://[^[:space:]]*/verify?token=[^[:space:]]*\).*#\1#p' | head -n 1)
+            [ -n "$realm_test_verification_url" ] || sleep 0.25
+            realm_test_attempt=$((realm_test_attempt + 1))
+        done
+        [ -n "$realm_test_verification_url" ] || {
+            printf '%s\n' 'realm production test: Mailpit did not receive account verification mail' >&2
+            exit 1
+        }
+        realm_test_verification_token=${realm_test_verification_url#*token=}
+        realm_test_cookie_jar="$realm_test_root/browser-cookies"
+        realm_test_verification_page="$realm_test_root/verification.html"
+        realm_test_status=$(curl --silent --insecure --cookie-jar "$realm_test_cookie_jar" \
+            --output "$realm_test_verification_page" --write-out '%{http_code}' "$realm_test_verification_url")
+        [ "$realm_test_status" = 200 ] || {
+            printf '%s\n' "realm production test: browser verification page returned $realm_test_status" >&2
+            exit 1
+        }
+        realm_test_csrf=$(sed -n \
+            's/.*name="csrf_token" value="\([a-f0-9][a-f0-9]*\)".*/\1/p' \
+            "$realm_test_verification_page" | head -n 1)
+        [ "${#realm_test_csrf}" -eq 64 ] || {
+            printf '%s\n' 'realm production test: browser verification page omitted its CSRF token' >&2
+            exit 1
+        }
+        realm_test_status=$(curl --silent --insecure --output /dev/null --write-out '%{http_code}' \
+            --cookie "$realm_test_cookie_jar" \
+            --data-urlencode "token=$realm_test_verification_token" \
+            --data-urlencode "csrf_token=$realm_test_csrf" \
+            "$realm_test_origin/verify")
+        [ "$realm_test_status" = 200 ] || {
+            printf '%s\n' "realm production test: browser account verification returned $realm_test_status" >&2
+            exit 1
+        }
+    fi
 }
 
-if [ "$realm_test_mailpit" -eq 1 ]; then
-    realm_test_verification_url=
+realm_test_create_and_verify_account
+
+# realm_test_replace_password verifies the explicit-login boundary before requesting recovery, consumes the browser
+# recovery form, and finally proves the old credential is revoked rather than merely adding another valid password.
+realm_test_replace_password() {
     realm_test_attempt=0
-    while [ "$realm_test_attempt" -lt 60 ] && [ -z "$realm_test_verification_url" ]; do
-        realm_test_message=$(curl --silent --get \
-            --data-urlencode "query=to:$realm_test_email" \
-            "http://127.0.0.1:$realm_test_mailpit_http_port/view/latest.txt" || true)
-        realm_test_verification_url=$(printf '%s\n' "$realm_test_message" | \
-            sed -n 's#.*\(https://[^[:space:]]*/verify?token=[^[:space:]]*\).*#\1#p' | head -n 1)
-        [ -n "$realm_test_verification_url" ] || sleep 0.25
+    while [ "$realm_test_attempt" -lt 30 ]; do
+        realm_test_status=$(curl --silent --insecure --output /dev/null --write-out '%{http_code}' \
+            -H 'Content-Type: application/json' \
+            --data "{\"name\":\"$realm_test_name\",\"password\":\"$realm_test_old_password\"}" \
+            "$realm_test_origin/v1/sessions")
+        [ "$realm_test_status" = 200 ] && break
+        realm_test_attempt=$((realm_test_attempt + 1))
+        sleep 1
+    done
+    [ "$realm_test_status" = 200 ] || {
+        printf '%s\n' "realm production test: verified account could not log in" >&2
+        exit 1
+    }
+
+    realm_test_status=$(curl --silent --insecure --output /dev/null --write-out '%{http_code}' \
+        -H 'Content-Type: application/json' --data "{\"email\":\"$realm_test_email\"}" \
+        "$realm_test_origin/v1/accounts/recovery")
+    [ "$realm_test_status" = 200 ] || {
+        printf '%s\n' "realm production test: recovery request returned $realm_test_status" >&2
+        exit 1
+    }
+
+    realm_test_recovery_url=
+    realm_test_attempt=0
+    while [ "$realm_test_attempt" -lt 30 ] && [ -z "$realm_test_recovery_url" ]; do
+        if [ "$realm_test_mailpit" -eq 1 ]; then
+            realm_test_message=$(curl --silent --get \
+                --data-urlencode "query=to:$realm_test_email subject:Reset" \
+                "http://127.0.0.1:$realm_test_mailpit_http_port/view/latest.txt" || true)
+            realm_test_recovery_url=$(printf '%s\n' "$realm_test_message" | \
+                sed -n 's#.*\(https://[^[:space:]]*/recover?token=[^[:space:]]*\).*#\1#p' | head -n 1)
+        else
+            realm_test_recovery_url=$(psql "$realm_test_database_url" -X -A -t -v ON_ERROR_STOP=1 \
+                -c "SELECT payload->>'recovery_url' FROM realm_mail_outbox \
+                    WHERE recipient = '$realm_test_email' AND kind = 'reset_password' \
+                    ORDER BY available_at DESC LIMIT 1")
+        fi
+        [ -n "$realm_test_recovery_url" ] || sleep 1
         realm_test_attempt=$((realm_test_attempt + 1))
     done
-    [ -n "$realm_test_verification_url" ] || {
-        printf '%s\n' 'realm production test: Mailpit did not receive account verification mail' >&2
+    [ -n "$realm_test_recovery_url" ] || {
+        printf '%s\n' "realm production test: recovery URL was not delivered" >&2
         exit 1
     }
-    realm_test_verification_token=${realm_test_verification_url#*token=}
+    realm_test_token=${realm_test_recovery_url#*token=}
+
     realm_test_cookie_jar="$realm_test_root/browser-cookies"
-    realm_test_verification_page="$realm_test_root/verification.html"
+    realm_test_recovery_page="$realm_test_root/recovery.html"
     realm_test_status=$(curl --silent --insecure --cookie-jar "$realm_test_cookie_jar" \
-        --output "$realm_test_verification_page" --write-out '%{http_code}' "$realm_test_verification_url")
+        --output "$realm_test_recovery_page" --write-out '%{http_code}' "$realm_test_recovery_url")
     [ "$realm_test_status" = 200 ] || {
-        printf '%s\n' "realm production test: browser verification page returned $realm_test_status" >&2
+        printf '%s\n' "realm production test: browser recovery page returned $realm_test_status" >&2
         exit 1
     }
-    realm_test_csrf=$(sed -n 's/.*name="csrf_token" value="\([a-f0-9][a-f0-9]*\)".*/\1/p' "$realm_test_verification_page" | head -n 1)
+    realm_test_csrf=$(sed -n \
+        's/.*name="csrf_token" value="\([a-f0-9][a-f0-9]*\)".*/\1/p' \
+        "$realm_test_recovery_page" | head -n 1)
     [ "${#realm_test_csrf}" -eq 64 ] || {
-        printf '%s\n' 'realm production test: browser verification page omitted its CSRF token' >&2
+        printf '%s\n' "realm production test: browser recovery page omitted its CSRF token" >&2
         exit 1
     }
     realm_test_status=$(curl --silent --insecure --output /dev/null --write-out '%{http_code}' \
         --cookie "$realm_test_cookie_jar" \
-        --data-urlencode "token=$realm_test_verification_token" \
+        --data-urlencode "token=$realm_test_token" \
         --data-urlencode "csrf_token=$realm_test_csrf" \
-        "$realm_test_origin/verify")
+        --data-urlencode "password=$realm_test_new_password" \
+        --data-urlencode "confirm_password=$realm_test_new_password" \
+        "$realm_test_origin/recover")
     [ "$realm_test_status" = 200 ] || {
-        printf '%s\n' "realm production test: browser account verification returned $realm_test_status" >&2
+        printf '%s\n' "realm production test: browser password replacement returned $realm_test_status" >&2
         exit 1
     }
-fi
 
-realm_test_attempt=0
-while [ "$realm_test_attempt" -lt 30 ]; do
     realm_test_status=$(curl --silent --insecure --output /dev/null --write-out '%{http_code}' \
         -H 'Content-Type: application/json' \
         --data "{\"name\":\"$realm_test_name\",\"password\":\"$realm_test_old_password\"}" \
         "$realm_test_origin/v1/sessions")
-    [ "$realm_test_status" = 200 ] && break
-    realm_test_attempt=$((realm_test_attempt + 1))
-    sleep 1
-done
-[ "$realm_test_status" = 200 ] || {
-    printf '%s\n' "realm production test: verified account could not log in" >&2
-    exit 1
+    [ "$realm_test_status" = 401 ] || {
+        printf '%s\n' "realm production test: old password was not revoked (status $realm_test_status)" >&2
+        exit 1
+    }
 }
 
-realm_test_status=$(curl --silent --insecure --output /dev/null --write-out '%{http_code}' \
-    -H 'Content-Type: application/json' --data "{\"email\":\"$realm_test_email\"}" \
-    "$realm_test_origin/v1/accounts/recovery")
-[ "$realm_test_status" = 200 ] || {
-    printf '%s\n' "realm production test: recovery request returned $realm_test_status" >&2
-    exit 1
+realm_test_replace_password
+
+# realm_test_verify_restart_persistence restarts the real process before logging in with the replacement password,
+# distinguishing durable PostgreSQL state from data that survived only in memory.
+realm_test_verify_restart_persistence() {
+    DARK_MAGIC_CONFIG_DIR="$realm_test_config" "$realm_test_script_dir/down.sh"
+    DARK_MAGIC_CONFIG_DIR="$realm_test_config" "$realm_test_script_dir/up.sh" --no-build
+    realm_test_status=$(curl --silent --insecure --output /dev/null --write-out '%{http_code}' \
+        -H 'Content-Type: application/json' \
+        --data "{\"name\":\"$realm_test_name\",\"password\":\"$realm_test_new_password\"}" \
+        "$realm_test_origin/v1/sessions")
+    [ "$realm_test_status" = 200 ] || {
+        printf '%s\n' "realm production test: recovered account did not survive restart" >&2
+        exit 1
+    }
 }
 
-realm_test_recovery_url=
-realm_test_attempt=0
-while [ "$realm_test_attempt" -lt 30 ] && [ -z "$realm_test_recovery_url" ]; do
-    if [ "$realm_test_mailpit" -eq 1 ]; then
-        realm_test_message=$(curl --silent --get \
-            --data-urlencode "query=to:$realm_test_email subject:Reset" \
-            "http://127.0.0.1:$realm_test_mailpit_http_port/view/latest.txt" || true)
-        realm_test_recovery_url=$(printf '%s\n' "$realm_test_message" | \
-            sed -n 's#.*\(https://[^[:space:]]*/recover?token=[^[:space:]]*\).*#\1#p' | head -n 1)
-    else
-        realm_test_recovery_url=$(psql "$realm_test_database_url" -X -A -t -v ON_ERROR_STOP=1 \
-            -c "SELECT payload->>'recovery_url' FROM realm_mail_outbox WHERE recipient = '$realm_test_email' AND kind = 'reset_password' ORDER BY available_at DESC LIMIT 1")
-    fi
-    [ -n "$realm_test_recovery_url" ] || sleep 1
-    realm_test_attempt=$((realm_test_attempt + 1))
-done
-[ -n "$realm_test_recovery_url" ] || {
-    printf '%s\n' "realm production test: recovery URL was not delivered" >&2
-    exit 1
-}
-realm_test_token=${realm_test_recovery_url#*token=}
+realm_test_verify_restart_persistence
 
-realm_test_cookie_jar="$realm_test_root/browser-cookies"
-realm_test_recovery_page="$realm_test_root/recovery.html"
-realm_test_status=$(curl --silent --insecure --cookie-jar "$realm_test_cookie_jar" \
-    --output "$realm_test_recovery_page" --write-out '%{http_code}' "$realm_test_recovery_url")
-[ "$realm_test_status" = 200 ] || {
-    printf '%s\n' "realm production test: browser recovery page returned $realm_test_status" >&2
-    exit 1
-}
-realm_test_csrf=$(sed -n 's/.*name="csrf_token" value="\([a-f0-9][a-f0-9]*\)".*/\1/p' "$realm_test_recovery_page" | head -n 1)
-[ "${#realm_test_csrf}" -eq 64 ] || {
-    printf '%s\n' "realm production test: browser recovery page omitted its CSRF token" >&2
-    exit 1
-}
-realm_test_status=$(curl --silent --insecure --output /dev/null --write-out '%{http_code}' \
-    --cookie "$realm_test_cookie_jar" \
-    --data-urlencode "token=$realm_test_token" \
-    --data-urlencode "csrf_token=$realm_test_csrf" \
-    --data-urlencode "password=$realm_test_new_password" \
-    --data-urlencode "confirm_password=$realm_test_new_password" \
-    "$realm_test_origin/recover")
-[ "$realm_test_status" = 200 ] || {
-    printf '%s\n' "realm production test: browser password replacement returned $realm_test_status" >&2
-    exit 1
-}
+# realm_test_verify_worker_journey exercises the optional asset-backed native session. Abrupt authority loss is
+# intentional: it proves generation fencing and checkpoint restoration, which a graceful shutdown cannot cover.
+realm_test_verify_worker_journey() {
+    [ "$realm_test_disable_workers" -eq 0 ] || return 0
 
-realm_test_status=$(curl --silent --insecure --output /dev/null --write-out '%{http_code}' \
-    -H 'Content-Type: application/json' \
-    --data "{\"name\":\"$realm_test_name\",\"password\":\"$realm_test_old_password\"}" \
-    "$realm_test_origin/v1/sessions")
-[ "$realm_test_status" = 401 ] || {
-    printf '%s\n' "realm production test: old password was not revoked (status $realm_test_status)" >&2
-    exit 1
-}
-
-DARK_MAGIC_CONFIG_DIR="$realm_test_config" "$realm_test_script_dir/down.sh"
-DARK_MAGIC_CONFIG_DIR="$realm_test_config" "$realm_test_script_dir/up.sh" --no-build
-realm_test_status=$(curl --silent --insecure --output /dev/null --write-out '%{http_code}' \
-    -H 'Content-Type: application/json' \
-    --data "{\"name\":\"$realm_test_name\",\"password\":\"$realm_test_new_password\"}" \
-    "$realm_test_origin/v1/sessions")
-[ "$realm_test_status" = 200 ] || {
-    printf '%s\n' "realm production test: recovered account did not survive restart" >&2
-    exit 1
-}
-
-if [ "$realm_test_disable_workers" -eq 0 ]; then
     realm_test_password_file="$realm_test_root/account-password"
     realm_test_ready_file="$realm_test_root/session-ready"
     realm_test_continue_file="$realm_test_root/session-continue"
@@ -415,16 +487,24 @@ if [ "$realm_test_disable_workers" -eq 0 ]; then
         go run ./internal/dev/tools/realm_acceptance >/dev/null
     realm_test_passed=1
     if [ "$realm_test_mailpit" -eq 1 ]; then
-        printf '%s\n' "realm production test: PASS (PostgreSQL, Mailpit browser actions, worker, QUIC, reconnect, checkpoint, commit, and restart verified)"
+        printf '%s\n' \
+            "realm production test: PASS (PostgreSQL, Mailpit browser actions, worker, QUIC, reconnect, \
+checkpoint, commit, and restart verified)"
     else
-        printf '%s\n' "realm production test: PASS (full PostgreSQL, worker, QUIC, reconnect, checkpoint, commit, and restart journey verified)"
+        printf '%s\n' \
+            "realm production test: PASS (full PostgreSQL, worker, QUIC, reconnect, checkpoint, commit, \
+and restart journey verified)"
     fi
     exit 0
-fi
+}
+
+realm_test_verify_worker_journey
 
 realm_test_passed=1
 if [ "$realm_test_mailpit" -eq 1 ]; then
-    printf '%s\n' "realm production test: PASS (PostgreSQL, SMTP verification, explicit login, and browser recovery verified)"
+    printf '%s\n' \
+        "realm production test: PASS (PostgreSQL, SMTP verification, explicit login, \
+and browser recovery verified)"
 else
     printf '%s\n' "realm production test: PASS (pre-production schema, explicit login and browser recovery verified)"
 fi
