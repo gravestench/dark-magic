@@ -2,6 +2,7 @@
 
 local authority=require("engine.authority_command/v1")
 local ecs=require("engine.ecs/v1")
+local game_rules=require("d2legacy.policy.game_rules")
 local M={}
 
 local function quest(id)
@@ -48,14 +49,16 @@ function M.reward(command)
         player=command.player,quest_id=quest.id,npc=npc,reward="skill_point:1"}})
 end
 
+-- Completing Act V unlocks the next difficulty for the character only; the
+-- active game keeps the difficulty fixed by its immutable rules.
 function M.advance_difficulty(command)
     local player=player_for(command.payload.player)
     local difficulty=ecs.get(player,"d2legacy.player.difficulty")
+    local completed=game_rules.difficulty()
     local wanted=command.payload.difficulty
     assert(command.payload.completed_act==5,"difficulty progression requires completed Act V")
-    assert(wanted==difficulty:get("current")+1 and wanted<=2,"invalid next difficulty")
-    difficulty:set("highest_completed",difficulty:get("current"))
-    difficulty:set("current",wanted)
+    assert(wanted==completed+1 and wanted<=2,"invalid next difficulty")
+    difficulty:set("highest_completed",math.max(difficulty:get("highest_completed"),completed))
 end
 
 function M.register()
