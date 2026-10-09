@@ -47,7 +47,7 @@ for _, mode in ipairs({ "NU", "WL", "RN" }) do
                 slot = "rarm",
                 weapon_set = 0,
                 weapon_class = "1HS",
-                composite = { RH = "SSD" },
+                composite = "RH=SSD",
             },
         },
     })

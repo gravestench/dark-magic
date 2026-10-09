@@ -79,7 +79,7 @@ local function assert_equipped_recipe(adapter)
         slot = "rarm",
         weapon_set = 0,
         weapon_class = "1hs",
-        composite = { RH = "ssd" },
+        composite = "RH=ssd",
     })
     local equipment = fixtures.equipment({ items = { weapon } })
     local equipped = adapter.resolve(player_recipe(3), equipment)

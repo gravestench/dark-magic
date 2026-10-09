@@ -39,7 +39,10 @@ func LoadDefinition(
 
 	var definition Definition
 
-	err = runtime.Run(ctx, func(state *lua.LState) error {
+	// Definition loading can require content and records from cold storage.
+	// The caller can still cancel it, but disk latency must not consume the
+	// budget reserved for recurring Lua callbacks.
+	err = runtime.runWithBudget(ctx, 0, func(state *lua.LState) error {
 		function, err := state.Load(bytes.NewReader(data), "@"+name)
 		if err != nil {
 			return fmt.Errorf("compile: %w", err)
@@ -182,7 +185,7 @@ func (c *scriptComponent) Start(ctx context.Context) error {
 		return nil
 	}
 
-	return c.definition.runtime.runScoped(ctx, c.scope, func(state *lua.LState) error {
+	return c.definition.runtime.runScopedWithBudget(ctx, c.scope, 0, func(state *lua.LState) error {
 		if err := state.CallByParam(
 			lua.P{Fn: c.definition.start, NRet: 0, Protect: true},
 			c.definition.table,

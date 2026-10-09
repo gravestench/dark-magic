@@ -293,21 +293,21 @@ type luaScene struct {
 	input      *inputstate.Store
 }
 
-// Scene construction legitimately decodes and composes cold MPQ assets. Keep
-// the tight normal invocation budget for update/render callbacks, while giving
-// transactional lifecycle work enough bounded time to finish on slower disks.
+// Scene teardown stays bounded. Construction can decode cold MPQ assets, so
+// Create and Enter use only the caller's cancellation instead of a wall clock
+// deadline. Update and Render retain the normal invocation budget.
 const sceneLifecycleBudget = 10 * time.Second
 
 // Create owns the create step at this boundary, keeping its side effects and failure point explicit to callers.
 func (s *luaScene) Create(ctx context.Context) error {
-	return s.callLifecycle(ctx, s.definition.create)
+	return s.callLifecycle(ctx, s.definition.create, 0)
 }
 
 // Enter owns the enter step at this boundary, keeping its side effects and failure point explicit to callers.
 func (s *luaScene) Enter(
 	ctx context.Context,
 ) error {
-	return s.callLifecycle(ctx, s.definition.enter)
+	return s.callLifecycle(ctx, s.definition.enter, 0)
 }
 
 // Render performs in one rendering boundary so compositing order and pixel ownership remain explicit.
@@ -317,7 +317,7 @@ func (s *luaScene) Render(ctx context.Context) error { return s.call(ctx, s.defi
 func (s *luaScene) Exit(
 	ctx context.Context,
 ) error {
-	return s.callLifecycle(ctx, s.definition.exit)
+	return s.callLifecycle(ctx, s.definition.exit, sceneLifecycleBudget)
 }
 
 // BlocksUpdateBelow owns the blocks update below step at this boundary, keeping its side effects and failure point
@@ -406,7 +406,7 @@ func (s *luaScene) UpdateRoutedInput(
 
 // Destroy owns the destroy step at this boundary, keeping its side effects and failure point explicit to callers.
 func (s *luaScene) Destroy(ctx context.Context) error {
-	err := s.callLifecycle(ctx, s.definition.destroy)
+	err := s.callLifecycle(ctx, s.definition.destroy, sceneLifecycleBudget)
 	if s.profiler != nil {
 		err = errorsJoin(err, s.profiler.CaptureSceneHeap(s.id))
 	}
@@ -416,7 +416,7 @@ func (s *luaScene) Destroy(ctx context.Context) error {
 
 // callLifecycle executes lifecycle through the runtime boundary so ownership, error wrapping, and cleanup
 // remain consistent.
-func (s *luaScene) callLifecycle(ctx context.Context, function *lua.LFunction) error {
+func (s *luaScene) callLifecycle(ctx context.Context, function *lua.LFunction, budget time.Duration) error {
 	if function == nil {
 		return nil
 	}
@@ -427,7 +427,7 @@ func (s *luaScene) callLifecycle(ctx context.Context, function *lua.LFunction) e
 		result = s.runtime.runScopedWithBudget(
 			ctx,
 			s.scope,
-			sceneLifecycleBudget,
+			budget,
 			func(state *lua.LState) error {
 				return state.CallByParam(
 					lua.P{Fn: function, NRet: 0, Protect: true},
