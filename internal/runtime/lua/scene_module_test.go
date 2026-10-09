@@ -44,6 +44,49 @@ func TestSceneFrameContextLabelsFocusedScene(t *testing.T) {
 
 type frameLabelScene struct{}
 
+func TestLuaSceneInitializationDoesNotUseFrameBudget(t *testing.T) {
+	runtime := New()
+	if err := runtime.SetExecutionBudget(5 * time.Millisecond); err != nil {
+		t.Fatal(err)
+	}
+	if err := runtime.Start(t.Context()); err != nil {
+		t.Fatal(err)
+	}
+	defer func() { _ = runtime.Stop(context.Background()) }()
+
+	var callback *lua.LFunction
+	if err := runtime.Run(t.Context(), func(state *lua.LState) error {
+		state.SetGlobal("slow_read", state.NewFunction(func(*lua.LState) int {
+			time.Sleep(25 * time.Millisecond)
+			return 0
+		}))
+		if err := state.DoString(`function scene_load(self) slow_read(); self.loaded = true end`); err != nil {
+			return err
+		}
+		callback = state.GetGlobal("scene_load").(*lua.LFunction)
+		return nil
+	}); err != nil {
+		t.Fatal(err)
+	}
+
+	scene := &luaScene{
+		id:      "slow_scene",
+		runtime: runtime,
+		definition: luaSceneDefinition{
+			table:  &lua.LTable{},
+			create: callback,
+			enter:  callback,
+		},
+		scope: &Scope{},
+	}
+	if err := scene.Create(t.Context()); err != nil {
+		t.Fatalf("create after slow read: %v", err)
+	}
+	if err := scene.Enter(t.Context()); err != nil {
+		t.Fatalf("enter after slow read: %v", err)
+	}
+}
+
 // Create owns the create step at this boundary, keeping its side effects and failure point explicit to callers.
 func (*frameLabelScene) Create(context.Context) error { return nil }
 

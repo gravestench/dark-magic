@@ -73,7 +73,9 @@ local function equipped_appearance(items)
         local hand = item.slot == "rarm" or item.slot == "larm"
         local active = not hand or item.weapon_set == items.active_weapon_set
         if item.container == "equipment" and active then
-            for component, code in pairs(item.composite or {}) do
+            -- Item snapshots use the authored "RH=SSD" component recipe.
+            local component, code = string.match(item.composite or "", "^([%w]+)=([%w]+)$")
+            if component then
                 appearance[upper(component)] = upper(code)
             end
             if hand and item.weapon_class and item.weapon_class ~= "" then
