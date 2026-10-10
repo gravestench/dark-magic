@@ -122,6 +122,32 @@ The client difficulty button is only a request.
 
 Exact quest flags used for each unlock belong in the probe queue.
 
+### Audit of quest, waypoint, and eligibility consumers (#371)
+
+Current state of each consumer of the game's selected difficulty:
+
+- **Active difficulty.** It is read only from the immutable game rules
+  (`d2legacy.policy.game_rules`). Players carry no copy of it:
+  `d2legacy.player.difficulty` holds only the character's
+  `highest_completed` progression.
+- **Character eligibility.** `system.player.enter` rejects a character whose
+  supplied `highest_completed_difficulty` is more than one below the game's
+  difficulty. Hosts do not yet supply that field, because the native
+  character save has no difficulty progression; until durable progression
+  exists (G15), entry without it is not checked.
+- **Act V unlock.** `system.difficulty.advance` records the next unlock on
+  the character without changing the game (#414). The record lasts only for
+  the session until it is persisted (G15).
+- **Quests.** In-session quest progress (`d2legacy.quest.progress`) holds one
+  quest per player and is not keyed by difficulty. That is correct within a
+  game, whose difficulty cannot change, but the original keeps separate quest
+  state for each difficulty, so durable per-difficulty quest state belongs to
+  G15. Only the Den of Evil reward is implemented.
+- **Waypoints.** No waypoint activation state exists yet; only the waypoint
+  panel UI and path-following "waypoints" in movement code. Per-difficulty
+  activation belongs with the waypoint world object (G12) and durable
+  character state (G15).
+
 ## Resistance penalty
 
 Difficulty resistance penalty should be represented as a rules/stat source applied to player effective resistance, not by rewriting base item/character resistance values.

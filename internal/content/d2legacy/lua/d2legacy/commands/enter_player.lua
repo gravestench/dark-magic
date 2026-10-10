@@ -307,6 +307,13 @@ function M.apply(command)
         p.difficulty == nil or p.difficulty == difficulty,
         "player entry difficulty differs from immutable game rules"
     )
+    -- A character may join a difficulty only after completing the one before
+    -- it. Hosts that do not yet supply durable progression skip this check.
+    local highest_completed = p.highest_completed_difficulty
+    assert(
+        highest_completed == nil or difficulty <= highest_completed + 1,
+        "character has not unlocked the game's difficulty"
+    )
     local resist_penalty = difficulty_levels.resist_penalty()
     local learned, preferred_skills = configured_skills(p.class)
     local _, run_drain = movement_rules.class_facts(p.class)
@@ -325,8 +332,7 @@ function M.apply(command)
             unspent_skill_points = p.unspent_skill_points or 0,
         },
         ["d2legacy.player.difficulty"] = {
-            current = difficulty,
-            highest_completed = p.highest_completed_difficulty or -1,
+            highest_completed = highest_completed or -1,
         },
         ["d2legacy.player.combat_stats"] = {
             base_attack_rating = player_stats.base_attack_rating(p.class, p.dexterity, p.base_attack_rating),

@@ -162,9 +162,7 @@ func assertQuestRewardAndDifficulty(t *testing.T, engine *gameecs.Engine) {
 
 	// Completing Normal unlocks Nightmare for the character; the active game
 	// stays on the Normal difficulty fixed by its immutable rules.
-	current, highest := playerDifficulty(t, engine)
-	if current != 0 || highest != 0 {
-		t.Fatalf("difficulty current=%d highest_completed=%d, want Normal game with Normal completed",
-			current, highest)
+	if highest := highestCompletedDifficulty(t, engine); highest != 0 {
+		t.Fatalf("difficulty highest_completed=%d, want Normal completed", highest)
 	}
 }
