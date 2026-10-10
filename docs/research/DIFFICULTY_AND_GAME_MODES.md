@@ -162,6 +162,27 @@ Do not permanently encode the penalty into the experience curve.
 
 Exact percentage/base and corpse-recovery behavior remain dedicated combat/death probes.
 
+High-confidence recovered arithmetic (pinned 1.10f, D2MOO `3b21043b99e987bad41cf0f7b49f1f246db52d5c`,
+`source/D2Game/src/PLAYER/Player.cpp`, after the gold penalty):
+
+```text
+skip when the killer is a player or a player-owned minion
+skip when the dead player's level <= 1
+span    = threshold(level) - threshold(level - 1)
+penalty = span * DeathExpPenalty / 100          (integer)
+new     = experience - penalty
+if new <= threshold(level - 1):
+    penalty = max(penalty + new - threshold(level - 1), 0)
+    new     = threshold(level - 1) + 1
+```
+
+So the loss is a percentage of the experience span of the current level, never
+drops the player below the start of that level, and is reported to the client
+as the recoverable amount. Owned 1.14d `patch_d2.mpq` authors
+`DeathExpPenalty` 0 / 5 / 10 for Normal / Nightmare / Hell, so Normal deaths
+lose no experience. Corpse recovery of the lost amount and 1.14d confirmation
+remain #386 probe work.
+
 ## Monster level and stat scaling
 
 `Levels.txt`, `MonStats`, `MonLvl` and difficulty context interact to produce effective monster stats and population.
@@ -190,11 +211,39 @@ Difficulty-specific divisors for monster freeze/cold and AI curse behavior are e
 
 The state application pipeline should receive `GameRules` and target kind so duration policy can be centralized/tested.
 
+High-confidence recovered application points (pinned 1.10f, D2MOO `3b21043b99e987bad41cf0f7b49f1f246db52d5c`):
+
+- `MonsterColdDivisor` (`source/D2Game/src/UNIT/SUnitDmg.cpp`) divides chill
+  length only for monster defenders whose MonStats cold effect applies, then
+  clamps the result to at least 1 frame.
+- `MonsterFreezeDivisor` (same file) divides freeze length for freezable
+  monster defenders. The recovered path has no minimum-frame clamp after the
+  division.
+- `AiCurseDivisor` (`source/D2Game/src/SKILLS/SkillNec.cpp`) is **not** a
+  general curse-duration divisor, despite later table documentation describing
+  it that way. It divides the length of only the AI-disrupting curses: Dim
+  Vision and Terror inside the shared curse server function (`SrvDo030`), the
+  Dim Vision helper, Attract (`SrvDo059`), and Confuse (`SrvDo061`). Amplify
+  Damage, Weaken, and other stat curses keep their formula length on every
+  difficulty. The division is integer and unclamped.
+
+Owned 1.14d `patch_d2.mpq` authors 1 / 2 / 4 for all three columns.
+
 ## Life and mana steal
 
 The combat research already found player leech divided by difficulty-specific `LifeStealDiv` and `ManaStealDiv` in the pinned 1.10f path.
 
 These values should be consumed at the leech stage of combat, not pre-adjust item stat values.
+
+High-confidence recovered ordering (pinned 1.10f, D2MOO `3b21043b99e987bad41cf0f7b49f1f246db52d5c`,
+`source/D2Game/src/UNIT/SUnitDmg.cpp`): leech is skipped unless the defender
+drains. A monster defender uses its MonStats `Drain` value for the current
+difficulty, and any other defender uses 100. When leech applies, life and mana
+leech are shifted left by 6 (fixed point), and then, only for player attackers,
+divided by `LifeStealDivisor` and `ManaStealDivisor`. Owned 1.14d
+`patch_d2.mpq` authors 1 / 2 / 3 for both columns. The base expansion
+`d2exp.mpq` still has 1 / 2 / 2, so the Hell value changed in a later patch;
+only the 1.14d row is in scope.
 
 The character sheet can still show raw item life-steal percentage while gameplay applies difficulty effectiveness.
 
@@ -367,11 +416,14 @@ Include difficulty/expansion/hardcore/ladder/player-count policy in replay/netwo
 
 1. Exact Normal->Nightmare->Hell unlock quest requirements for Classic/Expansion.
 2. Resistance penalties across Classic/Expansion and patch versions.
-3. Death XP penalty and corpse-recovery XP rules.
+3. Death XP penalty and corpse-recovery XP rules (penalty arithmetic recovered
+   above; corpse recovery and 1.14d confirmation outstanding).
 4. MonLvl/MonStats difficulty stat scaling and player-count interaction.
 5. MonsterSkillBonus application point and caps.
-6. Freeze/Cold/AiCurse divisor exact duration arithmetic.
-7. Life/ManaStealDiv exact fixed-point ordering.
+6. Freeze/Cold/AiCurse divisor exact duration arithmetic (application points
+   recovered above; 1.14d runtime confirmation outstanding).
+7. Life/ManaStealDiv exact fixed-point ordering (recovered ordering above;
+   1.14d runtime confirmation outstanding).
 8. Unique/Champion damage bonus application point.
 9. Mercenary/boss/Prime Evil/PvP scalars by target version.
 10. StaticFieldMin units and effect threshold.
