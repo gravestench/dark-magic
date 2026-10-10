@@ -10,7 +10,6 @@ local damage_bundle = require("d2legacy.policy.damage_bundle")
 local geometry = require("d2legacy.policy.geometry")
 local population = require("d2legacy.bootstrap.population")
 local cold_duration = require("d2legacy.policy.cold_duration")
-local game_rules = require("d2legacy.policy.game_rules")
 
 local M = {}
 
@@ -127,9 +126,9 @@ local function apply_on_hit_state(projectile, target, damage_result, structural)
         if not ecs.get(target.entity, "d2legacy.monster.stats") then
             return
         end
-        duration = cold_duration.target_frames(duration, target.entity, game_rules.difficulty(), ecs)
+        duration = cold_duration.target_frames(duration, target.entity, state_id, ecs)
     elseif policy == "cold" then
-        duration = cold_duration.target_frames(duration, target.entity, game_rules.difficulty(), ecs)
+        duration = cold_duration.target_frames(duration, target.entity, state_id, ecs)
     else
         assert(policy == "", "unsupported on-hit state duration policy")
     end

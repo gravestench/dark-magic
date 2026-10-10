@@ -8,7 +8,6 @@ local ecs = require("engine.ecs/v1")
 local cold_duration = require("d2legacy.policy.cold_duration")
 local damage = require("d2legacy.policy.damage")
 local damage_bundle = require("d2legacy.policy.damage_bundle")
-local game_rules = require("d2legacy.policy.game_rules")
 local geometry = require("d2legacy.policy.geometry")
 local projectile_spawn = require("d2legacy.gameplay.projectile_spawn")
 local M = {}
@@ -54,8 +53,7 @@ local function apply_reaction_state(reaction, target, source_suffix, structural)
     local stat = cannot_freeze and reaction:get("reaction_chill_stat") or reaction:get("reaction_stat")
     local stat_value = cannot_freeze and reaction:get("reaction_chill_stat_value")
         or reaction:get("reaction_stat_value")
-    local duration =
-        cold_duration.target_frames(reaction:get("reaction_duration"), target, game_rules.difficulty(), ecs)
+    local duration = cold_duration.target_frames(reaction:get("reaction_duration"), target, state_id, ecs)
     if state_id == "" or duration <= 0 then
         return
     end

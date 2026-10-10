@@ -229,6 +229,14 @@ High-confidence recovered application points (pinned 1.10f, D2MOO `3b21043b99e98
 
 Owned 1.14d `patch_d2.mpq` authors 1 / 2 / 4 for all three columns.
 
+Current implementation: `d2legacy.policy.cold_duration` divides monster freeze
+lengths by `MonsterFreezeDivisor` and every other cold state by
+`MonsterColdDivisor`, both read from the session difficulty's
+`DifficultyLevels` row. Players are not divided. Both lengths are clamped to at
+least 1 frame; the recovered freeze path's missing clamp is not reproduced.
+`AiCurseDivisor` has no consumer yet because none of its four curses are
+implemented.
+
 ## Life and mana steal
 
 The combat research already found player leech divided by difficulty-specific `LifeStealDiv` and `ManaStealDiv` in the pinned 1.10f path.
