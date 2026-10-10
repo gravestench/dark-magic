@@ -10,6 +10,7 @@ local skills = require("d2legacy.data.skill")
 local player_stats = require("d2legacy.data.player_stats")
 local item_bootstrap = require("d2legacy.items.bootstrap")
 local game_rules = require("d2legacy.policy.game_rules")
+local difficulty_levels = require("d2legacy.data.difficulty_levels")
 local movement_rules = require("d2legacy.movement_rules/v1")
 local collision_registry = require("d2legacy.gameplay.collision")
 local M = {}
@@ -306,6 +307,7 @@ function M.apply(command)
         p.difficulty == nil or p.difficulty == difficulty,
         "player entry difficulty differs from immutable game rules"
     )
+    local resist_penalty = difficulty_levels.resist_penalty()
     local learned, preferred_skills = configured_skills(p.class)
     local _, run_drain = movement_rules.class_facts(p.class)
     local left, right = initial_skills(learned, preferred_skills)
@@ -343,9 +345,9 @@ function M.apply(command)
             base_cold_resist = p.cold_resistance or 0,
             base_lightning_resist = p.lightning_resistance or 0,
             physical_resist = p.physical_resistance or 0,
-            fire_resist = p.fire_resistance or 0,
-            cold_resist = p.cold_resistance or 0,
-            lightning_resist = p.lightning_resistance or 0,
+            fire_resist = (p.fire_resistance or 0) + resist_penalty,
+            cold_resist = (p.cold_resistance or 0) + resist_penalty,
+            lightning_resist = (p.lightning_resistance or 0) + resist_penalty,
             max_fire_resist = 75,
             max_cold_resist = 75,
             max_lightning_resist = 75,

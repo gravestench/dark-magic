@@ -539,7 +539,10 @@ func TestD2LegacyPresentationAssetCoverageBaseline(t *testing.T) {
 	// and authoritative effect tests. Its runtime assets remain selected through
 	// existing MonStats, Skills, PetType, missile, and overlay prefixes, so the
 	// inventory grows only by source/test paths rather than shipping assets.
-	const auditedFingerprint = "4fb4572bd9f37ab9ac81f623b8a2e39feb6b8d2c576adf4743e30c4b331f9573"
+	// The session resistance penalty adds DifficultyLevels.txt to the
+	// code-owned authoritative tables. It is game-rule data, not a presentation
+	// dependency.
+	const auditedFingerprint = "147de7855bd825e8c524b66bf1642272ef66c1b092c5bb4fce19573bcf21d4cc"
 	if coverage.Fingerprint != auditedFingerprint {
 		t.Fatalf(
 			"presentation asset coverage changed: got %s, want audited %s; "+

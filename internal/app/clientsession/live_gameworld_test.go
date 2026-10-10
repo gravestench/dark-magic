@@ -565,6 +565,12 @@ func (liveGameworldRecords) Loaded(string) bool { return true }
 // Load supplies only authored facts consumed by the production Lua systems in this scenario.
 func (liveGameworldRecords) Load(path string) ([]map[string]string, error) {
 	switch path {
+	case "data/global/excel/difficultylevels.txt":
+		return []map[string]string{
+			{"Name": "Normal", "ResistPenalty": "0"},
+			{"Name": "Nightmare", "ResistPenalty": "-40"},
+			{"Name": "Hell", "ResistPenalty": "-100"},
+		}, nil
 	case "data/global/excel/charstats.txt":
 		return []map[string]string{
 			{

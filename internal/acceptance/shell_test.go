@@ -810,6 +810,12 @@ func (shellD2Records) Loaded(string) bool { return true }
 // Load returns the minimal authored records needed to cross from the shell into gameplay.
 func (shellD2Records) Load(path string) ([]map[string]string, error) {
 	switch path {
+	case "data/global/excel/difficultylevels.txt":
+		return []map[string]string{
+			{"Name": "Normal", "ResistPenalty": "0"},
+			{"Name": "Nightmare", "ResistPenalty": "-40"},
+			{"Name": "Hell", "ResistPenalty": "-100"},
+		}, nil
 	case "data/global/excel/charstats.txt":
 		return []map[string]string{{
 			"class": "Amazon", "StartSkill": "Test Skill", "WalkVelocity": "6", "RunVelocity": "9",
