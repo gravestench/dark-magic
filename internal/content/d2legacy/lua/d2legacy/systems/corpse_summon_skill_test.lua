@@ -757,7 +757,9 @@ return test.suite({
                 test.assert(victim ~= nil, "owned summon kill did not reach monster death")
                 test.expect(ecs.get(victim, "d2legacy.monster.death"):get("credited_id")):equals("player:alice")
                 local player = ecs.query({ all = { "d2legacy.player.progress" } })[1]
-                test.expect(ecs.get(player, "d2legacy.player.progress"):get("experience")):equals(10)
+                -- Credit uses the owner's level: 9 levels above the victim
+                -- keeps 61/256 of its 10 experience.
+                test.expect(ecs.get(player, "d2legacy.player.progress"):get("experience")):equals(2)
             end),
             test.submit_system(
                 fixtures.command("system.player.leave", { player = "alice" }, { tick = 10, sequence = 1 })

@@ -152,6 +152,14 @@ local armor = {
             value = 4,
             order = 80,
         },
+        {
+            source_id = "wisdom",
+            source_kind = "affix",
+            stat = "item_addexperience",
+            operation = "add",
+            value = 5,
+            order = 90,
+        },
     },
 }
 
@@ -239,6 +247,7 @@ local function assert_equipped_sources(sources)
     expect_source(sources, "equipment:modifier:maxstamina:armor:affix:60:endurance", 10)
     expect_source(sources, "equipment:modifier:lifedrainmindam:armor:affix:70:vampirism", 6)
     expect_source(sources, "equipment:modifier:manadrainmindam:armor:affix:80:wraith", 4)
+    expect_source(sources, "equipment:modifier:item_addexperience:armor:affix:90:wisdom", 5)
     expect_source(sources, "equipment:modifier:attack_rating:weapon:affix:10:precision", 75)
     expect_source(sources, "equipment:modifier:attack_rating:weapon:socket:20:socket-rune", 25)
     expect_source(sources, "equipment:modifier:attack_rating:weapon:attribute:30:mastery", 20)
@@ -275,6 +284,7 @@ local function assert_unequipped_armor_sources(sources)
     expect_source(sources, "equipment:modifier:maxstamina:armor:affix:60:endurance", nil)
     expect_source(sources, "equipment:modifier:lifedrainmindam:armor:affix:70:vampirism", nil)
     expect_source(sources, "equipment:modifier:manadrainmindam:armor:affix:80:wraith", nil)
+    expect_source(sources, "equipment:modifier:item_addexperience:armor:affix:90:wisdom", nil)
     expect_source(sources, "equipment:modifier:defense:armor:affix:10:sturdy", nil)
     expect_source(sources, "equipment:modifier:defense:armor:socket:20:socket-jewel", nil)
     expect_source(sources, "equipment:modifier:defense:armor:attribute:40:armor-mastery", nil)

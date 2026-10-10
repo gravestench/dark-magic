@@ -9,7 +9,12 @@ local loot = require("d2legacy.loot.generate")
 local attribution = require("d2legacy.owned_units.attribution")
 local player_count = require("d2legacy.policy.player_count")
 local party = require("d2legacy.policy.party")
+local experience_gain = require("d2legacy.policy.experience_gain")
+local progression = require("d2legacy.data.progression")
+local stat_sources = require("d2legacy.gameplay.stat_sources")
 local M = {}
+local thresholds
+local experience_rules
 
 local function selectable_by_id(entities, wanted)
     for _, entity in ipairs(entities) do
@@ -43,13 +48,28 @@ local function monster_selectable_id(monster, identity)
     return "monster:" .. identity:get("spawn_id")
 end
 
-local function credit_experience(entities, killer_id, amount)
+-- Credit resolves through ownership, so a minion's kill is computed at its
+-- owner's level. Returns the experience actually added.
+local function credit_experience(entities, killer_id, stats)
     local killer = selectable_by_id(entities, killer_id)
     local progress = killer and ecs.get(killer, "d2legacy.player.progress")
-    if not progress or amount <= 0 then
-        return
+    local identity = killer and ecs.get(killer, "d2legacy.player.identity")
+    if not progress or not identity or stats:get("experience") <= 0 then
+        return 0
     end
-    progress:set("experience", progress:get("experience") + amount)
+    local class = identity:get("class")
+    local gained = experience_gain.gain(
+        experience_rules,
+        class,
+        progress:get("level"),
+        stats:get("level"),
+        stats:get("experience"),
+        stat_sources.resolve(entities, killer, "item_addexperience", 0)
+    )
+    local before = progress:get("experience")
+    local after = experience_gain.capped_total(experience_rules, thresholds, class, before, gained)
+    progress:set("experience", after)
+    return after - before
 end
 
 local function count_game_players(entities)
@@ -169,7 +189,7 @@ local function commit_death(context, entities, structural, monster, killers)
     local ownership = attribution.resolve(entities, killer)
     local credited = ownership.ultimate_owner_id
     local experience = stats:get("experience")
-    credit_experience(entities, credited, experience)
+    credit_experience(entities, credited, stats)
 
     local drops, counts = roll_loot(entities, identity, stats, credited)
     local values = death_values(context, monster, identity, killer, credited, experience, drops, counts)
@@ -185,7 +205,9 @@ local function update(context, entities, structural)
     end
 end
 
-function M.register()
+function M.register(experience_thresholds)
+    thresholds = experience_thresholds or {}
+    experience_rules = progression.experience_rules()
     ecs.system({
         id = "d2legacy.monster.death",
         phase = "effects",
@@ -199,6 +221,7 @@ function M.register()
                 -- system snapshot so credited XP can reach player.progress.
                 "d2legacy.world.selectable",
                 "d2legacy.player.identity",
+                "d2legacy.stat.source",
             },
             none = { "d2legacy.world.inactive", "d2legacy.combat.death_observed" },
         },
@@ -216,6 +239,7 @@ function M.register()
             "d2legacy.player.progress",
             "d2legacy.monster.appearance",
             "d2legacy.combat.death_observed",
+            "d2legacy.stat.source",
         },
         write = {
             "d2legacy.monster.death",

@@ -130,7 +130,37 @@ UI never writes the new level/points.
 
 ## Experience award policy
 
-Separate threshold logic from XP award formulas. Exact research is still needed for monster/player level penalties, party division/range eligibility, high-level penalties, difficulty, player count, shrines, mercenary XP, quest/Ancients awards, and death penalties/recovery.
+Separate threshold logic from XP award formulas. Exact research is still needed for party division/range eligibility, player count, shrines, mercenary XP, quest/Ancients awards, and death-penalty recovery.
+
+Owned 1.14d `Experience.txt` starts with a `MaxLvl` row: its class columns are
+the level cap (99) and its `ExpRatio` is the binary shift (10) applied to every
+level's `ExpRatio`. The level rows that follow are cumulative thresholds; row
+`L` is the experience needed to reach level `L + 1`. `ExpRatio` is 1024 through
+level 69 and falls from 976 at level 70 to 5 at level 99.
+
+High-confidence recovered solo kill experience (pinned 1.10f D2MOO
+`UNIT/SUnitDmg.cpp`, `SUNITDMG_ComputeExperienceGain` and
+`SUNITDMG_AddExperienceForPlayer`), implemented in
+`d2legacy.policy.experience_gain` and applied by `systems/monster_death.lua`:
+
+```text
+skip monsters with no experience; a killer at the class level cap gains 0
+killer level >= monster level: factor by difference 0..10+
+    256 256 256 256 256 256 207 159 110 61 13   (/256)
+monster higher, killer below level 25: factor by difference 0..10+
+    256 256 256 256 256 256 225 174 92 38 5     (/256)
+monster higher, killer level 25+: experience * killer level / monster level
+then: experience * ExpRatio(killer level) >> ExpRatio(MaxLvl)
+then: + item_addexperience percent
+total experience is capped at the threshold of the class level cap
+```
+
+Credit resolves through ownership, so a minion's kill uses its owner's level.
+The recovered percentage helper divides before multiplying for large values,
+and the ratio step shifts before multiplying above `INT_MAX >> shift`; both
+precision-losing branches are kept. Party sharing (the recovered same-level,
+distance-checked split adding 89/256 per extra member) and hireling experience
+are not implemented; the party distance rule is #374's verification work.
 
 ## Stat-point allocation
 

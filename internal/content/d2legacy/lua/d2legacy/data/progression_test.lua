@@ -1,8 +1,9 @@
 local test = require("d2legacy.tests/v1")
 
-local function row(level, amazon)
+local function row(level, amazon, ratio)
     return {
         Level = level,
+        ExpRatio = ratio,
         Amazon = amazon,
         Sorceress = amazon,
         Necromancer = amazon,
@@ -20,13 +21,24 @@ return test.suite({
     -- per-level thresholds.
     records = {
         ["data/global/excel/experience.txt"] = {
-            row("MaxLvl", "99"),
-            row("0", "0"),
-            row("1", "500"),
-            row("2", "1500"),
+            row("MaxLvl", "99", "10"),
+            row("0", "0", "1024"),
+            row("1", "500", "1024"),
+            row("2", "1500", "976"),
         },
     },
     cases = {
+        test.case("max_level_row_supplies_the_cap_and_ratio_shift", {
+            test.run(function()
+                local progression = require("d2legacy.data.progression")
+                local rules = progression.experience_rules()
+                test.expect(rules.ratio_shift):equals(10)
+                test.expect(rules.max_levels.Amazon):equals(99)
+                test.expect(rules.max_levels.Assassin):equals(99)
+                test.expect(rules.ratios[0]):equals(1024)
+                test.expect(rules.ratios[2]):equals(976)
+            end),
+        }),
         test.case("level_cap_row_is_not_a_threshold", {
             test.run(function()
                 local progression = require("d2legacy.data.progression")

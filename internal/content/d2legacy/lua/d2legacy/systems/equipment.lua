@@ -363,6 +363,7 @@ function M.register()
                                 "item_stamina_perlevel",
                                 "lifedrainmindam",
                                 "manadrainmindam",
+                                "item_addexperience",
                             }) do
                                 sync_sources(
                                     entities,
@@ -411,6 +412,7 @@ function M.register()
                                 "item_stamina_perlevel",
                                 "lifedrainmindam",
                                 "manadrainmindam",
+                                "item_addexperience",
                             }) do
                                 sync_sources(
                                     entities,
