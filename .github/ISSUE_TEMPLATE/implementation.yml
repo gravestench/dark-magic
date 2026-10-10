@@ -1,0 +1,58 @@
+name: Implementation work
+description: Describe a specific change so a first-time contributor can understand and verify it.
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Write for someone new to Dark Magic. Start with what a player or contributor would notice. Explain specialized terms the first time you use them. If you do not know an answer, say what needs to be investigated instead of guessing.
+  - type: textarea
+    id: problem
+    attributes:
+      label: What is wrong or missing?
+      description: Describe what happens today, why it matters, and a small example if one helps.
+      placeholder: A player can place a trap, but ...
+    validations:
+      required: true
+  - type: textarea
+    id: result
+    attributes:
+      label: What should happen?
+      description: Describe the behavior someone should see when this work is complete.
+    validations:
+      required: true
+  - type: textarea
+    id: today
+    attributes:
+      label: What already works?
+      description: Separate existing behavior from the missing part. Link a test or merged change if known.
+    validations:
+      required: true
+  - type: textarea
+    id: starting-points
+    attributes:
+      label: Where should someone start?
+      description: Link a few documents, code paths, or functions. Explain what each one helps the reader understand. If the owner is unknown, say what needs to be located.
+      placeholder: "docs/... explains the behavior. internal/... contains the current calculation."
+    validations:
+      required: true
+  - type: textarea
+    id: evidence
+    attributes:
+      label: How do we know the expected behavior?
+      description: Link game data, observations from the original game, research, or design decisions. Mark uncertain claims and name the question that remains.
+    validations:
+      required: true
+  - type: textarea
+    id: done
+    attributes:
+      label: How will we know it is done?
+      description: List observable examples and the tests or demonstrations that should prove them. Include important failures and edge cases.
+    validations:
+      required: true
+  - type: textarea
+    id: boundaries
+    attributes:
+      label: Dependencies and limits
+      description: Name work that must happen first and related behavior that this issue does not cover.
+    validations:
+      required: false
