@@ -86,6 +86,68 @@ counts, target dates, or a next-work cursor to `ROADMAP.md`; change that file
 only when its stable product boundary, technical direction, or high-level
 program overview has changed.
 
+## Write issues for a first-time contributor
+
+Assume the reader has never worked on this project or its game systems. Start
+with the visible problem and desired result in ordinary language. Introduce a
+technical term only when it helps the reader find code or evidence, and explain
+it on first use. An issue should be understandable before the reader opens the
+repository; its links should then show where to investigate.
+
+For an implementation issue, include:
+
+1. **What is wrong or missing?** Describe what someone can observe today and
+   why it matters. Give a small example when possible.
+2. **What should happen?** Describe the intended result without prescribing a
+   particular code change.
+3. **What already works?** Distinguish existing behavior from the missing part.
+   Link the relevant test or merged change if known.
+4. **Where should I start?** Link a few current documents, code paths, or named
+   functions and say what each one explains or owns. Paths are entry points,
+   not a list of files that must change.
+5. **How do we know?** Link the game data, observations from the original game,
+   research, or design decision behind the expected behavior. Mark anything
+   still uncertain and state what would settle the question.
+6. **How will we know it is done?** List concrete, observable cases, including
+   failure and edge cases where they matter. Name the test or demonstration that
+   should prove each case. State what is outside this issue.
+
+For example, explain a "maximum-stamina callback" as what happens to the
+player's current stamina when a change to Vitality raises the maximum. Then
+link the existing calculation and the evidence needed to determine the exact
+order. A reader should not have to understand the callback name to understand
+the problem.
+
+A parent roadmap issue needs a plain-language outcome, links to its smaller
+issues, and a completion rule. A research issue needs a clear question, a way
+to gather evidence, and the decision that evidence will support. Keep the
+detailed implementation guide on the child issue that someone can actually
+pick up.
+
+Before marking an implementation issue ready, check that a new contributor can
+answer four questions from its body: What am I trying to make happen? What
+already exists? Where do I learn more and start looking? What evidence will
+show that the work is complete? If an answer is unknown, say so and keep the
+issue in scoping or research until the missing decision is made. Refresh the
+code pointers when the implementation changes.
+
+Use a child issue when a distinct piece of work can be understood, verified,
+and closed by one pull request. Link it to its parent issue using GitHub's
+sub-issue relationship so the parent shows progress. For a short set of tightly
+related changes, a checklist on one issue is simpler: link each pull request
+beside the criterion it satisfies, and close the issue with the final pull
+request only after every criterion is met. Do not create a retrospective issue
+for every historical pull request merely to make the counts look tidy.
+
+In a pull request description targeting the default branch, use `Closes #123`
+only for the specific issue whose whole completion rule the pull request
+satisfies. Use `Refs #123` for a parent or an issue receiving only partial work.
+GitHub closes a linked issue when that pull request merges; a plain reference
+keeps the broader issue open. If a pull request finishes the last criterion on
+an issue, its description can close that issue directly. Keep the issue body
+current when a partial pull request lands by recording the delivered criterion
+and its pull request link.
+
 A strong contribution normally has one understandable through-line:
 
 1. establish the missing behavior or mechanism;
