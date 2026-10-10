@@ -39,14 +39,17 @@ func run(
 	if err != nil {
 		return err
 	}
+
 	mapEditorOutput, err := darkpaths.ExpandHost(config.mapEditorOutput)
 	if err != nil {
 		return fmt.Errorf("expand map editor output path: %w", err)
 	}
+
 	mapEditorReadOnlyRoots, err := mountedGameDataRoots()
 	if err != nil {
 		return err
 	}
+
 	windowWidth, windowHeight, err := parseWindowSize(config.windowSize)
 	if err != nil {
 		return err
@@ -98,15 +101,19 @@ func parseWindowSize(value string) (int, int, error) {
 	if value == "" {
 		return 0, 0, nil
 	}
+
 	parts := strings.Split(value, "x")
 	if len(parts) != 2 {
 		return 0, 0, fmt.Errorf("window size %q must use WIDTHxHEIGHT", value)
 	}
+
 	width, widthErr := strconv.Atoi(strings.TrimSpace(parts[0]))
+
 	height, heightErr := strconv.Atoi(strings.TrimSpace(parts[1]))
 	if widthErr != nil || heightErr != nil || width < 640 || height < 480 {
 		return 0, 0, fmt.Errorf("window size %q must be at least 640x480", value)
 	}
+
 	return width, height, nil
 }
 
@@ -118,21 +125,26 @@ func mountedGameDataRoots() ([]string, error) {
 	if configured == "" {
 		return nil, nil
 	}
+
 	roots := make([]string, 0, strings.Count(configured, ",")+1)
 	for _, entry := range strings.Split(configured, ",") {
 		expanded, err := darkpaths.ExpandHost(strings.TrimSpace(entry))
 		if err != nil {
 			return nil, fmt.Errorf("expand mounted game-data root: %w", err)
 		}
+
 		if expanded == "" {
 			return nil, fmt.Errorf("mounted game-data root is empty")
 		}
+
 		resolved, err := filepath.EvalSymlinks(expanded)
 		if err != nil {
 			return nil, fmt.Errorf("resolve mounted game-data root %q: %w", expanded, err)
 		}
+
 		roots = append(roots, resolved)
 	}
+
 	return roots, nil
 }
 

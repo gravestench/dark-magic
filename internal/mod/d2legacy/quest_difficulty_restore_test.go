@@ -160,11 +160,11 @@ func assertQuestRewardAndDifficulty(t *testing.T, engine *gameecs.Engine) {
 		t.Fatal("quest reward was not committed")
 	}
 
-	difficulties, _ := akara.GetDynamicStore(engine.World(), "d2legacy.player.difficulty")
-	difficulty, _ := difficulties.Get(difficulties.Entities()[0])
-
-	current, _ := difficulty.Get("current")
-	if current != int64(1) {
-		t.Fatalf("difficulty = %v, want Nightmare", current)
+	// Completing Normal unlocks Nightmare for the character; the active game
+	// stays on the Normal difficulty fixed by its immutable rules.
+	current, highest := playerDifficulty(t, engine)
+	if current != 0 || highest != 0 {
+		t.Fatalf("difficulty current=%d highest_completed=%d, want Normal game with Normal completed",
+			current, highest)
 	}
 }
