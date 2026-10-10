@@ -80,6 +80,7 @@ function M.components(command, game_player_count)
             physical_min = definition.physical_min,
             physical_max = definition.physical_max,
             experience = experience,
+            drain_percent = definition.drain_percent or 0,
         },
         ["d2legacy.combat.melee_profile"] = {
             range = definition.attack_range,

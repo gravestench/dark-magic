@@ -196,6 +196,31 @@ attacker missing resources
 
 It should not be implemented as a generic item proc detached from final damage.
 
+Current implementation (high-confidence recovered from pinned 1.10f D2MOO
+`UNIT/SUnitDmg.cpp` and `MISSILES/MissMode.cpp`; awaiting 1.14d runtime
+confirmation): `d2legacy.policy.leech` runs after the shared damage
+transaction for landed basic melee hits and projectile hits.
+
+- Only physical damage leeches, capped at the defender's life before the hit.
+  A monster defender scales leech by its difficulty's MonStats `Drain`; a blank
+  column cannot be leeched from, and other defenders count as 100.
+- Players and hirelings leech a percentage: scaled by 64, divided by the
+  session steal divisor (players only), applied to physical damage, scaled by
+  drain, and returned to raw 8.8 units. Projectiles use their owner's current
+  stats; the original copies them onto the missile at launch.
+- Other monsters leech a flat amount rolled from their drain-damage stats and
+  doubled by the default 128/128 skill damage share. Life is capped by the
+  physical damage and mana by the defender's mana; both heal the monster after
+  drain, and the defender loses the drained mana.
+- Life is capped at maximum life and mana at maximum mana. Player life is still
+  stored whole, so fractions of a point are lost.
+- Leech emits the `steallife`/`stealmana` overlay cues on the attacker; a
+  player with both picks one at random.
+
+Deferred: monster missile leech (its recovered units are unpinned),
+skill-granted leech, stamina leech, and the recovered player-path quirk that
+also subtracts the scaled mana-leech value from the defender's mana.
+
 ## Timed secondary effects
 
 Damage can carry effect magnitude and duration separately.

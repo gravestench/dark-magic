@@ -9,6 +9,7 @@ local ecs = require("engine.ecs/v1")
 local combat_target = require("d2legacy.gameplay.combat_target")
 local policy = require("d2legacy.policy.melee")
 local damage_policy = require("d2legacy.policy.damage")
+local leech = require("d2legacy.policy.leech")
 local damage_bundle = require("d2legacy.policy.damage_bundle")
 local stat_sources = require("d2legacy.gameplay.stat_sources")
 local M = {}
@@ -120,6 +121,8 @@ function M.register()
             "d2legacy.combat.melee_profile",
             "d2legacy.monster.stats",
             "d2legacy.player.vitals",
+            "d2legacy.player.identity",
+            "d2legacy.owned_unit",
             "d2legacy.player.progress",
             "d2legacy.player.combat_stats",
             "d2legacy.combat.defense",
@@ -133,6 +136,7 @@ function M.register()
             "d2legacy.combat.attack_result",
             "d2legacy.combat.event",
             "d2legacy.combat.damage_bundle",
+            "d2legacy.presentation.effect_cue",
         },
         update = function(context, entities, structural)
             for _, attacker in ipairs(entities) do
@@ -172,6 +176,7 @@ function M.register()
                                 weapon_damage(attacker, profile, request:get("hand"), entities),
                                 ecs
                             )
+                            leech.apply(attacker, target, result, entities, ecs, structural, context.tick)
                             base.hit = true
                             base.outcome = "hit"
                             base.remaining_health_raw = result.remaining_health_raw

@@ -210,6 +210,9 @@ local function runtime_definition(stats, graphics, values, difficulty)
         physical_min = values.damage_min * RAW_SCALE,
         physical_max = values.damage_max * RAW_SCALE,
         experience = values.experience,
+        -- Leech effectiveness against this monster; a blank column cannot be
+        -- leeched from.
+        drain_percent = difficulty_value(stats, columns("Drain"), difficulty),
         treasure_class = treasure_class(stats, difficulty),
         collider_radius = size,
         select_radius = size,

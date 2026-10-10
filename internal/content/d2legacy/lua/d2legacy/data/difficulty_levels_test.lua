@@ -26,6 +26,8 @@ return test.suite({
                 MonsterFreezeDivisor = "1",
                 MonsterColdDivisor = "1",
                 DeathExpPenalty = "0",
+                LifeStealDivisor = "1",
+                ManaStealDivisor = "1",
             },
             {
                 Name = "Nightmare",
@@ -33,6 +35,8 @@ return test.suite({
                 MonsterFreezeDivisor = "2",
                 MonsterColdDivisor = "2",
                 DeathExpPenalty = "5",
+                LifeStealDivisor = "2",
+                ManaStealDivisor = "2",
             },
             {
                 Name = "Hell",
@@ -40,6 +44,8 @@ return test.suite({
                 MonsterFreezeDivisor = "4",
                 MonsterColdDivisor = "4",
                 DeathExpPenalty = "10",
+                LifeStealDivisor = "3",
+                ManaStealDivisor = "3",
             },
         },
     },

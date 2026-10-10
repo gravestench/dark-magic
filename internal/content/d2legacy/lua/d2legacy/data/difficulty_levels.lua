@@ -43,9 +43,13 @@ local function current()
         monster_freeze_divisor = integer(row, "MonsterFreezeDivisor"),
         monster_cold_divisor = integer(row, "MonsterColdDivisor"),
         death_experience_penalty = integer(row, "DeathExpPenalty"),
+        life_steal_divisor = integer(row, "LifeStealDivisor"),
+        mana_steal_divisor = integer(row, "ManaStealDivisor"),
     }
     assert(selected.monster_freeze_divisor > 0, "DifficultyLevels MonsterFreezeDivisor must be positive")
     assert(selected.monster_cold_divisor > 0, "DifficultyLevels MonsterColdDivisor must be positive")
+    assert(selected.life_steal_divisor > 0, "DifficultyLevels LifeStealDivisor must be positive")
+    assert(selected.mana_steal_divisor > 0, "DifficultyLevels ManaStealDivisor must be positive")
     return selected
 end
 
@@ -63,6 +67,15 @@ end
 
 function M.monster_cold_divisor()
     return current().monster_cold_divisor
+end
+
+-- Player life and mana leech are divided by these before drain applies.
+function M.life_steal_divisor()
+    return current().life_steal_divisor
+end
+
+function M.mana_steal_divisor()
+    return current().mana_steal_divisor
 end
 
 -- Percentage of the current level's experience span lost on death.

@@ -361,6 +361,8 @@ function M.register()
                                 "skill_staminapercent",
                                 "skill_passive_staminapercent",
                                 "item_stamina_perlevel",
+                                "lifedrainmindam",
+                                "manadrainmindam",
                             }) do
                                 sync_sources(
                                     entities,
@@ -407,6 +409,8 @@ function M.register()
                                 "skill_staminapercent",
                                 "skill_passive_staminapercent",
                                 "item_stamina_perlevel",
+                                "lifedrainmindam",
+                                "manadrainmindam",
                             }) do
                                 sync_sources(
                                     entities,
