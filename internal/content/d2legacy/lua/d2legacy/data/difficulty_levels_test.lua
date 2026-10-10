@@ -20,9 +20,24 @@ return test.suite({
     },
     records = {
         ["data/global/excel/difficultylevels.txt"] = {
-            { Name = "Normal", ResistPenalty = "0" },
-            { Name = "Nightmare", ResistPenalty = "-40" },
-            { Name = "Hell", ResistPenalty = "-100" },
+            {
+                Name = "Normal",
+                ResistPenalty = "0",
+                MonsterFreezeDivisor = "1",
+                MonsterColdDivisor = "1",
+            },
+            {
+                Name = "Nightmare",
+                ResistPenalty = "-40",
+                MonsterFreezeDivisor = "2",
+                MonsterColdDivisor = "2",
+            },
+            {
+                Name = "Hell",
+                ResistPenalty = "-100",
+                MonsterFreezeDivisor = "4",
+                MonsterColdDivisor = "4",
+            },
         },
     },
     cases = {

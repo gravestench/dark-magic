@@ -40,7 +40,11 @@ local function current()
     local row = row_for(game_rules.difficulty())
     selected = {
         resist_penalty = integer(row, "ResistPenalty"),
+        monster_freeze_divisor = integer(row, "MonsterFreezeDivisor"),
+        monster_cold_divisor = integer(row, "MonsterColdDivisor"),
     }
+    assert(selected.monster_freeze_divisor > 0, "DifficultyLevels MonsterFreezeDivisor must be positive")
+    assert(selected.monster_cold_divisor > 0, "DifficultyLevels MonsterColdDivisor must be positive")
     return selected
 end
 
@@ -49,6 +53,15 @@ end
 -- to the character's durable base resistance.
 function M.resist_penalty()
     return current().resist_penalty
+end
+
+-- Monster freeze and chill lengths are divided by separate authored columns.
+function M.monster_freeze_divisor()
+    return current().monster_freeze_divisor
+end
+
+function M.monster_cold_divisor()
+    return current().monster_cold_divisor
 end
 
 return M
