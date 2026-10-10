@@ -51,13 +51,16 @@ func (app *application) registerHostOverrideModules() error {
 // application object, limiting script authority to explicitly reviewed doors.
 func (app *application) registerBaseLuaModules() error {
 	var storage *mapeditor.Storage
+
 	if app.options.MapEditorOutput != "" {
 		var err error
+
 		storage, err = mapeditor.NewStorage(app.options.MapEditorOutput, app.options.MapEditorReadOnlyRoots...)
 		if err != nil {
 			return fmt.Errorf("configure map editor output: %w", err)
 		}
 	}
+
 	for _, module := range app.baseLuaModules(storage) {
 		if err := app.scripts.RegisterModule(module); err != nil {
 			return fmt.Errorf("register Lua module %s: %w", module.Name, err)
