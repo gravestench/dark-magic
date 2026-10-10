@@ -55,6 +55,30 @@ A major compatibility risk is collapsing all identity to one Go map key. Keep th
 
 A typed `map[code]record` is an index over a table; it must not erase the ordered record collection. This matters for tables where adjacent rows, numeric ordinals, redirect indexes, or act-local ordering are observable.
 
+Current identity boundary: `recordstore.LoadRows` returns ordered cells with a
+zero-based `RowOrdinal`, canonical table path, and winning source provenance.
+The generic store defines separate `SymbolicID`, `NumericID`, `ActLocalID`, and
+`DerivedIndex` types but does not infer them from column names. A consumer must
+assign those meanings explicitly. `Load` remains the plain cell-map API for
+callers that do not need row coordinates.
+
+The DS1 object resolver is the first end-to-end consumer of all six concepts.
+For dynamic objects, `MonPreset.txt` `Place` is the symbolic monster code and
+the DS1 ID is a per-act position; an interleaved row can therefore have global
+row ordinal 2 and act-local index 1. For static objects, recovered `obj.txt`
+`Id` is act-local while `ObjectId` is an explicit global `Objects.txt` number.
+Both resolvers retain the source row/provenance and a separately named derived
+lookup key. Link diagnostics likewise resolve row-ordinal references from
+position and act-local references within an act, instead of matching an
+unrelated numeric target column.
+
+These are Dark Magic's current interpretation of the recovered DS1 mapping,
+not a claim that every original 1.14d TXT-to-BIN relationship is known. The
+remaining per-consumer relationship audit is tracked in
+[issue #370](https://github.com/gravestench/dark-magic/issues/370). In
+particular, other numeric-looking `d2legacy` joins must remain unverified until
+their target column, positional rule, and sentinel behavior are documented.
+
 ## Raw-table representation
 
 The current generic `map[string]string` rows are useful but do not preserve original header order as a first-class structure. Raw bytes remain available, so no source information is irretrievably lost. If Dark Magic needs stronger diagnostics, introduce a renderer/gameplay-independent raw document shape roughly equivalent to:

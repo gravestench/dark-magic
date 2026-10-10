@@ -18,7 +18,7 @@ func TestCatalogLoadsRecoveredD2LegacyTables(t *testing.T) {
 		QuestsPath:   &fstest.MapFile{Data: []byte(quests)},
 		SpeechPath:   &fstest.MapFile{Data: []byte("sound\tsoundstr\nakara_intro\tAkaraIntroGossip1\n")},
 		DS1TypesPath: &fstest.MapFile{Data: []byte("Name\tDef\tLevelType\nTown\t1\t1\n")},
-		ObjectsPath:  &fstest.MapFile{Data: []byte("Act\tId\tDescription\tObjectId\n1\t0\tFountain\t12\n")},
+		ObjectsPath:  &fstest.MapFile{Data: []byte("Act\tId\tDescription\tObjectId\n1\t0\tFountain\t12\n2\t0\tOther Fountain\t108\n")},
 	}
 	catalog := New(source)
 
@@ -39,6 +39,11 @@ func TestCatalogLoadsRecoveredD2LegacyTables(t *testing.T) {
 
 	if snapshot.DS1TypeByDef[1].Name != "Town" || snapshot.MapObjectByActID["1:0"].ObjectID != 12 {
 		t.Fatalf("map recovery = %#v, %#v", snapshot.DS1TypeByDef, snapshot.MapObjectByActID)
+	}
+	second := snapshot.MapObjectByActID["2:0"]
+	if second.ObjectID != 108 || second.RowOrdinal != 1 ||
+		second.Source.Path != ObjectsPath || second.Source.Layer != "filesystem" {
+		t.Fatalf("map object identity = %#v", second)
 	}
 
 	snapshot.Quests[1].Stages[0].Alternates[0] = "changed"

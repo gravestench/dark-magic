@@ -7,6 +7,8 @@ import (
 	"sort"
 	"strconv"
 	"strings"
+
+	"github.com/gravestench/dark-magic/internal/game/data/store"
 )
 
 // ParseDS1Types parses unique executable-era definitions while ignoring the
@@ -94,6 +96,7 @@ func ParseMapObjects(input io.Reader) ([]MapObject, error) {
 
 		result = append(result, MapObject{
 			Act: act, ID: id, Description: strings.TrimSpace(row["Description"]), ObjectID: objectID,
+			RowOrdinal: recordstore.RowOrdinal(index),
 		})
 	}
 
