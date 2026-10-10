@@ -481,9 +481,18 @@ func (runtimeFixtureRecords) Load(path string) ([]map[string]string, error) {
 	switch path {
 	case "data/global/excel/difficultylevels.txt":
 		return []map[string]string{
-			{"Name": "Normal", "ResistPenalty": "0", "MonsterFreezeDivisor": "1", "MonsterColdDivisor": "1"},
-			{"Name": "Nightmare", "ResistPenalty": "-40", "MonsterFreezeDivisor": "2", "MonsterColdDivisor": "2"},
-			{"Name": "Hell", "ResistPenalty": "-100", "MonsterFreezeDivisor": "4", "MonsterColdDivisor": "4"},
+			{
+				"Name": "Normal", "ResistPenalty": "0",
+				"MonsterFreezeDivisor": "1", "MonsterColdDivisor": "1", "DeathExpPenalty": "0",
+			},
+			{
+				"Name": "Nightmare", "ResistPenalty": "-40",
+				"MonsterFreezeDivisor": "2", "MonsterColdDivisor": "2", "DeathExpPenalty": "5",
+			},
+			{
+				"Name": "Hell", "ResistPenalty": "-100",
+				"MonsterFreezeDivisor": "4", "MonsterColdDivisor": "4", "DeathExpPenalty": "10",
+			},
 		}, nil
 	case "data/global/excel/charstats.txt":
 		return []map[string]string{{
