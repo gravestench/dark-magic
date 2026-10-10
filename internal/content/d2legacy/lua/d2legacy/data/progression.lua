@@ -9,7 +9,8 @@ function M.load()
     for _, class in ipairs({"Amazon", "Sorceress", "Necromancer", "Paladin", "Barbarian", "Druid", "Assassin"}) do
         thresholds[class] = {}
         for _, row in ipairs(rows) do
-            local value = tonumber(row[class])
+            -- The authored MaxLvl row stores the level cap, not a threshold.
+            local value = row.Level ~= "MaxLvl" and tonumber(row[class]) or nil
             if value and value >= 0 then
                 thresholds[class][#thresholds[class] + 1] = math.floor(value)
             end
