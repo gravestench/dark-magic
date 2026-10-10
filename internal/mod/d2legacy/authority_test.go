@@ -61,14 +61,17 @@ func (records fixtureRecords) Load(path string) ([]map[string]string, error) {
 			{
 				"Name": "Normal", "ResistPenalty": "0",
 				"MonsterFreezeDivisor": "1", "MonsterColdDivisor": "1", "DeathExpPenalty": "0",
+				"LifeStealDivisor": "1", "ManaStealDivisor": "1",
 			},
 			{
 				"Name": "Nightmare", "ResistPenalty": "-40",
 				"MonsterFreezeDivisor": "2", "MonsterColdDivisor": "2", "DeathExpPenalty": "5",
+				"LifeStealDivisor": "2", "ManaStealDivisor": "2",
 			},
 			{
 				"Name": "Hell", "ResistPenalty": "-100",
 				"MonsterFreezeDivisor": "4", "MonsterColdDivisor": "4", "DeathExpPenalty": "10",
+				"LifeStealDivisor": "3", "ManaStealDivisor": "3",
 			},
 		}, nil
 	default:

@@ -233,6 +233,7 @@ function M.register()
         { name = "physical_min", type = "i64" },
         { name = "physical_max", type = "i64" },
         { name = "experience", type = "i64" },
+        { name = "drain_percent", type = "i64" },
     })
     -- Authored MonStats2 corpseSel is an immutable capability marker. Death
     -- state separately owns whether the resulting corpse remains usable after
