@@ -42,6 +42,7 @@ local function current()
         resist_penalty = integer(row, "ResistPenalty"),
         monster_freeze_divisor = integer(row, "MonsterFreezeDivisor"),
         monster_cold_divisor = integer(row, "MonsterColdDivisor"),
+        death_experience_penalty = integer(row, "DeathExpPenalty"),
     }
     assert(selected.monster_freeze_divisor > 0, "DifficultyLevels MonsterFreezeDivisor must be positive")
     assert(selected.monster_cold_divisor > 0, "DifficultyLevels MonsterColdDivisor must be positive")
@@ -62,6 +63,11 @@ end
 
 function M.monster_cold_divisor()
     return current().monster_cold_divisor
+end
+
+-- Percentage of the current level's experience span lost on death.
+function M.death_experience_penalty()
+    return current().death_experience_penalty
 end
 
 return M

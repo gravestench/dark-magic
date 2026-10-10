@@ -49,6 +49,7 @@ function M.register()
         { name = "credited_id", type = "string" },
         { name = "hardcore", type = "bool" },
         { name = "stage", type = "string" },
+        { name = "experience_lost", type = "i64" },
         { name = "consequences_pending", type = "bool" },
     })
     component("d2legacy.player.death_event", {
@@ -58,6 +59,7 @@ function M.register()
         { name = "killer_id", type = "string" },
         { name = "credited_id", type = "string" },
         { name = "hardcore", type = "bool" },
+        { name = "experience_lost", type = "i64" },
         { name = "consequences_pending", type = "bool" },
     })
     component("d2legacy.player.stamina_progression", {

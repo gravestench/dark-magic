@@ -183,6 +183,13 @@ as the recoverable amount. Owned 1.14d `patch_d2.mpq` authors
 lose no experience. Corpse recovery of the lost amount and 1.14d confirmation
 remain #386 probe work.
 
+Current implementation: `d2legacy.systems.player_death` applies this
+arithmetic when it commits a death, using the session difficulty's
+`DeathExpPenalty` and the class thresholds from `Experience.txt`. Credit is
+resolved through ownership, so a player-owned minion counts as a player. The
+reported loss is stored as `experience_lost` on the death state and the death
+event for a later corpse-recovery consumer.
+
 ## Monster level and stat scaling
 
 `Levels.txt`, `MonStats`, `MonLvl` and difficulty context interact to produce effective monster stats and population.

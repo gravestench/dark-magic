@@ -15,9 +15,27 @@ return test.suite({
     -- so distinct values here prove each effect reads its own column.
     records = {
         ["data/global/excel/difficultylevels.txt"] = {
-            { Name = "Normal", ResistPenalty = "0", MonsterFreezeDivisor = "1", MonsterColdDivisor = "1" },
-            { Name = "Nightmare", ResistPenalty = "-40", MonsterFreezeDivisor = "2", MonsterColdDivisor = "2" },
-            { Name = "Hell", ResistPenalty = "-100", MonsterFreezeDivisor = "5", MonsterColdDivisor = "3" },
+            {
+                Name = "Normal",
+                ResistPenalty = "0",
+                MonsterFreezeDivisor = "1",
+                MonsterColdDivisor = "1",
+                DeathExpPenalty = "0",
+            },
+            {
+                Name = "Nightmare",
+                ResistPenalty = "-40",
+                MonsterFreezeDivisor = "2",
+                MonsterColdDivisor = "2",
+                DeathExpPenalty = "5",
+            },
+            {
+                Name = "Hell",
+                ResistPenalty = "-100",
+                MonsterFreezeDivisor = "5",
+                MonsterColdDivisor = "3",
+                DeathExpPenalty = "10",
+            },
         },
     },
     cases = {
