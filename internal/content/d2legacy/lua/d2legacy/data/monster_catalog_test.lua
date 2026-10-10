@@ -64,6 +64,73 @@ return test.suite({
                 test.expect(loads["data/global/excel/monlvl.txt"]):equals(1)
             end)
         end),
+        test.case("expansion_hell_monsters_take_the_area_level", function(t)
+            t:run(function()
+                local function stats(id, boss)
+                    return {
+                        Id = id,
+                        BaseId = id,
+                        MonStatsEx = id,
+                        enabled = "1",
+                        isSpawn = "1",
+                        npc = "0",
+                        boss = boss and "1" or "",
+                        Level = "1",
+                        ["Level(H)"] = boss and "75" or "67",
+                        ["minHP(H)"] = "100",
+                        ["maxHP(H)"] = "100",
+                        ["AC(H)"] = "100",
+                        ["A1TH(H)"] = "100",
+                        ["A1MinD(H)"] = "100",
+                        ["A1MaxD(H)"] = "100",
+                        ["Exp(H)"] = "100",
+                    }
+                end
+                local function level(value, life)
+                    return {
+                        Level = value,
+                        ["HP(H)"] = life,
+                        ["AC(H)"] = "1",
+                        ["TH(H)"] = "1",
+                        ["DM(H)"] = "1",
+                        ["XP(H)"] = life,
+                    }
+                end
+                test.mock_module("engine.records/v1", {
+                    load = function(path)
+                        if string.find(path, "monstats2", 1, true) then
+                            return {
+                                { Id = "fallen", SizeX = "2", SizeY = "2", MeleeRng = "1" },
+                                { Id = "lord", SizeX = "2", SizeY = "2", MeleeRng = "1" },
+                            }
+                        end
+                        if string.find(path, "monlvl", 1, true) then
+                            return { level("67", "1000"), level("68", "2000"), level("75", "3000") }
+                        end
+                        return { stats("fallen", false), stats("lord", true) }
+                    end,
+                }, { "load" })
+                test.mock_module("d2legacy.policy.game_rules", {
+                    difficulty = function()
+                        return 2
+                    end,
+                }, { "difficulty" })
+
+                local monster = require("d2legacy.data.monster")
+                local area = { Id = "3", MonLvl3Ex = "68" }
+                -- An ordinary monster takes the area's Hell level and its MonLvl row.
+                local fallen = monster.load("fallen", area)
+                test.expect(fallen.level):equals(68)
+                test.expect(fallen.life_min):equals(2000 * 256)
+                test.expect(fallen.experience):equals(2000)
+                -- Without an area it keeps its own MonStats Level(H).
+                test.expect(monster.load("fallen").level):equals(67)
+                -- Bosses ignore the area level.
+                local lord = monster.load("lord", area)
+                test.expect(lord.level):equals(75)
+                test.expect(lord.life_min):equals(3000 * 256)
+            end)
+        end),
         test.case("difficulty_is_owned_by_immutable_game_rules", function(t)
             t:run(function()
                 test.mock_module("engine.records/v1", {

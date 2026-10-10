@@ -232,6 +232,29 @@ Difficulty can affect:
 
 Keep the effective monster-materialization policy centralized rather than letting combat independently guess a Hell multiplier.
 
+High-confidence recovered monster level (pinned 1.10f D2MOO
+`MONSTER/Monster.cpp` spawn initialization and `DATATBLS_GetMonsterLevelInArea`),
+implemented in `d2legacy.data.monster`:
+
+- Normal uses MonStats `Level`.
+- Expansion Nightmare and Hell use the spawning area's Levels.txt `MonLvl2Ex` /
+  `MonLvl3Ex`, unless the monster is a `boss` or `noRatio` unit, which keeps
+  MonStats `Level(N)` / `Level(H)`. Hirelings always use Normal (not yet
+  applied; hirelings do not exist yet).
+- Stats then come from the MonLvl row for that level, scaled by the MonStats
+  difficulty percentages, or straight from MonStats for `noRatio` units.
+
+In owned 1.14d data the Blood Moor is 1 / 36 / 67 and a Fallen's own MonStats
+level is 1 / 36 / 67. Before this was implemented, every difficulty used the
+Normal `Level` column, so a Hell Blood Moor Fallen was built from the level-1
+MonLvl row. Population passes its Levels.txt row; callers without an area, such
+as labs, fall back to MonStats `Level(N)` / `Level(H)`.
+
+The recovered stat lookup switches to MonLvl's `L-` columns when the game type
+is nonzero (`dwGameType` is recovered as "1 = Ladder"). Dark Magic uses the
+plain columns, which is correct for single-player and open games; whether
+realm games should read the `L-` columns is unresolved.
+
 ## Monster skill bonus
 
 The difficulty row exposes a monster skill-level bonus. Monster skill materialization should apply it through the normalized skill definition/learned-level model.
@@ -413,6 +436,21 @@ state. With no override, consumers read live join/leave population. Neither the
 admission cap nor a client-supplied drop result is a gameplay multiplier.
 
 Subsystems should receive the effective count they need from one service, not parse chat/UI commands themselves.
+
+High-confidence recovered player-count consumers (pinned 1.10f D2MOO
+`MONSTER/Monster.cpp` `MONSTER_GetPlayerCountBonus` and `ITEMS/Items.cpp`),
+all matched by `d2legacy.policy.player_count` (#373):
+
+- Only evil-aligned monsters scale; others count as one player.
+- Life and experience each gain 0 / 50 / 100 … 350 percent for 1 … 8 players,
+  applied once at spawn. Whole life is capped at 2^23 - 1.
+- The spawn count is stored on the monster (`STAT_MONSTER_PLAYERCOUNT`,
+  `spawn_player_count`) and caps later NoDrop benefits.
+- NoDrop uses `(players - party) / 2 + party`, where party is the credited
+  owner's living members in the same level (no distance check), capped by the
+  monster's spawn count, then raises the base NoDrop chance to that power. See
+  `ITEM_GENERATION_AND_LOOT.md`.
+- The `/players` override replaces the live count for all of these.
 
 ## Game type / PvP / arena
 
