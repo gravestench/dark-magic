@@ -176,6 +176,9 @@ The item construction path also exposes independent seed/start-seed, quality, qu
 - `source/D2Game/src/UNIT/SUnitNpc.cpp`
 - `source/D2Game/src/QUESTS/ACT5/A5Q6.cpp`
 - difficulty/state structures in `source/D2Common/include/D2DataTbls.h`
+- `source/D2Game/src/PLAYER/Player.cpp` (death experience penalty)
+- `source/D2Game/src/SKILLS/SkillNec.cpp` (`AiCurseDiv` curse-length callers)
+- `source/D2Game/src/UNIT/SUnitDmg.cpp` (cold/freeze divisors and leech `Life/ManaStealDiv`)
 
 ### Object and transition claims supported
 
