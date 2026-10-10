@@ -260,6 +260,14 @@ divided by `LifeStealDivisor` and `ManaStealDivisor`. Owned 1.14d
 `d2exp.mpq` still has 1 / 2 / 2, so the Hell value changed in a later patch;
 only the 1.14d row is in scope.
 
+Current implementation: `d2legacy.policy.leech` runs after landed basic melee
+and projectile hits. Players and hirelings (owned units of the `hireable` pet
+type) leech the published `lifedrainmindam`/`manadrainmindam` percentages;
+only players take the steal divisors. Other monsters leech a flat amount from
+their drain-damage stats. MonStats `Drain` is copied onto spawned monsters as
+`drain_percent`. See `docs/research/COMBAT_DAMAGE_AND_DEATH.md` for the full
+ordering and deferrals.
+
 The character sheet can still show raw item life-steal percentage while gameplay applies difficulty effectiveness.
 
 ## Unique/champion/boss damage rules

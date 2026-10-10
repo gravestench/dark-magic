@@ -122,6 +122,7 @@ function M.register()
             "d2legacy.monster.stats",
             "d2legacy.player.vitals",
             "d2legacy.player.identity",
+            "d2legacy.owned_unit",
             "d2legacy.player.progress",
             "d2legacy.player.combat_stats",
             "d2legacy.combat.defense",
@@ -135,6 +136,7 @@ function M.register()
             "d2legacy.combat.attack_result",
             "d2legacy.combat.event",
             "d2legacy.combat.damage_bundle",
+            "d2legacy.presentation.effect_cue",
         },
         update = function(context, entities, structural)
             for _, attacker in ipairs(entities) do
@@ -174,7 +176,7 @@ function M.register()
                                 weapon_damage(attacker, profile, request:get("hand"), entities),
                                 ecs
                             )
-                            leech.apply(attacker, target, result, entities, ecs)
+                            leech.apply(attacker, target, result, entities, ecs, structural, context.tick)
                             base.hit = true
                             base.outcome = "hit"
                             base.remaining_health_raw = result.remaining_health_raw

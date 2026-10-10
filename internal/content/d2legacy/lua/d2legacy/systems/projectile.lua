@@ -6,6 +6,7 @@
 
 local ecs = require("engine.ecs/v1")
 local damage = require("d2legacy.policy.damage")
+local leech = require("d2legacy.policy.leech")
 local damage_bundle = require("d2legacy.policy.damage_bundle")
 local geometry = require("d2legacy.policy.geometry")
 local population = require("d2legacy.bootstrap.population")
@@ -96,10 +97,21 @@ local function emit_hit(context, projectile, target, result, structural)
     })
 end
 
-local function apply_hit(context, projectile, target, structural)
+local function owner_entity(entities, owner_id)
+    for _, entity in ipairs(entities) do
+        local selectable = ecs.get(entity, "d2legacy.world.selectable")
+        if selectable and selectable:get("id") == owner_id then
+            return entity
+        end
+    end
+    return nil
+end
+
+local function apply_hit(context, projectile, target, structural, owner, entities)
     local amount = damage.roll(projectile:get("minimum_damage_raw"), projectile:get("maximum_damage_raw"))
     local bundle = damage_bundle.single(projectile:get("damage_channel"), amount)
     local result = damage.resolve(target.entity, bundle, ecs)
+    leech.apply(owner, target.entity, result, entities, ecs, structural, context.tick, "missile")
     emit_hit(context, projectile, target, result, structural)
     if projectile:get("hit_sound") ~= "" then
         structural:create({
@@ -198,9 +210,9 @@ local function emit_impact(context, projectile, impact_id, location, x, y, struc
     structural:create(components)
 end
 
-local function apply_area_impact(context, projectile, location, targets, x, y, structural)
+local function apply_area_impact(context, projectile, location, targets, x, y, structural, owner, entities)
     for _, area_target in ipairs(impact_targets(projectile, location, targets, x, y)) do
-        local damage_result = apply_hit(context, projectile, area_target, structural)
+        local damage_result = apply_hit(context, projectile, area_target, structural, owner, entities)
         apply_on_hit_state(projectile, area_target, damage_result, structural)
     end
 end
@@ -242,14 +254,26 @@ local function resolve_contacts(context, entities, structural)
             local position = ecs.get(entity, "d2legacy.world.position")
             local location = ecs.get(entity, "d2legacy.world.location")
             local target, along = first_contact(entity, projectile, position, location, targets, locks)
+            local owner = (target or projectile:get("impact_on_expiry"))
+                and owner_entity(entities, projectile:get("owner_id"))
             if target then
                 local previous_x, previous_y = projectile:get("previous_x"), projectile:get("previous_y")
                 local impact_x = previous_x + (position:get("x") - previous_x) * along
                 local impact_y = previous_y + (position:get("y") - previous_y) * along
                 if projectile:get("impact_radius") > 0 then
-                    apply_area_impact(context, projectile, location, targets, impact_x, impact_y, structural)
+                    apply_area_impact(
+                        context,
+                        projectile,
+                        location,
+                        targets,
+                        impact_x,
+                        impact_y,
+                        structural,
+                        owner,
+                        entities
+                    )
                 else
-                    local damage_result = apply_hit(context, projectile, target, structural)
+                    local damage_result = apply_hit(context, projectile, target, structural, owner, entities)
                     apply_on_hit_state(projectile, target, damage_result, structural)
                 end
                 if projectile:get("impact_missile_id") ~= "" then
@@ -273,7 +297,17 @@ local function resolve_contacts(context, entities, structural)
             elseif projectile:get("remaining_ticks") <= 0 then
                 if projectile:get("impact_on_expiry") then
                     local impact_x, impact_y = position:get("x"), position:get("y")
-                    apply_area_impact(context, projectile, location, targets, impact_x, impact_y, structural)
+                    apply_area_impact(
+                        context,
+                        projectile,
+                        location,
+                        targets,
+                        impact_x,
+                        impact_y,
+                        structural,
+                        owner,
+                        entities
+                    )
                     if projectile:get("impact_missile_id") ~= "" then
                         emit_impact(context, projectile, "ground", location, impact_x, impact_y, structural)
                     end
@@ -307,6 +341,7 @@ function M.register()
                 "d2legacy.missile.projectile",
                 "d2legacy.missile.contact_lock",
                 "d2legacy.world.selectable",
+                "d2legacy.stat.source",
             },
             none = { "d2legacy.world.inactive" },
         },
@@ -320,6 +355,9 @@ function M.register()
             "d2legacy.player.vitals",
             "d2legacy.combat.defense",
             "d2legacy.missile.contact_lock",
+            "d2legacy.stat.source",
+            "d2legacy.player.identity",
+            "d2legacy.owned_unit",
         },
         write = {
             "d2legacy.monster.stats",

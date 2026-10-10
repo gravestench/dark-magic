@@ -136,6 +136,22 @@ local armor = {
             value = 10,
             order = 60,
         },
+        {
+            source_id = "vampirism",
+            source_kind = "affix",
+            stat = "lifedrainmindam",
+            operation = "add",
+            value = 6,
+            order = 70,
+        },
+        {
+            source_id = "wraith",
+            source_kind = "affix",
+            stat = "manadrainmindam",
+            operation = "add",
+            value = 4,
+            order = 80,
+        },
     },
 }
 
@@ -221,6 +237,8 @@ local function assert_equipped_sources(sources)
     expect_source(sources, "equipment:armor-velocity:shield", -10)
     expect_source(sources, "equipment:modifier:item_fastermovevelocity:armor:affix:50:haste", 30)
     expect_source(sources, "equipment:modifier:maxstamina:armor:affix:60:endurance", 10)
+    expect_source(sources, "equipment:modifier:lifedrainmindam:armor:affix:70:vampirism", 6)
+    expect_source(sources, "equipment:modifier:manadrainmindam:armor:affix:80:wraith", 4)
     expect_source(sources, "equipment:modifier:attack_rating:weapon:affix:10:precision", 75)
     expect_source(sources, "equipment:modifier:attack_rating:weapon:socket:20:socket-rune", 25)
     expect_source(sources, "equipment:modifier:attack_rating:weapon:attribute:30:mastery", 20)
@@ -242,6 +260,7 @@ local function assert_unequipped_weapon_sources(sources)
     expect_source(sources, "equipment:armor-velocity:armor", -5)
     expect_source(sources, "equipment:armor-velocity:shield", -10)
     expect_source(sources, "equipment:modifier:item_fastermovevelocity:armor:affix:50:haste", 30)
+    expect_source(sources, "equipment:modifier:lifedrainmindam:armor:affix:70:vampirism", 6)
     expect_source(sources, "equipment:modifier:defense:armor:affix:10:sturdy", 7)
     expect_source(sources, "equipment:modifier:defense:armor:socket:20:socket-jewel", 3)
     expect_source(sources, "equipment:modifier:defense:armor:attribute:40:armor-mastery", 20)
@@ -254,6 +273,8 @@ local function assert_unequipped_armor_sources(sources)
     expect_source(sources, "equipment:armor-velocity:shield", -10)
     expect_source(sources, "equipment:modifier:item_fastermovevelocity:armor:affix:50:haste", nil)
     expect_source(sources, "equipment:modifier:maxstamina:armor:affix:60:endurance", nil)
+    expect_source(sources, "equipment:modifier:lifedrainmindam:armor:affix:70:vampirism", nil)
+    expect_source(sources, "equipment:modifier:manadrainmindam:armor:affix:80:wraith", nil)
     expect_source(sources, "equipment:modifier:defense:armor:affix:10:sturdy", nil)
     expect_source(sources, "equipment:modifier:defense:armor:socket:20:socket-jewel", nil)
     expect_source(sources, "equipment:modifier:defense:armor:attribute:40:armor-mastery", nil)
