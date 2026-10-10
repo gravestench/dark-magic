@@ -50,10 +50,8 @@ func TestDifficultyAdvanceRecordsUnlockWithoutChangingSessionDifficulty(t *testi
 		Sequence: 2, Kind: "system.difficulty.advance",
 		Payload: []byte(`{"player":"alice","difficulty":1,"completed_act":5}`)})
 
-	current, highest := playerDifficulty(t, engine)
-	if current != 0 || highest != 0 {
-		t.Fatalf("after Normal Act V: current=%d highest_completed=%d, want current=0 highest_completed=0",
-			current, highest)
+	if highest := highestCompletedDifficulty(t, engine); highest != 0 {
+		t.Fatalf("after Normal Act V: highest_completed=%d, want 0", highest)
 	}
 
 	// A second unlock inside the same Normal game would skip Nightmare entirely.
@@ -67,10 +65,8 @@ func TestDifficultyAdvanceRecordsUnlockWithoutChangingSessionDifficulty(t *testi
 		t.Fatalf("Hell unlock from a Normal game error = %v, want %v", err, gamesession.ErrCommandApply)
 	}
 
-	current, highest = playerDifficulty(t, engine)
-	if current != 0 || highest != 0 {
-		t.Fatalf("after rejected skip: current=%d highest_completed=%d, want current=0 highest_completed=0",
-			current, highest)
+	if highest := highestCompletedDifficulty(t, engine); highest != 0 {
+		t.Fatalf("after rejected skip: highest_completed=%d, want 0", highest)
 	}
 }
 
@@ -88,8 +84,9 @@ func submitAndStep(t *testing.T, session *gamesession.Session, command simulatio
 	}
 }
 
-// playerDifficulty reads the single player's active and completed difficulty.
-func playerDifficulty(t *testing.T, engine *gameecs.Engine) (current, highest int64) {
+// highestCompletedDifficulty reads the single player's completed difficulty.
+// The active difficulty lives only in the immutable game rules.
+func highestCompletedDifficulty(t *testing.T, engine *gameecs.Engine) int64 {
 	t.Helper()
 
 	store, _ := akara.GetDynamicStore(engine.World(), "d2legacy.player.difficulty")
@@ -98,8 +95,11 @@ func playerDifficulty(t *testing.T, engine *gameecs.Engine) (current, highest in
 	}
 
 	value, _ := store.Get(store.Entities()[0])
-	currentValue, _ := value.Get("current")
+	if _, err := value.Get("current"); err == nil {
+		t.Fatal("player difficulty must not copy the game's active difficulty")
+	}
+
 	highestValue, _ := value.Get("highest_completed")
 
-	return currentValue.(int64), highestValue.(int64)
+	return highestValue.(int64)
 }

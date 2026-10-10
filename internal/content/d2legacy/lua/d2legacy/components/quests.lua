@@ -13,8 +13,10 @@ function M.register()
         {name="player",type="string"},{name="quest_id",type="i64"},
         {name="npc",type="string"},{name="reward",type="string"},
     }})
+    -- Character progression only. The game's difficulty is read from the
+    -- immutable game rules, never copied onto players.
     ecs.component({name="d2legacy.player.difficulty",fields={
-        {name="current",type="i64"},{name="highest_completed",type="i64"},
+        {name="highest_completed",type="i64"},
     }})
 end
 
