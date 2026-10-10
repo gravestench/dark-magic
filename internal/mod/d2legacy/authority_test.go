@@ -56,6 +56,12 @@ func (records fixtureRecords) Load(path string) ([]map[string]string, error) {
 			"Vel": "20", "Range": "40", "Size": "2",
 			"CelFile": "firebolt",
 		}}, nil
+	case "data/global/excel/difficultylevels.txt":
+		return []map[string]string{
+			{"Name": "Normal", "ResistPenalty": "0"},
+			{"Name": "Nightmare", "ResistPenalty": "-40"},
+			{"Name": "Hell", "ResistPenalty": "-100"},
+		}, nil
 	default:
 		return nil, nil
 	}

@@ -138,6 +138,14 @@ Expansion versus non-expansion may use different authored values in later tables
 
 This source changes when entering a game of another difficulty and should disappear cleanly when leaving the session.
 
+Current implementation (verified against owned 1.14d `patch_d2.mpq` data:
+Normal 0, Nightmare -40, Hell -100): `d2legacy.data.difficulty_levels` reads the
+`ResistPenalty` column for the immutable session difficulty. Derived combat
+stats add it to a player's fire, cold, and lightning resistance before stat
+sources and the maximum-resistance cap; the durable base resistance is
+unchanged. Monsters and summons are not penalized. Poison resistance is not yet
+modeled.
+
 ## Death experience penalty
 
 Death XP penalty is a player-death policy, not a generic XP gain multiplier.

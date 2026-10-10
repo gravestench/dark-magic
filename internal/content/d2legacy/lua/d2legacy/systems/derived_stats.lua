@@ -2,6 +2,7 @@
 
 local ecs = require("engine.ecs/v1")
 local stat_sources = require("d2legacy.gameplay.stat_sources")
+local difficulty_levels = require("d2legacy.data.difficulty_levels")
 local M = {}
 
 function M.register()
@@ -26,6 +27,7 @@ function M.register()
             "d2legacy.player.movement_stats",
             "d2legacy.player.resource_stats",
             "d2legacy.stat.source",
+            "d2legacy.player.identity",
         },
         write = {
             "d2legacy.combat.defense",
@@ -55,6 +57,12 @@ function M.register()
                         )
                     end
                     if defense then
+                        -- Only players take the session's resistance penalty;
+                        -- monsters and summons author resistances per difficulty.
+                        local penalty = 0
+                        if ecs.get(target, "d2legacy.player.identity") then
+                            penalty = difficulty_levels.resist_penalty()
+                        end
                         defense:set(
                             "physical_resist",
                             stat_sources.resolve(
@@ -66,11 +74,21 @@ function M.register()
                         )
                         defense:set(
                             "fire_resist",
-                            stat_sources.resolve(entities, target, "fire_resist", defense:get("base_fire_resist"))
+                            stat_sources.resolve(
+                                entities,
+                                target,
+                                "fire_resist",
+                                defense:get("base_fire_resist") + penalty
+                            )
                         )
                         defense:set(
                             "cold_resist",
-                            stat_sources.resolve(entities, target, "cold_resist", defense:get("base_cold_resist"))
+                            stat_sources.resolve(
+                                entities,
+                                target,
+                                "cold_resist",
+                                defense:get("base_cold_resist") + penalty
+                            )
                         )
                         defense:set(
                             "lightning_resist",
@@ -78,7 +96,7 @@ function M.register()
                                 entities,
                                 target,
                                 "lightning_resist",
-                                defense:get("base_lightning_resist")
+                                defense:get("base_lightning_resist") + penalty
                             )
                         )
                         defense:set("max_fire_resist", stat_sources.resolve(entities, target, "max_fire_resist", 75))
