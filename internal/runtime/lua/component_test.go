@@ -4,11 +4,48 @@ import (
 	"context"
 	"testing"
 	"testing/fstest"
+	"time"
 
 	"github.com/gravestench/dark-magic/internal/app/host"
 	"github.com/gravestench/dark-magic/internal/content"
 	lua "github.com/yuin/gopher-lua"
 )
+
+func TestComponentInitializationDoesNotUseFrameBudget(t *testing.T) {
+	runtime := New()
+	if err := runtime.SetExecutionBudget(5 * time.Millisecond); err != nil {
+		t.Fatal(err)
+	}
+	if err := runtime.RegisterModule(Module{Name: "test.slow/v1", Loader: func(state *lua.LState) int {
+		state.Push(state.SetFuncs(state.NewTable(), map[string]lua.LGFunction{
+			"read": func(*lua.LState) int {
+				time.Sleep(25 * time.Millisecond)
+				return 0
+			},
+		}))
+		return 1
+	}}); err != nil {
+		t.Fatal(err)
+	}
+	if err := runtime.Start(t.Context()); err != nil {
+		t.Fatal(err)
+	}
+	defer func() { _ = runtime.Stop(context.Background()) }()
+
+	source := fstest.MapFS{"boot.lua": &fstest.MapFile{Data: []byte(`
+local slow = require("test.slow/v1")
+slow.read()
+return { id = "slow.boot", start = function() slow.read() end }
+`)}}
+	definition, err := LoadDefinition(t.Context(), runtime, source, "boot.lua")
+	if err != nil {
+		t.Fatalf("load definition after slow read: %v", err)
+	}
+	component := &scriptComponent{definition: definition, scope: &Scope{}}
+	if err := component.Start(t.Context()); err != nil {
+		t.Fatalf("start component after slow read: %v", err)
+	}
+}
 
 // TestLuaDefinitionUsesSharedManagerLifecycle protects the lua definition uses shared manager lifecycle contract,
 // including its observable ordering and failure behavior.
