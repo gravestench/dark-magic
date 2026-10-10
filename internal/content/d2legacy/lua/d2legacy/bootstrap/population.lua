@@ -61,7 +61,7 @@ local function candidate_monsters(level, difficulty)
         if id and id ~= "" then
             -- Levels may reference special rows which are not ordinary spawns.
             -- The monster interpreter rejects them; this list simply skips them.
-            local valid, definition = pcall(monster.load, id)
+            local valid, definition = pcall(monster.load, id, level)
             if valid then
                 result[#result + 1] = definition
             else

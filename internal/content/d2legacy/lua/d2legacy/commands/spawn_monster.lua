@@ -59,7 +59,8 @@ function M.components(command, game_player_count)
     local minimum, maximum = definition.life_min / 256, definition.life_max / 256
     local base_health = minimum + random.integer("d2legacy.monster.spawn.life", maximum - minimum + 1)
     local scaling = player_count.monster_spawn(game_player_count, definition.evil ~= false)
-    local health = (base_health + percentage(base_health, scaling.life_bonus_percent)) * 256
+    -- The recovered spawn path caps whole life at 2^23 - 1 before scaling to 8.8.
+    local health = math.min(base_health + percentage(base_health, scaling.life_bonus_percent), 8388607) * 256
     local experience = definition.experience + percentage(definition.experience, scaling.experience_bonus_percent)
     local result = {
         ["d2legacy.monster.identity"] = {

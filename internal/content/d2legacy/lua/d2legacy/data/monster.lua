@@ -188,7 +188,21 @@ local function graphics_id(stats)
     return stats.Id
 end
 
-local function runtime_definition(stats, graphics, values, difficulty)
+-- Expansion Nightmare and Hell monsters take the area's monster level
+-- (Levels.txt MonLvl2Ex/MonLvl3Ex) unless they are bosses or NoRatio units,
+-- which keep their own MonStats Level(N)/Level(H). Normal always uses MonStats
+-- Level. High-confidence recovered from pinned 1.10f D2MOO
+-- (MONSTER/Monster.cpp and DATATBLS_GetMonsterLevelInArea). Without an area,
+-- as in labs, Nightmare and Hell fall back to the MonStats columns.
+local function monster_level(stats, difficulty, area)
+    if difficulty > 0 and area and not truth(stats, "noRatio") and not truth(stats, "boss") then
+        local column = difficulty == 2 and "MonLvl3Ex" or "MonLvl2Ex"
+        return math.max(integer(area, column, 1), 1)
+    end
+    return math.max(difficulty_value(stats, columns("Level"), difficulty), 1)
+end
+
+local function runtime_definition(stats, graphics, values, difficulty, level)
     local size = math.max(integer(graphics, "SizeX", 2), integer(graphics, "SizeY", 2)) / 2
     local overlay_height = integer(graphics, "OverlayHeight", 0)
     assert(overlay_height >= 0 and overlay_height <= 4, "MonStats2 OverlayHeight must be in 0..4")
@@ -204,7 +218,7 @@ local function runtime_definition(stats, graphics, values, difficulty)
         components = graphics_components(graphics),
         life_min = values.life_min * RAW_SCALE,
         life_max = values.life_max * RAW_SCALE,
-        level = integer(stats, "Level", 1),
+        level = level or monster_level(stats, difficulty),
         defense = values.defense,
         attack_rating = values.attack,
         physical_min = values.damage_min * RAW_SCALE,
@@ -233,8 +247,13 @@ local function runtime_definition(stats, graphics, values, difficulty)
     }
 end
 
-function M.load(id, ...)
+-- area is the spawning area's Levels.txt row, when known.
+function M.load(id, area, ...)
     assert(select("#", ...) == 0, "monster difficulty comes from immutable game rules")
+    assert(
+        area == nil or type(area) == "table",
+        "monster difficulty comes from immutable game rules; the area must be a Levels.txt row"
+    )
     local difficulty = game_rules.difficulty()
     local indexed = monster_catalog()
     local stats = assert(indexed.stats[id], "missing MonStats row")
@@ -244,8 +263,9 @@ function M.load(id, ...)
     )
 
     local graphics = assert(indexed.graphics[graphics_id(stats)], "missing MonStats2 row")
-    local level = indexed.levels[stats.Level]
-    return runtime_definition(stats, graphics, scaled_stats(stats, level, difficulty), difficulty)
+    local level = monster_level(stats, difficulty, area)
+    local values = scaled_stats(stats, indexed.levels[tostring(level)], difficulty)
+    return runtime_definition(stats, graphics, values, difficulty, level)
 end
 
 -- Summoned monsters are authored MonStats units but intentionally are not
