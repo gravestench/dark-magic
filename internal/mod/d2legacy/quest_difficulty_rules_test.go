@@ -2,6 +2,7 @@ package d2legacy
 
 import (
 	"context"
+	"errors"
 	"testing"
 
 	"github.com/gravestench/akara"
@@ -62,8 +63,8 @@ func TestDifficultyAdvanceRecordsUnlockWithoutChangingSessionDifficulty(t *testi
 		t.Fatal(err)
 	}
 
-	if err := session.Step(); err == nil {
-		t.Fatal("Hell unlock was accepted from a Normal game")
+	if err := session.Step(); !errors.Is(err, gamesession.ErrCommandApply) {
+		t.Fatalf("Hell unlock from a Normal game error = %v, want %v", err, gamesession.ErrCommandApply)
 	}
 
 	current, highest = playerDifficulty(t, engine)
