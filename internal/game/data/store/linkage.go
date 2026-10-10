@@ -2,6 +2,7 @@ package recordstore
 
 import (
 	"fmt"
+	"strconv"
 	"strings"
 )
 
@@ -25,8 +26,10 @@ type LinkSpec struct {
 	SourceTable     string
 	SourceColumn    string
 	SourceKeyColumn string
+	SourceActColumn string
 	TargetTable     string
 	TargetColumn    string
+	TargetActColumn string
 	Identity        IdentityKind
 	AllowEmpty      bool
 }
@@ -37,7 +40,7 @@ type LinkDiagnostic struct {
 	SourceTable  string       `json:"source_table"`
 	SourceLayer  string       `json:"source_layer,omitempty"`
 	SourcePath   string       `json:"source_path,omitempty"`
-	RowOrdinal   int          `json:"row_ordinal"`
+	RowOrdinal   RowOrdinal   `json:"row_ordinal"`
 	SourceLine   int          `json:"source_line"`
 	AuthoredKey  string       `json:"authored_key,omitempty"`
 	Column       string       `json:"column"`
@@ -67,7 +70,7 @@ func (s *Store) ValidateLink(spec LinkSpec) ([]LinkDiagnostic, error) {
 		return nil, err
 	}
 
-	targets := countTargetIdentities(targetRows, spec.TargetColumn)
+	targets := countTargetIdentities(targetRows, spec)
 	provenance, _ := s.Source(spec.SourceTable)
 
 	var diagnostics []LinkDiagnostic
@@ -88,15 +91,45 @@ func validLinkSpec(spec LinkSpec) bool {
 		strings.TrimSpace(spec.SourceTable) != "" &&
 		strings.TrimSpace(spec.SourceColumn) != "" &&
 		strings.TrimSpace(spec.TargetTable) != "" &&
-		strings.TrimSpace(spec.TargetColumn) != "" &&
-		validIdentityKind(spec.Identity)
+		validIdentityKind(spec.Identity) && validTargetIdentitySpec(spec)
 }
 
-// countTargetIdentities preserves duplicate counts because ambiguity is distinct from a missing relationship.
-func countTargetIdentities(rows []map[string]string, column string) map[string]int {
+// validTargetIdentitySpec makes positional and authored-column relationships
+// mutually exclusive, so an apparent numeric match cannot hide a wrong kind.
+func validTargetIdentitySpec(spec LinkSpec) bool {
+	switch spec.Identity {
+	case IdentityRowOrdinal:
+		return spec.TargetColumn == "" && spec.SourceActColumn == "" && spec.TargetActColumn == ""
+	case IdentityActLocal:
+		return spec.SourceActColumn != "" && spec.TargetActColumn != ""
+	default:
+		return spec.TargetColumn != "" && spec.SourceActColumn == "" && spec.TargetActColumn == ""
+	}
+}
+
+// countTargetIdentities preserves duplicate counts because ambiguity is
+// distinct from a missing relationship. Positional IDs come from ordered rows,
+// never an authored numeric column that happens to contain the same value.
+func countTargetIdentities(rows []map[string]string, spec LinkSpec) map[string]int {
 	identities := make(map[string]int, len(rows))
-	for _, row := range rows {
-		identities[row[column]]++
+	actOffsets := make(map[string]int)
+	for ordinal, row := range rows {
+		var key string
+		switch spec.Identity {
+		case IdentityRowOrdinal:
+			key = strconv.Itoa(ordinal)
+		case IdentityActLocal:
+			act := row[spec.TargetActColumn]
+			index := row[spec.TargetColumn]
+			if spec.TargetColumn == "" {
+				index = strconv.Itoa(actOffsets[act])
+				actOffsets[act]++
+			}
+			key = actLocalKey(act, index)
+		default:
+			key = row[spec.TargetColumn]
+		}
+		identities[key]++
 	}
 
 	return identities
@@ -116,7 +149,11 @@ func unresolvedLinkDiagnostic(
 		return LinkDiagnostic{}, false
 	}
 
-	matches := targets[raw]
+	lookup := raw
+	if spec.Identity == IdentityActLocal {
+		lookup = actLocalKey(row[spec.SourceActColumn], raw)
+	}
+	matches := targets[lookup]
 	if matches == 1 {
 		return LinkDiagnostic{}, false
 	}
@@ -131,7 +168,7 @@ func unresolvedLinkDiagnostic(
 		SourceTable:  spec.SourceTable,
 		SourceLayer:  provenance.Layer,
 		SourcePath:   provenance.Path,
-		RowOrdinal:   ordinal,
+		RowOrdinal:   RowOrdinal(ordinal),
 		SourceLine:   ordinal + 2,
 		AuthoredKey:  row[spec.SourceKeyColumn],
 		Column:       spec.SourceColumn,
@@ -142,6 +179,10 @@ func unresolvedLinkDiagnostic(
 		Severity:     "error",
 		Message:      message,
 	}, true
+}
+
+func actLocalKey(act, index string) string {
+	return act + "\x00" + index
 }
 
 // validIdentityKind keeps diagnostics constrained to the stable serialized identity vocabulary.

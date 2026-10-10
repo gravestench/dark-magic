@@ -7,25 +7,41 @@ import (
 	"strconv"
 	"sync"
 
+	"github.com/gravestench/dark-magic/internal/game/data/store"
 	"github.com/gravestench/dark-magic/internal/mod/d2legacy/data/recovered"
 )
 
 // Records supplies generation-pinned table rows used to resolve dynamic object identities.
 type Records interface {
-	Load(string) ([]map[string]string, error)
+	LoadRows(string) ([]recordstore.Row, error)
 }
 
-// staticDefinition joins the object record identity with its recovered human-readable description.
-type staticDefinition struct {
-	objectID    int
-	description string
+// StaticDefinition keeps the DS1 act-local identity separate from the authored
+// global Objects.txt numeric ID and the derived lookup key.
+type StaticDefinition struct {
+	ActLocalID  recordstore.ActLocalID
+	ObjectID    recordstore.NumericID
+	Description string
+	RowOrdinal  recordstore.RowOrdinal
+	Source      recordstore.Provenance
+	IndexKey    recordstore.DerivedIndex
+}
+
+// DynamicDefinition keeps MonPreset's global source row separate from its
+// positional per-act DS1 ID and authored monster code.
+type DynamicDefinition struct {
+	ActLocalID recordstore.ActLocalID
+	Place      recordstore.SymbolicID
+	RowOrdinal recordstore.RowOrdinal
+	Source     recordstore.Provenance
+	IndexKey   recordstore.DerivedIndex
 }
 
 // Resolver is an immutable O(1) lookup built once per game-data generation.
 type Resolver struct {
 	mu      sync.RWMutex
-	static  map[string]staticDefinition
-	dynamic map[string]string
+	static  map[recordstore.DerivedIndex]StaticDefinition
+	dynamic map[recordstore.DerivedIndex]DynamicDefinition
 }
 
 // New freezes both data generations into act-local lookup indexes. Dynamic
@@ -42,7 +58,7 @@ func New(recoveredData recovered.Snapshot, records Records) (*Resolver, error) {
 // Update atomically replaces lookup indexes after the mounted package recipe
 // changes while preserving the pointer captured by Lua/native capabilities.
 func (resolver *Resolver) Update(recoveredData recovered.Snapshot, records Records) error {
-	presets, err := records.Load("data/global/excel/monpreset.txt")
+	presets, err := records.LoadRows("data/global/excel/monpreset.txt")
 	if err != nil {
 		return fmt.Errorf("d2legacy world objects: load MonPreset.txt: %w", err)
 	}
@@ -64,13 +80,19 @@ func (resolver *Resolver) Update(recoveredData recovered.Snapshot, records Recor
 }
 
 // indexStaticDefinitions projects recovered DS1 identities into the act-local key space used by map objects.
-func indexStaticDefinitions(entries []recovered.MapObject) map[string]staticDefinition {
-	definitions := make(map[string]staticDefinition, len(entries))
+func indexStaticDefinitions(entries []recovered.MapObject) map[recordstore.DerivedIndex]StaticDefinition {
+	definitions := make(map[recordstore.DerivedIndex]StaticDefinition, len(entries))
 
 	for _, entry := range entries {
-		definitions[key(entry.Act, entry.ID)] = staticDefinition{
-			objectID:    entry.ObjectID,
-			description: entry.Description,
+		actLocalID := recordstore.ActLocalID{Act: entry.Act, Index: entry.ID}
+		indexKey := key(actLocalID)
+		definitions[indexKey] = StaticDefinition{
+			ActLocalID:  actLocalID,
+			ObjectID:    recordstore.NumericID(entry.ObjectID),
+			Description: entry.Description,
+			RowOrdinal:  entry.RowOrdinal,
+			Source:      entry.Source,
+			IndexKey:    indexKey,
 		}
 	}
 
@@ -78,23 +100,30 @@ func indexStaticDefinitions(entries []recovered.MapObject) map[string]staticDefi
 }
 
 // indexDynamicDefinitions preserves authored per-act row order because DS1 dynamic IDs are positional indexes.
-func indexDynamicDefinitions(rows []map[string]string) (map[string]string, error) {
-	definitions := make(map[string]string, len(rows))
+func indexDynamicDefinitions(rows []recordstore.Row) (map[recordstore.DerivedIndex]DynamicDefinition, error) {
+	definitions := make(map[recordstore.DerivedIndex]DynamicDefinition, len(rows))
 	actOffsets := make(map[int]int, 5)
 
-	for row, entry := range rows {
-		act, err := strconv.Atoi(entry["Act"])
+	for _, row := range rows {
+		act, err := strconv.Atoi(row.Values["Act"])
 		if err != nil {
 			return nil, fmt.Errorf(
 				"d2legacy world objects: MonPreset.txt row %d has invalid Act %q",
-				row+2,
-				entry["Act"],
+				int(row.Ordinal)+2,
+				row.Values["Act"],
 			)
 		}
 
-		index := actOffsets[act]
-		definitions[key(act, index)] = entry["Place"]
-		actOffsets[act] = index + 1
+		actLocalID := recordstore.ActLocalID{Act: act, Index: actOffsets[act]}
+		indexKey := key(actLocalID)
+		definitions[indexKey] = DynamicDefinition{
+			ActLocalID: actLocalID,
+			Place:      recordstore.SymbolicID(row.Values["Place"]),
+			RowOrdinal: row.Ordinal,
+			Source:     row.Provenance,
+			IndexKey:   indexKey,
+		}
+		actOffsets[act]++
 	}
 
 	return definitions, nil
@@ -103,34 +132,48 @@ func indexDynamicDefinitions(rows []map[string]string) (map[string]string, error
 // ResolveStaticObject maps a DS1 static ID to Objects.txt and its recovered
 // human-readable description.
 func (resolver *Resolver) ResolveStaticObject(act, id int) (int, string, bool) {
+	entry, found := resolver.StaticDefinition(act, id)
+	return int(entry.ObjectID), entry.Description, found
+}
+
+// StaticDefinition exposes the authored numeric target and source coordinates
+// without conflating either with the DS1 act-local lookup identity.
+func (resolver *Resolver) StaticDefinition(act, id int) (StaticDefinition, bool) {
 	if resolver == nil {
-		return 0, "", false
+		return StaticDefinition{}, false
 	}
 
 	resolver.mu.RLock()
 	defer resolver.mu.RUnlock()
 
-	entry, found := resolver.static[key(act, id)]
+	entry, found := resolver.static[key(recordstore.ActLocalID{Act: act, Index: id})]
 
-	return entry.objectID, entry.description, found
+	return entry, found
 }
 
 // ResolveDynamicObject maps a DS1 dynamic ID to the act-local MonPreset place
 // token. It returns identity only; spawning remains authoritative game logic.
 func (resolver *Resolver) ResolveDynamicObject(act, id int) (string, bool) {
+	entry, found := resolver.DynamicDefinition(act, id)
+	return string(entry.Place), found
+}
+
+// DynamicDefinition exposes the source ordinal, authored monster code, and
+// per-act positional ID as separate values for diagnostics and consumers.
+func (resolver *Resolver) DynamicDefinition(act, id int) (DynamicDefinition, bool) {
 	if resolver == nil {
-		return "", false
+		return DynamicDefinition{}, false
 	}
 
 	resolver.mu.RLock()
 	defer resolver.mu.RUnlock()
 
-	entry, found := resolver.dynamic[key(act, id)]
+	entry, found := resolver.dynamic[key(recordstore.ActLocalID{Act: act, Index: id})]
 
 	return entry, found
 }
 
 // key keeps identical numeric IDs from different acts in independent lookup namespaces.
-func key(act, id int) string {
-	return fmt.Sprintf("%d:%d", act, id)
+func key(id recordstore.ActLocalID) recordstore.DerivedIndex {
+	return recordstore.DerivedIndex(fmt.Sprintf("%d:%d", id.Act, id.Index))
 }

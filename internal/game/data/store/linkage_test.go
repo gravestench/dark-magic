@@ -77,3 +77,49 @@ func TestValidateLinkReportsAmbiguousTargetAndAllowsEmptySentinel(t *testing.T) 
 		t.Fatalf("diagnostics = %#v", diagnostics)
 	}
 }
+
+// These fixtures deliberately give one row three different numeric-looking
+// identities. A column value must never stand in for row or per-act position.
+func TestValidateLinkKeepsNumericOrdinalAndActLocalTargetsDistinct(t *testing.T) {
+	store := New(fstest.MapFS{
+		"source.txt": &fstest.MapFile{Data: []byte("Act\tordinal\tnumeric\tlocal\n1\t2\t42\t1\n1\t42\t2\t2\n")},
+		"target.txt": &fstest.MapFile{Data: []byte("Act\tId\tCode\n1\t99\tfirst\n2\t0\tother-act\n1\t42\tsecond\n")},
+	})
+	base := LinkSpec{Name: "identity-kind", SourceTable: "source.txt", TargetTable: "target.txt"}
+	tests := []struct {
+		name, sourceColumn string
+		kind               IdentityKind
+		wantValue          string
+	}{
+		{"row ordinal", "ordinal", IdentityRowOrdinal, "42"},
+		{"explicit numeric ID", "numeric", IdentityNumeric, "2"},
+		{"act-local position", "local", IdentityActLocal, "2"},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			spec := base
+			spec.SourceColumn = test.sourceColumn
+			spec.Identity = test.kind
+			switch test.kind {
+			case IdentityNumeric:
+				spec.TargetColumn = "Id"
+			case IdentityActLocal:
+				spec.SourceActColumn = "Act"
+				spec.TargetActColumn = "Act"
+			}
+			diagnostics, err := store.ValidateLink(spec)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if len(diagnostics) != 1 || diagnostics[0].RawValue != test.wantValue || diagnostics[0].RowOrdinal != 1 {
+				t.Fatalf("diagnostics = %#v", diagnostics)
+			}
+		})
+	}
+
+	_, err := store.ValidateLink(LinkSpec{Name: "ambiguous", SourceTable: "source.txt", SourceColumn: "ordinal",
+		TargetTable: "target.txt", TargetColumn: "Id", Identity: IdentityRowOrdinal})
+	if err == nil {
+		t.Fatal("row-ordinal link accepted an explicit target ID column")
+	}
+}

@@ -8,6 +8,8 @@ import (
 	"io/fs"
 	"strings"
 	"sync"
+
+	"github.com/gravestench/dark-magic/internal/game/data/store"
 )
 
 const (
@@ -58,9 +60,11 @@ type DS1Type struct {
 // MapObject resolves an act-local static map object to Objects.txt.
 type MapObject struct {
 	Act         int
-	ID          int
+	ID          int // Authored DS1 ID within Act, not the row ordinal.
 	Description string
-	ObjectID    int
+	ObjectID    int // Explicit global Objects.txt numeric ID.
+	RowOrdinal  recordstore.RowOrdinal
+	Source      recordstore.Provenance
 }
 
 // Snapshot is an immutable generation with ordered rows and lookup indexes.
@@ -156,6 +160,10 @@ func load(source fs.FS) (Snapshot, error) {
 	if err != nil {
 		return Snapshot{}, err
 	}
+	objectSource := sourceOf(source, ObjectsPath)
+	for index := range objects {
+		objects[index].Source = objectSource
+	}
 
 	result := Snapshot{
 		Quests:           quests,
@@ -184,6 +192,22 @@ func load(source fs.FS) (Snapshot, error) {
 	}
 
 	return result, nil
+}
+
+// sourceOf records the mounted winner when the source supports layered
+// provenance. A plain filesystem still has a stable source-relative path.
+func sourceOf(source fs.FS, path string) recordstore.Provenance {
+	resolver, ok := source.(interface {
+		ResolveSource(string) (string, string, error)
+	})
+	if ok {
+		layer, resolvedPath, err := resolver.ResolveSource(path)
+		if err == nil {
+			return recordstore.Provenance{Layer: layer, Path: resolvedPath}
+		}
+		return recordstore.Provenance{Layer: "unresolved", Path: path}
+	}
+	return recordstore.Provenance{Layer: "filesystem", Path: path}
 }
 
 // loadTable owns one file from open through close. Parse errors retain priority

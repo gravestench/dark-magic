@@ -20,6 +20,8 @@ func TestResolverUsesActLocalOrderingForBothObjectKinds(t *testing.T) {
 		ID:          3,
 		ObjectID:    108,
 		Description: "Malus",
+		RowOrdinal:  7,
+		Source:      recordstore.Provenance{Layer: "recovered", Path: recovered.ObjectsPath},
 	}}}
 
 	resolver, err := New(recoveredData, recordstore.New(rows))
@@ -37,5 +39,17 @@ func TestResolverUsesActLocalOrderingForBothObjectKinds(t *testing.T) {
 
 	if _, found := resolver.ResolveDynamicObject(2, 1); found {
 		t.Fatal("act-local dynamic index leaked across acts")
+	}
+	static, found := resolver.StaticDefinition(1, 3)
+	if !found || static.ActLocalID != (recordstore.ActLocalID{Act: 1, Index: 3}) ||
+		static.ObjectID != 108 || static.RowOrdinal != 7 || static.IndexKey != "1:3" ||
+		static.Source.Layer != "recovered" || static.Source.Path != recovered.ObjectsPath {
+		t.Fatalf("static identity = %#v, %v", static, found)
+	}
+	dynamic, found := resolver.DynamicDefinition(1, 1)
+	if !found || dynamic.ActLocalID != (recordstore.ActLocalID{Act: 1, Index: 1}) ||
+		dynamic.RowOrdinal != 2 || dynamic.Place != "zombie" || dynamic.IndexKey != "1:1" ||
+		dynamic.Source.Path != "data/global/excel/monpreset.txt" {
+		t.Fatalf("dynamic identity = %#v, %v", dynamic, found)
 	}
 }
