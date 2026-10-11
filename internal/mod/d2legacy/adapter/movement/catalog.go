@@ -13,9 +13,8 @@ type recordsGateway interface {
 	Load(string) ([]map[string]string, error)
 }
 
-// ClassRates are authoritative world-subtile units per second. CharStats.txt
-// names these fields as velocities; Dark Magic's world coordinate and fixed-
-// tick integrator use the same unit directly.
+// ClassRates retains raw CharStats walk/run velocities and stamina facts.
+// EffectiveRates converts velocities into world-subtiles per second.
 type ClassRates struct {
 	Walk               float64
 	Run                float64

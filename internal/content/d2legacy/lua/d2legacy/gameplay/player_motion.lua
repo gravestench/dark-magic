@@ -69,6 +69,7 @@ function M.force_walk(entity, tick)
     local x, y = velocity:get("x"), velocity:get("y")
     local magnitude = math.sqrt(x * x + y * y)
     if magnitude > 0 then
+        walk = math.min(walk, magnitude)
         velocity:set("x", x / magnitude * walk)
         velocity:set("y", y / magnitude * walk)
     end

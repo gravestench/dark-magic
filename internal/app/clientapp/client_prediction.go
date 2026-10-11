@@ -28,6 +28,7 @@ type positionPrediction struct {
 	applied    map[uint64]bool
 	rates      movement.ClassRates
 	classKnown bool
+	motion     *movement.MovePayload
 }
 
 // predictPosition advances full authority ticks and then a presentation-only fractional remainder.
@@ -103,6 +104,7 @@ func newPositionPrediction(
 // one fixed step. Changing that order would create recurring prediction corrections.
 func (prediction *positionPrediction) advanceTick(tick uint64) {
 	prediction.applyInputs(tick)
+	prediction.resolveMotion()
 	prediction.advanceStamina()
 	prediction.integrate(1)
 }
@@ -111,6 +113,7 @@ func (prediction *positionPrediction) advanceTick(tick uint64) {
 // stamina advancement; fractional presentation time must not consume authoritative resources.
 func (prediction *positionPrediction) advanceFraction(tick uint64, fraction float64) {
 	prediction.applyInputs(tick)
+	prediction.resolveMotion()
 	prediction.integrate(fraction)
 }
 
@@ -124,19 +127,24 @@ func (prediction *positionPrediction) applyInputs(tick uint64) {
 
 		var payload movement.MovePayload
 		if json.Unmarshal(intent.Payload, &payload) == nil && prediction.classKnown {
-			payload.Running = payload.Running && prediction.staminaRaw > 0
-			resolved := movement.Resolve(
-				prediction.position,
-				payload,
-				prediction.rates,
-				prediction.movementModifiers(),
-			)
-			prediction.velocity = resolved.Velocity
-			prediction.running = payload.Running
+			prediction.motion = &payload
 		}
 
 		prediction.applied[intent.Sequence] = true
 	}
+}
+
+// Re-resolve retained input so a waypoint stops on later replay ticks too.
+func (prediction *positionPrediction) resolveMotion() {
+	if prediction.motion == nil {
+		return
+	}
+	payload := *prediction.motion
+	payload.Running = payload.Running && prediction.staminaRaw > 0
+	resolved := movement.Resolve(prediction.position, payload, prediction.rates,
+		prediction.step.Seconds(), prediction.movementModifiers())
+	prediction.velocity = resolved.Velocity
+	prediction.running = payload.Running
 }
 
 // skipIntent excludes already applied, non-movement, and future input while preserving original
@@ -187,6 +195,9 @@ func (prediction *positionPrediction) canRecoverStamina(moving, inTown bool) boo
 // visible heading change at the exact tick stamina is exhausted.
 func (prediction *positionPrediction) forceWalk() {
 	prediction.running = false
+	if prediction.motion != nil {
+		prediction.motion.Running = false
+	}
 	effective := movement.EffectiveRates(prediction.rates, prediction.movementModifiers())
 
 	magnitude := math.Hypot(prediction.velocity.X, prediction.velocity.Y)
@@ -194,8 +205,9 @@ func (prediction *positionPrediction) forceWalk() {
 		return
 	}
 
-	prediction.velocity.X = prediction.velocity.X / magnitude * effective.Walk
-	prediction.velocity.Y = prediction.velocity.Y / magnitude * effective.Walk
+	speed := min(magnitude, effective.Walk)
+	prediction.velocity.X = prediction.velocity.X / magnitude * speed
+	prediction.velocity.Y = prediction.velocity.Y / magnitude * speed
 }
 
 // movementModifiers restricts prediction to modifiers projected by authority; client-only stats
