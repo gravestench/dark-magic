@@ -330,25 +330,40 @@ code review.
 
 A pull request is ready for review only when its description is complete.
 Fill in every section of the [pull request
-template](.github/PULL_REQUEST_TEMPLATE.md) in enough detail that a reviewer
-who has not run the code can check each claim:
+template](.github/PULL_REQUEST_TEMPLATE.md). Use this rubric for AI-assisted
+pull requests; the same standard of explanation and evidence applies to every
+contribution. A reviewer new to the project should be able to answer:
 
-1. **What changed,** in everyday language, and why this is the right owner for
-   it.
-2. **Scope:** the linked issue, what this pull request covers, and what it
-   deliberately leaves out.
-3. **Evidence** for the expected behavior: owned game data (table and column),
-   observations from the original game, or a pinned source such as a D2MOO
-   commit. Say which claims are verified and which are inferred.
-4. **How it was checked:** the exact commands, tests, captures, or manual steps
-   and their results. CI has no game data, so tests that need it (such as
-   `*_real_test.go` and tests that read `MPQ_DIRECTORY`) skip there. Say
-   whether you ran them locally against legally obtained game files. Where
-   practical, show that the new test fails without the change.
-5. **What remains unverified,** the known risks, and any follow-up issues.
-6. **How AI was used:** which parts were generated or reviewed with an agent,
-   confirmation that you reviewed the complete diff, and the separate review
-   pass described above.
+1. **What changed for a player or contributor?** The opening explains the
+   problem and visible result in everyday language. Specialized terms are
+   explained when first used.
+2. **Which issue checks are satisfied?** The description links the issue,
+   names the completion criteria this pull request actually meets, and says
+   what remains outside its scope. It uses `Closes` only when the entire issue
+   is finished; otherwise it uses `Refs`. For the typo, broken-build, or
+   recent-PR-fix exception above, link the earlier pull request and explain
+   the specific defect instead.
+3. **Where should I look?** A few direct links to the owning code, tests, or
+   documents explain what each location does and why this is the right place
+   for the change. A file list without that explanation is not a review map.
+4. **Why should I believe each important behavior claim?** The description
+   links the relevant owned game data (including table and column), original
+   game observation, research, or pinned external source. It states the target
+   version and distinguishes verified behavior from inference or an open
+   question. A citation that does not support its claim does not count as
+   evidence. For a documentation-only or other non-game change, name the
+   governing decision or document and explain why game evidence does not
+   apply.
+5. **What proves the result?** Map the claimed completion criteria to tests,
+   captures, or reproducible manual steps, including meaningful failure or
+   edge cases. Give exact commands and results from the submitted commit.
+   CI has no game data, so say whether tests that need it (such as
+   `*_real_test.go` and tests that read `MPQ_DIRECTORY`) ran locally against
+   legally obtained game files. An unrun or skipped check is not a passing
+   check; say what remains unverified.
+6. **Who checked the final work?** Describe known risks and follow-up issues,
+   which parts an agent wrote or reviewed, confirmation that the submitter
+   reviewed the complete diff, and what the separate review pass found.
 
 Never describe a test, command, or check as passing unless it was actually run
 on the submitted commit. Open a draft pull request if you want early feedback,
