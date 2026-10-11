@@ -3,6 +3,14 @@
 Read [CONTRIBUTING.md](CONTRIBUTING.md) before editing. Its "Rules for
 AI-assisted work" section is mandatory. In short:
 
+- **Use Superpowers for agentic code changes.** Install the
+  [Superpowers plugin](https://github.com/obra/superpowers) in the coding
+  environment, load its `using-superpowers` skill at the start of the task,
+  and follow the applicable skills through design, implementation, review,
+  and verification. If the plugin is unavailable, tell the maintainer before
+  editing code. Superpowers supplies the development workflow; the linked
+  issue and milestone still define acceptance, and repository research and
+  architecture documents still define behavioral evidence and ownership.
 - **Work only on the linked issue.** Before changing code, name the issue and
   its acceptance boundary. If the task has no issue, stop and ask for one.
 - **Stay inside that boundary.** Do not refactor, rename, reformat untouched
