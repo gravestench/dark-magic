@@ -2374,7 +2374,7 @@ return test.suite({
                 for _, player in ipairs(moving_players) do
                     local velocity = ecs.get(player, "d2legacy.world.velocity")
                     test.assert(
-                        math.abs(velocity:get("x") - 7.32) < 0.000000001,
+                        math.abs(velocity:get("x") - 11.431884765625) < 0.000000001,
                         "Vigor walk velocity = " .. tostring(velocity:get("x"))
                     )
                 end

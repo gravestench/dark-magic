@@ -51,7 +51,8 @@ local function resolve(entity, context)
         identity:get("class"),
         payload,
         stats:get("velocitypercent"),
-        stats:get("item_fastermovevelocity")
+        stats:get("item_fastermovevelocity"),
+        context.delta_seconds
     )
     velocity:set("x", velocity_x)
     velocity:set("y", velocity_y)
