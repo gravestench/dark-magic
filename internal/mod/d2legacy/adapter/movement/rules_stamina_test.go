@@ -31,7 +31,7 @@ func checkVitalityAllocationEvidence(t *testing.T, catalog Catalog) {
 	defer state.Close()
 	module := RulesModule(catalog)
 	state.PreloadModule(module.Name, module.Loader)
-	if err := state.DoFile("testdata/module_test.lua"); err != nil {
+	if err := state.DoFile("testdata/stamina_test.lua"); err != nil {
 		t.Fatal(err)
 	}
 }
