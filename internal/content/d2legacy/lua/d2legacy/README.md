@@ -33,7 +33,9 @@ state lifetime, units, and ordering rather than restating Lua syntax.
 ## Straight-missile skill execution order
 
 1. `manifests/skill-behavior-coverage.v1.json` admits exact skill IDs to reviewed
-   reusable families for the Expansion 1.14d target.
+   reusable families for the current Expansion 1.14d implementation baseline.
+   The product goal also includes 1.13c feature parity; version-specific
+   behavior remains subject to separate evidence.
 2. Go admits `d2legacy.skill.cast` by identity, tick, sequence, and authority.
 3. `commands/cast.lua` validates its payload and creates a cast request.
 4. `data/missile_skills.lua` validates each explicitly supported 1.14d record

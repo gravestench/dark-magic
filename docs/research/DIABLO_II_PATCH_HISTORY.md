@@ -1,13 +1,15 @@
-# Diablo II legacy patch history and 1.14d inference guide
+# Diablo II legacy patch history and target-version guide
 
 Status: historical research baseline for the original Diablo II executable
 family. This document covers retail Diablo II, Diablo II: Lord of Destruction,
 and their shared patch line through 1.14d. Diablo II: Resurrected is a separate
 product and is not included.
 
-Dark Magic still targets **Lord of Destruction, Expansion mode, patch 1.14d**.
-The older versions below are evidence for how that target accumulated its
-behavior. They are not additional compatibility targets.
+Dark Magic targets feature parity with **Lord of Destruction, Expansion mode,
+patches 1.13c and 1.14d**. Earlier versions show how the shared feature set
+accumulated; they are not additional product targets. A feature-parity goal does
+not assert identical behavior, data, or save compatibility between the two
+target patches.
 
 ## Executive conclusions
 
@@ -24,10 +26,12 @@ behavior. They are not additional compatibility targets.
    experience, added Ladder and the World Event, and changed many item and
    combat rules. D2MOO's reconstructed 1.10f runtime is therefore highly useful
    structural evidence, but it cannot prove later 1.11-1.14d behavior.
-4. **1.13c is the last documented broad gameplay/balance release.** The 1.13d
-   release is mostly chat, exploit, aura, and crash corrections. The 1.14
+4. **1.13c is the last documented broad gameplay/balance release.** This makes
+   its core feature set a reasonable parity target alongside 1.14d. The 1.13d
+   release includes chat, exploit, aura, and crash corrections. The 1.14
    series is predominantly operating-system, installer, renderer, crash, and
-   diagnostics work, with a few real gameplay fixes.
+   diagnostics work, with a few real gameplay fixes. Those differences still
+   require patch-specific treatment.
 5. **Patch notes describe deltas, not exhaustive state.** They omit unchanged
    inherited behavior, undocumented fixes, data-only changes, server-only
    changes, implementation ordering, integer rounding, and some platform
@@ -56,7 +60,7 @@ The minimum compatibility identity for research artifacts should therefore be:
 
 ```text
 product = diablo-ii-legacy
-patch = 1.14d
+patch = exact build (for example 1.13c or 1.14d)
 mode = expansion | classic
 session = single-player | open | realm
 content-era = explicit when Realm/Ladder content matters
@@ -64,9 +68,29 @@ platform = windows | mac
 character-origin = created-in-target | converted | imported
 ```
 
-Dark Magic's current product target is
+Dark Magic's product targets are
+`diablo-ii-legacy / 1.13c / expansion` and
 `diablo-ii-legacy / 1.14d / expansion`. Classic remains out of implementation
-scope even though it is necessary historical context.
+scope even though it is necessary historical context. Current owned data,
+runtime captures, and probe validators are pinned to 1.14d; their results do
+not automatically verify 1.13c.
+
+## Why target both Expansion patches?
+
+The [production 1.13c release](#version-and-changelog-inventory) completed the
+last documented broad gameplay and balance pass. The subsequent 1.13d and
+1.14a-1.14d notes mostly describe targeted fixes, communication, platform,
+installer, renderer, and diagnostic changes rather than another feature-set
+revision. This supports a shared **core feature set** as a product goal.
+
+The documented exceptions matter: 1.13d corrected aura behavior and added
+chat controls; 1.14b fixed a mercenary turning into `An Evil Force`. Platform
+and save-location changes also affect the surrounding experience. Patch notes
+are incomplete delta records, so absence of a listed change is not proof that
+the two patches have identical authored data, formulas, event ordering,
+network behavior, or save state. Record patch identity with each source and
+probe, compare owned 1.13c and 1.14d data where available, and investigate a
+specific difference before declaring parity for that boundary.
 
 ## Version and changelog inventory
 
@@ -385,11 +409,10 @@ diagnostic controls.
 
 The four inspected workspace roots (`dark-magic`, `od2_codecs`, `akara`, and
 `d2_english_mpq`) contain no complete historical `Patch.txt` or equivalent
-release-note corpus. Dark Magic's existing documents consistently identify
-Expansion 1.14d as the product target, D2MOO 1.10f as older reconstructed
-runtime evidence, and libd2 as clean-room 1.14d corroboration. That evidence
-model is consistent with the patch history, but it previously lacked one
-central document explaining the cumulative-version relationship.
+release-note corpus. Dark Magic's earlier documents identified Expansion 1.14d
+as the sole product target, D2MOO 1.10f as older reconstructed runtime evidence,
+and libd2 as clean-room 1.14d corroboration. The dual-target decision adds
+1.13c as a feature-parity goal while retaining the provenance of those sources.
 
 ## Verification backlog
 
@@ -408,5 +431,6 @@ central document explaining the cumulative-version relationship.
    variants, not default production gameplay targets.
 9. Resolve exact 1.14c deployment date only if build chronology becomes
    materially relevant.
-10. Do not expand Dark Magic's compatibility scope until the Expansion 1.14d
-    target is complete; use older versions as differential evidence only.
+10. Compare owned Expansion 1.13c and 1.14d data and runtime observations at
+    patch-sensitive boundaries before claiming verified parity. Keep earlier
+    versions as differential evidence only.

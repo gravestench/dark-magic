@@ -1,6 +1,10 @@
 # Game data loading, linkage, localization, and modability
 
-Status: implementation-oriented research baseline for expansion 1.14d. Current Dark Magic ownership is established; exact 1.14d TXT-to-BIN behavior and several linkage rules still require probes. Classic and earlier-patch compatibility are out of scope.
+Status: implementation-oriented research baseline from Expansion 1.14d data.
+Dark Magic targets 1.13c and 1.14d feature parity, but the data comparison
+between them remains open. Current ownership is established; exact 1.14d
+TXT-to-BIN behavior and several linkage rules still require probes. Classic
+and other patch versions are out of scope.
 
 ## Executive result
 
@@ -286,5 +290,7 @@ Do not “fix” dangling references, duplicate keys, sentinel rows, contradicto
 - Dark Magic [GAME_DATA_RECORDS.md](../GAME_DATA_RECORDS.md).
 - Dark Magic `internal/game/data/store/store.go` and `internal/game/data/catalog/catalog.go`.
 - Bundled `docs/diabloiidatafileguide.html.gz` for table semantics, subordinate to mounted bytes.
-- [D2MOO 1.10f](https://github.com/ThePhrozenKeep/D2MOO/tree/3b21043b99e987bad41cf0f7b49f1f246db52d5c) as secondary recovered implementation evidence only; it does not define the 1.14d target when behavior differs.
+- [D2MOO 1.10f](https://github.com/ThePhrozenKeep/D2MOO/tree/3b21043b99e987bad41cf0f7b49f1f246db52d5c)
+  as secondary recovered implementation evidence only; it does not define
+  either target patch when behavior differs.
 - [libd2 verification methodology](https://github.com/jaenster/libd2/blob/e6cdc4927c6180be8dd309b0423b470f64f1fc6c/docs/VERIFICATION.md) for retail-engine golden/holdout testing.

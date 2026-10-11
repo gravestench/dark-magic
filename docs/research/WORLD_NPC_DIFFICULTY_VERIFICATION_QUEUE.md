@@ -107,7 +107,8 @@ This queue consolidates empirical probes for world objects, shrines/wells, trans
 - difficulty-specific quest items/vendors/hirelings/monster lists;
 - `/players X` semantics;
 - Hardcore creation/join/death persistence;
-- expansion 1.14d content/formulas; Classic branching is out of scope;
+- Expansion 1.13c and 1.14d content/formulas, with patch-specific differences
+  recorded; Classic branching is out of scope;
 - ladder/season feature eligibility.
 
 ## P1: campaign/endgame encounters
@@ -132,7 +133,9 @@ This queue consolidates empirical probes for world objects, shrines/wells, trans
 
 ## P2: later-version special content
 
-Implement only entries present in expansion 1.14d, using a pinned 1.14d corpus:
+Implement entries present in the targeted Expansion 1.13c and 1.14d feature
+set. Start from the pinned 1.14d corpus and compare 1.13c data before claiming
+version parity for a specific entry:
 
 - Uber Dungeon/Uber Tristram Cube operations and introduction version;
 - key/organ drops and recipes;
