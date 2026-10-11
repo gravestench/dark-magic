@@ -3,6 +3,7 @@ package movement
 import (
 	"bytes"
 	"errors"
+	"math"
 	"testing"
 
 	"github.com/gravestench/akara"
@@ -26,12 +27,47 @@ func (scriptedPaths) FindPath(request gameworld.PathRequest) ([]gameworld.Point,
 // countingPaths records collision searches so held-pointer movement can prove that sub-cell drift avoids replanning.
 type countingPaths struct {
 	calls int
+	path  []gameworld.Point
 }
 
 // FindPath records each search and returns a direct route whose endpoint remains easy to assert.
 func (paths *countingPaths) FindPath(request gameworld.PathRequest) ([]gameworld.Point, error) {
 	paths.calls++
+	if paths.path != nil {
+		return paths.path, nil
+	}
 	return []gameworld.Point{request.Start, request.Goal}, nil
+}
+
+func TestMovementSourceRetainsFinalCellWhenHeldPointerDrifts(t *testing.T) {
+	fixture := newMovementFixture(t)
+	fixture.addPosition(0, 0)
+	controller := &MovementController{}
+	if err := controller.SetMoveTarget(5, 0); err != nil {
+		t.Fatal(err)
+	}
+	source := fixture.source(controller)
+	paths := &countingPaths{path: []gameworld.Point{{0, 0}, {1, 0}, {2, 0}, {3, 0}, {4, 0}, {5, 0}}}
+	source.navigation = paths
+	if first := commandPayload(t, source, 1); first.Target == nil || first.Target.X != 4 || first.Target.Y != 0 {
+		t.Fatalf("straight route anchor = %#v", first.Target)
+	}
+	if err := controller.SetMoveTarget(5.25, 0.25); err != nil {
+		t.Fatal(err)
+	}
+	if held := commandPayload(t, source, 2); held.Target == nil || held.Target.X != 4 || held.Target.Y != 0 {
+		t.Fatalf("held-pointer drift redirected the long segment: %#v", held.Target)
+	}
+	positions, _ := akara.GetDynamicStore(fixture.engine.World(), "d2legacy.world.position")
+	if _, err := positions.Set(fixture.entity, map[string]any{"x": 4.0, "y": 0.0}); err != nil {
+		t.Fatal(err)
+	}
+	if final := commandPayload(t, source, 3); final.Target == nil || final.Target.X != 5.25 || final.Target.Y != 0.25 {
+		t.Fatalf("last segment did not follow sub-cell drift: %#v", final.Target)
+	}
+	if paths.calls != 1 {
+		t.Fatalf("sub-cell drift performed %d searches, want 1", paths.calls)
+	}
 }
 
 // movementFixture owns the minimum ECS and input state needed by command-source tests.
@@ -213,7 +249,7 @@ func TestMovementSourceKeepsAcceptedRouteWhenReplacementIsBlocked(t *testing.T) 
 	fixture.publishInput("game_world", false, nil)
 
 	controller := &MovementController{}
-	if err := controller.SetMoveTarget(20, 10); err != nil {
+	if err := controller.SetMoveTarget(20, 11); err != nil {
 		t.Fatal(err)
 	}
 
@@ -235,7 +271,7 @@ func TestMovementSourceKeepsAcceptedRouteWhenReplacementIsBlocked(t *testing.T) 
 	}
 
 	retained := controller.moveTarget()
-	if retained == nil || retained.X != 20 || retained.Y != 10 {
+	if retained == nil || retained.X != 20 || retained.Y != 11 {
 		t.Fatalf("controller retained target = %#v, want original target", retained)
 	}
 }
@@ -323,5 +359,40 @@ func TestMovementSourceKeepsRouteWhenSameNavigationIsReinstalled(t *testing.T) {
 			source.path,
 			source.pathTarget,
 		)
+	}
+}
+
+func TestStraightRouteMatchesDirectMovementCadence(t *testing.T) {
+	for _, rates := range []ClassRates{{Walk: 6, Run: 9}, {Walk: 40, Run: 60}} {
+		for _, running := range []bool{false, true} {
+			fixture := newMovementFixture(t)
+			fixture.addPosition(0, 0)
+			controller := &MovementController{}
+			controller.SetRunning(running)
+			if err := controller.SetMoveTarget(20, 0); err != nil {
+				t.Fatal(err)
+			}
+			source := fixture.source(controller)
+			path := make([]gameworld.Point, 21)
+			for i := range path {
+				path[i].X = float64(i)
+			}
+			source.navigation = &countingPaths{path: path}
+			positions, _ := akara.GetDynamicStore(fixture.engine.World(), "d2legacy.world.position")
+			planned, direct := gameworld.Point{}, gameworld.Point{}
+			for tick := uint64(1); tick <= 6; tick++ {
+				payload := commandPayload(t, source, tick)
+				plannedVelocity := Resolve(planned, payload, rates).Velocity
+				directVelocity := Resolve(direct, MovePayload{Running: running, Target: &MoveTarget{X: 20}}, rates).Velocity
+				planned = gameworld.IntegrateVelocity(nil, planned, plannedVelocity, gameworld.Point{X: 100, Y: 100}, 0, .04)
+				direct = gameworld.IntegrateVelocity(nil, direct, directVelocity, gameworld.Point{X: 100, Y: 100}, 0, .04)
+				if math.Abs(planned.X-direct.X) > 1e-8 || planned.Y != direct.Y {
+					t.Fatalf("rates=%+v running=%t tick=%d: planned=%v direct=%v", rates, running, tick, planned, direct)
+				}
+				if _, err := positions.Set(fixture.entity, map[string]any{"x": planned.X, "y": planned.Y}); err != nil {
+					t.Fatal(err)
+				}
+			}
+		}
 	}
 }
