@@ -18,6 +18,8 @@ local records = {
             Set = "300",
         },
         { ["Treasure Class"] = "equipment", Picks = "-1", Item1 = "weap3", Prob1 = "1", Magic = "400" },
+        { ["Treasure Class"] = "empty-family", Picks = "-2", Item1 = "weap96", Prob1 = "2" },
+        { ["Treasure Class"] = "empty-family-nodrop", Picks = "2", NoDrop = "5", Item1 = "weap96", Prob1 = "1" },
     },
     ["data/global/excel/ItemTypes.txt"] = {
         { Code = "weap", TreasureClass = "1" },
@@ -58,9 +60,13 @@ local function implicit_item_families_resolve_to_eligible_base_codes()
     test.expect(code == "hax" or code == "axe"):equals(true)
     test.expect(treasure.roll("armo3", context)[1].code):equals("cap")
     test.expect(treasure.roll("mpot3", context)[1].code):equals("gpl")
-    local ok, message = pcall(treasure.roll, "weap96", context)
-    test.expect(ok):equals(false)
-    test.expect(string.find(message, "treasure class has no weighted outcomes", 1, true) ~= nil):equals(true)
+    test.expect(#treasure.roll("weap96", context)):equals(0)
+end
+
+local function empty_item_families_drop_nothing()
+    local treasure = require("d2legacy.loot.treasure_class")
+    test.expect(#treasure.roll("empty-family", { no_drop_player_count = 1 })):equals(0)
+    test.expect(#treasure.roll("empty-family-nodrop", { no_drop_player_count = 3 })):equals(0)
 end
 
 local function generated_classes_keep_weights_order_and_catalog()
@@ -193,6 +199,7 @@ return test.suite({
         test.case("implicit_item_families_resolve_to_eligible_base_codes", {
             { run = implicit_item_families_resolve_to_eligible_base_codes },
         }),
+        test.case("empty_item_families_drop_nothing", { { run = empty_item_families_drop_nothing } }),
         test.case("nested_classes_keep_strongest_quality_modifiers", {
             { run = nested_classes_keep_strongest_quality_modifiers },
         }),
