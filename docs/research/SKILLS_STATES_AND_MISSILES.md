@@ -1329,6 +1329,31 @@ observations, not exhaustive missile lifecycle or engine-frame timestamps. First
 range and footprint remain open in
 [issue #418](https://github.com/gravestench/dark-magic/issues/418).
 
+## Owned Charged Bolt Sentry initializer lifetime
+
+Two accepted rank-one casts in an owned Expansion 1.14d client emitted ten
+sampled missile 495 identities with initial total/current frame words `(77, 77)`,
+although the owned `sentrychargedbolt` row has `Range=98`. The total stayed 77
+while the sampled current counter reached 20 in both casts. The joined
+`BoltSentry` helper selects server skill function 17 and
+`srvmissilea=sentrychargedbolt`.
+
+Trap decoding caps function-17 helper lifetimes at 77 ticks after reading the
+missile row, preserving shorter authored lifetimes and other helper initializers.
+Synthetic coverage carries the decoded lifetime through production projectile
+spawning, remaining ticks, expiry, and checkpoint continuation. These tests
+establish Dark Magic behavior, not native full expiry or authoritative damage.
+The native evidence supports the sampled rank-one initialization only.
+Generalized rank/angle behavior, steering, first-shot phase, spread, target range,
+and footprint remain open in
+[issue #418](https://github.com/gravestench/dark-magic/issues/418).
+
+Private case `cbs-route-001` has partial evidence index
+`c364d87f5b109c1f037cfeeb7a6606632f0ad4c33308c42051552635dbde1084`.
+It retains a failed first room watch, two normally closed fixed-identity flight
+watches, and two route/counter comparison mismatches. The older D2MOO 1.10f
+initializer is corroborating hypothesis evidence, not target-version authority.
+
 ## Assassin trap family
 
 The exact player IDs 251, 256, 257, 261, 262, 266, 271, 272, 276, and 277 now

@@ -251,7 +251,12 @@ end
 local function helper_projectile(helper, missiles, label)
     local name = helper.srvmissile ~= "" and helper.srvmissile or helper.srvmissilea
     assert(name and name ~= "", label .. " helper has no server missile")
-    return missile_definition(lookup(missiles, name, label), label)
+    local definition = missile_definition(lookup(missiles, name, label), label)
+    if helper.srvdofunc == "17" then
+        -- The charged-bolt initializer caps live frames after the missile row is decoded.
+        definition.lifetime_ticks = math.min(definition.lifetime_ticks, 77)
+    end
+    return definition
 end
 
 local function shot_synergy(row, helper, skills, label)

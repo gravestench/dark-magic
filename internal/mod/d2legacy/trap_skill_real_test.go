@@ -87,6 +87,11 @@ func TestOwnedTargetAssassinTrapFamilyRecords(t *testing.T) {
 		}
 	}
 
+	boltSentry := rowBy(skills, "skill", "BoltSentry")
+	if boltSentry == nil || boltSentry["srvdofunc"] != "17" || boltSentry["srvmissilea"] != "sentrychargedbolt" {
+		t.Fatalf("owned Expansion 1.14d BoltSentry initializer fields = %#v", boltSentry)
+	}
+
 	missiles, err := store.Load("data/global/excel/Missiles.txt")
 	if err != nil {
 		t.Fatal(err)
