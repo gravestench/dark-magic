@@ -16,6 +16,21 @@ AI-assisted code is not second-class code; unverified code is. Large generated
 diffs are also not evidence of progress. The goal is a small, coherent,
 reviewable slice that advances a real acceptance boundary.
 
+## Agentic coding requires Superpowers
+
+Install the [Superpowers plugin](https://github.com/obra/superpowers#installation)
+in the coding agent's environment before using that agent to change code in this
+repository. Start with its `using-superpowers` skill and follow the applicable
+skills for the task. The upstream guide covers Codex App, Codex CLI, and other
+supported agents; install it separately in each environment you use. If it is
+unavailable, pause agentic code edits and tell the maintainer. Human-only
+contributions do not require the plugin.
+
+Superpowers governs the agent's development process. The linked issue and
+milestone still define the acceptance boundary, and this repository's research
+and architecture documents still define evidence and ownership. A skill's
+generic workflow does not establish Diablo II behavior or close an issue.
+
 ## Point the agent at the repository first
 
 Do not begin with a blank prompt and general Diablo II knowledge. Give the agent
@@ -53,11 +68,15 @@ exact acceptance boundary, the current owner of each mechanism and policy, the
 existing interfaces, and the repository evidence supporting the requested
 behavior.
 
-Propose a small coherent plan, then implement it without creating a parallel
-authority. Add executable acceptance coverage, run the relevant test suites,
-and perform a fresh review for correctness, architecture, determinism, source
-provenance, security, dead code, overstated claims, and egregious performance
-problems. Report the commands run and anything that remains unverified.
+Use the Superpowers plugin, starting with `using-superpowers`, and follow its
+applicable skills for this task.
+
+Complete the applicable Superpowers design and planning steps, then implement
+without creating a parallel authority. Add executable acceptance coverage, run
+the relevant test suites, and perform a fresh review for correctness,
+architecture, determinism, source provenance, security, dead code, overstated
+claims, and egregious performance problems. Report the commands run and
+anything that remains unverified.
 ```
 
 Adapt that prompt to the task. Ask the agent to cite concrete paths, symbols,
