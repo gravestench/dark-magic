@@ -1,8 +1,8 @@
 package modruntime
 
 import (
+	"bytes"
 	"encoding/json"
-	"fmt"
 
 	"github.com/gravestench/dark-magic/internal/game/simulation"
 	lua "github.com/yuin/gopher-lua"
@@ -52,9 +52,13 @@ func registerAuthorityState(stores *simulation.StateStore) lua.LGFunction {
 	}
 }
 
-// readAuthorityState parses read authority state at the package boundary so malformed input fails before state
-// publication.
+// Cached JSON values remain private; each read converts independent Lua tables.
 func readAuthorityState(stores *simulation.StateStore) lua.LGFunction {
+	type cachedState struct {
+		data  []byte
+		value any
+	}
+	cache := map[string]cachedState{}
 	return func(state *lua.LState) int {
 		id := state.CheckString(1)
 
@@ -64,12 +68,25 @@ func readAuthorityState(stores *simulation.StateStore) lua.LGFunction {
 			return 1
 		}
 
-		decoded, err := decodeLuaState(state, value.Data)
-		if err != nil {
-			state.RaiseError("decode authoritative state %q: %v", id, err)
-			return 0
+		cached, present := cache[id]
+		changed := !present || !bytes.Equal(cached.data, value.Data)
+		if changed {
+			var decoded any
+			if err := json.Unmarshal(value.Data, &decoded); err != nil {
+				state.RaiseError("decode authoritative state %q: %v", id, err)
+				return 0
+			}
+			cached = cachedState{data: value.Data, value: decoded}
 		}
 
+		decoded, err := goToLua(state, cached.value, 0)
+		if err != nil {
+			state.RaiseError("decode authoritative state %q: convert registered state: %v", id, err)
+			return 0
+		}
+		if changed {
+			cache[id] = cached
+		}
 		state.Push(decoded)
 
 		return 1
@@ -106,20 +123,4 @@ func encodeLuaState(value lua.LValue) ([]byte, error) {
 	}
 
 	return json.Marshal(converted)
-}
-
-// decodeLuaState loads decode lua state before publication so malformed content cannot become observable runtime
-// state.
-func decodeLuaState(state *lua.LState, data []byte) (lua.LValue, error) {
-	var decoded any
-	if err := json.Unmarshal(data, &decoded); err != nil {
-		return nil, err
-	}
-
-	value, err := goToLua(state, decoded, 0)
-	if err != nil {
-		return nil, fmt.Errorf("convert registered state: %w", err)
-	}
-
-	return value, nil
 }
