@@ -71,6 +71,7 @@ func run(
 		FixtureWorldLevel:      config.fixtureWorldLevel,
 		FixtureWorldSpawn:      config.fixtureWorldSpawn,
 		FixturePointerMove:     config.fixturePointerMove,
+		GameDifficulty:         config.gameDifficulty,
 		OutputPalette:          config.outputPalette,
 		PlayerProfilePath:      playerProfilePath,
 		ViewportFit:            config.viewportFit,

@@ -2,6 +2,7 @@ package main
 
 import (
 	"flag"
+	"fmt"
 	"os"
 	"strconv"
 	"strings"
@@ -12,6 +13,7 @@ import (
 // value so the running client cannot depend on global parser state.
 type clientFlags struct {
 	logLevel            *string
+	gameDifficulty      *string
 	profileDirectory    *string
 	profileScenes       *string
 	captureDirectory    *string
@@ -69,6 +71,11 @@ func registerRuntimeFlags(flags *clientFlags) {
 		"log-level",
 		environmentDefault("DARK_MAGIC_LOG_LEVEL", "info"),
 		"log verbosity: trace, debug, info, warn, or error",
+	)
+	flags.gameDifficulty = flag.String(
+		"game-difficulty",
+		"normal",
+		"offline and hosted game difficulty: normal, nightmare, or hell",
 	)
 	flags.profileDirectory = flag.String(
 		"profile-dir",
@@ -189,6 +196,11 @@ func (flags clientFlags) config() (clientConfig, error) {
 		return clientConfig{}, err
 	}
 
+	gameDifficulty, err := parseGameDifficulty(*flags.gameDifficulty)
+	if err != nil {
+		return clientConfig{}, err
+	}
+
 	return clientConfig{
 		profileDirectory:      *flags.profileDirectory,
 		profileScenes:         *flags.profileScenes,
@@ -211,6 +223,7 @@ func (flags clientFlags) config() (clientConfig, error) {
 		mapEditorOutput:       *flags.mapEditorOutput,
 		mods:                  *flags.mods,
 		logLevel:              logLevel,
+		gameDifficulty:        gameDifficulty,
 	}, nil
 }
 
@@ -222,4 +235,17 @@ func environmentDefault(name, fallback string) string {
 	}
 
 	return fallback
+}
+
+// parseGameDifficulty keeps the legacy numeric encoding at the command boundary,
+// matching the server's --game-difficulty so hosts and joiners agree on identity.
+func parseGameDifficulty(value string) (int, error) {
+	difficulties := map[string]int{"normal": 0, "nightmare": 1, "hell": 2}
+
+	difficulty, found := difficulties[strings.ToLower(strings.TrimSpace(value))]
+	if !found {
+		return 0, fmt.Errorf("invalid game difficulty %q", value)
+	}
+
+	return difficulty, nil
 }

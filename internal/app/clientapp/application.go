@@ -56,6 +56,7 @@ type Options struct {
 	FixtureWorldLevel      int
 	FixtureWorldSpawn      string
 	FixturePointerMove     bool
+	GameDifficulty         int
 	OutputPalette          string
 	ViewportFit            string
 	NativeResolution       bool

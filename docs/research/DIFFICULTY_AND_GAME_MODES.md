@@ -147,6 +147,14 @@ Current state of each consumer of the game's selected difficulty:
   panel UI and path-following "waypoints" in movement code. Per-difficulty
   activation belongs with the waypoint world object (G12) and durable
   character state (G15).
+- **Choosing the difficulty.** The standalone server takes
+  `--game-difficulty normal|nightmare|hell`. The client takes the same flag
+  for offline and self-hosted games, applied to both the game rules and the
+  generated entry world. A joiner must use the host's value, since difficulty
+  is part of the runtime identity. There is no in-game difficulty picker yet:
+  the offline session is built before character selection, and no
+  progression exists to gate the choice, so any character can enter any
+  difficulty.
 
 ## Resistance penalty
 
