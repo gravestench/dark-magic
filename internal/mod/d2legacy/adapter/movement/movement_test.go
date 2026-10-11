@@ -10,6 +10,7 @@ import (
 	gameecs "github.com/gravestench/dark-magic/internal/game/ecs"
 	gameworld "github.com/gravestench/dark-magic/internal/game/world"
 	"github.com/gravestench/dark-magic/internal/inputstate"
+	lua "github.com/yuin/gopher-lua"
 )
 
 // scriptedPaths supplies one intermediate waypoint and rejects a sentinel target for route-retention tests.
@@ -365,15 +366,35 @@ func TestMovementSourceKeepsRouteWhenSameNavigationIsReinstalled(t *testing.T) {
 func TestStraightRouteMatchesDirectMovementCadence(t *testing.T) {
 	for _, rates := range []ClassRates{{Walk: 6, Run: 9}, {Walk: 40, Run: 60}} {
 		for _, running := range []bool{false, true} {
+			state := lua.NewState()
+			defer state.Close()
+			bridge := movementRulesBridge{catalog: Catalog{byClass: map[string]ClassRates{"amazon": rates}}}
+			velocity := func(position gameworld.Point, payload MovePayload) gameworld.Point {
+				target := state.NewTable()
+				target.RawSetString("x", lua.LNumber(payload.Target.X))
+				target.RawSetString("y", lua.LNumber(payload.Target.Y))
+				intent := state.NewTable()
+				intent.RawSetString("target", target)
+				intent.RawSetString("running", lua.LBool(payload.Running))
+				err := state.CallByParam(lua.P{Fn: state.NewFunction(bridge.velocity), NRet: 3, Protect: true},
+					lua.LNumber(position.X), lua.LNumber(position.Y), lua.LString("Amazon"), intent,
+					lua.LNumber(0), lua.LNumber(0), lua.LNumber(.04))
+				if err != nil {
+					t.Fatal(err)
+				}
+				result := gameworld.Point{X: float64(state.Get(-3).(lua.LNumber)), Y: float64(state.Get(-2).(lua.LNumber))}
+				state.Pop(3)
+				return result
+			}
 			fixture := newMovementFixture(t)
 			fixture.addPosition(0, 0)
 			controller := &MovementController{}
 			controller.SetRunning(running)
-			if err := controller.SetMoveTarget(20, 0); err != nil {
+			if err := controller.SetMoveTarget(100, 0); err != nil {
 				t.Fatal(err)
 			}
 			source := fixture.source(controller)
-			path := make([]gameworld.Point, 21)
+			path := make([]gameworld.Point, 101)
 			for i := range path {
 				path[i].X = float64(i)
 			}
@@ -382,8 +403,8 @@ func TestStraightRouteMatchesDirectMovementCadence(t *testing.T) {
 			planned, direct := gameworld.Point{}, gameworld.Point{}
 			for tick := uint64(1); tick <= 6; tick++ {
 				payload := commandPayload(t, source, tick)
-				plannedVelocity := Resolve(planned, payload, rates).Velocity
-				directVelocity := Resolve(direct, MovePayload{Running: running, Target: &MoveTarget{X: 20}}, rates).Velocity
+				plannedVelocity := velocity(planned, payload)
+				directVelocity := velocity(direct, MovePayload{Running: running, Target: &MoveTarget{X: 100}})
 				planned = gameworld.IntegrateVelocity(nil, planned, plannedVelocity, gameworld.Point{X: 100, Y: 100}, 0, .04)
 				direct = gameworld.IntegrateVelocity(nil, direct, directVelocity, gameworld.Point{X: 100, Y: 100}, 0, .04)
 				if math.Abs(planned.X-direct.X) > 1e-8 || planned.Y != direct.Y {

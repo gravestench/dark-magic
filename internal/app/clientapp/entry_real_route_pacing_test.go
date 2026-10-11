@@ -1,6 +1,7 @@
 package clientapp
 
 import (
+	movement "github.com/gravestench/dark-magic/internal/mod/d2legacy/adapter/movement"
 	"math"
 	"testing"
 )
@@ -23,6 +24,7 @@ func TestOwnedPointMovementMaintainsConfiguredRoutePace(t *testing.T) {
 	if !found {
 		t.Fatal("missing configured Amazon rates")
 	}
+	rates = movement.EffectiveRates(rates, movement.Modifiers{})
 
 	for _, trial := range []struct {
 		name    string
