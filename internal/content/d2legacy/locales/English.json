@@ -143,5 +143,9 @@
   "d2legacy.character_panel.defense": "DEFENSE",
   "d2legacy.character_panel.stamina": "STAMINA",
   "d2legacy.character_panel.life": "LIFE",
-  "d2legacy.character_panel.mana": "MANA"
+  "d2legacy.character_panel.mana": "MANA",
+  "d2legacy.character_panel.fire_resistance": "Fire\nResistance",
+  "d2legacy.character_panel.cold_resistance": "Cold\nResistance",
+  "d2legacy.character_panel.lightning_resistance": "Lightning\nResistance",
+  "d2legacy.character_panel.poison_resistance": "Poison\nResistance"
 }

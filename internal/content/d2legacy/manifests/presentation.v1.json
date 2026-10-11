@@ -633,6 +633,12 @@
         {"field":"stamina_pair","label":"d2legacy.character_panel.stamina","label_x":280,"label_y":300,"x":350,"y":295},
         {"field":"health_pair","label":"d2legacy.character_panel.life","label_x":280,"label_y":322,"x":350,"y":320},
         {"field":"mana_pair","label":"d2legacy.character_panel.mana","label_x":280,"label_y":360,"x":350,"y":355}
+      ],
+      "resistances":[
+        {"element":"fire","label":"d2legacy.character_panel.fire_resistance","label_x":302,"label_y":395,"x":371,"y":398},
+        {"element":"cold","label":"d2legacy.character_panel.cold_resistance","label_x":302,"label_y":419,"x":371,"y":422},
+        {"element":"lightning","label":"d2legacy.character_panel.lightning_resistance","label_x":302,"label_y":443,"x":371,"y":446},
+        {"element":"poison","label":"d2legacy.character_panel.poison_resistance","label_x":302,"label_y":467,"x":371,"y":470}
       ]
     },
     "skills": {"x":400,"y":64,"unavailable_bottom":70,"close_inset":48},
