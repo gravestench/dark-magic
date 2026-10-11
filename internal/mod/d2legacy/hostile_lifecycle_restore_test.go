@@ -1490,7 +1490,7 @@ func generatedHostileRecords() fixtureRecords {
 		"code": "rin", "namestr": "Ring", "type": "ring", "level": "1", "invwidth": "1", "invheight": "1",
 	}}
 	records["data/global/excel/itemratio.txt"] = []map[string]string{{
-		"Version": "100", "Uber": "0", "Class Specific": "0",
+		"Version": "1", "Uber": "0", "Class Specific": "0",
 		"Unique": "4000", "Set": "4000", "Rare": "4000", "Magic": "4000",
 		"HiQuality": "4000", "Normal": "4000",
 	}}

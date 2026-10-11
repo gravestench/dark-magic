@@ -25,11 +25,13 @@ local function integer(row, key, fallback)
 end
 
 local function matching_ratio(version, uber, class_specific)
+    -- ItemRatio uses 0 for classic and 1 for expansion. Affix tables use 100 for expansion.
+    local ratio_version = version >= 100 and 1 or 0
     local rows = records.load("data/global/excel/itemratio.txt")
     for _, row in ipairs(rows) do
         local row_uber = integer(row, "Uber") ~= 0
         local row_class = integer(row, "Class Specific") ~= 0
-        if integer(row, "Version") == version
+        if integer(row, "Version") == ratio_version
             and row_uber == uber
             and row_class == class_specific then
             return row
