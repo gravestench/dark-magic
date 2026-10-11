@@ -140,7 +140,8 @@ return test.suite({
                 test.expect(definitions[900].missile_id):equals("fixturebolt")
                 test.expect(definitions[900].damage_channel):equals("magic")
                 test.expect(definitions[900].knockback_value):equals(75)
-                test.expect(definitions[900].speed_per_tick):equals(1)
+                test.expect(definitions[900].speed_per_tick):equals(75 / 64)
+                test.expect(definitions[900].maximum_range):equals(46.875)
             end)
         end),
         test.case("decodes_multiple_area_impact_configurations_without_skill_branches", function(t)

@@ -94,7 +94,7 @@ return test.suite({
                 test.expect(fixture.damage_channel):equals("cold")
                 test.expect(fixture.missile_count_base):equals(8)
                 test.expect(fixture.missile_count_per_level):equals(2)
-                test.expect(fixture.speed_per_tick):equals(1)
+                test.expect(fixture.speed_per_tick):equals(75 / 64)
                 test.expect(fixture.lifetime_ticks):equals(20)
             end)
         end),

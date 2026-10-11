@@ -1297,6 +1297,38 @@ field for visual handoff or a separate client state scheduler.
 
 Skill behavior should not create an unowned generic monster. Summoning must enter the owned-unit system described in [HIRELINGS_AND_OWNED_UNITS.md](HIRELINGS_AND_OWNED_UNITS.md): owner, pet type, limit/replacement policy, inherited/snapshotted stats, AI, and lifecycle are authoritative.
 
+## Owned base missile velocity
+
+Owned Expansion 1.14d room-list probes connect each emitted missile to its
+source sentry through matching type/ID owner words and visible game output.
+Lightning Sentry's missile 526 has authored `Vel=30`: seven stable axial
+increments are exactly `-92160` in 16.16 Y coordinates, or 1.40625 subtiles per
+update. Eleven oblique increments also match the stored step vector. An
+independent Charged Bolt Sentry missile 495 holdout has `Vel=12`: 288 stable
+increments across eleven exact identities include axial steps of `36864`, or
+0.5625 subtiles, and diagonal steps of `(26064, -26064)`. Both axial speeds
+match `Vel * 3 / 64`. The previous `Vel / 25` decoding made base motion too slow.
+
+Straight, radial, trap and reactive-state decoders share this base conversion.
+Derived maximum range uses the converted speed times the authored tick
+lifetime. Runtime coverage carries the decoded speed through axial movement,
+owner attribution, expiry and checkpoint replay. This does not establish
+acceleration, rank-dependent velocity, angular quantization or steering policy.
+In particular, native charged bolts turn during travel while the current
+projectile policy keeps straight rays.
+
+Private evidence indexes: `trap-first-fire-001`
+`27927c4ee673a0dd22f00e9f06388dbaa49816e3b58f402e48cbb31328fa712d`
+and `cbs-speed-001`
+`6a9069ab1a5330db86570e3cf101edde76fece679575e94e02fd75354b40c434`.
+The CBS case closed with partial observer failures: an immediate-mana guard
+and a non-atomic multi-room walk failed. The failing traversal was discarded;
+the later accepted cast and normally closed motion watch supply the holdout,
+with eight transient observer errors excluded. These are scoped client
+observations, not exhaustive missile lifecycle or engine-frame timestamps. First-shot phase, spread, target
+range and footprint remain open in
+[issue #418](https://github.com/gravestench/dark-magic/issues/418).
+
 ## Assassin trap family
 
 The exact player IDs 251, 256, 257, 261, 262, 266, 271, 272, 276, and 277 now
