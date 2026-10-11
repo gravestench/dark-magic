@@ -27,4 +27,5 @@ type clientConfig struct {
 	mapEditorOutput       string
 	mods                  string
 	logLevel              slog.Level
+	gameDifficulty        int
 }

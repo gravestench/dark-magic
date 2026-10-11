@@ -19,7 +19,7 @@ func (app *application) sessionInitialData() map[string]any {
 		"d2legacy.game_rules": map[string]any{
 			"target":          "lod-1.14d",
 			"expansion":       true,
-			"difficulty":      0,
+			"difficulty":      app.options.GameDifficulty,
 			"hardcore":        false,
 			"ladder":          false,
 			"maximum_players": 8,

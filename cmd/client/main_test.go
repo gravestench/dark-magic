@@ -51,6 +51,25 @@ func TestParseLogLevel(t *testing.T) {
 	}
 }
 
+// TestParseGameDifficulty keeps the client's names identical to the server's
+// --game-difficulty so a host and its joiners hash the same runtime identity.
+func TestParseGameDifficulty(t *testing.T) {
+	t.Parallel()
+
+	for input, want := range map[string]int{"normal": 0, " Nightmare ": 1, "HELL": 2} {
+		got, err := parseGameDifficulty(input)
+		if err != nil {
+			t.Errorf("parseGameDifficulty(%q): %v", input, err)
+		} else if got != want {
+			t.Errorf("parseGameDifficulty(%q) = %d, want %d", input, got, want)
+		}
+	}
+
+	if _, err := parseGameDifficulty("torment"); err == nil {
+		t.Fatal("parseGameDifficulty accepted an unsupported value")
+	}
+}
+
 // TestDevelopmentCharacters protects fixture determinism because capture and
 // acceptance comparisons rely on stable character identity and ordering.
 func TestDevelopmentCharacters(t *testing.T) {
