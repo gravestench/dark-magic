@@ -15,8 +15,7 @@ test-lua-format:
 	find internal/content/d2legacy/lua/d2legacy \( -name '*_test.lua' -o -path '*/tests/v1.lua' -o -path '*/tests/support/*.lua' \) -print0 | xargs -0 stylua --check
 
 test-lua-syntax:
-	find internal/content/d2legacy/lua -name '*.lua' -print0 | xargs -0 -n 100 luac -p
-	find internal/content/ds1editor/lua -name '*.lua' -print0 | xargs -0 -n 100 luac -p
+	go run ./internal/dev/tools/lua_syntax internal/content/d2legacy/lua internal/content/ds1editor/lua
 
 architecture:
 	go test ./internal/acceptance -run 'Test(Retired|LegacyRenderer|NoAccidental|DependencyDirection|CommandRemains|GameplayOwnership)'

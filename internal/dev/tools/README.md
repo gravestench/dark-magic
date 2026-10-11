@@ -12,3 +12,5 @@ Magic product binaries. Run them from the repository root with `go run`:
 - `./internal/dev/tools/dt1_catalog` prints DT1 identities and, with `-stamps`,
   the exact mounted DT1 libraries declared by each DS1 stamp.
 - `./internal/dev/tools/d2legacy_pack` packages the redistributable first-party `d2legacy` mod.
+- `./internal/dev/tools/lua_syntax` compiles Lua files with the game's gopher-lua
+  compiler; `make test-lua-syntax` runs it over the d2legacy and ds1editor trees.
