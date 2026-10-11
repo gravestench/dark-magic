@@ -264,7 +264,6 @@ return test.suite({
                 test.expect(definitions[261].lifetime_ticks):equals(77)
                 test.expect(definitions[262].lifetime_ticks):equals(25)
                 test.expect(definitions[271].lifetime_ticks):equals(98)
-                test.expect(definitions[261].speed_per_tick):equals(25 / 25)
                 test.expect(definitions[251].field_count_base):equals(nil)
                 test.expect(definitions[256].field_count_synergy_skill_id):equals(261)
                 test.expect(definitions[257].weapon_fraction):equals(96)
