@@ -413,6 +413,30 @@ The remaining player locomotion model needs:
 
 All of these are authoritative. HUD stamina is a snapshot of this system, not its owner.
 
+## Straight-route waypoint cadence
+
+Player route commands skip only same-direction collinear intermediate stops.
+Turns, reversals, the actual fractional start approach, and the final two
+nodes remain. The penultimate node anchors sub-cell held-pointer endpoint
+updates, so those updates cannot redirect an entire long segment.
+
+`TestStraightRouteMatchesDirectMovementCadence` compares the production command
+source, movement resolver, and collision integrator with a direct target at the
+same configured rates. Its high-rate synthetic case distinguishes the old
+per-cell route, which can reverse after overshooting intermediate nodes.
+`TestOwnedPointMovementMaintainsConfiguredRoutePace` checks consecutive full-rate
+steps and arrival through ordinary admission, pointer intent, managed Lua
+motion, and collision integration with owned data at 25 Hz.
+
+These checks establish route cadence at the configured scale. Matching native
+1.14d distance per tick additionally requires the movement-scale conversion and
+its target-distance clamp. Historical combined application traces showed
+running steps alternating between 0.5625 and 0.4375 subtiles before intermediate
+stops were removed. Those traces do not establish native-rate parity on a branch
+without that conversion. Native directional observations remain qualified
+context, not proof of retail path selection, corner timing, mouse projection,
+or bit-exact diagonal/terminal rounding. This advances #375 only partially.
+
 ## Movement action versus animation speed
 
 Gameplay distance per tick and sprite/3D animation playback are separate state,
