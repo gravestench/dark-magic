@@ -279,6 +279,63 @@ unredacted sensitive logs. Be equally careful before sending such material to a
 hosted model provider. Use synthetic fixtures, hashes, schemas, narrow excerpts,
 and local tooling wherever possible.
 
+## Rules for AI-assisted work
+
+The guidance above describes how to work well. The rules in this section are
+requirements. They apply to every pull request, but they exist mostly because
+coding agents produce plausible work quickly and drift beyond the task unless
+told not to. A pull request that breaks one of them may be returned without a
+code review.
+
+### Stay within scope
+
+1. **Start from an issue.** Every pull request links an open issue with
+   `Closes #123` or `Refs #123`. If no issue covers the work, open one with the
+   Implementation template and agree the scope before writing code. A typo, a
+   broken build, or a fix to a recently merged pull request may link that pull
+   request instead.
+2. **Change only what the issue asks for.** Refactors, renames, formatting of
+   untouched files, dependency updates, new abstractions, and "while I was
+   here" fixes belong in their own issue and pull request, even when they are
+   improvements. Revert anything the agent changed outside the task.
+3. **Report other problems instead of fixing them.** When the work uncovers a
+   bug or gap outside the issue, list it in the pull request's scope section or
+   open a new issue for it.
+4. **Split work that outgrows its issue.** If the change becomes much larger
+   than the issue describes, stop and ask whether to split it before
+   continuing.
+5. **Give the agent the boundary.** Tell the agent which issue it is working
+   on and what is out of scope, and reject output that crosses that line.
+
+### Write up the work before submitting
+
+A pull request is ready for review only when its description is complete.
+Fill in every section of the [pull request
+template](.github/PULL_REQUEST_TEMPLATE.md) in enough detail that a reviewer
+who has not run the code can check each claim:
+
+1. **What changed,** in everyday language, and why this is the right owner for
+   it.
+2. **Scope:** the linked issue, what this pull request covers, and what it
+   deliberately leaves out.
+3. **Evidence** for the expected behavior: owned game data (table and column),
+   observations from the original game, or a pinned source such as a D2MOO
+   commit. Say which claims are verified and which are inferred.
+4. **How it was checked:** the exact commands, tests, captures, or manual steps
+   and their results. CI has no game data, so tests that need it (such as
+   `*_real_test.go` and tests that read `MPQ_DIRECTORY`) skip there. Say
+   whether you ran them locally against legally obtained game files. Where
+   practical, show that the new test fails without the change.
+5. **What remains unverified,** the known risks, and any follow-up issues.
+6. **How AI was used:** which parts were generated or reviewed with an agent,
+   confirmation that you reviewed the complete diff, and the separate review
+   pass described above.
+
+Never describe a test, command, or check as passing unless it was actually run
+on the submitted commit. Open a draft pull request if you want early feedback,
+and mark it ready only after the write-up is complete. When the code changes
+after review, update the description so it still matches the diff.
+
 ## Pull request expectations
 
 Keep the PR focused on one coherent slice. Its description should explain:
