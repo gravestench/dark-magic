@@ -92,6 +92,13 @@ assert(state.read("null") == nil and state.read("number") == 17)
 		t.Fatal(err)
 	}
 	run(`assert(require("engine.authority_state/v1").read("tree").array[3] == 3)`)
+	if err := stores.Replace("tree", "tree/v1", []byte(strings.Repeat("[", 66)+"0"+strings.Repeat("]", 66))); err != nil {
+		t.Fatal(err)
+	}
+	run(`local ok, err = pcall(require("engine.authority_state/v1").read, "tree"); assert(not ok and string.find(err, "convert registered state: state exceeds maximum nesting depth", 1, true))`)
+	if err := stores.RestoreState(archive); err != nil {
+		t.Fatal(err)
+	}
 	if err := runtime.Stop(t.Context()); err != nil {
 		t.Fatal(err)
 	}

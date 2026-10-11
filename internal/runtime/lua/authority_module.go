@@ -3,7 +3,6 @@ package modruntime
 import (
 	"bytes"
 	"encoding/json"
-	"fmt"
 
 	"github.com/gravestench/dark-magic/internal/game/simulation"
 	lua "github.com/yuin/gopher-lua"
@@ -53,11 +52,11 @@ func registerAuthorityState(stores *simulation.StateStore) lua.LGFunction {
 	}
 }
 
-// Cached decoded values remain private; every read returns an independent table.
+// Cached JSON values remain private; each read converts independent Lua tables.
 func readAuthorityState(stores *simulation.StateStore) lua.LGFunction {
 	type cachedState struct {
 		data  []byte
-		value lua.LValue
+		value any
 	}
 	cache := map[string]cachedState{}
 	return func(state *lua.LState) int {
@@ -70,29 +69,28 @@ func readAuthorityState(stores *simulation.StateStore) lua.LGFunction {
 		}
 
 		cached, present := cache[id]
-		if !present || !bytes.Equal(cached.data, value.Data) {
-			decoded, err := decodeLuaState(state, value.Data)
-			if err != nil {
+		changed := !present || !bytes.Equal(cached.data, value.Data)
+		if changed {
+			var decoded any
+			if err := json.Unmarshal(value.Data, &decoded); err != nil {
 				state.RaiseError("decode authoritative state %q: %v", id, err)
 				return 0
 			}
 			cached = cachedState{data: value.Data, value: decoded}
-			cache[id] = cached
 		}
 
-		state.Push(copyRegisteredLuaValue(state, cached.value))
+		decoded, err := goToLua(state, cached.value, 0)
+		if err != nil {
+			state.RaiseError("decode authoritative state %q: convert registered state: %v", id, err)
+			return 0
+		}
+		if changed {
+			cache[id] = cached
+		}
+		state.Push(decoded)
 
 		return 1
 	}
-}
-
-func copyRegisteredLuaValue(state *lua.LState, value lua.LValue) lua.LValue {
-	if table, ok := value.(*lua.LTable); ok {
-		copy := state.CreateTable(table.Len(), 0)
-		table.ForEach(func(key, entry lua.LValue) { copy.RawSet(key, copyRegisteredLuaValue(state, entry)) })
-		return copy
-	}
-	return value
 }
 
 // replaceAuthorityState returns the replace authority state observation under the service lock so callers cannot
@@ -125,20 +123,4 @@ func encodeLuaState(value lua.LValue) ([]byte, error) {
 	}
 
 	return json.Marshal(converted)
-}
-
-// decodeLuaState loads decode lua state before publication so malformed content cannot become observable runtime
-// state.
-func decodeLuaState(state *lua.LState, data []byte) (lua.LValue, error) {
-	var decoded any
-	if err := json.Unmarshal(data, &decoded); err != nil {
-		return nil, err
-	}
-
-	value, err := goToLua(state, decoded, 0)
-	if err != nil {
-		return nil, fmt.Errorf("convert registered state: %w", err)
-	}
-
-	return value, nil
 }
