@@ -1,4 +1,5 @@
 local test = require("d2legacy.tests/v1")
+local fixtures = require("d2legacy.tests.support.fixtures")
 
 local function unit(x, velocity, blocks, request, semantic_id)
     local ecs = require("engine.ecs/v1")
@@ -34,6 +35,14 @@ local function positions()
     return result
 end
 
+local function stationary_unit(x, blocks)
+    local ecs = require("engine.ecs/v1")
+    local entity = unit(x, 0, blocks)
+    ecs.remove(entity, "d2legacy.world.velocity")
+    ecs.remove(entity, "d2legacy.world.bounds")
+    return entity
+end
+
 local function forced_event()
     local ecs = require("engine.ecs/v1")
     local events = ecs.query({ all = { "d2legacy.world.forced_motion_event" } })
@@ -55,6 +64,60 @@ return test.suite({
     tier = "fast",
     covers = { "internal/game/world" },
     cases = {
+        test.case("spawned_monster_footprints_block_player_steps", {
+            test.run(function()
+                unit(2, 25, true)
+                require("d2legacy.commands.spawn_monster").materialize({
+                    tick = 0,
+                    payload = fixtures.monster_spawn({ x = 4, y = 10, level_id = 2 }),
+                })
+            end),
+            test.step(1),
+            test.run(function()
+                test.expect(positions()[1]):equals(2)
+            end),
+            test.expect_checkpoint_parity(1),
+        }),
+        test.case("stationary_footprints_block_without_movement_components", {
+            test.run(function()
+                unit(2, 25, true)
+                stationary_unit(4, true)
+            end),
+            test.step(1),
+            test.run(function()
+                local actual = positions()
+                test.expect(actual[1]):equals(2)
+                test.expect(actual[2]):equals(4)
+            end),
+            test.expect_checkpoint_parity(1),
+        }),
+        test.case("stationary_nonblocking_footprints_allow_movement", {
+            test.run(function()
+                unit(2, 25, true)
+                stationary_unit(4, false)
+            end),
+            test.step(1),
+            test.run(function()
+                local actual = positions()
+                test.expect(actual[1]):equals(3)
+                test.expect(actual[2]):equals(4)
+            end),
+        }),
+        test.case("inactive_and_other_level_stationary_footprints_do_not_block", {
+            test.run(function()
+                local ecs = require("engine.ecs/v1")
+                unit(2, 25, true)
+                local inactive = stationary_unit(4, true)
+                ecs.set(inactive, "d2legacy.world.inactive", {})
+                local elsewhere = stationary_unit(4, true)
+                ecs.get(elsewhere, "d2legacy.world.location"):set("level_id", 3)
+            end),
+            test.step(1),
+            test.run(function()
+                test.expect(positions()[1]):equals(3)
+            end),
+            test.expect_checkpoint_parity(1),
+        }),
         test.case("same_tick_contenders_cannot_enter_an_occupied_footprint", {
             test.run(function()
                 unit(2, 25, true)

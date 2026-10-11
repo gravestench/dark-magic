@@ -2,7 +2,8 @@
 --
 -- Input does not run here. A fixed-tick command handler has already translated
 -- player intent into velocity. This system only applies that simulation fact to
--- every entity with Position + Velocity + Bounds.
+-- every mover with Position + Velocity + Bounds. Blocking footprints also
+-- participate when they have no movement state.
 
 local ecs = require("engine.ecs/v1")
 local entity_identity = require("d2legacy.policy.entity_identity")
@@ -232,8 +233,6 @@ function M.register(collision)
         query = {
             all = {
                 "d2legacy.world.position",
-                "d2legacy.world.velocity",
-                "d2legacy.world.bounds",
                 "d2legacy.world.collider",
                 "d2legacy.world.occupancy",
             },
@@ -266,7 +265,10 @@ function M.register(collision)
                 }
             end
             for _, entity in ipairs(entities) do
-                update_entity(context, entity, units, structural)
+                -- Stationary footprints block without owning movement state.
+                if ecs.get(entity, "d2legacy.world.velocity") and ecs.get(entity, "d2legacy.world.bounds") then
+                    update_entity(context, entity, units, structural)
+                end
             end
         end,
     })

@@ -339,7 +339,7 @@ func TestPopulationInactivatesMonsterAndRestoresCheckpointParity(t *testing.T) {
 		"links": []map[string]any{{"from": "a", "to": "b"}, {"from": "b", "to": "c"}},
 		"rooms": []map[string]any{
 			{"id": "a", "populate": true, "x": 0, "y": 0, "width": 10, "height": 10,
-				"points": []map[string]any{{"x": 8, "y": 1}}},
+				"points": []map[string]any{{"x": 8, "y": 8}}},
 			{"id": "b", "populate": false, "x": 10, "y": 0, "width": 10, "height": 10,
 				"points": []map[string]any{}},
 			{"id": "c", "populate": false, "x": 20, "y": 0, "width": 10, "height": 10,
