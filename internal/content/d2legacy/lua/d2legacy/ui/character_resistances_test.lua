@@ -58,10 +58,7 @@ return test.suite({
             test.step(1),
             test.run(function()
                 local resistances = require("d2legacy.ui.character_resistances")
-                local shown = assert(resistances.for_player("alice"))
-                test.expect(shown.fire):equals(-100)
-                test.expect(shown.cold):equals(-100)
-                test.expect(shown.lightning):equals(-100)
+                test.expect(resistances.for_player("alice")):deep_equals({ fire = -100, cold = -100, lightning = -100 })
                 test.expect(resistances.for_player("bob")):equals(nil)
             end),
         }),

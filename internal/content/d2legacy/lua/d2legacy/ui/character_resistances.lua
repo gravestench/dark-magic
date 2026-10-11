@@ -4,8 +4,6 @@
 -- and stat sources to d2legacy.combat.defense. This module only reads that
 -- component and formats what the panel draws, and it never writes ECS state.
 
-local ecs = require("engine.ecs/v1")
-
 local M = {}
 
 -- Elements in panel order. Poison is not modeled yet, so it has no value.
@@ -26,6 +24,9 @@ end
 -- Returns nil when this process has no authoritative defense for the player,
 -- such as on a connected client, so the panel can leave the boxes empty.
 function M.for_player(player_id)
+    -- Required lazily: the overlay is registered at boot, before frontend
+    -- scenes have an ECS capability.
+    local ecs = require("engine.ecs/v1")
     for _, entity in ipairs(ecs.query({ all = { "d2legacy.player.identity", "d2legacy.combat.defense" } })) do
         if ecs.get(entity, "d2legacy.player.identity"):get("player") == player_id then
             return M.displayed(ecs.get(entity, "d2legacy.combat.defense"):snapshot())
