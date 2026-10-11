@@ -17,6 +17,7 @@ func TestPredictionRetainsAndSettlesPendingTargets(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+
 	for _, tc := range []struct {
 		name       string
 		step       time.Duration
@@ -35,6 +36,7 @@ func TestPredictionRetainsAndSettlesPendingTargets(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
+
 			hud := playeradapter.HUD{
 				Tick: 10, Position: playeradapter.HUDPosition{X: 10, Y: 20},
 				Player:   playeradapter.HUDIdentity{Class: "Amazon"},
@@ -44,6 +46,7 @@ func TestPredictionRetainsAndSettlesPendingTargets(t *testing.T) {
 					Bounds: playeradapter.HUDPosition{X: 100, Y: 100}, Radius: 1, RunDrain: 20,
 				},
 			}
+
 			got := predictPosition(hud, []gameserver.CommandIntent{
 				{TargetTick: 11, Sequence: 1, Kind: movement.MoveCommand, Payload: payload},
 			}, tc.moment, nil, tc.step, catalog)

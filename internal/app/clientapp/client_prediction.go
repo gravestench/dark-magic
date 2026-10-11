@@ -139,6 +139,7 @@ func (prediction *positionPrediction) resolveMotion() {
 	if prediction.motion == nil {
 		return
 	}
+
 	payload := *prediction.motion
 	payload.Running = payload.Running && prediction.staminaRaw > 0
 	resolved := movement.Resolve(prediction.position, payload, prediction.rates,
@@ -198,6 +199,7 @@ func (prediction *positionPrediction) forceWalk() {
 	if prediction.motion != nil {
 		prediction.motion.Running = false
 	}
+
 	effective := movement.EffectiveRates(prediction.rates, prediction.movementModifiers())
 
 	magnitude := math.Hypot(prediction.velocity.X, prediction.velocity.Y)
