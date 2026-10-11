@@ -95,7 +95,7 @@ func newLiveGameworldFixture(t *testing.T, ctx context.Context) liveGameworldFix
 		"links": []map[string]any{},
 		"rooms": []map[string]any{{"id": "blood-moor-network", "populate": true,
 			"x": 0, "y": 0, "width": 20, "height": 20,
-			"points": []map[string]any{{"x": 14, "y": 10}}}},
+			"points": []map[string]any{{"x": 14, "y": 15}}}},
 	})
 	if err != nil {
 		t.Fatal(err)

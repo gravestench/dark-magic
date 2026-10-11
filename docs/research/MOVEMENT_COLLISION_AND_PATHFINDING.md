@@ -222,24 +222,64 @@ continues to describe continuous footprint radius, while a separate
 ordinary unit motion. Players and living monsters carry both facts; inactive
 monster archive/restore retains them. The Lua movement phase processes stable
 ECS order and consults each other same-level unit's current or already-committed
-position during both axis steps. Two contenders therefore cannot swap through
+position during both axis steps. Two contenders under this Lua resolver cannot swap through
 one another or enter the same footprint, and an explicitly nonblocking unit is
 passable. Admission and warp placement can temporarily overlap footprints; a
 unit may move only when its candidate position strictly increases separation,
 preventing that transient condition from trapping locomotion. Static DT1
 collision remains an independent input.
 
+Blocker discovery includes active position/collider/occupancy footprints even
+when they lack velocity or movement bounds. This includes stationary bodies
+and monsters moved by `engine.world.velocity_mover`; only entities with
+velocity and bounds are integrated by the Lua resolver. The native monster
+mover still checks terrain without reciprocally reserving unit footprints.
+Ordinary A* still plans against static terrain. Town interaction targets are
+metadata without spatial bodies, so the NPC observations below do not yet
+constitute NPC materialization or category-policy integration.
+
 Remaining target questions include:
 
 - do monsters block players and each other during planning or only during motion resolution?
 - can friendly owned units be pushed/passed?
-- what is the collision behavior of NPCs in town?
+- what are the remaining town NPC subcategory rules beyond the holdouts below?
 - are dead bodies blocking?
 - do missiles use entity collision in path planning, contact checks, or both?
 - when multiple entities attempt to enter the same space on one tick, which stable ordering resolves the conflict?
 
 The remaining planning and category rules must extend this deterministic fixed-
 tick policy; they must not introduce mutex/timing winners.
+
+### Owned town NPC holdouts
+
+Unchanged owned LoD 1.14d on Wine 11.18 Staging was observed on 2026-10-11,
+with `Game.exe` SHA-256
+`631066c1649c4ea9ffe48bf97e24c00bca1f7a6759c21150f1a79982589adaaf`. A
+synthetic level-one Sorceress retained the stock Barbarian equipment/quest
+tail. Ordinary ground clicks and passive client-unit path reads distinguish
+two town NPC cases; raw data and imagery remain private. The immutable receipt
+has SHA-256 `e258cd2282ba21cc3f0c5490be013cd97751e067ad65202257a6e5e91686fdc4`.
+
+The stationary Rogue guard, identified by owned `MonStats` index 152 and unit
+ID 2, stayed at `(4516.5, 4626.5)`. A running player crossed its center, reaching
+a sampled separation of 0.4463 subtiles before continuing beyond it. Kashya,
+index 150 and unit ID 3, stayed at `(4498.5, 4633.5)` after an ordinary dialogue
+was closed. Ground clicks across her position from both sides produced detours:
+both traces reached a closest sampled separation of `sqrt(2)`, with a route
+point two cells south of her center. A control crossing five cells south kept
+its Y coordinate constant throughout, excluding a systematic projection bend
+without excluding every local terrain confound. These are trajectories, not a
+recovered planning algorithm or a proof of exact step-collision ordering.
+
+A passive room-grid snapshot showed `0x100` in the four cardinal neighbors of
+each NPC. Kashya's center was `0x1100`, while the guard's was `0x2100`; nearby
+cells were clear. Those distinct raw masks support the behavioral distinction
+without assigning universal meanings to their bits. Both owned rows had
+`Align=1`, `soft=1`, and a 2-by-2 size, so those facts alone do not explain the
+difference. Other NPCs, actual player/hireling/summon categories, and whether
+each category participates in initial planning or later resolution remain
+holdouts. A circle-radius approximation must not be presented as the measured
+retail footprint.
 
 ## Doors and objects
 
@@ -688,6 +728,8 @@ MV4.
 Deterministic same-level unit-footprint occupancy/contact resolution now covers
 simultaneous contenders, explicit nonblocking policy, archive/restore, and
 checkpoint parity, including escape from a pre-existing admission/warp overlap.
+Stationary and native-moved blocking footprints are included in Lua-controlled
+step checks without acquiring Lua movement ownership.
 Extend it with target-verified unit categories and decide which dynamic
 footprints affect A* planning before calling MV3 complete.
 
