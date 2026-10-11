@@ -366,6 +366,29 @@ The remaining player locomotion model needs:
 
 All of these are authoritative. HUD stamina is a snapshot of this system, not its owner.
 
+## Movement action versus animation speed
+
+Gameplay distance per tick and sprite/3D animation playback are separate state,
+but Expansion locomotion derives both rates from the same effective velocity
+percentage. Integrated distance never advances the animation clock.
+
+Recommended split:
+
+```text
+LocomotionState
+  authoritative world velocity / path policy / facing
+
+AnimationState
+  logical mode WL/RN/etc.
+  AnimData frame count/events
+  WL/RN runtime base 213/101 scaled by effective velocity percentage
+```
+
+The retained player playback integrates presentation/network time. A raw
+position correction or collision-shortened displacement does not retime it;
+FRW or chill does. Rate changes preserve current frame phase rather than
+retroactively applying the new rate to all time since mode start.
+
 ## Owned one-point Vitality allocation observations
 
 Issue #377's arithmetic boundary was measured on 2026-10-11 in unchanged owned
@@ -477,29 +500,6 @@ The arithmetic order is established for these cases. Exact CPU instruction
 order, simultaneous allocation/equipment changes, and bulk allocations remain
 separate holdouts. Partial and zero cases for Sorceress, Necromancer, Paladin,
 and Druid, and literal zero for Assassin, remain unmeasured.
-
-## Movement action versus animation speed
-
-Gameplay distance per tick and sprite/3D animation playback are separate state,
-but Expansion locomotion derives both rates from the same effective velocity
-percentage. Integrated distance never advances the animation clock.
-
-Recommended split:
-
-```text
-LocomotionState
-  authoritative world velocity / path policy / facing
-
-AnimationState
-  logical mode WL/RN/etc.
-  AnimData frame count/events
-  WL/RN runtime base 213/101 scaled by effective velocity percentage
-```
-
-The retained player playback integrates presentation/network time. A raw
-position correction or collision-shortened displacement does not retime it;
-FRW or chill does. Rate changes preserve current frame phase rather than
-retroactively applying the new rate to all time since mode start.
 
 ## Knockback
 
