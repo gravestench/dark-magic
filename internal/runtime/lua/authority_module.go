@@ -1,6 +1,7 @@
 package modruntime
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
 
@@ -52,9 +53,13 @@ func registerAuthorityState(stores *simulation.StateStore) lua.LGFunction {
 	}
 }
 
-// readAuthorityState parses read authority state at the package boundary so malformed input fails before state
-// publication.
+// Cached decoded values remain private; every read returns an independent table.
 func readAuthorityState(stores *simulation.StateStore) lua.LGFunction {
+	type cachedState struct {
+		data  []byte
+		value lua.LValue
+	}
+	cache := map[string]cachedState{}
 	return func(state *lua.LState) int {
 		id := state.CheckString(1)
 
@@ -64,16 +69,30 @@ func readAuthorityState(stores *simulation.StateStore) lua.LGFunction {
 			return 1
 		}
 
-		decoded, err := decodeLuaState(state, value.Data)
-		if err != nil {
-			state.RaiseError("decode authoritative state %q: %v", id, err)
-			return 0
+		cached, present := cache[id]
+		if !present || !bytes.Equal(cached.data, value.Data) {
+			decoded, err := decodeLuaState(state, value.Data)
+			if err != nil {
+				state.RaiseError("decode authoritative state %q: %v", id, err)
+				return 0
+			}
+			cached = cachedState{data: value.Data, value: decoded}
+			cache[id] = cached
 		}
 
-		state.Push(decoded)
+		state.Push(copyRegisteredLuaValue(state, cached.value))
 
 		return 1
 	}
+}
+
+func copyRegisteredLuaValue(state *lua.LState, value lua.LValue) lua.LValue {
+	if table, ok := value.(*lua.LTable); ok {
+		copy := state.CreateTable(table.Len(), 0)
+		table.ForEach(func(key, entry lua.LValue) { copy.RawSet(key, copyRegisteredLuaValue(state, entry)) })
+		return copy
+	}
+	return value
 }
 
 // replaceAuthorityState returns the replace authority state observation under the service lock so callers cannot
