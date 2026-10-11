@@ -142,6 +142,8 @@ return test.suite({
                 test.expect(definitions[50].reaction_duration_per_level[2]):equals(25)
                 test.expect(definitions[60].reaction):equals("missile_hit_return")
                 test.expect(definitions[60].reaction_missile.missile_id):equals("chillingarmorbolt")
+                test.expect(definitions[60].reaction_missile.speed_per_tick):equals(27 / 32)
+                test.expect(definitions[60].reaction_missile.maximum_range):equals(675 / 32)
                 test.expect(definitions[60].reaction_missile.directions):equals(16)
                 test.expect(definitions[60].reaction_missile.transparency_mode):equals(1)
             end)

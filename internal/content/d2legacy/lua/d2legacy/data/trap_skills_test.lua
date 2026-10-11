@@ -200,9 +200,9 @@ local missiles = {
     missile("web-ground", { Vel = "0", CollideKill = "" }),
     missile("blade-sentinel-missile"),
     missile("blade-fury-missile"),
-    missile("charged-shot"),
+    missile("charged-shot", { Vel = "12" }),
     missile("wake-fire-shot"),
-    missile("lightning-shot"),
+    missile("lightning-shot", { Vel = "30" }),
     missile("inferno-shot"),
     missile("death-shot"),
     missile("blade-shield-attachment", { CltSubMissile1 = "blade-shield-overlay" }),
@@ -253,6 +253,9 @@ return test.suite({
                     test.expect(definitions[id].skill_id):equals(id)
                     test.expect(definitions[id].shape):equals(shapes[id])
                 end
+                test.expect(definitions[261].speed_per_tick):equals(36864 / 65536)
+                test.expect(definitions[271].speed_per_tick):equals(92160 / 65536)
+                test.expect(definitions[256].speed_per_tick):equals(0)
                 test.expect(definitions[251].field_count_base):equals(nil)
                 test.expect(definitions[256].field_count_synergy_skill_id):equals(261)
                 test.expect(definitions[257].weapon_fraction):equals(96)

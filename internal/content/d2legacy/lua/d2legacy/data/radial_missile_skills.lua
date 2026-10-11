@@ -1,6 +1,7 @@
 -- Decode exact-ID, targetless radial missile skills from owned 1.14d records.
 
 local records = require("engine.records/v1")
+local missile_motion = require("d2legacy.policy.missile_motion")
 local M = {}
 
 local function index(rows, column)
@@ -72,7 +73,7 @@ local function decode(skill, missiles)
         effect_delay = 1,
         complete_delay = 2,
         requires_point_target = false,
-        speed_per_tick = integer(missile, "Vel", label, 1) / 25,
+        speed_per_tick = missile_motion.speed_per_tick(integer(missile, "Vel", label, 1)),
         lifetime_ticks = integer(missile, "Range", label, 1),
         collision_radius = integer(missile, "Size", label, 1) / 2,
         destroy_on_contact = false,

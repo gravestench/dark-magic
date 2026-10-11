@@ -87,6 +87,25 @@ func TestOwnedTargetAssassinTrapFamilyRecords(t *testing.T) {
 		}
 	}
 
+	missiles, err := store.Load("data/global/excel/Missiles.txt")
+	if err != nil {
+		t.Fatal(err)
+	}
+	for name, fields := range map[string]map[string]string{
+		"sentrylightningbolt": {"Id": "526", "Vel": "30", "MaxVel": "30", "Range": "10", "pSrvDoFunc": "1"},
+		"sentrychargedbolt":   {"Id": "495", "Vel": "12", "MaxVel": "12", "Range": "98", "pSrvDoFunc": "1"},
+	} {
+		row := rowBy(missiles, "Missile", name)
+		if row == nil {
+			t.Fatalf("owned Expansion 1.14d sentry missile %s is missing", name)
+		}
+		for field, want := range fields {
+			if row[field] != want {
+				t.Fatalf("owned Expansion 1.14d missile %s %s = %q, want %q", name, field, row[field], want)
+			}
+		}
+	}
+
 	inferno := rowBy(skills, "Id", "272")
 	formula := inferno["EDmgSymPerCalc"]
 

@@ -1,6 +1,7 @@
 -- Decode explicitly supported targetless, timed self-state skills.
 
 local records = require("engine.records/v1")
+local missile_motion = require("d2legacy.policy.missile_motion")
 local skill_modifiers = require("d2legacy.data.skill_modifiers")
 local M = {}
 
@@ -99,9 +100,9 @@ local function missile_definition(row, missiles, label)
     return {
         trajectory = "straight",
         missile_id = missile_id,
-        speed_per_tick = velocity / 25,
+        speed_per_tick = missile_motion.speed_per_tick(velocity),
         lifetime_ticks = lifetime,
-        maximum_range = velocity * lifetime / 25,
+        maximum_range = missile_motion.speed_per_tick(velocity) * lifetime,
         collision_radius = required_integer(missile, "Size", label) / 2,
         destroy_on_contact = true,
         next_hit_delay = 0,

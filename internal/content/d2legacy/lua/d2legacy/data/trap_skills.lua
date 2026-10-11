@@ -3,6 +3,7 @@
 -- reusable device, projectile, channel, or periodic-state transactions.
 
 local records = require("engine.records/v1")
+local missile_motion = require("d2legacy.policy.missile_motion")
 local M = {}
 
 local RAW = 256
@@ -127,7 +128,7 @@ local function missile_definition(row, label)
     local cel = assert(row.CelFile and row.CelFile ~= "" and row.CelFile, label .. " missile has no CelFile")
     return {
         missile_id = row.Missile,
-        speed_per_tick = optional_integer(row, "Vel", 0) / 25,
+        speed_per_tick = missile_motion.speed_per_tick(optional_integer(row, "Vel", 0)),
         lifetime_ticks = integer(row, "Range", label),
         collision_radius = optional_integer(row, "Size", 1) / 2,
         destroy_on_contact = truth(row, "CollideKill"),

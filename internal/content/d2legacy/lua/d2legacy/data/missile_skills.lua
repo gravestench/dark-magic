@@ -5,6 +5,7 @@
 -- contract. Unknown function/flag combinations fail instead of being guessed.
 
 local records = require("engine.records/v1")
+local missile_motion = require("d2legacy.policy.missile_motion")
 local skill_modifiers = require("d2legacy.data.skill_modifiers")
 
 local M = {}
@@ -168,9 +169,9 @@ local function decode(skill, missile, missiles, skills_by_name, behavior)
         effect_delay = 1,
         complete_delay = 2,
         requires_point_target = true,
-        speed_per_tick = velocity / 25,
+        speed_per_tick = missile_motion.speed_per_tick(velocity),
         lifetime_ticks = lifetime,
-        maximum_range = velocity * lifetime / 25,
+        maximum_range = missile_motion.speed_per_tick(velocity) * lifetime,
         collision_radius = required_integer(missile, "Size", nil, label) / 2,
         destroy_on_contact = true,
         next_hit_delay = 0,
