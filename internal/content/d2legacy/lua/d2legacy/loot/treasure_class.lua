@@ -220,9 +220,14 @@ local function weighted_entry(class, total, no_drop)
 end
 
 local function random_entries(class, context)
+    -- Native picks stop when no item has weight, even with NoDrop set, so an
+    -- empty generated family such as 1.14d bow15 drops nothing.
+    local item_total = weighted_total(class) - class.no_drop
+    if item_total <= 0 then
+        return {}
+    end
     local no_drop = adjusted_no_drop(class, context)
-    local total = weighted_total(class) - class.no_drop + no_drop
-    assert(total > 0, "treasure class has no weighted outcomes")
+    local total = item_total + no_drop
 
     local result = {}
     for _ = 1, class.picks do

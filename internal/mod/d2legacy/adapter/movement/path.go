@@ -137,9 +137,32 @@ func (source *MovementSource) replaceAcceptedRoute(
 		return
 	}
 
-	source.path = path
+	source.path = routeCorners(path, current)
 	copyTarget := *target
 	source.pathTarget = &copyTarget
+}
+
+// routeCorners removes intermediate stops on the same segment without changing
+// its collision-checked geometry, including the actual fractional start.
+// The last cell remains an anchor for sub-cell held-pointer endpoint updates.
+func routeCorners(path []gameworld.Point, current gameworld.Point) []gameworld.Point {
+	if len(path) < 3 {
+		return path
+	}
+	result := make([]gameworld.Point, 0, len(path))
+	result = append(result, path[0])
+	previous := current
+	for i := 1; i < len(path)-2; i++ {
+		point, next := path[i], path[i+1]
+		ax, ay := point.X-previous.X, point.Y-previous.Y
+		bx, by := next.X-point.X, next.Y-point.Y
+		if ax*by == ay*bx && ax*bx+ay*by > 0 {
+			continue
+		}
+		result = append(result, point)
+		previous = point
+	}
+	return append(result, path[len(path)-2:]...)
 }
 
 // retainRouteOrStop keeps accepted movement alive; only an initial blocked click resolves to a stop.

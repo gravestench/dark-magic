@@ -11,6 +11,37 @@ return test.suite({
     tier = "fast",
     covers = { "internal/game/player" },
     cases = {
+        test.case("exhaustion_preserves_a_close_waypoint_velocity_cap", {
+            test.submit_system({
+                tick = 1,
+                sequence = 1,
+                kind = "system.player.enter",
+                payload = fixtures.player_entry({ x = 10, y = 12, level_id = 2 }),
+            }),
+            test.step(1),
+            test.run(function()
+                local ecs = require("engine.ecs/v1")
+                ecs.get(player(), "d2legacy.player.vitals"):set("stamina_raw", 1)
+            end),
+            test.submit({
+                tick = 2,
+                sequence = 1,
+                player = "alice",
+                kind = "player.move",
+                payload = { x = 0, y = 0, running = true, target = { x = 10.25, y = 12 } },
+            }),
+            test.step(4),
+            test.run(function()
+                local ecs = require("engine.ecs/v1")
+                local entity = player()
+                local position = ecs.get(entity, "d2legacy.world.position")
+                local motion = ecs.get(entity, "d2legacy.player.motion")
+                test.expect(position:get("x")):equals(10.25)
+                test.expect(position:get("y")):equals(12)
+                test.expect(motion:get("running")):equals(false)
+            end),
+            test.expect_checkpoint_parity(1),
+        }),
         test.case("wilderness_running_drains_fixed_point_stamina_and_falls_back_to_walk", {
             test.submit_system({
                 tick = 1,
@@ -46,7 +77,7 @@ return test.suite({
                 test.expect(vitals:get("stamina")):equals(0)
                 test.expect(mode:get("running")):equals(false)
                 test.expect(animation:get("mode")):equals("WL")
-                test.assert(math.abs(velocity:get("x") - 6) < 0.000000001, [=[walk fallback velocity is six]=])
+                test.assert(math.abs(velocity:get("x") - 9.375) < 0.000000001, "walk fallback rate")
             end),
         }),
         test.case("zero_stamina_rejects_run_mode_without_rejecting_movement", {
@@ -71,7 +102,7 @@ return test.suite({
                 local mode = ecs.get(entity, "d2legacy.player.movement_mode")
                 local velocity = ecs.get(entity, "d2legacy.world.velocity")
                 test.expect(mode:get("running")):equals(false)
-                test.assert(math.abs(velocity:get("x") - 6) < 0.000000001, [=[zero stamina moves at walk rate]=])
+                test.assert(math.abs(velocity:get("x") - 9.375) < 0.000000001, "zero stamina moves at walk rate")
             end),
         }),
         test.case("idle_and_town_motion_recover_at_full_and_half_rates", {
@@ -128,7 +159,10 @@ return test.suite({
                 local stats = ecs.get(entity, "d2legacy.player.movement_stats")
                 local velocity = ecs.get(entity, "d2legacy.world.velocity")
                 test.expect(stats:get("item_fastermovevelocity")):equals(30)
-                test.assert(math.abs(velocity:get("x") - 7.5) < 0.000000001, [=[30 item FRW becomes 25 effective FRW]=])
+                test.assert(
+                    math.abs(velocity:get("x") - 11.71875) < 0.000000001,
+                    "30 item FRW becomes 25 effective FRW"
+                )
             end),
         }),
     },

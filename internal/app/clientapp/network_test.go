@@ -108,8 +108,8 @@ func TestPendingMovementPredictionReplaysFromCanonicalPosition(t *testing.T) {
 		{TargetTick: 11, Sequence: 1, Kind: "player.move", Payload: payload},
 		{TargetTick: 12, Sequence: 2, Kind: "player.move", Payload: payload},
 	}, networkclock.Moment{Tick: 12}, nil, networkInputStep, catalog)
-	if math.Abs(got.X-10.72) > 1e-12 || got.Y != 20 {
-		t.Fatalf("predicted position = %#v, want x=10.72 y=20", got)
+	if math.Abs(got.X-11.125) > 1e-12 || got.Y != 20 {
+		t.Fatalf("predicted position = %#v, want x=11.125 y=20", got)
 	}
 }
 

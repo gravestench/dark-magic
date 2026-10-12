@@ -1,6 +1,12 @@
 # Movement, collision, pathfinding, and room-streaming research
 
-Status: implementation-oriented research baseline for expansion 1.14d. This document deliberately distinguishes **Dark Magic's current deterministic movement policy** from older behavior recovered through D2MOO. That 1.10f code is secondary evidence only and must be revalidated where the 1.14d target may differ. The current implementation is already useful and should be extended rather than replaced wholesale.
+Status: implementation-oriented research baseline from owned Expansion 1.14d
+evidence. Dark Magic targets 1.13c and 1.14d feature parity, but 1.13c movement
+equivalence remains unverified. This document distinguishes **Dark Magic's
+current deterministic movement policy** from older behavior recovered through
+D2MOO. That 1.10f code is secondary evidence only and must be revalidated
+where either target patch may differ. The current implementation is already
+useful and should be extended rather than replaced wholesale.
 
 ## Executive conclusion
 
@@ -316,6 +322,53 @@ joins the velocity channel. Walk begins at 100%; run begins at the integer
 skill/state/armor terms then join before the final 25% floor. This one integer
 rule is shared by authority, prediction, and player locomotion presentation.
 
+Raw `CharStats` velocities are not subtiles per second. After resolving the
+percentage, the shared rule truncates `WalkVelocity * 256 * percentage / 100`,
+then converts that velocity to subtiles per second with `25 / 4096`. For the
+owned 6/9 class facts, baseline walk/run is 9.375/14.0625 subtiles per second.
+The prior direct 6/9 interpretation moved at 64% of the measured target rate.
+
+### Owned positive-speed holdouts
+
+On 2026-10-11, the unchanged Windows LoD 1.14d reference under Wine was sampled
+through ordinary ground movement and Burst of Speed casts. Two private,
+synthetic Assassin saves supplied skill ID 258 at ranks 1 and 20, with raw
+level/XP and the selected skill chain checked before casting. They retain the
+stock Barbarian equipment and quest/item tail. A second candidate unit and
+the client agreed on rank-one steps; the candidate's server role remains an
+inference. Rank 20 was sampled from the client unit.
+
+The immutable private receipt `speed-evidence-index-001.json` has SHA-256
+`ab0d6445f9414d0e6e49aff0cbf50e67dbb948c0d27f87ea03fce92b3721f84b`.
+It pins the fixtures, closed watches, ordinary inputs, selected-skill reads,
+screenshots, source hashes, exclusions, and observed stat transitions.
+Consecutive straight-axis samples had these dominant 16.16 position deltas:
+
+| State | Walk percentage / step | Run percentage / step | attackrate / other_animrate |
+| --- | --- | --- | --- |
+| Baseline and after expiry | 100 / 24576 | 150 / 36864 | 100 / 100 |
+| Burst rank 1 | 123 / 30224 | 173 / 42512 | 121 / 121 |
+| Burst rank 20 | 161 / 39552 | 211 / 51840 | 152 / 152 |
+
+Dominant-step intervals were approximately 40 ms. All six deltas fit the
+integer velocity conversion above. The run observations distinguish adding
+the skill contribution from multiplying the 150% run baseline by it. Raw
+speed stats returned to baseline approximately 120 and 348 seconds after the
+respective effects began, followed by baseline movement repeats. Passive reads
+are non-atomic; observation timestamps do not identify exact instructions.
+
+The corrected rate also requires close-target protection: authority caps a
+waypoint step by the remaining distance and actual tick duration. Prediction
+re-resolves retained pending target input each replay step, and exhaustion
+preserves a smaller target-capped velocity. These are regression safeguards,
+not proof of retail arrival or target redirection policy. Prediction seeded
+only from a HUD still lacks the authority's retained target, and the connected
+client currently supplies a 40 ms step.
+
+This advances #375's positive movement evidence only. It does not enable
+Burst of Speed content, prove attack timing, settle extreme modifiers or
+cold/freeze policy, or establish bit-exact diagonal/terminal position rounding.
+
 Owned Expansion 1.14d `Armor.txt` rows now pin representative zero/five/ten
 speed penalties for both torso armor and shields, and equipment coverage proves
 separate equipped pieces stack. A checkpointed generic timed `cold` source
@@ -365,6 +418,30 @@ The remaining player locomotion model needs:
 - terrain/skill-specific movement modifiers if present.
 
 All of these are authoritative. HUD stamina is a snapshot of this system, not its owner.
+
+## Straight-route waypoint cadence
+
+Player route commands skip only same-direction collinear intermediate stops.
+Turns, reversals, the actual fractional start approach, and the final two
+nodes remain. The penultimate node anchors sub-cell held-pointer endpoint
+updates, so those updates cannot redirect an entire long segment.
+
+`TestStraightRouteMatchesDirectMovementCadence` compares the production command
+source, movement resolver, and collision integrator with a direct target at the
+same configured rates. Its high-rate synthetic case distinguishes the old
+per-cell route, which can reverse after overshooting intermediate nodes.
+`TestOwnedPointMovementMaintainsConfiguredRoutePace` checks consecutive full-rate
+steps and arrival through ordinary admission, pointer intent, managed Lua
+motion, and collision integration with owned data at 25 Hz.
+
+These checks establish route cadence at the configured scale. Matching native
+1.14d distance per tick additionally requires the movement-scale conversion and
+its target-distance clamp. Historical combined application traces showed
+running steps alternating between 0.5625 and 0.4375 subtiles before intermediate
+stops were removed. Those traces do not establish native-rate parity on a branch
+without that conversion. Native directional observations remain qualified
+context, not proof of retail path selection, corner timing, mouse projection,
+or bit-exact diagonal/terminal rounding. This advances #375 only partially.
 
 ## Movement action versus animation speed
 
@@ -885,9 +962,9 @@ probe rather than a compatibility claim.
 2. A*/IDA* neighbor order, score/tie-break behavior and maximum lengths.
 3. Straight/toward/wall-follow algorithms and fallback rules.
 4. 16-bit fractional position stepping and exact rounding.
-5. Velocity/acceleration update cadence and unit conversion.
-6. Remaining fixed-point path-velocity rounding after the pinned `CharStats`
-   class conversion.
+5. Velocity/acceleration update cadence and conversion for other unit families.
+6. Fixed-point diagonal and terminal path stepping beyond the player
+   straight-axis baseline and positive-speed holdouts.
 7. Expansion 1.14d holdout vectors for the implemented drain/recovery cadence,
    town exception, torso multiplier, and exhaustion tick.
 8. Faster Run/Walk, slows, chill and state ordering.

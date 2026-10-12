@@ -188,8 +188,9 @@ func EffectiveRates(base ClassRates, modifiers Modifiers) ClassRates {
 	walkPercentage := EffectiveVelocityPercent(base, false, modifiers)
 	runPercentage := EffectiveVelocityPercent(base, true, modifiers)
 	walk := base.Walk
-	base.Walk = walk * float64(walkPercentage) / 100
-	base.Run = walk * float64(runPercentage) / 100
+	// Retail truncates the 8.8 velocity before converting to a 16.16 path step.
+	base.Walk = float64(int64(walk*256*float64(walkPercentage)/100)) * 25 / 4096
+	base.Run = float64(int64(walk*256*float64(runPercentage)/100)) * 25 / 4096
 
 	return base
 }
@@ -229,9 +230,14 @@ func MovementAnimationRate(base ClassRates, running bool, modifiers Modifiers) i
 
 // Resolve applies the production d2legacy input policy without touching ECS.
 // Both authoritative Lua and client prediction call this implementation.
-func Resolve(position gameworld.Point, payload MovePayload, rates ClassRates, modifiers ...Modifiers) ResolvedMovement {
+func Resolve(position gameworld.Point, payload MovePayload, rates ClassRates, elapsedSeconds float64, modifiers ...Modifiers) ResolvedMovement {
+	modifier := Modifiers{}
 	if len(modifiers) > 0 {
-		rates = EffectiveRates(rates, modifiers[0])
+		modifier = modifiers[0]
+	}
+	rates = EffectiveRates(rates, modifier)
+	if elapsedSeconds <= 0 || math.IsNaN(elapsedSeconds) || math.IsInf(elapsedSeconds, 0) {
+		return ResolvedMovement{}
 	}
 
 	x, y := float64(payload.X), float64(payload.Y)
@@ -245,6 +251,11 @@ func Resolve(position gameworld.Point, payload MovePayload, rates ClassRates, mo
 	speed := rates.Walk
 	if payload.Running {
 		speed = rates.Run
+	}
+	if payload.Target != nil {
+		// A retained waypoint must settle instead of oscillating across a close target.
+		distance := math.Hypot(payload.Target.X-position.X, payload.Target.Y-position.Y)
+		speed = min(speed, distance/elapsedSeconds)
 	}
 
 	return ResolvedMovement{

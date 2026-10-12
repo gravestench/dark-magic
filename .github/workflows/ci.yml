@@ -70,9 +70,7 @@ jobs:
       - name: Unit and integration tests
         run: make test
       - name: Install Lua quality tools
-        run: |
-          brew install lua@5.4 stylua
-          echo "$(brew --prefix lua@5.4)/bin" >> "$GITHUB_PATH"
+        run: brew install stylua
       - name: D2legacy Lua harness hardening
         run: make test-lua-hardening
       - name: Architecture boundaries

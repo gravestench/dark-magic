@@ -48,5 +48,45 @@ return test.suite({
                 )
             end),
         }),
+        test.case("redirected_group_uses_target_row_position", {
+            test.run(function()
+                local played
+                test.mock_module("engine.records/v1", {
+                    load = function()
+                        return {
+                            {
+                                Sound = "redirect_source",
+                                Redirect = "2",
+                                FileName = "source.wav",
+                                ["Group Weight"] = "9",
+                            },
+                            { Sound = "unrelated", FileName = "neighbor.wav", ["Group Weight"] = "9" },
+                            {
+                                Sound = "target",
+                                FileName = "target-first.wav",
+                                ["Group Size"] = "2",
+                                ["Group Weight"] = "1",
+                            },
+                            { Sound = "target_alt", FileName = "target-second.wav", ["Group Weight"] = "3" },
+                            { Sound = "invalid_redirect", Redirect = "99", FileName = "fallback.wav" },
+                        }
+                    end,
+                }, { "load" })
+                test.mock_module("engine.audio/v1", {
+                    exists = function()
+                        return true
+                    end,
+                    play = function(path)
+                        played = path
+                        return path
+                    end,
+                }, { "exists", "play" })
+                local audio = require("d2legacy.audio")
+                audio.play_record("redirect_source", 2)
+                test.expect(played):equals("target-second.wav")
+                audio.play_record("invalid_redirect", 0)
+                test.expect(played):equals("fallback.wav")
+            end),
+        }),
     },
 })

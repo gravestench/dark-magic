@@ -147,6 +147,14 @@ Current state of each consumer of the game's selected difficulty:
   panel UI and path-following "waypoints" in movement code. Per-difficulty
   activation belongs with the waypoint world object (G12) and durable
   character state (G15).
+- **Choosing the difficulty.** The standalone server takes
+  `--game-difficulty normal|nightmare|hell`. The client takes the same flag
+  for offline and self-hosted games, applied to both the game rules and the
+  generated entry world. A joiner must use the host's value, since difficulty
+  is part of the runtime identity. There is no in-game difficulty picker yet:
+  the offline session is built before character selection, and no
+  progression exists to gate the choice, so any character can enter any
+  difficulty.
 
 ## Resistance penalty
 
@@ -306,8 +314,9 @@ difficulty, and any other defender uses 100. When leech applies, life and mana
 leech are shifted left by 6 (fixed point), and then, only for player attackers,
 divided by `LifeStealDivisor` and `ManaStealDivisor`. Owned 1.14d
 `patch_d2.mpq` authors 1 / 2 / 3 for both columns. The base expansion
-`d2exp.mpq` still has 1 / 2 / 2, so the Hell value changed in a later patch;
-only the 1.14d row is in scope.
+`d2exp.mpq` still has 1 / 2 / 2, so the Hell value changed in a later patch.
+The implemented value is supported by owned 1.14d data; the 1.13c row must be
+checked before claiming parity for this rule.
 
 Current implementation: `d2legacy.policy.leech` runs after landed basic melee
 and projectile hits. Players and hirelings (owned units of the `hireable` pet

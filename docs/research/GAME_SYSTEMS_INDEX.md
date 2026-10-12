@@ -2,9 +2,11 @@
 
 Status: living research index. All 28 gameplay workstreams now have implementation-oriented baselines; this table tracks research maturity, not implementation completion.
 
-Target: expansion-only Diablo II: Lord of Destruction 1.14d. Classic and
-earlier-patch compatibility are out of scope; older recovered sources are
-secondary evidence where 1.14d behavior has not yet been measured.
+Target: feature parity with expansion Diablo II: Lord of Destruction 1.13c and
+1.14d. Classic and other patch versions are out of scope. Most owned data
+and runtime observations currently come from 1.14d; their patch labels remain
+explicit, and 1.13c equivalence is not assumed. Older recovered sources are
+secondary evidence where target behavior has not yet been measured.
 
 Research program: [GAME_SYSTEMS_RESEARCH_PROGRAM.md](GAME_SYSTEMS_RESEARCH_PROGRAM.md).
 Gameplay source inventory: [SYSTEMS_SOURCE_MATRIX.md](SYSTEMS_SOURCE_MATRIX.md).

@@ -7,6 +7,34 @@ return test.suite({
     tier = "fast",
     covers = { "internal/game/player" },
     cases = {
+        test.case("close_running_waypoint_settles_without_oscillation", {
+            test.submit_system({
+                tick = 1,
+                sequence = 1,
+                kind = "system.player.enter",
+                payload = fixtures.player_entry({ x = 10, y = 12 }),
+            }),
+            test.step(1),
+            test.submit({
+                tick = 2,
+                sequence = 1,
+                player = "alice",
+                kind = "player.move",
+                payload = { x = 0, y = 0, running = true, target = { x = 10.3, y = 12 } },
+            }),
+            test.step(8),
+            test.run(function()
+                local ecs = require("engine.ecs/v1")
+                local player = ecs.query({ all = { "d2legacy.player.identity" } })[1]
+                local position = ecs.get(player, "d2legacy.world.position")
+                local velocity = ecs.get(player, "d2legacy.world.velocity")
+                test.expect(position:get("x")):equals(10.3)
+                test.expect(position:get("y")):equals(12)
+                test.expect(velocity:get("x")):equals(0)
+                test.expect(velocity:get("y")):equals(0)
+            end),
+            test.expect_checkpoint_parity(1),
+        }),
         test.case("players_admitted_at_one_realm_anchor_receive_independent_movement_space", {
             test.submit_system({
                 tick = 1,
@@ -108,7 +136,7 @@ return test.suite({
                 local facing = ecs.get(players[1], "d2legacy.world.facing")
                 local mode = ecs.get(players[1], "d2legacy.player.movement_mode")
                 local motion = ecs.get(players[1], "d2legacy.player.motion")
-                local expected = 9 * 0.7071067811865476
+                local expected = 14.0625 * 0.7071067811865476
                 test.assert(
                     math.abs(velocity:get("x") - expected) < 0.000000001,
                     [=[math.abs(velocity:get("x") - expected) < 0.000000001]=]

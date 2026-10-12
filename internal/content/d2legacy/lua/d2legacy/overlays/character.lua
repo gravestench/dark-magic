@@ -13,6 +13,7 @@ local locale = require("engine.locale/v1")
 local controls = require("d2legacy.ui.controls")
 local button = require("d2legacy.ui.button")
 local text = require("d2legacy.ui.text")
+local resistances = require("d2legacy.ui.character_resistances")
 
 local manifest = assert(data.load_manifest("manifests/presentation.v1.json", "d2legacy.presentation/v1"))
 local screen = manifest.screens.character
@@ -46,6 +47,21 @@ local function displayed_value(character, field)
 
     -- Other manifest fields are direct scalar stats. Missing data displays as 0.
     return stats[field] or 0
+end
+
+-- Redraw a resistance only when it changes. Values are absent until the player
+-- is admitted, and on a connected client, which has no authoritative defense.
+local function refresh_resistances(self)
+    local live = resistances.local_player() or {}
+    for _, entry in ipairs(self.resistance_boxes or {}) do
+        local value = live[entry.box.element]
+        if value ~= entry.value then
+            entry.value = value
+            local shown = value and tostring(value) or ""
+            local _, height = text.set(entry.node, screen.value_style, shown, 37)
+            entry.node:set_position(entry.box.x + offset_x, entry.box.y + offset_y + height / 2)
+        end
+    end
 end
 
 return {
@@ -88,6 +104,15 @@ return {
             text.create(self.root, screen.value_style, displayed_value(character, value.field), value.x + offset_x, value.y + offset_y, 100)
         end
 
+        -- Resistances come from live authority, not the save, because the session's
+        -- difficulty penalty applies only in game. update() fills the value nodes.
+        self.resistance_boxes = {}
+        for _, box in ipairs(screen.resistances) do
+            text.create(self.root, screen.label_style, assert(locale.text(box.label)), box.label_x + offset_x, box.label_y + offset_y, 95)
+            self.resistance_boxes[#self.resistance_boxes + 1] = { box = box, node = render.create("modal", self.root) }
+        end
+        refresh_resistances(self)
+
         local close = screen.close
         local close_placement = {
             sheet=close.sheet, palette=close.palette, up_frame=close.up_frame, down_frame=close.down_frame,
@@ -105,6 +130,7 @@ return {
 
     update = function(self)
         self.controls:update()
+        refresh_resistances(self)
 
         -- The panel's own action key and universal Cancel both close it.
         if input.pressed("character") or input.pressed("cancel") then

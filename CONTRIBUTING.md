@@ -16,6 +16,21 @@ AI-assisted code is not second-class code; unverified code is. Large generated
 diffs are also not evidence of progress. The goal is a small, coherent,
 reviewable slice that advances a real acceptance boundary.
 
+## Agentic coding requires Superpowers
+
+Install the [Superpowers plugin](https://github.com/obra/superpowers#installation)
+in the coding agent's environment before using that agent to change code in this
+repository. Start with its `using-superpowers` skill and follow the applicable
+skills for the task. The upstream guide covers Codex App, Codex CLI, and other
+supported agents; install it separately in each environment you use. If it is
+unavailable, pause agentic code edits and tell the maintainer. Human-only
+contributions do not require the plugin.
+
+Superpowers governs the agent's development process. The linked issue and
+milestone still define the acceptance boundary, and this repository's research
+and architecture documents still define evidence and ownership. A skill's
+generic workflow does not establish Diablo II behavior or close an issue.
+
 ## Point the agent at the repository first
 
 Do not begin with a blank prompt and general Diablo II knowledge. Give the agent
@@ -53,11 +68,15 @@ exact acceptance boundary, the current owner of each mechanism and policy, the
 existing interfaces, and the repository evidence supporting the requested
 behavior.
 
-Propose a small coherent plan, then implement it without creating a parallel
-authority. Add executable acceptance coverage, run the relevant test suites,
-and perform a fresh review for correctness, architecture, determinism, source
-provenance, security, dead code, overstated claims, and egregious performance
-problems. Report the commands run and anything that remains unverified.
+Use the Superpowers plugin, starting with `using-superpowers`, and follow its
+applicable skills for this task.
+
+Complete the applicable Superpowers design and planning steps, then implement
+without creating a parallel authority. Add executable acceptance coverage, run
+the relevant test suites, and perform a fresh review for correctness,
+architecture, determinism, source provenance, security, dead code, overstated
+claims, and egregious performance problems. Report the commands run and
+anything that remains unverified.
 ```
 
 Adapt that prompt to the task. Ask the agent to cite concrete paths, symbols,
@@ -278,6 +297,78 @@ private keys, account data, private save files, proprietary material, or
 unredacted sensitive logs. Be equally careful before sending such material to a
 hosted model provider. Use synthetic fixtures, hashes, schemas, narrow excerpts,
 and local tooling wherever possible.
+
+## Rules for AI-assisted work
+
+The guidance above describes how to work well. The rules in this section are
+requirements. They apply to every pull request, but they exist mostly because
+coding agents produce plausible work quickly and drift beyond the task unless
+told not to. A pull request that breaks one of them may be returned without a
+code review.
+
+### Stay within scope
+
+1. **Start from an issue.** Every pull request links an open issue with
+   `Closes #123` or `Refs #123`. If no issue covers the work, open one with the
+   Implementation template and agree the scope before writing code. A typo, a
+   broken build, or a fix to a recently merged pull request may link that pull
+   request instead.
+2. **Change only what the issue asks for.** Refactors, renames, formatting of
+   untouched files, dependency updates, new abstractions, and "while I was
+   here" fixes belong in their own issue and pull request, even when they are
+   improvements. Revert anything the agent changed outside the task.
+3. **Report other problems instead of fixing them.** When the work uncovers a
+   bug or gap outside the issue, list it in the pull request's scope section or
+   open a new issue for it.
+4. **Split work that outgrows its issue.** If the change becomes much larger
+   than the issue describes, stop and ask whether to split it before
+   continuing.
+5. **Give the agent the boundary.** Tell the agent which issue it is working
+   on and what is out of scope, and reject output that crosses that line.
+
+### Write up the work before submitting
+
+A pull request is ready for review only when its description is complete.
+Fill in every section of the [pull request
+template](.github/PULL_REQUEST_TEMPLATE.md). Use this rubric for AI-assisted
+pull requests; the same standard of explanation and evidence applies to every
+contribution. A reviewer new to the project should be able to answer:
+
+1. **What changed for a player or contributor?** The opening explains the
+   problem and visible result in everyday language. Specialized terms are
+   explained when first used.
+2. **Which issue checks are satisfied?** The description links the issue,
+   names the completion criteria this pull request actually meets, and says
+   what remains outside its scope. It uses `Closes` only when the entire issue
+   is finished; otherwise it uses `Refs`. For the typo, broken-build, or
+   recent-PR-fix exception above, link the earlier pull request and explain
+   the specific defect instead.
+3. **Where should I look?** A few direct links to the owning code, tests, or
+   documents explain what each location does and why this is the right place
+   for the change. A file list without that explanation is not a review map.
+4. **Why should I believe each important behavior claim?** The description
+   links the relevant owned game data (including table and column), original
+   game observation, research, or pinned external source. It states the target
+   version and distinguishes verified behavior from inference or an open
+   question. A citation that does not support its claim does not count as
+   evidence. For a documentation-only or other non-game change, name the
+   governing decision or document and explain why game evidence does not
+   apply.
+5. **What proves the result?** Map the claimed completion criteria to tests,
+   captures, or reproducible manual steps, including meaningful failure or
+   edge cases. Give exact commands and results from the submitted commit.
+   CI has no game data, so say whether tests that need it (such as
+   `*_real_test.go` and tests that read `MPQ_DIRECTORY`) ran locally against
+   legally obtained game files. An unrun or skipped check is not a passing
+   check; say what remains unverified.
+6. **Who checked the final work?** Describe known risks and follow-up issues,
+   which parts an agent wrote or reviewed, confirmation that the submitter
+   reviewed the complete diff, and what the separate review pass found.
+
+Never describe a test, command, or check as passing unless it was actually run
+on the submitted commit. Open a draft pull request if you want early feedback,
+and mark it ready only after the write-up is complete. When the code changes
+after review, update the description so it still matches the diff.
 
 ## Pull request expectations
 

@@ -55,7 +55,7 @@ func (app *application) prepareEntryWorld() (*entryworld.Prepared, error) {
 		app.records,
 		app.worldObjectResolver,
 		1,
-		0,
+		app.options.GameDifficulty,
 	)
 	if err != nil {
 		return nil, wrap("prepare d2legacy entry world", err)

@@ -555,7 +555,7 @@ return test.suite({
                 test.expect(motion:get("kind")):equals("target")
                 test.assert(motion:get("active"), [=[motion:get("active")]=])
                 test.assert(
-                    math.abs(velocity:get("x") - 6) < 0.000000001,
+                    math.abs(velocity:get("x") - 9.375) < 0.000000001,
                     "attack approach bypassed the Amazon's pinned walk rate"
                 )
             end),

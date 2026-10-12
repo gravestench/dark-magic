@@ -66,7 +66,7 @@ func movementRulesHelp() modruntime.ModuleHelp {
 				Summary: "Advance one authoritative 25 Hz 8.8 stamina tick.",
 			},
 			"velocity": {
-				Usage:   "d2legacy.movement_rules.velocity(x, y, class, payload, velocitypercent?, item_frw?)",
+				Usage:   "d2legacy.movement_rules.velocity(x, y, class, payload, velocitypercent, item_frw, delta_seconds)",
 				Summary: "Return authoritative x/y velocity and whether movement is active.",
 			},
 		},
@@ -125,7 +125,7 @@ func (bridge movementRulesBridge) velocity(state *lua.LState) int {
 		X: float64(state.CheckNumber(1)),
 		Y: float64(state.CheckNumber(2)),
 	}
-	resolved := Resolve(position, payload, rates, luaModifiers(state, 5, 6))
+	resolved := Resolve(position, payload, rates, float64(state.CheckNumber(7)), luaModifiers(state, 5, 6))
 
 	state.Push(lua.LNumber(resolved.Velocity.X))
 	state.Push(lua.LNumber(resolved.Velocity.Y))
