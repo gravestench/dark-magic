@@ -79,6 +79,53 @@ remaining per-consumer relationship audit is tracked in
 particular, other numeric-looking `d2legacy` joins must remain unverified until
 their target column, positional rule, and sentinel behavior are documented.
 
+### Admitted `d2legacy` lookup ledger (issue #370)
+
+This audits **current Dark Magic consumers**, not the original expansion 1.14d
+TXT-to-BIN compiler. Each row originates in the session-pinned layered record
+generation; the listed key is a consumer-owned lookup, separate from source
+provenance and authored row order. `C` means consumer code establishes the rule,
+`T` a divergent-identity consumer test, and `R` recovered DS1 evidence. These
+grades do not establish the original compiler rule. Test paths below are
+relative to `internal/content/d2legacy/lua/d2legacy/` unless stated otherwise.
+
+| Consumer | Source field → target field | Identity, sentinel and missing behavior | Evidence |
+| --- | --- | --- | --- |
+| `data/skill.lua`, skill decoders | Requested skill number → `Skills.Id` | Explicit numeric ID compared as text, never row position; absent gives `nil` in presentation or asserts in enrolled decoders. | C+T: `data/skill_test.lua` has conflicting ID and ordinal. |
+| `data/skill.lua`, golem/trap decoders | `Skills.skilldesc` → `SkillDesc.skilldesc` | Symbolic name; empty/unmatched gives no presentation/learnable skill or asserts in a required specialized decoder. Golem folds case. | C+T: `data/skill_test.lua` separates the two row positions. |
+| `data/skill.lua` | Requested class → `CharStats.class`; `CharStats.StartSkill` → `Skills.skill` | Case-folded symbolic names; empty/unmatched starting skill adds no class-specific skill; `Skills.general=1` is independent. | C: `data/skill_test.lua`; original compiler unprobed. |
+| `data/{area_curse,aura,corpse_aura,periodic_aura,state,targeted_state}_skills.lua` | `Skills.aurastate`, `auratargetstate`, `passivestate` → `States.state` | Symbolic state name; each decoder asserts required states and handles unsupported or empty optional fields locally. | C: corresponding decoder tests. |
+| `data/aura_skills.lua` | `Skills.aurastat*` / operation stat → `ItemStatCost.Stat` | Symbolic stat name; missing required stat is rejected. | C: `data/aura_skills_test.lua`. |
+| `data/{missile,radial_missile,state,trap}_skills.lua` | `Skills.srvmissile*` / event missile → `Missiles.Missile` | Symbolic missile name; empty optional slots are skipped, required slots assert. | C: corresponding decoder tests. |
+| `data/{corpse_summon,golem_summon,periodic_aura,missile,trap}_skills.lua` | Formula `skill('name')`, `sumskill*`, helper skill → `Skills.skill` | Symbolic skill name, distinct from `Skills.Id`; absent optional grants are skipped, required helpers assert. | C: corresponding decoder tests. |
+| `data/{corpse_summon,golem_summon,trap}_skills.lua` | `Skills.pettype` → `PetType.pet type` | Symbolic pet category; admitted required variants assert on empty/unmatched. Golem folds case. | C: corresponding decoder tests. |
+| `data/trap_skills.lua` | `Skills.summon` → `MonStats.Id`; `MonStats.MonStatsEx` → `MonStats2.Id` | Symbolic monster and graphics IDs despite the `Id` spelling; required variants assert. | C: `data/trap_skills_test.lua`. |
+| `data/monster.lua` | Monster code → `MonStats.Id`; `MonStats.MonStatsEx` (or `Id`) → `MonStats2.Id` | Symbolic IDs; missing selected row asserts. | C: consumer code; no standalone monster Lua test, original fallback unverified. |
+| `data/monster.lua` | Effective monster level → `MonLvl.Level` | Explicit numeric level converted to text key, not row ordinal; absent level asserts for summons/revives. | C: consumer code; divergent-level test gap. |
+| `mapgen/records.lua`, preset/maze | Area number → `Levels.Id`; `Levels.Id` → `LvlPrest.LevelId` or `LvlMaze.Level` | Explicit numeric area IDs compared as text; missing match returns `nil`, required strategy asserts. | C: `mapgen/records_test.lua`. |
+| `mapgen/records.lua`, preset/outdoor | `Levels.LevelType` → `LvlTypes` row | Zero-based row ordinal (`rows[id+1]`), including leading null rows; out-of-range returns `nil`. | C+T: `mapgen/records_test.lua` makes `Id`-looking text disagree with position. |
+| `mapgen/records.lua`, preset/maze | Requested definition → `LvlPrest.Def` | Explicit numeric definition key compared as text; missing match returns `nil`, required strategy asserts. | C: `mapgen/records_test.lua`. |
+| `audio.lua` | Requested sound → `Sounds.Sound`; `Sounds.Redirect` → `Sounds` row | Case-folded symbolic name, then zero-based target row ordinal (`redirect+1`); absent name asserts, invalid redirect retains named row. Group Size selects adjacent rows from resolved position. | C+T: `audio_test.lua` separates source, target, and neighbor. Original compiler unverified. |
+| `gameplay/state_overlay_presentation.lua`, `cast_presentation.lua` | State ID → `States.state`; state overlay fields or `Skills.castoverlay` → `Overlay.overlay` | Symbolic names; empty overlay means none, nonempty missing overlay asserts; missing state has no recipe. | C: `gameplay/state_overlay_presentation_test.lua`. |
+| `loot/treasure_class.lua` | `TreasureClassEx.Item1..10` → `TreasureClassEx.Treasure Class` or terminal base `code` | Symbolic names/codes; empty item skipped, unknown class falls through as terminal code, cycles assert. `NoDrop` is a weight. | C: `loot/treasure_class_test.lua`; terminal lookup in `loot/items.lua`. |
+| `loot/treasure_class.lua` | Implicit family / base `type`, `type2` / `ItemTypes.Equiv1/2` → `ItemTypes.Code` | Symbolic type code with recursive equivalence; empty/missing does not match, cycles assert. | C: `loot/treasure_class_test.lua`; consumer cites recovered 1.10f algorithm, 1.14d parity unverified. |
+| `loot/items.lua`, `loot/generate.lua` | Treasure terminal code → `Weapons`, `Armor`, or `Misc`.`code` | Symbolic base code; absent returns `nil` to caller. | C: consumer code and `loot/treasure_class_test.lua`; no standalone base-item join test. |
+| `loot/affixes.lua`, `loot/properties.lua` | Affix `mod*code` → `Properties.code` | Symbolic property code; empty modifier slot skipped, nonempty missing property asserts. | C: `loot/properties_test.lua`; no divergent affix/property row test. |
+| `worldobjects/resolver.go` recovered DS1 adapter | Dynamic DS1 ID → `MonPreset` act-local position; `MonPreset.Place` → monster code; static `obj.Id` / `ObjectId` → act-local ID / `Objects` explicit number | Distinct act-local, symbolic, and explicit numeric identities; source rows/provenance retained. Missing or ambiguous targets diagnosed without substituting another numeric field. | C+R: `internal/mod/d2legacy/adapter/worldobjects/*_test.go`; 1.13c byte comparison remains unknown. |
+
+Other production `records.load` files perform single-table reads or selection
+by a caller-supplied key rather than a cross-table join:
+`bootstrap/population.lua` (`Levels.Id`), `gameplay/cast_presentation.lua`
+(`Skills.skill` before its overlay handoff), `items/development_fixtures.lua`,
+`overlays/{inventory,vendor}.lua`, `ui/fixed_panel.lua`,
+`data/{cast_actions,difficulty_levels,melee_skills,missile,player_stats,point_movement_skills,progression}.lua`,
+and `loot/{affixes,quality}.lua`. `point_movement_skills.lua` reads `Levels.Id`
+for teleport policy but does not turn a skill column into a level reference.
+`loot/affixes.lua` emits the property link listed above; `data/missile.lua`
+builds a single-table missile catalog. This inventory covers the production
+Lua `records.load` calls; the recovered DS1 adapter is the separate Go
+consumer. New consumers must declare any different identity rule.
+
 ## Raw-table representation
 
 The current generic `map[string]string` rows are useful but do not preserve original header order as a first-class structure. Raw bytes remain available, so no source information is irretrievably lost. If Dark Magic needs stronger diagnostics, introduce a renderer/gameplay-independent raw document shape roughly equivalent to:
