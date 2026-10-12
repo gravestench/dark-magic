@@ -481,7 +481,11 @@ local function update_monsters(self, elapsed)
     end
     self.monsters = self.monsters or {}
     local seen = {}
-    for _, snapshot in ipairs(self.gameplay_world.monster_snapshots()) do
+    local snapshots = self.gameplay_world.monster_snapshots()
+    for _, snapshot in ipairs(self.gameplay_world.npc_snapshots()) do
+        snapshots[#snapshots + 1] = snapshot
+    end
+    for _, snapshot in ipairs(snapshots) do
         if snapshot.level_id == self.world_level_id then
             local key = tostring(snapshot.entity_id)
             seen[key] = true

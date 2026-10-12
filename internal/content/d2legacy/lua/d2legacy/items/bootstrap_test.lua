@@ -9,6 +9,15 @@ return test.suite({
             owner = "alice",
             targets = {
                 {
+                    id = "act1-akara",
+                    npc = "Akara",
+                    x = 21,
+                    y = 46,
+                    radius = 4,
+                    level_id = 1,
+                    selectable = true,
+                },
+                {
                     id = "room-object",
                     npc = "Room Object",
                     x = 4,
@@ -62,6 +71,26 @@ return test.suite({
         },
     },
     cases = {
+        test.case("guide_model_and_selection_share_one_target_lifetime", {
+            test.run(function()
+                local ecs = require("engine.ecs/v1")
+                local targets = ecs.query({ all = { "d2legacy.interaction.target", "d2legacy.world.selectable" } })
+                test.expect(#targets):equals(1)
+                local entity = targets[1]
+                local target = ecs.get(entity, "d2legacy.interaction.target")
+                local position = ecs.get(entity, "d2legacy.world.position")
+                local location = ecs.get(entity, "d2legacy.world.location")
+                test.expect(target:get("id")):equals("act1-akara")
+                test.expect(position:get("x")):equals(target:get("x"))
+                test.expect(position:get("y")):equals(target:get("y"))
+                test.expect(location:get("level_id")):equals(1)
+                local selected = require("d2legacy.gameplay.targeting").selectable_at(21, 46, 1)
+                test.expect(selected.id):equals("act1-akara")
+                require("d2legacy.items.bootstrap").ensure_player("alice")
+                test.expect(#ecs.query({ all = { "d2legacy.world.selectable", "d2legacy.interaction.target" } }))
+                    :equals(1)
+            end),
+        }),
         test.case("materializes_initial_items_into_lua_owned_ecs", {
             test.run(function()
                 local ecs = require("engine.ecs/v1")

@@ -18,7 +18,17 @@ func InteractionData(
 	owner string,
 	initial string,
 ) map[string]any {
-	targets := []any{actOneGuideTarget()}
+	guide := actOneGuideTarget()
+	if town := worlds[1]; town != nil {
+		for _, object := range town.Objects {
+			if object.Resolved && object.Type == gameworld.ObjectTypeDynamic && object.Class == "akara" {
+				guide["x"], guide["y"] = float64(object.X), float64(object.Y)
+				guide["level_id"], guide["selectable"], guide["radius"] = float64(1), true, float64(4)
+				break
+			}
+		}
+	}
+	targets := []any{guide}
 
 	for _, levelID := range sortedLevelIDs(worlds) {
 		targets = appendSelectableTargets(targets, levelID, worlds[levelID], zones[levelID])
@@ -70,6 +80,9 @@ func appendSelectableTargets(
 
 	for _, selected := range gameMap.Selectables() {
 		object := objects[selected.ID]
+		if levelID == 1 && object.Resolved && object.Type == gameworld.ObjectTypeDynamic && object.Class == "akara" {
+			continue
+		}
 
 		name := strings.TrimSpace(object.Description)
 		if name == "" {

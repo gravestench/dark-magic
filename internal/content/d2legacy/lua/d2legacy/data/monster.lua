@@ -5,7 +5,6 @@
 -- this mod owns their Diablo-specific relationship and difficulty formulas.
 
 local records = require("engine.records/v1")
-local game_rules = require("d2legacy.policy.game_rules")
 
 local M = {}
 
@@ -254,7 +253,7 @@ function M.load(id, area, ...)
         area == nil or type(area) == "table",
         "monster difficulty comes from immutable game rules; the area must be a Levels.txt row"
     )
-    local difficulty = game_rules.difficulty()
+    local difficulty = require("d2legacy.policy.game_rules").difficulty()
     local indexed = monster_catalog()
     local stats = assert(indexed.stats[id], "missing MonStats row")
     assert(
@@ -277,7 +276,7 @@ function M.summon(id, pet_level, ...)
     assert(select("#", ...) == 0, "monster difficulty comes from immutable game rules")
     assert(type(pet_level) == "number" and pet_level >= 1, "summon pet level must be positive")
     pet_level = math.floor(pet_level)
-    local difficulty = game_rules.difficulty()
+    local difficulty = require("d2legacy.policy.game_rules").difficulty()
     local indexed = monster_catalog()
     local stats = assert(lookup(indexed.stats, id), "missing summoned MonStats row")
     assert(truth(stats, "enabled") and not truth(stats, "npc"), "summoned monster is unavailable")
@@ -303,7 +302,7 @@ function M.revive(id, monster_level, ...)
     assert(select("#", ...) == 0, "monster difficulty comes from immutable game rules")
     assert(type(monster_level) == "number" and monster_level >= 1, "revived monster level must be positive")
     monster_level = math.floor(monster_level)
-    local difficulty = game_rules.difficulty()
+    local difficulty = require("d2legacy.policy.game_rules").difficulty()
     local indexed = monster_catalog()
     local stats = assert(lookup(indexed.stats, id), "missing revived MonStats row")
     assert(truth(stats, "enabled") and not truth(stats, "npc"), "revived monster is unavailable")
@@ -326,6 +325,21 @@ local function encoded_components(values)
     end
     table.sort(result)
     return table.concat(result, ",")
+end
+
+-- NPC presentation uses authored graphics without admitting an ordinary combat spawn.
+function M.npc_appearance(id)
+    local indexed = monster_catalog()
+    local stats = assert(indexed.stats[id], "missing MonStats row")
+    assert(truth(stats, "npc"), "monster is not an NPC")
+    local graphics = assert(indexed.graphics[graphics_id(stats)], "missing MonStats2 row")
+    return {
+        token = string.upper(stats.Code or ""),
+        weapon_class = string.upper(graphics.BaseW or "HTH"),
+        components = encoded_components(graphics_components(graphics)),
+        name_key = stats.NameStr or stats.Id,
+        overlay_height = integer(graphics, "OverlayHeight", 0),
+    }
 end
 
 function M.all(...)

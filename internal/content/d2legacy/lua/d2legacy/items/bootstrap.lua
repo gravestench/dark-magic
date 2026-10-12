@@ -206,6 +206,15 @@ local function create_target(target)
             radius = target.radius,
         },
     }
+    if target.selectable then
+        assert(type(target.level_id) == "number" and target.level_id > 0, "selectable level is required")
+        components["d2legacy.world.position"] = { x = target.x, y = target.y }
+        components["d2legacy.world.location"] = { act = 1, level_id = target.level_id }
+        components["d2legacy.world.selectable"] = {
+            id = wanted, kind = "dynamic-object", label = target.npc,
+            radius = target.radius, priority = 20,
+        }
+    end
     if target.room_id ~= nil then
         assert(type(target.resident_id) == "string" and target.resident_id ~= "", "resident ID is required")
         assert(type(target.level_id) == "number" and target.level_id > 0, "resident level is required")

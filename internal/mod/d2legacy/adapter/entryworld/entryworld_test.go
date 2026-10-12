@@ -163,3 +163,24 @@ func TestInitialDataUsesSharedInteractionAndTransitionContracts(t *testing.T) {
 		t.Fatalf("game rules = %#v", rules)
 	}
 }
+
+func TestInteractionDataGroundsAkaraInAuthoredTownPlacement(t *testing.T) {
+	town, err := gameworld.NewOpenMap(100, 100)
+	if err != nil {
+		t.Fatal(err)
+	}
+	town.Objects = []gameworld.Object{
+		{Type: gameworld.ObjectTypeDynamic, ID: 2, X: 21, Y: 46, Class: "akara", Resolved: true},
+		{Type: gameworld.ObjectTypeStatic, ID: 12, X: 11, Y: 16, Description: "Chest", Resolved: true},
+	}
+	data := InteractionData(map[int]*gameworld.Map{1: town}, nil, "alice", "")
+	targets := data["targets"].([]any)
+	if len(targets) != 2 {
+		t.Fatalf("Akara must have one target, got %#v", targets)
+	}
+	guide := targets[0].(map[string]any)
+	if guide["id"] != "act1-akara" || guide["x"] != float64(21) || guide["y"] != float64(46) ||
+		guide["level_id"] != float64(1) || guide["selectable"] != true || guide["radius"] != float64(4) {
+		t.Fatalf("authored Akara target = %#v", guide)
+	}
+}
