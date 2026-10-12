@@ -155,6 +155,7 @@ func cloneHUDResistanceValues(hud playeradapter.HUD) playeradapter.HUD {
 		values := *hud.Resistances
 		hud.Resistances = &values
 	}
+
 	return hud
 }
 

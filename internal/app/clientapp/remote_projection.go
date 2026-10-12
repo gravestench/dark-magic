@@ -59,6 +59,7 @@ func (app *application) installRemoteProjection(
 	if err := setRemoteComponents(world, hero, remoteHeroComponents(world, hud, party)); err != nil {
 		return err
 	}
+
 	if hud.Resistances == nil {
 		if store, found := akara.GetDynamicStore(world, "d2legacy.presentation.character_resistances"); found {
 			store.Remove(hero)
@@ -201,6 +202,7 @@ func remoteHeroComponents(
 			"max_lightning_resist": values.MaxLightningResist,
 		}
 	}
+
 	return components
 }
 

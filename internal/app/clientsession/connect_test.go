@@ -585,11 +585,14 @@ func TestPresentationSnapshotsAreImmutableAtomicRevisions(t *testing.T) {
 		Admission: gameserver.JoinResponse{Snapshot: gameserver.Snapshot{Tick: 10, StepNanos: int64(40 * time.Millisecond)}},
 	}
 	view, _ := session.View()
+
 	view.Resistances.FireResist = 40
 	if session.HUD.Resistances.FireResist != 30 {
 		t.Fatal("View returned a mutable resistance alias")
 	}
+
 	presentation, _, _ := session.PresentationView()
+
 	presentation.Resistances.FireResist = 50
 	if session.HUD.Resistances.FireResist != 30 {
 		t.Fatal("PresentationView returned a mutable resistance alias")
@@ -599,6 +602,7 @@ func TestPresentationSnapshotsAreImmutableAtomicRevisions(t *testing.T) {
 	if again := session.PresentationSnapshot(); again != before {
 		t.Fatal("unchanged presentation allocated a new snapshot")
 	}
+
 	session.HUD.Resistances.FireResist = 60
 	if before.HUD.Resistances.FireResist != 30 {
 		t.Fatal("published HUD aliases mutable session resistance state")

@@ -38,6 +38,7 @@ func TestConnectedProjectionCreatesDistinctAuthenticatedAndPeerPlayers(t *testin
 // mirror when successive authority HUDs carry different effective values.
 func TestConnectedProjectionUpdatesOnlyOwnerResistances(t *testing.T) {
 	engine := gameecs.New()
+
 	t.Cleanup(func() { _ = engine.Close() })
 	registerRemoteViewSchemas(t, engine)
 	app := &application{clientSimulation: engine}
@@ -48,12 +49,14 @@ func TestConnectedProjectionUpdatesOnlyOwnerResistances(t *testing.T) {
 		FireResist: 90, ColdResist: -100, LightningResist: 31,
 		MaxFireResist: 75, MaxColdResist: 80, MaxLightningResist: 85,
 	}
+
 	presentation := &clientsession.PresentationSnapshot{
 		HUD: hud, World: connected.World, Private: connected.Private, Party: connected.Party, Revision: 1,
 	}
 	if _, err := client.installCanonicalPresentation(app, presentation); err != nil {
 		t.Fatal(err)
 	}
+
 	if err := app.syncRemoteMirrors(connected.World.Entities, hud.Location); err != nil {
 		t.Fatal(err)
 	}
@@ -62,19 +65,24 @@ func TestConnectedProjectionUpdatesOnlyOwnerResistances(t *testing.T) {
 	if !found {
 		t.Fatal("connected resistance schema is unavailable")
 	}
+
 	owner, err := authenticatedHero(engine.World(), "player-2")
 	if err != nil {
 		t.Fatal(err)
 	}
+
 	if _, found := store.Get(app.remoteMirrors["player:player-1"]); found {
 		t.Fatal("peer received owner-only resistances")
 	}
+
 	assertResistance := func(field string, want int64) {
 		t.Helper()
+
 		values, found := store.Get(owner)
 		if !found {
 			t.Fatal("owner has no resistance mirror")
 		}
+
 		got, err := values.Get(field)
 		if err != nil || got != want {
 			t.Fatalf("owner %s = %v, %v; want %d", field, got, err, want)
@@ -92,22 +100,27 @@ func TestConnectedProjectionUpdatesOnlyOwnerResistances(t *testing.T) {
 	updated.MaxFireResist = 95
 	hud.Resistances = &updated
 	presentation.HUD = hud
+
 	presentation.Revision = 2
 	if _, err := client.installCanonicalPresentation(app, presentation); err != nil {
 		t.Fatal(err)
 	}
+
 	assertResistance("fire_resist", -40)
 	assertResistance("max_fire_resist", 95)
+
 	if _, found := store.Get(app.remoteMirrors["player:player-1"]); found {
 		t.Fatal("peer received owner-only resistances after refresh")
 	}
 
 	hud.Resistances = nil
 	presentation.HUD = hud
+
 	presentation.Revision = 3
 	if _, err := client.installCanonicalPresentation(app, presentation); err != nil {
 		t.Fatal(err)
 	}
+
 	if _, found := store.Get(owner); found {
 		t.Fatal("stale resistance mirror survived a HUD without resistance values")
 	}
