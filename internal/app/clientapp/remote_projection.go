@@ -59,6 +59,11 @@ func (app *application) installRemoteProjection(
 	if err := setRemoteComponents(world, hero, remoteHeroComponents(world, hud, party)); err != nil {
 		return err
 	}
+	if hud.Resistances == nil {
+		if store, found := akara.GetDynamicStore(world, "d2legacy.presentation.character_resistances"); found {
+			store.Remove(hero)
+		}
+	}
 
 	if err := app.refreshPrivateProjection(world, hero, hud, private); err != nil {
 		return err
@@ -128,7 +133,7 @@ func remoteHeroComponents(
 	hud playeradapter.HUD,
 	party playeradapter.PartyView,
 ) map[string]map[string]any {
-	return map[string]map[string]any{
+	components := map[string]map[string]any{
 		"d2legacy.player.identity": {
 			"character_id": hud.Player.CharacterID,
 			"player":       hud.Player.PlayerID,
@@ -186,6 +191,17 @@ func remoteHeroComponents(
 			"priority": int64(10),
 		},
 	}
+	if values := hud.Resistances; values != nil {
+		components["d2legacy.presentation.character_resistances"] = map[string]any{
+			"fire_resist":          values.FireResist,
+			"cold_resist":          values.ColdResist,
+			"lightning_resist":     values.LightningResist,
+			"max_fire_resist":      values.MaxFireResist,
+			"max_cold_resist":      values.MaxColdResist,
+			"max_lightning_resist": values.MaxLightningResist,
+		}
+	}
+	return components
 }
 
 // remoteVitalsFields maps display totals and fixed-point stamina fields expected by presentation

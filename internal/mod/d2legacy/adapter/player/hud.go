@@ -12,25 +12,26 @@ import (
 	"github.com/gravestench/dark-magic/internal/game/simulation"
 )
 
-const HUDVersion uint32 = 6
+const HUDVersion uint32 = 7
 
 var ErrHUDPlayer = errors.New("player HUD: authenticated player is absent")
 
 // HUD is the versioned owner-private view shared by local presentation and
 // remote clients. Other private domains receive separately reviewed views.
 type HUD struct {
-	Version   uint32       `json:"version"`
-	Tick      uint64       `json:"tick"`
-	Player    HUDIdentity  `json:"player"`
-	Vitals    HUDVitals    `json:"vitals"`
-	Progress  HUDProgress  `json:"progress"`
-	Combat    HUDCombat    `json:"combat"`
-	Position  HUDPosition  `json:"position"`
-	Location  HUDLocation  `json:"location"`
-	Animation HUDAnimation `json:"animation"`
-	Movement  HUDMovement  `json:"movement"`
-	Skills    HUDSkills    `json:"skills"`
-	Belt      HUDBelt      `json:"belt"`
+	Version     uint32          `json:"version"`
+	Tick        uint64          `json:"tick"`
+	Player      HUDIdentity     `json:"player"`
+	Vitals      HUDVitals       `json:"vitals"`
+	Progress    HUDProgress     `json:"progress"`
+	Combat      HUDCombat       `json:"combat"`
+	Resistances *HUDResistances `json:"resistances,omitempty"`
+	Position    HUDPosition     `json:"position"`
+	Location    HUDLocation     `json:"location"`
+	Animation   HUDAnimation    `json:"animation"`
+	Movement    HUDMovement     `json:"movement"`
+	Skills      HUDSkills       `json:"skills"`
+	Belt        HUDBelt         `json:"belt"`
 }
 
 type HUDIdentity struct {
@@ -60,6 +61,17 @@ type HUDProgress struct {
 type HUDCombat struct {
 	AttackRating int64 `json:"attack_rating"`
 	Defense      int64 `json:"defense"`
+}
+
+// HUDResistances carries current effective values and maxima without exposing
+// the authority's base defenses or stat sources to a connected client.
+type HUDResistances struct {
+	FireResist         int64 `json:"fire_resist"`
+	ColdResist         int64 `json:"cold_resist"`
+	LightningResist    int64 `json:"lightning_resist"`
+	MaxFireResist      int64 `json:"max_fire_resist"`
+	MaxColdResist      int64 `json:"max_cold_resist"`
+	MaxLightningResist int64 `json:"max_lightning_resist"`
 }
 
 type HUDPosition struct {
@@ -249,6 +261,17 @@ func fillRequiredHUD(reader hudComponentReader, view *HUD) error {
 // fillOptionalHUD adds live presentation and movement details when available.
 // Each component stays optional to preserve compatibility with older snapshots.
 func fillOptionalHUD(reader hudComponentReader, view *HUD) {
+	if fields, found := reader.optional("d2legacy.combat.defense"); found {
+		view.Resistances = &HUDResistances{
+			FireResist:         intField(fields, "fire_resist"),
+			ColdResist:         intField(fields, "cold_resist"),
+			LightningResist:    intField(fields, "lightning_resist"),
+			MaxFireResist:      intField(fields, "max_fire_resist"),
+			MaxColdResist:      intField(fields, "max_cold_resist"),
+			MaxLightningResist: intField(fields, "max_lightning_resist"),
+		}
+	}
+
 	if fields, found := reader.optional("d2legacy.player.animation"); found {
 		view.Animation.Mode = stringField(fields, "mode")
 		view.Animation.StartTick = uint64(max(0, intField(fields, "start_tick")))
