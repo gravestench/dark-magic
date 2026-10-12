@@ -1,10 +1,11 @@
 <h1 align="center">Dark Magic</h1>
 <h3 align="center">An open-source Diablo II: Lord of Destruction engine rewrite</h3>
 
-Dark Magic is a clean-room engine rewrite targeting **Diablo II: Lord of
-Destruction 1.14d**. The project aims to reproduce the game's authored behavior
-and presentation on a modern, deterministic, scriptable engine while making the
-systems underneath it easier to inspect, test, extend, and mod.
+Dark Magic is a clean-room engine rewrite targeting feature parity with
+**Diablo II: Lord of Destruction Expansion 1.13c and 1.14d**. The project aims
+to reproduce the game's authored behavior and presentation on a modern,
+deterministic, scriptable engine while making the systems underneath it easier
+to inspect, test, extend, and mod.
 
 Dark Magic is under active development and is **not yet a complete Diablo II
 replacement**. It does not distribute Blizzard assets; running the real-asset
@@ -48,8 +49,13 @@ building parallel implementations for each mode.
 
 The project deliberately targets:
 
-- **Expansion 1.14d only.** Classic mode and earlier patch behavior are not
-  product targets.
+- **Expansion 1.13c and 1.14d feature parity.** These releases share the core
+  gameplay feature set; later patches added targeted fixes and platform changes.
+  Known differences remain version-specific. Classic mode, other patches, and
+  Diablo II: Resurrected are outside the product target. See the
+  [patch-history research](docs/research/DIABLO_II_PATCH_HISTORY.md) for the
+  evidence and its limits. Current owned game data and runtime probes are
+  pinned to 1.14d; they do not by themselves verify 1.13c behavior.
 - **Faithful, evidence-driven behavior.** Mechanics are reconstructed from game
   data, repeatable observation, reverse-engineering research, and independent
   implementations rather than guessed where evidence exists.

@@ -1,7 +1,8 @@
 # Dark Magic roadmap
 
 Dark Magic is building an increasingly complete, clean-room implementation of
-**Diablo II: Lord of Destruction 1.14d** on a deterministic, scriptable engine.
+**Diablo II: Lord of Destruction Expansion 1.13c and 1.14d** on a deterministic,
+scriptable engine.
 The project is past its initial engine and networking foundations; current work
 is concentrated on completing authoritative gameplay without creating parallel
 offline, server, or skill-specific implementations.
@@ -31,10 +32,15 @@ started, completed, deferred, or reordered.
 
 ## Product boundary
 
-Dark Magic has one supported behavioral target: the latest original Diablo II
-expansion release, **Lord of Destruction 1.14d**.
+Dark Magic targets feature parity with **Lord of Destruction Expansion 1.13c and
+1.14d**. The releases share the core gameplay feature set; the later patch line
+also contains targeted fixes and platform changes. The
+[patch-history research](docs/research/DIABLO_II_PATCH_HISTORY.md) records those
+deltas and the limits of inferring parity from release notes. The current
+implementation and owned-runtime evidence are centered on 1.14d; 1.13c
+equivalence requires its own checks.
 
-- Classic mode and behavior from earlier patches are out of scope.
+- Classic mode and compatibility with other patch versions are out of scope.
 - Diablo II: Resurrected behavior is not silently back-ported into the target.
 - Vanilla client/server protocol compatibility is not a goal.
 - Vanilla save-game import/export is not a goal.
@@ -96,8 +102,9 @@ project and milestones determine the actual ordering and current status.
 
 Behavior claims use explicit confidence labels:
 
-- **verified**: reproduced against an owned Lord of Destruction 1.14d runtime or
-  directly established by owned target data;
+- **verified**: reproduced against an owned, explicitly identified target-patch
+  runtime or directly established by owned data from that patch; a 1.14d result
+  does not automatically verify 1.13c;
 - **high-confidence recovered**: strongly supported by pinned recovered code or
   multiple independent sources, but not yet confirmed against the target
   runtime;

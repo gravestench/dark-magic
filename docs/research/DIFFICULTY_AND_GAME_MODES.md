@@ -314,8 +314,9 @@ difficulty, and any other defender uses 100. When leech applies, life and mana
 leech are shifted left by 6 (fixed point), and then, only for player attackers,
 divided by `LifeStealDivisor` and `ManaStealDivisor`. Owned 1.14d
 `patch_d2.mpq` authors 1 / 2 / 3 for both columns. The base expansion
-`d2exp.mpq` still has 1 / 2 / 2, so the Hell value changed in a later patch;
-only the 1.14d row is in scope.
+`d2exp.mpq` still has 1 / 2 / 2, so the Hell value changed in a later patch.
+The implemented value is supported by owned 1.14d data; the 1.13c row must be
+checked before claiming parity for this rule.
 
 Current implementation: `d2legacy.policy.leech` runs after landed basic melee
 and projectile hits. Players and hirelings (owned units of the `hireable` pet

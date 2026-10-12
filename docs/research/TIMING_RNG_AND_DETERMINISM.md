@@ -196,10 +196,12 @@ Optional trace records should include tick, stream ID, pre-state/counter, operat
 
 ## Versioning
 
-RNG algorithm and event-order policy are replay-format concerns. Any admitted
-Diablo stream must identify the sole product target explicitly, for example
-`d2-lod-1.14d`, rather than vague `legacy`; older-version streams are not a
-compatibility target.
+RNG algorithm and event-order policy are replay-format concerns. A Diablo
+stream must identify its patch explicitly rather than use vague `legacy`.
+Current 1.14d streams use `d2-lod-1.14d`; future 1.13c parity work needs a
+distinct `d2-lod-1.13c` identity once that patch is supported. A stream
+verified for one patch does not establish event-order parity with the other;
+streams from other patch versions are outside the product target.
 
 ## Implementation slices
 
