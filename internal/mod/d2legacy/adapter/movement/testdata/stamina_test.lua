@@ -13,7 +13,7 @@ local cases = {
     { "Amazon", 1, 22, 0, 0, 22016, 22272, 256 },
     { "Barbarian", 1, 26, 18168, 0, 23808, 24064, 18619 },
     { "Barbarian", 1, 27, 0, 0, 24064, 24320, 256 },
-    -- One observed running frame is removed from these current operands.
+    -- A running frame is inferred to precede allocation in these two cases.
     { "Barbarian", 12, 25, 29114, 30, 34278, 34611, 29652 },
     { "Barbarian", 1, 26, 20815, 0, 23808, 24064, 21294 },
     { "Assassin", 1, 22, 23340, 0, 24960, 25280, 23959 },
@@ -24,7 +24,7 @@ for _, case in ipairs(cases) do
     assert(rules.maximum_stamina(class, level, vitality + 1, 0, 0, 0, passive) == maximum)
     local _, _, _, quarters = rules.class_facts(class)
     local rescaled = rules.rescale_stamina(current, previous, maximum)
-    assert(math.min(maximum, rescaled + quarters * 64) == expected, class .. " allocation order")
+    assert(rules.allocate_vitality_stamina(class, current, previous, maximum) == expected, class .. " allocation order")
     if current < previous then
         assert(rescaled ~= expected, class .. " generic-only negative control")
         assert(

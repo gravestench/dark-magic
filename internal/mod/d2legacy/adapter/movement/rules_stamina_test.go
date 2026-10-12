@@ -7,16 +7,7 @@ import (
 )
 
 func TestRulesModuleVitalityAllocationEvidence(t *testing.T) {
-	catalog := Catalog{byClass: map[string]ClassRates{
-		"amazon":      ownedClassRates(20, 84, 20, 4, 4),
-		"sorceress":   ownedClassRates(10, 74, 20, 4, 4),
-		"necromancer": ownedClassRates(15, 79, 20, 4, 4),
-		"paladin":     ownedClassRates(25, 89, 20, 4, 4),
-		"barbarian":   ownedClassRates(25, 92, 20, 4, 4),
-		"druid":       ownedClassRates(25, 84, 20, 4, 4),
-		"assassin":    ownedClassRates(20, 95, 15, 5, 5),
-	}}
-	checkVitalityAllocationEvidence(t, catalog)
+	checkVitalityAllocationEvidence(t, ownedClassCatalog())
 }
 
 func TestOwnedRulesModuleVitalityAllocationEvidence(t *testing.T) {
@@ -24,7 +15,7 @@ func TestOwnedRulesModuleVitalityAllocationEvidence(t *testing.T) {
 	checkVitalityAllocationEvidence(t, catalog)
 }
 
-// checkVitalityAllocationEvidence composes existing capabilities without introducing a live allocation API.
+// checkVitalityAllocationEvidence exercises the production allocation rule without a live spending transaction.
 func checkVitalityAllocationEvidence(t *testing.T, catalog Catalog) {
 	t.Helper()
 	state := lua.NewState()

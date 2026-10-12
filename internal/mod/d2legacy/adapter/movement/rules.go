@@ -136,6 +136,12 @@ func RescaleCurrentStamina(currentRaw, previousMaximumRaw, newMaximumRaw int64) 
 	return max(int64(1), min(rescaled, newMaximumRaw))
 }
 
+// AllocateVitalityStamina applies the class's one-point gain after the maximum-change callback.
+func AllocateVitalityStamina(rates ClassRates, currentRaw, previousMaximumRaw, newMaximumRaw int64) int64 {
+	return min(max(int64(0), newMaximumRaw),
+		RescaleCurrentStamina(currentRaw, previousMaximumRaw, newMaximumRaw)+rates.StaminaPerVitality*64)
+}
+
 // AdvanceStamina applies one 25 Hz Diablo II stamina event in 8.8 units.
 // Drain takes precedence over recovery, so an eligible running tick cannot also regenerate stamina.
 func AdvanceStamina(tick StaminaTick) ResolvedStamina {

@@ -496,6 +496,7 @@ These are observed adjacent samples, not pre-adjusted test operands:
 | Partial, 30% passive | 25/10 → 26/9 | 29154 → 29652 | 34278 → 34611 | one running frame between positions |
 | Partial, normal life | 26/2 → 27/1 | 20855 → 21294 | 23808 → 24064 | one running frame between positions |
 | Partial, Assassin | 22/1 → 23/0 | 23340 → 23959 | 24960 → 25280 | same position and running mode |
+| Full, Assassin | 20/3 → 21/2 | 24320 → 24640 | 24320 → 24640 | same position and mode |
 
 Fixtures added unearned points to a clone of an owned save. The first partial
 and zero cases also used synthetic high life to isolate movement. The passive
@@ -536,7 +537,8 @@ and do not supply these exact arithmetic operands. The other four full cases
 use repeated reads of the same active client unit, followed until current and
 maximum settle together. They are not independent authority observations.
 
-The partial same-position vector distinguishes the arithmetic order:
+The partial same-position Barbarian, Amazon, and Assassin vectors distinguish
+the inferred arithmetic order without adjusting for an intervening drain:
 
 ```text
 rescale only:             trunc(18168 / 23808 * 24064)       = 18363
@@ -554,26 +556,29 @@ newCurrent = min(newMaximum, rescaled + CharStats.StaminaPerVitality * 64)
 
 Maximum changes therefore retain the existing ratio/truncation callback, then
 allocation adds the class's unmodified quarter-point gain. The passive case
-changes maximum by 333 raw but grants 256: after the intervening running drain,
+changes maximum by 333 raw but grants 256. Inferring that the 40-raw running
+drain precedes allocation gives
 `trunc(29114 / 34278 * 34611) + 256 = 29652`. The normal-life partial similarly
-uses 20815 after its intervening drain. The zero case's first observed 303 is
+uses 20815 under that timing inference. Drain after allocation would instead
+produce 29653 and 21295, respectively. The zero case's first observed 303 is
 consistent with a 256 allocation gain followed by one 47-unit walking recovery
 frame, then the observed +47 sequence. The normal-life zero holdout directly
 observed the intermediate 256 before the next walking frame produced 303.
 Full stamina caps at the new maximum.
 
-The allocation evidence suite composes the existing production
-`d2legacy.movement_rules/v1.maximum_stamina`, `rescale_stamina`, and `class_facts`
-capabilities with the observed one-point gain. It checks all seven full cases,
+The production `d2legacy.movement_rules/v1.allocate_vitality_stamina` rule
+applies the inferred ordering after the caller calculates the new maximum.
+Its evidence suite checks all seven full cases,
 the recorded partial/zero cases, class rounding, and the passive-bonus ordering.
 Generic equipment/source changes remain on `rescale_stamina`, where zero stays
 zero. The existing calculations remain correct for those roles.
-A future allocation transaction must apply the formula exactly once, commit
+A future allocation transaction must call that rule exactly once, commit
 maximum and current together, and avoid applying the generic callback again.
-This is a research foundation for feature parity, not a live allocation API,
-earning policy, command, or UI.
+This is a reusable rule for future feature parity, not a live allocation
+transaction, earning policy, command, or UI.
 
-The arithmetic order is established for these cases. Exact CPU instruction
+The arithmetic order is inferred from distinguishing observed vectors for these
+cases. Exact CPU instruction
 order, simultaneous allocation/equipment changes, and bulk allocations remain
 separate holdouts. Partial and zero cases for Sorceress, Necromancer, Paladin,
 and Druid, and literal zero for Assassin, remain unmeasured.
