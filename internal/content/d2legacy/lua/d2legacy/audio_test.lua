@@ -54,9 +54,15 @@ return test.suite({
                 test.mock_module("engine.records/v1", {
                     load = function()
                         return {
-                            { Sound = "redirect_source", Redirect = "2", FileName = "source.wav", ["Group Weight"] = "9" },
+                            {
+                                Sound = "redirect_source", Redirect = "2", FileName = "source.wav",
+                                ["Group Weight"] = "9",
+                            },
                             { Sound = "unrelated", FileName = "neighbor.wav", ["Group Weight"] = "9" },
-                            { Sound = "target", FileName = "target-first.wav", ["Group Size"] = "2", ["Group Weight"] = "1" },
+                            {
+                                Sound = "target", FileName = "target-first.wav",
+                                ["Group Size"] = "2", ["Group Weight"] = "1",
+                            },
                             { Sound = "target_alt", FileName = "target-second.wav", ["Group Weight"] = "3" },
                             { Sound = "invalid_redirect", Redirect = "99", FileName = "fallback.wav" },
                         }

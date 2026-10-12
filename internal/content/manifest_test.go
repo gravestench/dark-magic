@@ -542,7 +542,9 @@ func TestD2LegacyPresentationAssetCoverageBaseline(t *testing.T) {
 	// The session resistance penalty adds DifficultyLevels.txt to the
 	// code-owned authoritative tables. It is game-rule data, not a presentation
 	// dependency.
-	const auditedFingerprint = "147de7855bd825e8c524b66bf1642272ef66c1b092c5bb4fce19573bcf21d4cc"
+	// The divergent skill-ID fixture names the selected Sorceress icon sheet;
+	// this adds one static code-owned path under the existing spells prefix.
+	const auditedFingerprint = "16c1abd9f33b84ee8b7e32c4ebb4be7e3d069c87cebe5bb6ce73fc40ab3ab291"
 	if coverage.Fingerprint != auditedFingerprint {
 		t.Fatalf(
 			"presentation asset coverage changed: got %s, want audited %s; "+
