@@ -1,6 +1,12 @@
 # Movement, collision, pathfinding, and room-streaming research
 
-Status: implementation-oriented research baseline for expansion 1.14d. This document deliberately distinguishes **Dark Magic's current deterministic movement policy** from older behavior recovered through D2MOO. That 1.10f code is secondary evidence only and must be revalidated where the 1.14d target may differ. The current implementation is already useful and should be extended rather than replaced wholesale.
+Status: implementation-oriented research baseline from owned Expansion 1.14d
+evidence. Dark Magic targets 1.13c and 1.14d feature parity, but 1.13c movement
+equivalence remains unverified. This document distinguishes **Dark Magic's
+current deterministic movement policy** from older behavior recovered through
+D2MOO. That 1.10f code is secondary evidence only and must be revalidated
+where either target patch may differ. The current implementation is already
+useful and should be extended rather than replaced wholesale.
 
 ## Executive conclusion
 

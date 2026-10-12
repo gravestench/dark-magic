@@ -37,6 +37,12 @@ The legacy binary-format source inventory remains in [../formats/SOURCE_MATRIX.m
 
 GPL sources are behavioral/research references only. Do not mechanically translate GPL implementation into Dark Magic.
 
+For the dual Expansion 1.13c/1.14d feature-parity goal, the patch chronology
+supports a largely shared feature set, not exact mechanical equivalence. The
+owned 1.14d rows and observations above verify only that patch. A 1.13c claim
+needs its own data or runtime check, especially where later notes record a
+fix. See the [target-version rationale](DIABLO_II_PATCH_HISTORY.md#why-target-both-expansion-patches).
+
 ## D2MOO paths inspected for foundation research
 
 - `source/D2Common/include/D2Seed.h`

@@ -217,14 +217,14 @@ Model these as separate semantic cue roles. Do not use one `Skill.Sound` field f
 
 Missile travel sounds that track a moving entity need emitter tracking until the missile is removed. The current mixer can manage a sound handle, but the presentation layer needs to update pan/attenuation or use future backend-native 3D tracking.
 
-For the current owned Expansion 1.14d target, record inspection makes this a
-concrete evidence gate rather than a generic recommendation. Fire Bolt, Fire
-Ball, Ice Blast, and Glacial Spike reference travel sounds whose `Sounds.txt`
-rows have `Loop=1`; their referenced impact sounds have `Loop=0`. Nova instead
-references one non-looping travel row and no hit row. Those data joins identify
-assets and a record-level loop flag, but they do not prove start/stop frames,
-whether a travel loop survives contact or expiration, or whether Nova plays
-once per cast or once per radial projectile.
+For the current owned Expansion 1.14d evidence baseline, record inspection
+makes this a concrete evidence gate rather than a generic recommendation. Fire
+Bolt, Fire Ball, Ice Blast, and Glacial Spike reference travel sounds whose
+`Sounds.txt` rows have `Loop=1`; their referenced impact sounds have `Loop=0`.
+Nova instead references one non-looping travel row and no hit row. Those data
+joins identify assets and a record-level loop flag, but they do not prove
+start/stop frames, whether a travel loop survives contact or expiration, or
+whether Nova plays once per cast or once per radial projectile.
 
 The strict `missile_audio_probe` therefore records projectile creation,
 contact/removal, audible intervals, and observed sound-instance count across a

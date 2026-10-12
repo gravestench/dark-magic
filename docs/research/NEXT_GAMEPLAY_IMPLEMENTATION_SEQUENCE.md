@@ -6,8 +6,9 @@ its linked issues, and GitHub milestones own the current queue. This document
 remains useful for the evidence and rationale behind the completed M21 spine,
 but its old assumption that M22 networking follows gameplay is obsolete.
 
-Target: expansion-only Diablo II: Lord of Destruction 1.14d. Classic and
-earlier-patch behavior are not implementation targets.
+Current product target: feature parity with Expansion 1.13c and 1.14d. This
+superseded plan used 1.14d as its sole evidence baseline; its patch-specific
+probes retain that meaning. Classic and other patch versions are out of scope.
 
 This document is historical planning guidance, not an implementation-status
 authority. GitHub issues and milestones own status; the system research
