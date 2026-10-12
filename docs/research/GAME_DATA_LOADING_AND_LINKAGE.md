@@ -82,11 +82,12 @@ relationships remain unverified unless separately supported by evidence.
 ### Admitted `d2legacy` lookup ledger (issue #370)
 
 This audits **current Dark Magic consumers**, not the original expansion 1.14d
-TXT-to-BIN compiler. Each row originates in the session-pinned layered record
-generation; the listed key is a consumer-owned lookup, separate from source
-provenance and authored row order. `C` means consumer code establishes the rule,
-`T` a divergent-identity consumer test, and `R` recovered DS1 evidence. These
-grades do not establish the original compiler rule. Test paths below are
+TXT-to-BIN compiler. Lua TXT rows originate in the session-pinned layered
+record generation; the recovered DS1 adapter has its separately retained source
+rows and provenance. The listed key is a consumer-owned lookup, separate from
+source provenance and authored row order. `C` means consumer code establishes
+the rule, `T` a divergent-identity consumer test, and `R` recovered DS1
+evidence. These grades do not establish the original compiler rule. Test paths below are
 relative to `internal/content/d2legacy/lua/d2legacy/` unless stated otherwise.
 
 | Consumer | Source field → target field | Identity, sentinel and missing behavior | Evidence |
