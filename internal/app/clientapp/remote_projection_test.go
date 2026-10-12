@@ -43,11 +43,15 @@ func TestConnectedProjectionUpdatesOnlyOwnerResistances(t *testing.T) {
 	app := &application{clientSimulation: engine}
 	connected := connectedProjectionFixture()
 	hud := connected.HUD
+	client := newClientWorld()
 	hud.Resistances = &playeradapter.HUDResistances{
 		FireResist: 90, ColdResist: -100, LightningResist: 31,
 		MaxFireResist: 75, MaxColdResist: 80, MaxLightningResist: 85,
 	}
-	if err := app.installRemoteProjection(hud, connected.Private, connected.Party, true); err != nil {
+	presentation := &clientsession.PresentationSnapshot{
+		HUD: hud, World: connected.World, Private: connected.Private, Party: connected.Party, Revision: 1,
+	}
+	if _, err := client.installCanonicalPresentation(app, presentation); err != nil {
 		t.Fatal(err)
 	}
 	if err := app.syncRemoteMirrors(connected.World.Entities, hud.Location); err != nil {
@@ -87,7 +91,9 @@ func TestConnectedProjectionUpdatesOnlyOwnerResistances(t *testing.T) {
 	updated.FireResist = -40
 	updated.MaxFireResist = 95
 	hud.Resistances = &updated
-	if err := app.installRemoteProjection(hud, connected.Private, connected.Party, false); err != nil {
+	presentation.HUD = hud
+	presentation.Revision = 2
+	if _, err := client.installCanonicalPresentation(app, presentation); err != nil {
 		t.Fatal(err)
 	}
 	assertResistance("fire_resist", -40)
@@ -97,7 +103,9 @@ func TestConnectedProjectionUpdatesOnlyOwnerResistances(t *testing.T) {
 	}
 
 	hud.Resistances = nil
-	if err := app.installRemoteProjection(hud, connected.Private, connected.Party, false); err != nil {
+	presentation.HUD = hud
+	presentation.Revision = 3
+	if _, err := client.installCanonicalPresentation(app, presentation); err != nil {
 		t.Fatal(err)
 	}
 	if _, found := store.Get(owner); found {

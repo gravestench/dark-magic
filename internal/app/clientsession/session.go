@@ -112,7 +112,7 @@ func (session *Session) PresentationSnapshot() *PresentationSnapshot {
 // so public, private, party, and event projections cannot come from different corrections.
 func (session *Session) publishPresentationLocked() {
 	session.presentation.Store(&PresentationSnapshot{
-		HUD:        session.HUD,
+		HUD:        cloneHUDResistanceValues(session.HUD),
 		World:      session.World,
 		Private:    session.Private,
 		Party:      clonePartyView(session.Party),
@@ -148,11 +148,22 @@ func cloneEventView(view playeradapter.EventView) playeradapter.EventView {
 	return view
 }
 
-// clonePresentationView recursively detaches every mutable public slice and optional health value.
+// cloneHUDResistanceValues detaches the optional owner HUD pointer before a
+// caller or retained render snapshot can observe concurrent session updates.
+func cloneHUDResistanceValues(hud playeradapter.HUD) playeradapter.HUD {
+	if hud.Resistances != nil {
+		values := *hud.Resistances
+		hud.Resistances = &values
+	}
+	return hud
+}
+
+// clonePresentationView recursively detaches every mutable public slice and optional value.
 func clonePresentationView(
 	hud playeradapter.HUD,
 	world playeradapter.WorldView,
 ) (playeradapter.HUD, playeradapter.WorldView) {
+	hud = cloneHUDResistanceValues(hud)
 	hud.Belt.Slots = append([]string(nil), hud.Belt.Slots...)
 	hud.Skills.Learned = append([]playeradapter.HUDLearnedSkill(nil), hud.Skills.Learned...)
 	world.Entities = append([]playeradapter.WorldEntity(nil), world.Entities...)
