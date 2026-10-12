@@ -78,7 +78,10 @@ function M.play_record(name, seed)
     assert(first, "unknown sound record: " .. tostring(name))
     local row = rows[first]
     local redirect = tonumber(text(row, "Redirect", "redirect"))
-    if redirect and rows[redirect + 1] then row = rows[redirect + 1] end
+    if redirect and rows[redirect + 1] then
+        first = redirect + 1
+        row = rows[first]
+    end
     local group = number(row, "Group Size", "GroupSize")
     if group > 1 then row = choose_group(rows, first, group, seed) end
     return engine_audio.play(asset_path(row), options(row, name, seed))

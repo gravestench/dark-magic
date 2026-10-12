@@ -14,7 +14,11 @@ return test.suite({
                         { Def = "29", LevelId = "2" },
                         { Def = "30", LevelId = "3" },
                     },
-                    ["data/global/excel/LvlTypes.txt"] = { {}, {}, { File1 = "outdoor.dt1" } },
+                    ["data/global/excel/LvlTypes.txt"] = {
+                        { Id = "0" },
+                        { Id = "2", File1 = "wrong-row.dt1" },
+                        { Id = "9", File1 = "outdoor.dt1" },
+                    },
                 }
                 test.mock_module("engine.records/v1", {
                     load = function(path)
@@ -31,6 +35,7 @@ return test.suite({
                 end
                 test.assert(records.level(2).Id == "2")
                 test.assert(records.level_type(2).File1 == "outdoor.dt1")
+                test.assert(records.level_type(9) == nil)
                 test.assert(loads["data/global/excel/LvlPrest.txt"] == 1)
                 test.assert(loads["data/global/excel/Levels.txt"] == 1)
                 test.assert(loads["data/global/excel/LvlTypes.txt"] == 1)
