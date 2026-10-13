@@ -118,9 +118,10 @@ local skills = {
         ["repeat"] = "1",
         usemanaondo = "1",
         srvmissilea = "blade-fury-missile",
+        cltmissilea = "blade-fury-visual",
         SrcDam = "96",
         Param3 = "6",
-        Param4 = "3",
+        Param4 = "5",
     }),
     skill(271, "Lightning Sentry", {
         srvdofunc = "45",
@@ -204,7 +205,8 @@ local missiles = {
     missile("web-air", { HitSubMissile1 = "web-ground" }),
     missile("web-ground", { Vel = "0", CollideKill = "" }),
     missile("blade-sentinel-missile"),
-    missile("blade-fury-missile"),
+    missile("blade-fury-missile", { Vel = "22", Range = "40" }),
+    missile("blade-fury-visual", { Vel = "22", Range = "33" }),
     missile("charged-shot", { Vel = "12", Range = "98" }),
     missile("wake-fire-shot"),
     missile("lightning-shot", { Vel = "30", Range = "98" }),
@@ -238,6 +240,15 @@ return test.suite({
         ["data/global/excel/SkillDesc.txt"] = descriptions,
     },
     cases = {
+        test.case("uses_blade_fury_server_missile_instead_of_client_visual", function(t)
+            t:run(function()
+                local definition = require("d2legacy.data.trap_skills").load({ 266 })[266]
+                test.expect(definition.missile_id):equals("blade-fury-missile")
+                test.expect(definition.speed_per_tick):equals(67584 / 65536)
+                test.expect(definition.lifetime_ticks):equals(40)
+                test.expect(definition.complete_delay):equals(6)
+            end)
+        end),
         test.case("decodes_all_ten_exact_ids_by_six_record_shapes", function(t)
             t:run(function()
                 local ids = { 251, 256, 257, 261, 262, 266, 271, 272, 276, 277 }

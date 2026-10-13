@@ -56,6 +56,7 @@ func TestOwnedTargetAssassinTrapFamilyRecords(t *testing.T) {
 			"skill": "Blade Fury", "srvstfunc": "26", "srvdofunc": "48", "repeat": "1",
 			"usemanaondo": "1", "startmana": "6", "Param3": "3", "Param4": "5",
 			"mana": "8", "manashift": "5",
+			"srvmissilea": "bladefragment1", "cltmissilea": "bladefragment2", "prgcalc1": "par4",
 		},
 		"271": {
 			"skill": "Lightning Sentry", "srvdofunc": "45", "summon": "lightningsentry",
@@ -99,6 +100,8 @@ func TestOwnedTargetAssassinTrapFamilyRecords(t *testing.T) {
 	for name, fields := range map[string]map[string]string{
 		"sentrylightningbolt": {"Id": "526", "Vel": "30", "MaxVel": "30", "Range": "10", "pSrvDoFunc": "1"},
 		"sentrychargedbolt":   {"Id": "495", "Vel": "12", "MaxVel": "12", "Range": "98", "pSrvDoFunc": "1"},
+		"bladefragment1":      {"Id": "506", "Vel": "22", "MaxVel": "22", "Range": "40", "pSrvDoFunc": "1"},
+		"bladefragment2":      {"Id": "508", "Vel": "22", "MaxVel": "22", "Range": "33", "pCltDoFunc": "1"},
 	} {
 		row := rowBy(missiles, "Missile", name)
 		if row == nil {
