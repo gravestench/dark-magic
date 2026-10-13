@@ -1354,6 +1354,36 @@ It retains a failed first room watch, two normally closed fixed-identity flight
 watches, and two route/counter comparison mismatches. The older D2MOO 1.10f
 initializer is corroborating hypothesis evidence, not target-version authority.
 
+## Owned Blade Fury logical and visual missiles
+
+The owned skill 266 selects `bladefragment1` for `srvmissilea` and
+`bladefragment2` for `cltmissilea`. Their missile IDs are 506 and 508, with
+authored lifetimes 40 and 33 respectively. Both have `Vel=22`.
+Two ordinary one-second secondary-button holds produced client room-list
+missile 508 identities with owner words `(0, 1)`. Repeated paused reads preserve
+total/current counters `(33, 15)`, `(33, 21)`, `(33, 27)` and `(33, 33)`.
+
+A bounded writable-allocation scan also found three distinct missile 506
+candidates with the same owner and total/current counters `(40, 21)`,
+`(40, 27)` and `(40, 33)`. Briefly resuming the game yielded 50 logical-candidate
+and 47 visual increments of exactly `-67584` in 16.16 Y coordinates, matching
+`22 * 3 / 64` subtiles per update. Sampled counters decrement alongside motion.
+Both groups retain six-counter spacing between coexisting blades.
+
+The owned server row preserves the logical missile's 40-tick definition.
+Owned `Param4=5` gives the current decoder's `Param4 + 1` completion interval
+of six. The observed six-counter spacing is consistent with that interval,
+but does not establish accepted release timestamps or startup latency.
+The client visual's 33-tick counter is not a replacement for the logical lifetime. The allocation
+matches do not establish damage authority, contacts, equipment capture timing,
+continuous channel admission or first-shot latency in
+[issue #419](https://github.com/gravestench/dark-magic/issues/419).
+
+Private case `blade-fury-cadence-001` has evidence index
+`a52beb1c451ec5236bb7d21b5d3c6e992a8a7c318e32127f34d4b93dd35051e7`.
+It retains the first actor's failed expectation of missile 506 in a client
+room walk, both native casts, candidate scan, live watches and rejected reads.
+
 ## Assassin trap family
 
 The exact player IDs 251, 256, 257, 261, 262, 266, 271, 272, 276, and 277 now
