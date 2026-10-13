@@ -225,7 +225,9 @@ Research Akara reward, token respec, patch applicability, exactly which stats/sk
 `CharStats` walk/run velocity, run drain, stamina drain/recovery, and the core
 level/Vitality/source-derived maximum are implemented. Movement owns integration;
 progression owns the base class/resource terms. Remaining work here is the
-live base-Vitality allocation ordering and owned-runtime cold/freeze boundaries.
+live stat-allocation command and owned-runtime cold/freeze boundaries. Owned
+one-point stamina observations infer rescale, then the class gain, capped
+at the new maximum; see [the movement evidence](MOVEMENT_COLLISION_AND_PATHFINDING.md#owned-one-point-vitality-allocation-observations).
 The checkpointed per-act environment cycle now evaluates packed
 `item_stamina_bytime` min/max values through the pinned op-6 dependency; the Act
 II Tainted Sun quest still needs an owned transition vector before it may switch
@@ -294,8 +296,8 @@ Keep durable hardcore flag, edition, Ladder/season identity, highest completed d
 
 1. Extract all seven CharStats rows into non-distributable test vectors and document scaling.
 2. Verify creation max life/mana and `HPAdd` semantics; maximum stamina core is pinned.
-3. Verify life/mana per-level and per-Vitality/Energy rounding plus stamina
-   base-Vitality allocation callback ordering.
+3. Verify life/mana per-level and per-Vitality/Energy rounding. The one-point
+   stamina allocation order is inferred from distinguishing observed vectors.
 4. Verify Experience row semantics and level cap.
 5. Trace one XP grant crossing multiple levels.
 6. Trace party/level/difficulty XP penalties and integer rounding.
