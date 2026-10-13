@@ -214,6 +214,11 @@ local function create_target(target)
             id = wanted, kind = "dynamic-object", label = target.npc,
             radius = target.radius, priority = 20,
         }
+        if wanted == "act1-akara" then
+            local appearance = require("d2legacy.data.monster").npc_appearance("akara")
+            appearance.mode, appearance.death_sound = "NU", ""
+            components["d2legacy.monster.appearance"] = appearance
+        end
     end
     if target.room_id ~= nil then
         assert(type(target.resident_id) == "string" and target.resident_id ~= "", "resident ID is required")

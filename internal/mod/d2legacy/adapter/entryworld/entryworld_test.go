@@ -183,4 +183,7 @@ func TestInteractionDataGroundsAkaraInAuthoredTownPlacement(t *testing.T) {
 		guide["level_id"] != float64(1) || guide["selectable"] != true || guide["radius"] != float64(4) {
 		t.Fatalf("authored Akara target = %#v", guide)
 	}
+	if other := targets[1].(map[string]any); other["npc"] != "Chest" || other["x"] != float64(11) || other["y"] != float64(16) {
+		t.Fatalf("DS1 Akara must not be a second target: %#v", other)
+	}
 }

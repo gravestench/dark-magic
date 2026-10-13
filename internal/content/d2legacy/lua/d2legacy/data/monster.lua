@@ -333,12 +333,14 @@ function M.npc_appearance(id)
     local stats = assert(indexed.stats[id], "missing MonStats row")
     assert(truth(stats, "npc"), "monster is not an NPC")
     local graphics = assert(indexed.graphics[graphics_id(stats)], "missing MonStats2 row")
+    local overlay_height = integer(graphics, "OverlayHeight", 0)
+    assert(overlay_height >= 0 and overlay_height <= 4, "MonStats2 OverlayHeight must be in 0..4")
     return {
         token = string.upper(stats.Code or ""),
         weapon_class = string.upper(graphics.BaseW or "HTH"),
         components = encoded_components(graphics_components(graphics)),
         name_key = stats.NameStr or stats.Id,
-        overlay_height = integer(graphics, "OverlayHeight", 0),
+        overlay_height = overlay_height,
     }
 end
 

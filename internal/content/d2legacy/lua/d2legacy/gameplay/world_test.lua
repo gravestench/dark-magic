@@ -6,22 +6,20 @@ return test.suite({
     cases = {
         test.case("akara_snapshot_reuses_target_position_and_filters_inactive_lifetime", {
             test.run(function()
-                test.mock_module("engine.records/v1", {
-                    load = function(path)
-                        if string.find(path, "monstats2", 1, true) then
-                            return { { Id = "akara", BaseW = "hth", TR = "1", TRv = "lit", OverlayHeight = "2" } }
-                        end
-                        if string.find(path, "monlvl", 1, true) then
-                            return {}
-                        end
-                        return { { Id = "akara", Code = "PS", MonStatsEx = "akara", npc = "1", NameStr = "Akara" } }
-                    end,
-                }, { "load" })
                 local ecs = require("engine.ecs/v1")
                 require("d2legacy.components.items").register()
                 local world = require("d2legacy.gameplay.world")
                 local actor = ecs.create({
                     ["d2legacy.interaction.target"] = { id = "act1-akara", npc = "Akara", x = 12, y = 8, radius = 4 },
+                    ["d2legacy.monster.appearance"] = {
+                        token = "PS",
+                        mode = "NU",
+                        weapon_class = "HTH",
+                        name_key = "Akara",
+                        components = "TR=LIT",
+                        death_sound = "",
+                        overlay_height = 2,
+                    },
                     ["d2legacy.world.position"] = { x = 12, y = 8 },
                     ["d2legacy.world.location"] = { act = 1, level_id = 1 },
                     ["d2legacy.world.selectable"] = {

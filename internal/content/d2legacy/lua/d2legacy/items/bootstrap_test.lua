@@ -4,6 +4,15 @@ return test.suite({
     profile = "authority",
     tier = "fast",
     covers = { "internal/game/item" },
+    records = {
+        ["data/global/excel/monstats.txt"] = {
+            { Id = "akara", Code = "PS", MonStatsEx = "akara", npc = "1", NameStr = "Akara" },
+        },
+        ["data/global/excel/monstats2.txt"] = {
+            { Id = "akara", BaseW = "hth", TR = "1", TRv = "lit", OverlayHeight = "2" },
+        },
+        ["data/global/excel/monlvl.txt"] = { { Level = "1" } },
+    },
     initial_data = {
         ["d2legacy.interactions"] = {
             owner = "alice",
@@ -84,6 +93,11 @@ return test.suite({
                 test.expect(position:get("x")):equals(target:get("x"))
                 test.expect(position:get("y")):equals(target:get("y"))
                 test.expect(location:get("level_id")):equals(1)
+                local appearance = ecs.get(entity, "d2legacy.monster.appearance")
+                test.expect(appearance:get("token")):equals("PS")
+                test.expect(appearance:get("mode")):equals("NU")
+                test.expect(appearance:get("components")):equals("TR=LIT")
+                test.expect(appearance:get("overlay_height")):equals(2)
                 local selected = require("d2legacy.gameplay.targeting").selectable_at(21, 46, 1)
                 test.expect(selected.id):equals("act1-akara")
                 require("d2legacy.items.bootstrap").ensure_player("alice")

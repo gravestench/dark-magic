@@ -5,6 +5,24 @@ return test.suite({
     profile = "module",
     tier = "fast",
     cases = {
+        test.case("npc_appearance_rejects_invalid_overlay_height", function(t)
+            t:run(function()
+                test.mock_module("engine.records/v1", {
+                    load = function(path)
+                        if string.find(path, "monstats2", 1, true) then
+                            return { { Id = "akara", OverlayHeight = "5" } }
+                        end
+                        if string.find(path, "monlvl", 1, true) then
+                            return { { Level = "1" } }
+                        end
+                        return { { Id = "akara", MonStatsEx = "akara", npc = "1" } }
+                    end,
+                }, { "load" })
+                local ok, message = pcall(require("d2legacy.data.monster").npc_appearance, "akara")
+                test.expect(ok):equals(false)
+                test.expect(string.find(message, "OverlayHeight must be in 0..4", 1, true) ~= nil):equals(true)
+            end)
+        end),
         test.case("legacy_tables_are_loaded_once_per_vm", function(t)
             t:run(function()
                 local loads = {}
