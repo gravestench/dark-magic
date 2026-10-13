@@ -1,8 +1,9 @@
 -- Value-only resistance figures for the character panel.
 --
 -- Authority owns the resistances: derived_stats applies the difficulty penalty
--- and stat sources to d2legacy.combat.defense. This module only reads that
--- component and formats what the panel draws, and it never writes ECS state.
+-- and stat sources to d2legacy.combat.defense. Connected clients receive only
+-- the current display inputs in a presentation mirror. This module never
+-- writes ECS state.
 
 local M = {}
 
@@ -21,8 +22,8 @@ function M.displayed(defense)
     return values
 end
 
--- Returns nil when this process has no authoritative defense for the player,
--- such as on a connected client, so the panel can leave the boxes empty.
+-- Prefer local authority when present; connected clients read the owner-only
+-- presentation mirror. Missing values leave the panel boxes empty.
 function M.for_player(player_id)
     -- Required lazily: the overlay is registered at boot, before frontend
     -- scenes have an ECS capability.
@@ -30,6 +31,11 @@ function M.for_player(player_id)
     for _, entity in ipairs(ecs.query({ all = { "d2legacy.player.identity", "d2legacy.combat.defense" } })) do
         if ecs.get(entity, "d2legacy.player.identity"):get("player") == player_id then
             return M.displayed(ecs.get(entity, "d2legacy.combat.defense"):snapshot())
+        end
+    end
+    for _, entity in ipairs(ecs.query({ all = { "d2legacy.player.identity", "d2legacy.presentation.character_resistances" } })) do
+        if ecs.get(entity, "d2legacy.player.identity"):get("player") == player_id then
+            return M.displayed(ecs.get(entity, "d2legacy.presentation.character_resistances"):snapshot())
         end
     end
     return nil

@@ -395,6 +395,15 @@ function M.register()
         { name = "physical_reduction_raw", type = "i64" },
         { name = "fire_absorb_percent", type = "i64", default = 0 },
     })
+    -- Connected clients mirror only the six values drawn by the character panel.
+    component("d2legacy.presentation.character_resistances", {
+        { name = "fire_resist", type = "i64" },
+        { name = "cold_resist", type = "i64" },
+        { name = "lightning_resist", type = "i64" },
+        { name = "max_fire_resist", type = "i64" },
+        { name = "max_cold_resist", type = "i64" },
+        { name = "max_lightning_resist", type = "i64" },
+    })
     component("d2legacy.stat.source", {
         { name = "target", type = "entity" },
         { name = "source_id", type = "string" },
