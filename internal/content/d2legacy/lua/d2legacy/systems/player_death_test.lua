@@ -192,5 +192,71 @@ return test.suite({
             end),
             test.expect_checkpoint_parity(1),
         }),
+        -- Death already stops an active knockback. It must also record that
+        -- stop, so the transaction ends with exactly one outcome.
+        test.case("death_interrupts_active_forced_motion_with_one_outcome", {
+            test.submit_system(
+                fixtures.command(
+                    "system.player.enter",
+                    fixtures.player_entry({ health = 3, max_health = 3 }),
+                    { tick = 1, sequence = 1 }
+                )
+            ),
+            test.step(1),
+            test.run(function()
+                local ecs = require("engine.ecs/v1")
+                local player = ecs.query({ all = { "d2legacy.player.identity" } })[1]
+                ecs.set(player, "d2legacy.world.forced_motion_request", {
+                    kind = "knockback",
+                    source_x = 8,
+                    source_y = 12,
+                    distance = 5,
+                    speed = 25,
+                    request_tick = 1,
+                })
+            end),
+            test.step(1),
+            test.run(function()
+                local ecs = require("engine.ecs/v1")
+                local damage = require("d2legacy.policy.damage")
+                local bundle = require("d2legacy.policy.damage_bundle")
+                local player = ecs.query({ all = { "d2legacy.player.identity" } })[1]
+                test.expect(ecs.get(player, "d2legacy.world.position"):get("x")):equals(11)
+                local result = damage.resolve(player, bundle.single("physical", 3 * 256), ecs)
+                test.assert(result.lethal, "test damage did not reach lethal player health")
+                ecs.create({
+                    ["d2legacy.combat.event"] = {
+                        kind = "unit_died",
+                        tick = 2,
+                        attacker_id = "monster:wolf",
+                        target_id = "player:alice",
+                        source_kind = "melee",
+                        damage_channel = "physical",
+                        rolled_damage_raw = result.rolled_damage_raw,
+                        damage_raw = result.damage_raw,
+                        remaining_health_raw = result.remaining_health_raw,
+                    },
+                })
+            end),
+            test.step(1),
+            test.run(function()
+                local ecs = require("engine.ecs/v1")
+                local player = ecs.query({ all = { "d2legacy.player.death" } })[1]
+                test.assert(player ~= nil, "lethal result did not kill the player")
+                test.assert(not ecs.get(player, "d2legacy.world.forced_motion"), "death kept forced motion")
+                local events = ecs.query({ all = { "d2legacy.world.forced_motion_event" } })
+                test.expect(#events):equals(1)
+                local event = ecs.get(events[1], "d2legacy.world.forced_motion_event")
+                test.expect(event:get("kind")):equals("knockback")
+                test.expect(event:get("outcome")):equals("interrupted")
+                test.expect(event:get("target_id")):equals("player:alice")
+                test.expect(event:get("start_x")):equals(10)
+                test.expect(event:get("end_x")):equals(12)
+                test.expect(event:get("requested_distance")):equals(5)
+                test.expect(event:get("applied_distance")):equals(2)
+                test.expect(ecs.get(player, "d2legacy.world.position"):get("x")):equals(12)
+            end),
+            test.expect_checkpoint_parity(1),
+        }),
     },
 })
