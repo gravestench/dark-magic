@@ -30,7 +30,7 @@ return test.suite({
                         priority = 20,
                     },
                 })
-                local snapshots = world.npc_snapshots()
+                local snapshots = world.akara_snapshots()
                 test.expect(#snapshots):equals(1)
                 test.expect(snapshots[1].token):equals("PS")
                 test.expect(snapshots[1].components):equals("TR=LIT")
@@ -38,16 +38,16 @@ return test.suite({
                 test.expect(snapshots[1].x):equals(12)
                 test.expect(snapshots[1].y):equals(8)
                 snapshots[1].x = 999
-                test.expect(world.npc_snapshots()[1].x):equals(12)
+                test.expect(world.akara_snapshots()[1].x):equals(12)
                 local selected = require("d2legacy.gameplay.targeting").selectable_at(12, 8, 1)
                 test.expect(selected.id):equals("act1-akara")
-                test.expect(selected.x):equals(world.npc_snapshots()[1].x)
+                test.expect(selected.x):equals(world.akara_snapshots()[1].x)
                 ecs.set(actor, "d2legacy.world.inactive", {})
-                test.expect(#world.npc_snapshots()):equals(0)
+                test.expect(#world.akara_snapshots()):equals(0)
                 ecs.remove(actor, "d2legacy.world.inactive")
-                test.expect(#world.npc_snapshots()):equals(1)
+                test.expect(#world.akara_snapshots()):equals(1)
                 ecs.destroy(actor)
-                test.expect(#world.npc_snapshots()):equals(0)
+                test.expect(#world.akara_snapshots()):equals(0)
             end),
         }),
         test.case("semantic_cues_tolerate_absent_optional_events", {

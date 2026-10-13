@@ -240,7 +240,7 @@ function M.monster_snapshots()
 end
 
 -- The guide's interaction entity also owns its presentation position and lifetime.
-function M.npc_snapshots()
+function M.akara_snapshots()
     local result = {}
     for _, entity in
         ipairs(ecs.query({
