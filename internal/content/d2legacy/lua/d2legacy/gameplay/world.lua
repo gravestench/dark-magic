@@ -239,6 +239,37 @@ function M.monster_snapshots()
     return result
 end
 
+-- The guide's interaction entity also owns its presentation position and lifetime.
+function M.akara_snapshots()
+    local result = {}
+    for _, entity in
+        ipairs(ecs.query({
+            all = {
+                "d2legacy.interaction.target",
+                "d2legacy.monster.appearance",
+                "d2legacy.world.selectable",
+                "d2legacy.world.position",
+                "d2legacy.world.location",
+            },
+            none = { "d2legacy.world.inactive" },
+        }))
+    do
+        local target = ecs.get(entity, "d2legacy.interaction.target")
+        if target:get("id") == "act1-akara" then
+            local snapshot = ecs.get(entity, "d2legacy.monster.appearance"):snapshot()
+            local position = ecs.get(entity, "d2legacy.world.position")
+            local location = ecs.get(entity, "d2legacy.world.location")
+            snapshot.entity_id, snapshot.spawn_id = entity:id(), target:get("id")
+            snapshot.x, snapshot.y = position:get("x"), position:get("y")
+            snapshot.act, snapshot.level_id = location:get("act"), location:get("level_id")
+            snapshot.direction = 0
+            snapshot.velocity_x, snapshot.velocity_y = 0, 0
+            result[#result + 1] = snapshot
+        end
+    end
+    return result
+end
+
 function M.player_snapshots(local_player, include_local, excluded_entity)
     local result = {}
     local excluded_id = excluded_entity and excluded_entity:id() or nil
