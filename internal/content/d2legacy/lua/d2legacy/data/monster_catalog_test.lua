@@ -18,6 +18,11 @@ return test.suite({
                         return { { Id = "akara", MonStatsEx = "akara", npc = "1" } }
                     end,
                 }, { "load" })
+                test.mock_module("d2legacy.policy.game_rules", {
+                    difficulty = function()
+                        return 0
+                    end,
+                }, { "difficulty" })
                 local ok, message = pcall(require("d2legacy.data.monster").npc_appearance, "akara")
                 test.expect(ok):equals(false)
                 test.expect(string.find(message, "OverlayHeight must be in 0..4", 1, true) ~= nil):equals(true)

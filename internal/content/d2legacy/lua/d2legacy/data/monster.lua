@@ -5,6 +5,7 @@
 -- this mod owns their Diablo-specific relationship and difficulty formulas.
 
 local records = require("engine.records/v1")
+local game_rules = require("d2legacy.policy.game_rules")
 
 local M = {}
 
@@ -253,7 +254,7 @@ function M.load(id, area, ...)
         area == nil or type(area) == "table",
         "monster difficulty comes from immutable game rules; the area must be a Levels.txt row"
     )
-    local difficulty = require("d2legacy.policy.game_rules").difficulty()
+    local difficulty = game_rules.difficulty()
     local indexed = monster_catalog()
     local stats = assert(indexed.stats[id], "missing MonStats row")
     assert(
@@ -276,7 +277,7 @@ function M.summon(id, pet_level, ...)
     assert(select("#", ...) == 0, "monster difficulty comes from immutable game rules")
     assert(type(pet_level) == "number" and pet_level >= 1, "summon pet level must be positive")
     pet_level = math.floor(pet_level)
-    local difficulty = require("d2legacy.policy.game_rules").difficulty()
+    local difficulty = game_rules.difficulty()
     local indexed = monster_catalog()
     local stats = assert(lookup(indexed.stats, id), "missing summoned MonStats row")
     assert(truth(stats, "enabled") and not truth(stats, "npc"), "summoned monster is unavailable")
@@ -302,7 +303,7 @@ function M.revive(id, monster_level, ...)
     assert(select("#", ...) == 0, "monster difficulty comes from immutable game rules")
     assert(type(monster_level) == "number" and monster_level >= 1, "revived monster level must be positive")
     monster_level = math.floor(monster_level)
-    local difficulty = require("d2legacy.policy.game_rules").difficulty()
+    local difficulty = game_rules.difficulty()
     local indexed = monster_catalog()
     local stats = assert(lookup(indexed.stats, id), "missing revived MonStats row")
     assert(truth(stats, "enabled") and not truth(stats, "npc"), "revived monster is unavailable")
