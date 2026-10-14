@@ -45,6 +45,7 @@ func InteractionData(
 func actOneGuideTarget() map[string]any {
 	return map[string]any{
 		"id":         "act1-akara",
+		"act":        float64(1),
 		"npc":        "Akara",
 		"vendor":     "Akara",
 		"categories": "armo,misc,weap",

@@ -23,6 +23,7 @@ return test.suite({
                     x = 21,
                     y = 46,
                     radius = 4,
+                    act = 1,
                     level_id = 1,
                     selectable = true,
                 },
@@ -92,6 +93,7 @@ return test.suite({
                 test.expect(target:get("id")):equals("act1-akara")
                 test.expect(position:get("x")):equals(target:get("x"))
                 test.expect(position:get("y")):equals(target:get("y"))
+                test.expect(location:get("act")):equals(1)
                 test.expect(location:get("level_id")):equals(1)
                 local appearance = ecs.get(entity, "d2legacy.monster.appearance")
                 test.expect(appearance:get("token")):equals("PS")

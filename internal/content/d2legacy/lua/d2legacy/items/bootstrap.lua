@@ -207,9 +207,10 @@ local function create_target(target)
         },
     }
     if target.selectable then
+        assert(type(target.act) == "number" and target.act > 0, "selectable act is required")
         assert(type(target.level_id) == "number" and target.level_id > 0, "selectable level is required")
         components["d2legacy.world.position"] = { x = target.x, y = target.y }
-        components["d2legacy.world.location"] = { act = 1, level_id = target.level_id }
+        components["d2legacy.world.location"] = { act = target.act, level_id = target.level_id }
         components["d2legacy.world.selectable"] = {
             id = wanted, kind = "dynamic-object", label = target.npc,
             radius = target.radius, priority = 20,

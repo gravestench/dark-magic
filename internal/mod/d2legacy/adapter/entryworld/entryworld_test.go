@@ -180,6 +180,7 @@ func TestInteractionDataGroundsAkaraInAuthoredTownPlacement(t *testing.T) {
 	}
 	guide := targets[0].(map[string]any)
 	if guide["id"] != "act1-akara" || guide["x"] != float64(21) || guide["y"] != float64(46) ||
+		guide["act"] != float64(1) ||
 		guide["level_id"] != float64(1) || guide["selectable"] != true || guide["radius"] != float64(4) {
 		t.Fatalf("authored Akara target = %#v", guide)
 	}
