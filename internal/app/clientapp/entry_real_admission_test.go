@@ -30,13 +30,16 @@ func TestOwnedAkaraProjectsVisibleConnectedMirror(t *testing.T) {
 	fixture.advanceOffline(t, 10)
 
 	var x, y float64
+
 	found := false
+
 	for _, object := range fixture.app.gameWorlds[1].Objects {
 		if object.Resolved && object.Type == gameworld.ObjectTypeDynamic && object.Class == "akara" {
 			x, y = float64(object.X), float64(object.Y)
 			found = true
 		}
 	}
+
 	if !found {
 		t.Fatal("owned town has no decoded Akara")
 	}
@@ -45,21 +48,26 @@ func TestOwnedAkaraProjectsVisibleConnectedMirror(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+
 	payload, err := playeradapter.ProjectWorldView("local-player", checkpoint)
 	if err != nil {
 		t.Fatal(err)
 	}
+
 	var view playeradapter.WorldView
 	if err := json.Unmarshal(payload, &view); err != nil {
 		t.Fatal(err)
 	}
+
 	var guide *playeradapter.WorldEntity
+
 	for index := range view.Entities {
 		if view.Entities[index].ID == "act1-akara" {
 			guide = &view.Entities[index]
 			break
 		}
 	}
+
 	if guide == nil || guide.Position.X != x || guide.Position.Y != y || guide.Radius != 4 ||
 		guide.Token != "PS" || guide.Mode != "NU" || guide.WeaponClass != "HTH" ||
 		guide.Components != "TR=LIT" || guide.OverlayHeight != 2 {
@@ -67,17 +75,24 @@ func TestOwnedAkaraProjectsVisibleConnectedMirror(t *testing.T) {
 	}
 
 	engine := gameecs.New()
+
 	t.Cleanup(func() { _ = engine.Close() })
 	registerRemoteViewSchemas(t, engine)
+
 	client := &application{clientSimulation: engine}
-	if err := client.syncRemoteMirrors([]playeradapter.WorldEntity{*guide}, playeradapter.HUDLocation{Act: 1, LevelID: 1}); err != nil {
+	location := playeradapter.HUDLocation{Act: 1, LevelID: 1}
+
+	if err := client.syncRemoteMirrors([]playeradapter.WorldEntity{*guide}, location); err != nil {
 		t.Fatal(err)
 	}
+
 	appearances, _ := akara.GetDynamicStore(engine.World(), "d2legacy.monster.appearance")
+
 	appearance, found := appearances.Get(client.remoteMirrors[guide.ID])
 	if !found {
 		t.Fatal("connected Akara mirror has no appearance")
 	}
+
 	token, _ := appearance.Get("token")
 	if token != "PS" {
 		t.Fatalf("connected Akara mirror token = %v", token)
