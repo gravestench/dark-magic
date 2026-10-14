@@ -21,7 +21,7 @@ func InteractionData(
 	guide := actOneGuideTarget()
 	if town := worlds[1]; town != nil {
 		for _, object := range town.Objects {
-			if object.Resolved && object.Type == gameworld.ObjectTypeDynamic && object.Class == "akara" {
+			if isAuthoredAkara(object) {
 				guide["x"], guide["y"] = float64(object.X), float64(object.Y)
 				guide["level_id"], guide["selectable"], guide["radius"] = float64(1), true, float64(4)
 				break
@@ -55,6 +55,10 @@ func actOneGuideTarget() map[string]any {
 	}
 }
 
+func isAuthoredAkara(object gameworld.Object) bool {
+	return object.Resolved && object.Type == gameworld.ObjectTypeDynamic && object.Class == "akara"
+}
+
 // sortedLevelIDs makes target publication independent of Go map iteration, preserving stable initial-state snapshots
 // and checksums across processes.
 func sortedLevelIDs(worlds map[int]*gameworld.Map) []int {
@@ -80,7 +84,7 @@ func appendSelectableTargets(
 
 	for _, selected := range gameMap.Selectables() {
 		object := objects[selected.ID]
-		if levelID == 1 && object.Resolved && object.Type == gameworld.ObjectTypeDynamic && object.Class == "akara" {
+		if levelID == 1 && isAuthoredAkara(object) {
 			continue
 		}
 
