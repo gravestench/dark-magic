@@ -17,6 +17,8 @@ little-endian numeric storage. Fingerprints were captured on 2026-10-14.
 |---|---|---:|---|
 | `LOD113C-D2COMMON` | `D2Common.dll` | 679936 | `59fa5928522f566f2bf99675571206ad70df889c89d3d07fa87edf5083e06e10` |
 | `LOD113C-D2GAME` | `D2Game.dll` | 1138688 | `24b293b86f95bea0228826c502ea04737ba21b91ca9832e52aac4b11fef14f53` |
+| `LOD113C-D2CLIENT` | `D2Client.dll` | 1093632 | `dd8bc6025de921216a97c17f97cd1a50fbb85926e838ec60e13451448836d906` |
+| `LOD113C-D2SOUND` | `D2Sound.dll` | 98304 | `b24dfb0159c76867e7f3d14602e73bccc37d59b7c8d2def88213b01084b61a72` |
 | `LOD113C-FOG` | `Fog.dll` | 212992 | `96c05770ab06b71a7a2d6abe5dc7c2f943b30ac8fe367e44bdbad7e2643bb863` |
 | `LOD113C-STORM` | `Storm.dll` | 372736 | `4b5fcaf87c98676e6be94f980b06b893c50f1505343cbbf038c5b331a2da2d5b` |
 | `LOD113C-GAME` | `Game.exe` | 61440 | `74fe9c092a521f7710392548c82f81544e531107db2358617e83818874db40a2` |
@@ -25,16 +27,27 @@ little-endian numeric storage. Fingerprints were captured on 2026-10-14.
 |---|---|---|---|
 | `LOD113C-D2COMMON` | `0x6FD50000` | Not available | Not available |
 | `LOD113C-D2GAME` | `0x6FC20000` | Not available | Not available |
+| `LOD113C-D2CLIENT` | `0x6FAB0000` | Not available | Not available |
+| `LOD113C-D2SOUND` | `0x6F9B0000` | Not available | Not available |
 | `LOD113C-FOG` | `0x6FF50000` | Not available | Not available |
 | `LOD113C-STORM` | `0x6FBF0000` | `1.08b` | Empty |
 | `LOD113C-GAME` | `0x00400000` | `1, 0, 13, 60` | `1, 0, 13, 257` |
 
 The build label identifies the source bundle. A DLL's resource version can differ from
 that label; matching the exact file fingerprint establishes whether a cited location
-applies. These five fingerprints agree across two stored original bundles. The four DLL
+applies. The original five fingerprints (D2Common, D2Game, Fog, Storm and Game) agree
+across two stored original bundles. Those four DLL
 fingerprints also match the recorded executable hashes of the analysis images used for
 instruction-listing corroboration. This correspondence identifies the analyzed specimens;
 fingerprinting adds no gameplay confirmation.
+
+During specification regeneration, the D2Common, D2Game, Fog and Storm analysis files
+were rehashed and matched the entries above. D2Client and D2Sound were additionally
+fingerprinted from the available original analysis specimens; their PE headers establish
+the architecture and preferred bases listed here. No file/product version strings were
+present in those two specimens. These additions identify the current analysis files;
+they do not establish the identity of DLLs loaded by earlier runtime sessions or prove
+that every historical client/audio reference was checked against these same specimens.
 
 The historical session record includes the matching `Game.exe` SHA-256. The historical
 static stat-reader record includes the matching `D2Common.dll` SHA-256. Full fingerprints

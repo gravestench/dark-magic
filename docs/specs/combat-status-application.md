@@ -3,12 +3,9 @@
 **Description**
 
 When a hit lands, the game decides whether the target is stunned, chilled, frozen, poisoned or set on
-fire. Each effect has its own length and its own rules for refreshing: a new chill only ever makes an
-existing chill last longer, while a new stun, poison or burn can replace a longer one with a shorter one,
-and a weaker poison or burn is ignored. Some monsters cannot be stunned or frozen, and a freeze that
-cannot apply becomes a chill instead. Chilling a monster can also mark it to shatter if it dies, and
-stunning some monsters usually fails; these chances use the same random numbers as the rest of combat,
-so they change what happens later in the fight.
+fire. A new chill or freeze only extends an existing effect; stun, poison and burn can replace a longer
+effect with a shorter one, while weaker poison and burn are ignored. Some monsters resist stun or
+receive chill instead of freeze, and chilling a monster can mark it to shatter if it dies.
 
 Status: draft
 Evidence build: Lord of Destruction Expansion 1.13c
@@ -50,12 +47,13 @@ record (resistance, cannot-be-frozen) are produced upstream.
   [combat-damage-pipeline-order](combat-damage-pipeline-order.md) defines. Within that operation the
   status stage runs after the life clamp, leech, absorb heal and the current-life write (DPO-R14,
   DPO-R16, DPO-R17), and before the durability step, post-apply events, reflection and hit reaction.
-- The cold expiry callback runs later, when the lifecycle removes an expired cold list (STL-R03,
-  STL-R05), after that list's stats were removed from the unit.
+- The cold expiry callback is requested later through the lifecycle's expired-list removal path
+  (STL-R03, STL-R05). Actual contribution removal and callback invocation remain CSA-Q02; CSA-R13
+  defines the callback at supplied entry after the list's stats have been removed.
 - Frequency: each applier is requested exactly once per hit-application call, in CSA-R01 order; each
   returns at its own gates.
-- Client view: state and stat changes reach clients through the lifecycle's state-change and unit
-  update messages; message content belongs to a `net-` spec (CSA-Q04).
+- Client view: state-change and unit-update message integration remains unresolved under STL-R14;
+  the sender and message content belong to a `net-` owner (CSA-Q04).
 - The full call chain with original locations is in the
   [companion](../research/spec-evidence/combat-status-application.md#dispatch-chain).
 
@@ -70,7 +68,7 @@ expiry frames are absolute game frames.
 | unit identity | `unit.type`, `unit.classId`, `unit.id`, `unit.mode` | i32 type/class/mode, u32 id | Types 0 player, 1 monster (NRF section 3.4); a null defender is type 6 in the freeze routing test; modes by GDF-R14/GDF-R15 |
 | seeds | `A.seed`, `D.seed` | pair `{lo,hi}` of u32 | One step is NRF-R01; `r = lo mod 100` is unsigned |
 | attacker game | `A.game.frame`, `A.game.difficulty`, `A.game.pool` | i32 frame, u8 difficulty 0..2, allocation context | Every applier takes frame, difficulty and pool from the attacker's game |
-| damage record | NRF section 3.2 fields `manaBurn`, `staminaBurn`, `stunLength`, `coldLength`, `freezeLength`, `poison`, `poisonLength`, `burnMagnitude`, `burnLength`, `resultFlags.lethal` | i32 (magnitudes 8.8 per frame, lengths frames); `lethal` is the 0x0002 bit of the u16 `resultFlags` | `manaBurn` holds the value left by the leech stage (LSE-R17); CSA-R01 clears only the 0x0002 bit |
+| damage record | NRF section 3.2 fields `manaBurn`, `staminaBurn`, `stunLength`, `coldLength`, `freezeLength`, `poison`, `poisonLength`, `burnMagnitude`, `burnLength`, `resultFlags.lethal` | i32 (magnitudes 8.8 per frame, lengths frames); `lethal` is the 0x0002 bit of the u16 `resultFlags` | `manaBurn` holds the value left by the leech stage (LSE-R17); CSA-R01 modifies only the 0x0002 bit |
 | monster data | `D.monsterData` present or absent; its 16-bit condition word | association; u16 | `monsterFlag8`: monster data present and condition word AND 8 nonzero; wider meaning CSA-Q03 |
 | alive exclusion | `unit.aliveExclusionCondition` | boolean | When true the unit is not alive for CSA-R13 (the same condition STL-R11 tests); wider meaning CSA-Q03 |
 | pending timer nodes | `D.eventChain`: ordered nodes, each with `kind` (u8) and successor | ordered list | Walked by CSA-R09 and CSA-R11 |
@@ -80,6 +78,8 @@ expiry frames are absolute game frames.
 | state set | `HasState`, `FindStateList` results | NRF-R12a | States 1 `freeze`, 2 `poison`, 11 `cold`, 21 `stunned`, 54 `uninterruptable`, 107 `shatter`, 115 `burning` (GDF-R12) |
 | list stat | own stat 74 `hpregen` of an existing poison/burn list | i32 | Read through the list read of NRF-R12b/NRF-R12c |
 | defender life | `Stat(D, 6, 0)` | i32 8.8 | Unit read of NRF-R12b/NRF-R12c, after all appliers |
+| helper arguments | optional supplied monster record, `mask`, callback state `s` | record association; u32 mask; i32 state | Supplied record takes precedence in `recordGate`; `monsterGate` intersects the low 16 mask bits; callback state comes from its removed list |
+| state and stat-read context | base list/state storage, state count; selected stat array, stat-definition count and availability, `fMin`, `MinAccr`, `ValShift` | optional associations; i32 counts, stat values and `MinAccr`; u8 `ValShift`; boolean conditions | Supplied state lookups/tests and list/unit stat reads consume NRF-R12a/NRF-R12b/NRF-R12c; these inputs are distinct from list writes |
 
 | Mapping / constant | Origin | Binding |
 |---|---|---|
@@ -340,9 +340,9 @@ kind-3 node the poison pre-step scheduled.
 
 Equal magnitude replaces. No draw occurs.
 
-**CSA-R13** **Cold expiry callback** [verified in 1.13c code (static)]. Called by the lifecycle with the
-unit and the removed list's state `s` (11 for every list tagged with this callback), after that list's
-stats were removed (STL-R05):
+**CSA-R13** **Cold expiry callback** [verified in 1.13c code (static)]. At supplied callback entry, use
+the unit and removed list's state `s` (11 for every list tagged with this callback), with that list's
+stats already removed. Actual removal and callback invocation through STL-R05 remain CSA-Q02:
 
 ```
 ColdExpiry(unit, s):
@@ -377,7 +377,7 @@ NRF-R12a leaves outside the successful boundary.
 | CSA-R10 | Poison/burn gates and field roles | verified in 1.13c code (static) | none | CSA-V13, CSA-V14 |
 | CSA-R11 | Poison/burn monster kind-3 pre-step | verified in 1.13c code (static) | CSA-Q02: node removal and handler effects; ordered requests eligible | CSA-V12, CSA-V02 |
 | CSA-R12 | Poison/burn magnitude comparison and replacement | verified in 1.13c code (static) | CSA-Q01: stored attach/stat effects; ordered requests and comparison eligible | CSA-V12, CSA-V13, CSA-V14 |
-| CSA-R13 | Cold expiry callback | verified in 1.13c code (static) | CSA-Q02: refresh and bookkeeping effects; requests eligible | CSA-V15 |
+| CSA-R13 | Cold expiry callback | verified in 1.13c code (static) | CSA-Q01: disguise/update effects; CSA-Q02: actual free/callback and refresh effects; supplied-entry requests eligible | CSA-V15 |
 
 ## 5. Outputs and side effects
 
@@ -396,10 +396,14 @@ NRF-R12a leaves outside the successful boundary.
 | Poison/burn state on, list allocation, kind-12 timer, list stat 74 = `-mag`, tag, generic callback, attach mode 1; or expiry replacement, kind-12 timer and stat 74 replacement | CSA-R12 |
 | Cold expiry: state off, state 107 off when alive, animation refresh | CSA-R13 |
 | Fatal assertion: null attacker reaching a list lookup's assertion (stun, cold, freeze, poison, burn), zero freeze divisor for a monster, a freeze reaching CSA-R09 on a non-monster; faults: null defender at a state-list lookup, stun Velocity read for a class without a record, cancel step on a null attacker | CSA-R03 to CSA-R05, CSA-R08 to CSA-R10 |
-| Messages: none sent here; state changes reach clients through lifecycle and update messages (CSA-Q04) | none |
+| Messages: no direct send; lifecycle/update-message integration is unresolved (CSA-Q04) | none |
 
 Requested dependency effects become stored or queued effects only under the owning dependency's
 acceptance (CSA-Q01, CSA-Q02).
+The gate helpers return the values listed above; no applier return value is consumed by CSA-R01.
+The remaining listed list, stat, state, refresh and removal effects are ordered requests at this
+boundary, with stored membership established only by the verified portion of STL-R07 and supplied
+fixture operations. Disguise and update-queue integration remain gated.
 
 ## 6. Branches and edge cases
 
@@ -431,8 +435,8 @@ acceptance (CSA-Q01, CSA-Q02).
 
 | Question | Kind / status | Evidence that would settle it |
 |---|---|---|
-| **CSA-Q01** | integration / open | Stored effects of `Attach`, replacing list `SetStat` and state-bit bookkeeping where STL-R06b, STL-R06c and STL-R07a are gated: accept those lifecycle contracts with integration vectors. Ordered requests and arithmetic here are verified. |
-| **CSA-Q02** | integration / open | Animation refresh effects; active/deferred timer-node removal; kind-2, kind-3 and kind-12 handler execution; and the scheduler's own handling of a kind-2 request for a monster holding state 54, which the freeze path can reach only if a dependency sets that state after CSA-R07's test. Accept the lifecycle and animation owners' contracts. |
+| **CSA-Q01** | integration / open | Stored effects of `Attach`, replacing list `SetStat`, disguise and state-update bookkeeping where STL-R06b, STL-R06c, STL-R07a and NRF-Q17 are gated: accept those contracts with integration vectors. Ordered requests, arithmetic and the verified membership subset of STL-R07 remain available. |
+| **CSA-Q02** | integration / open | Animation refresh effects; active/deferred frame-event node removal; kind-2, kind-3 and kind-12 handler execution; actual list contribution removal and callback invocation through unresolved STL-R05; and the scheduler's own handling of a kind-2 request for a monster holding state 54, which the freeze path can reach only if a dependency sets that state after CSA-R07's test. Accept the lifecycle and animation owners' contracts. Direct supplied-entry callback requests remain available. |
 | **CSA-Q03** | outside-boundary / open | Producer and wider meaning of the monster condition word's bit 8 (`monsterFlag8`) and of `aliveExclusionCondition`: trace their writers in monster spawning and unit lifecycle owners. The tested branches here are verified. |
 | **CSA-Q04** | outside-boundary / open | Which server-to-client messages carry these state and stat changes: trace the update sender in a `net-` spec. |
 | **CSA-Q06** | outside-boundary / open | Whether any caller can supply a game difficulty outside 0..2. The divisor lookup's handling of such a value and the unguarded per-difficulty cold-effect read are not part of this contract; establish the difficulty producer's range in its owner. |
@@ -757,12 +761,16 @@ every case states its own outputs.
     (n) `D` associated with a different game (frame 5000, difficulty 0, pool `P2`; a fixture input):
     the attacker's game is used; 25 / 2 = 12, expiry 1012; new-list requests with `NewList(P, ...)`,
     stats -50; kind-12 at 1012 on `A.game`; draw (D, 100, 5); state 107 on.
+    (o) `A.game.difficulty` 1 selects a supplied difficulty row with `MonsterColdDivisor` 0
+    (fixture input, not table data): skip division, `len` stays 25, expiry 1025; new-list requests
+    with stats 67, 68, 69 = -50 and kind-12 at 1025; draw (D, 100, 5), D becomes `{5, 0}`;
+    state 107 on. No fatal assertion occurs.
     A unchanged in every case.
   - Discriminates: (l) and (m) reject reading one fixed difficulty column; (n) rejects using the
     defender's game; (e) rejects dividing players; (d) rejects a minimum applied before division;
     (c) rejects ignoring `deadCol`; (e) also rejects allowing players to shatter; (h) and (i) fix the
     threshold at `r < 20`; (j) rejects dividing for positive E; (k), with CSA-V11 (e), rejects using
-    the freeze divisor for cold.
+    the freeze divisor for cold; (o) rejects a fatal zero-divisor policy for cold.
   - runtime_observed: no
 
 - **CSA-V10** Freeze routing to cold (CSA-R07, CSA-R05, CSA-R06; boundary: supplied-input stage)
@@ -890,9 +898,13 @@ every case states its own outputs.
     (h) Player `D` associated with a different game (frame 5000, difficulty 2, pool `P2`; fixture
     input), no list, magnitude 100, length 50: state 2 on, `NewList(P, 2, 1050, owner 0/7)`, kind-12
     at 1050 on `A.game`, stat 74 = -100, tag 2, generic callback, attach 1.
+    (i) Existing list with own stat 74 = -2147483648, magnitude 100, length 50:
+    `i32(low32(-(-2147483648)))` = -2147483648, which is not greater than 100; accept,
+    `SetListExpiry(1050)`, kind-12 at 1050, stat 74 = -100. No draw; both seeds unchanged.
   - Discriminates: (a) rejects extend-only poison; (b) rejects a strict comparison; (e) rejects a
     lookup before the gates; (g) rejects a pre-step before the gates; (h) rejects using the
-    defender's game.
+    defender's game; (i) rejects widening the existing-magnitude negation, which would produce
+    2147483648 and incorrectly reject the application.
   - runtime_observed: no
 
 - **CSA-V14** Burn gates, field roles and refresh (CSA-R10, CSA-R12; boundary: supplied-input stage)
@@ -961,7 +973,8 @@ All are pending; procedures are in the
 
 Partial acceptance: every assertion of CSA-V01 to CSA-V15 for CSA-R01 to CSA-R13 within the stated
 supplied-input boundary. Stored list, stat and state effects of the requests, animation refresh effects,
-timer-node removal and handler execution remain gated by CSA-Q01 and CSA-Q02; passing the vectors
+frame-event node removal, handler execution and actual lifecycle free/callback invocation remain
+gated by CSA-Q01 and CSA-Q02; passing the vectors
 with supplied operations does not accept those integrations. Full reproduction additionally requires
 accepting those dependency contracts and matching observations for CSA-O01, CSA-O02 and the verified
 rules (CSA-Q05).
@@ -969,9 +982,11 @@ rules (CSA-Q05).
 **Depends on:** [core-numeric-and-rng-foundations](core-numeric-and-rng-foundations.md) NRF-R01
 (seed step), NRF-R12a (state lookup, test and set routing), NRF-R12b and NRF-R12c (stat reads),
 section 3.2 (damage record); [state-timed-state-lifecycle](state-timed-state-lifecycle.md) STL-R01
-(scheduling and frame clamp), STL-R03 and STL-R05 (expiry and removal before the callback), STL-R06a
+(scheduling and frame clamp), STL-R03 (expiry routing) and STL-R05 (actual free/callback integration,
+unresolved), STL-R06a
 (list primitives), STL-R06b and STL-R06c (attach and list-stat writes, gated), STL-R07 and STL-R07a
-(state bits), STL-R11 (generic and freeze callbacks), STL-R12a (stay-death);
+(verified state membership and unresolved disguise), STL-R11 (generic and freeze callbacks),
+STL-R12a (stay-death consumer with supplied masks); NRF-Q17 retains update-queue integration;
 [core-game-data-fields](core-game-data-fields.md) GDF-R02, GDF-R05, GDF-R06, GDF-R11, GDF-R12,
 GDF-R14, GDF-R15, GDF-R17, GDF-R18 (names and fields);
 [combat-leech-and-status-effects](combat-leech-and-status-effects.md) LSE-R17 (mana drain) and

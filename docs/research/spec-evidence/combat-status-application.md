@@ -126,8 +126,9 @@ cold callback `ecx` unit, `edx` state, stack list.
   `+0x40` and `0xDA930`; then stun with `eax` = attacker, `edi` = defender, pushing `+0x44`; cold with
   `eax` = attacker, `esi` = defender, pushing `+0x30`; freeze with `eax` = defender, `ecx` = attacker,
   pushing `+0x34`; poison pushing `+0x2C`, `+0x28`, defender, attacker; burn pushing `+0x18`, `+0x14`,
-  defender, attacker. It then reads stat 6 layer 0 and, on `jle` (signed nonpositive), skips the
-  `and byte [record+4], 0FDh`. No step or draw helper appears in this slice.
+  defender, attacker. It then reads stat 6 layer 0: signed nonpositive takes `jle` to
+  `or byte [record+4], 2`; positive executes `and byte [record+4], 0FDh`. No step or draw helper appears
+  in this slice.
 - **CSA-R02.** `0x1A550` returns 0 for a non-type-1 unit, uses the supplied record or looks up the class
   (out-of-range returns 0), and returns the bit-6 mask (64). `0x22A80` returns 0 for null, nonmonster or
   absent MonsterData; otherwise ANDs word `+0x16` with the low word of its stack argument and converts
@@ -175,23 +176,28 @@ cold callback `ecx` unit, `edx` state, stack list.
 ### Shatter request on the non-shatter path (CSA-R06)
 
 - Affected ids: CSA-R06; vectors CSA-V02, CSA-V03, CSA-V08, CSA-V09, CSA-V10.
-- Conflict: NRF (rows of NRF-R04a and NRF-R13a, read 2026-10-12/13/14) stated only that the cold draw
-  sets state 107 when the shatter condition holds; its vectors NRF-V08, NRF-V18, NRF-V21 and NRF-V30
-  recorded no state 107 request for a failed condition. LSE-R19 (read 2026-10-13) stated that every
-  other outcome calls the state setter with state 107 off.
+- Conflict: NRF (rows of NRF-R04a and the earlier foundations cold/freeze rule, read 2026-10-12/13/14)
+  stated only that the cold draw sets state 107 when the shatter condition holds; its earlier
+  foundations cold-extension cases, the
+  earlier foundations monster hand-off cases, the earlier foundations stun-cap/cold-contrast cases and
+  the earlier foundations freeze-fallback cases recorded no state 107 request for a failed condition.
+  The earlier leech shatter-request rule (read 2026-10-13) stated that every other outcome calls the
+  state setter with state 107 off.
 - Same inputs and boundary: both readings cover the same function and the same branch; no profile or
   capture question applies.
 - Settled 2026-10-14 by rereading the tail of D2Game `0xDC780`: the failed-condition target pushes
   `(0, 0x6B, defender)` and calls thunk `0xA3CA` (#10945). LSE is correct. CSA-R06 states both requests.
   The NRF vectors' existing values are unchanged; their CSA conversions add the state 107 off request
-  as an established output. LSE-V12, LSE-V13, LSE-V17 and LSE-V20 already carried it.
+  as an established output. The earlier leech cold cases, the earlier leech freeze cases, the earlier
+  leech hand-off/status case and the earlier leech fallback cases already carried it.
 
 ### Null defender at the cold applier (CSA-R05)
 
 - Affected ids: CSA-R05 and the fault row of section 5.
-- Conflict: LSE-R11a (2026-10-13) said a null defender would be treated as a nonmonster with E = -50 and
-  fault at the shatter step. NRF-R12a (2026-10-14) states that finding a state list requires a non-null
-  unit, and NRF-R13d places a null stun defender's fault at the list lookup.
+- Conflict: the earlier leech cold-application rule (2026-10-13) said a null defender would be treated
+  as a nonmonster with E = -50 and fault at the shatter step. NRF-R12a (2026-10-14) states that finding
+  a state list requires a non-null
+  unit, and the earlier foundations stun rule places a null stun defender's fault at the list lookup.
 - Settled 2026-10-14: `0xDC780` calls #10871 for the defender before the attacker test and the effect
   getter; #10871 (`0x38520`) dereferences the unit's stat-list field with no null test. The fault occurs
   at the list lookup. Both readings agree the path is not a successful fixture; only the fault point
@@ -200,27 +206,33 @@ cold callback `ecx` unit, `edx` state, stack list.
 ### One monster condition, two neutral names (CSA-R02, CSA-R03, CSA-R07)
 
 - NRF named the stun-cancel condition `stunCancelCondition` and the freeze test `monsterGate(unit, 8)`
-  separately; LSE-R12b said they were the same flag. Not a disagreement about behavior, but NRF-V18
-  supplied `stunCancelCondition = true` together with `monsterGate = 0`.
+  separately; the earlier leech freeze-gate rule said they were the same flag. Not a disagreement about
+  behavior, but the earlier foundations monster hand-off cases supplied `stunCancelCondition = true`
+  together with `monsterGate = 0`.
 - Settled 2026-10-14: `0xDCC20` tests byte MonsterData `+0x16` with `0x8` after a MonsterData null test;
   `0x22A80` with mask 8 tests word `+0x16` AND 8 after the same type and null tests. Both select the
-  same bit. CSA names it once (`monsterFlag8`). NRF-V18's combination never reached the freeze gates
-  (freeze length 0), so its values are unchanged; CSA-V02 states `monsterFlag8` true, and its freeze
+  same bit. CSA names it once (`monsterFlag8`). The earlier foundations monster hand-off case's
+  combination never reached the freeze gates (freeze length 0), so its values are unchanged;
+  CSA-V02 states `monsterFlag8` true, and its freeze
   control case sets it false explicitly.
 
 ### Agreement checks without conflict
 
-The following were compared rule by rule and agreed: stun gate order, caps and request order
-(NRF-R13d, LSE-R10a/R10b/R18); cold divisor only for monsters with negative E, minimum 1 after
-division, strict extension and draw on every application (NRF-R13a, LSE-R11a/R19); freeze routing,
-state-54 rejection, gate order, no minimum, zero divisor fatal, timer 12 on a retained expiry and the
-kind-2 tail (NRF-R04d/R13a/R13e, LSE-R12a/R12b/R20); poison and burn length-then-magnitude gates,
-pre-step, magnitude comparison and unconditional expiry replacement (NRF-R13c/R15b/R15c,
-LSE-R13a/R14a/R14b/R21); hand-off order (NRF-R15a, LSE-R16); ColdEffect -50 for invalid records
-(NRF-R13a correction 2026-10-14, LSE-R11b). LSE-R12c's claim that the scheduler calls a further helper
-for a kind-2 request on a state-54 monster concerns the scheduler, which the lifecycle owns; CSA-R07
-returns for state 54 before its kind-2 request, so that edge is reachable only if a dependency sets
-state 54 in between. It stays in CSA-Q02.
+The 2026-10-14 comparison of the earlier foundations and leech readings agreed on these subjects:
+
+| Compared subject | Current owner |
+|---|---|
+| Stun gate order, caps and request order | CSA-R02, CSA-R03, CSA-R04 |
+| Cold divisor only for monsters with negative E, minimum 1 after division, strict extension and a draw on every application | CSA-R05, CSA-R06 |
+| Freeze routing, state-54 rejection, gate order, no minimum, zero-divisor fatal path, timer 12 at a retained expiry and the kind-2 tail | CSA-R07, CSA-R08, CSA-R09 |
+| Poison/burn length-then-magnitude gates, pre-step, magnitude comparison and unconditional expiry replacement | CSA-R10, CSA-R11, CSA-R12 |
+| Status hand-off order | CSA-R01; surrounding stage order remains LSE-R16 |
+| ColdEffect -50 for invalid records, including the 2026-10-14 foundations correction | CSA-R05 |
+
+The earlier leech freeze-scheduler-edge reading claimed that a kind-2 request on a state-54 monster
+calls a further helper. That assertion concerns the scheduler owned by the lifecycle; CSA-R07 returns
+for state 54 before requesting kind 2, so that edge is reachable only if a dependency sets state 54
+in between. It stays in CSA-Q02. The subject mapping below retains the source-to-owner relationships.
 
 ## Reused evidence and table records
 
@@ -247,82 +259,85 @@ data anchor on MonStats `+0x0C`, `+0x32`, `+0x168`, `+0x18` and DifficultyLevels
 string anchor on the empty assert file string and its line numbers; decompile view only to check byte
 runs; runtime not armed. The 2026-10-14 rereads are targeted readings, not new searches.
 
-## Identifier mapping
+<a id="identifier-mapping"></a>
+## Subject and current-owner mapping
 
-This mapping lets the reference updates in NRF, LSE and their companions and gap files point to the
-new owner. "Stays" means the item remains in its spec.
+This mapping records which pre-split subjects moved to the current owner. Historical identifiers
+are retained in the complete private original; descriptive subjects below avoid linking to a retired
+identifier or to a reused number with a different meaning. Each table's left column describes the
+earlier source; its right column identifies the current contract.
 
 ### From core-numeric-and-rng-foundations
 
-| Old id | New owner |
+| Prior subject | Current owner |
 |---|---|
 | NRF-R04a, stun-cancel and cold-shatter rows | Stay in NRF-R04a as references to CSA-R03 and CSA-R06; the shatter-condition sentence below the table moves to CSA-R06 |
-| NRF-R04d | CSA-R07 |
-| NRF-R13 (preamble: boundary, timer policy, fixtures) | CSA section 4 preamble, section 8.1 defaults, CSA-Q01 |
-| NRF-R13a, cold part | CSA-R05 (draw in CSA-R06) |
-| NRF-R13a, freeze part | CSA-R08 (type assertion in CSA-R09) |
-| NRF-R13b | CSA-R13 |
-| NRF-R13c | CSA-R10, CSA-R12 (pre-step CSA-R11) |
-| NRF-R13d | CSA-R03, CSA-R04 |
-| NRF-R13e | CSA-R09 |
-| NRF-R13f | CSA-R02 |
-| NRF-R15a | CSA-R01 (drain arithmetic stays LSE-R17 and DPO-R18) |
-| NRF-R15b | CSA-R10, CSA-R12 |
-| NRF-R15c | CSA-R11 |
-| NRF-V08 | CSA-V08 (a) to (d) |
-| NRF-V09 | CSA-V14 (a) to (c), (e), (f) |
-| NRF-V12 | CSA-V05 (a) to (e), CSA-V06 (a) to (c) |
-| NRF-V18 | CSA-V02 |
-| NRF-V19 | CSA-V13 (a) to (c), (e) |
-| NRF-V21 | CSA-V07 (a) to (c); cold contrast CSA-V08 (e), (f) |
-| NRF-V23 | CSA-V15 (a) to (f) |
-| NRF-V30 (c) | CSA-V10 (a) to (c); the remaining NRF-V30 cases stay for NRF-R04b, relabelled (a) to (d) |
-| NRF-V33 (b) | CSA-V01; the remaining NRF-V33 cases stay for NRF-R12a, relabelled (a) to (f) |
-| NRF-V34 (a), (c), (d) | CSA-V11 (a) to (c) |
-| NRF-V34 (b) | CSA-V12 |
-| NRF-V35 | CSA-V04 |
-| NRF-O04 | CSA-O01 |
+| Earlier foundations freeze-fallback rule | CSA-R07 |
+| Earlier foundations status-boundary preamble | CSA section 4 preamble, section 8.1 defaults, CSA-Q01 |
+| Earlier foundations cold/freeze rule, cold part | CSA-R05 (draw in CSA-R06) |
+| Earlier foundations cold/freeze rule, freeze part | CSA-R08 (type assertion in CSA-R09) |
+| Earlier foundations cold-expiry rule | CSA-R13 |
+| Earlier foundations poison/burn rule | CSA-R10, CSA-R12 (pre-step CSA-R11) |
+| Earlier foundations stun rule | CSA-R03, CSA-R04 |
+| Earlier foundations freeze-tail rule | CSA-R09 |
+| Earlier foundations gate-helper rule | CSA-R02 |
+| Earlier foundations status hand-off rule | CSA-R01 (drain arithmetic stays LSE-R17 and DPO-R18) |
+| Earlier foundations poison/burn list rule | CSA-R10, CSA-R12 |
+| Earlier foundations poison/burn pre-step rule | CSA-R11 |
+| Earlier foundations cold-extension cases | CSA-V08 (a) to (d) |
+| Earlier foundations burn cases | CSA-V14 (a) to (c), (e), (f) |
+| Earlier foundations stun cases | CSA-V05 (a) to (e), CSA-V06 (a) to (c) |
+| Earlier foundations monster hand-off cases | CSA-V02 |
+| Earlier foundations poison-refresh cases | CSA-V13 (a) to (c), (e) |
+| Earlier foundations stun-cap/cold-contrast cases | CSA-V07 (a) to (c); cold contrast CSA-V08 (e), (f) |
+| Earlier foundations cold-expiry cases | CSA-V15 (a) to (f) |
+| Former foundations freeze-fallback case | CSA-V10 (a) to (c); the remaining NRF-V30 cases stay for NRF-R04b, relabelled (a) to (d) |
+| Former foundations status hand-off case | CSA-V01; the remaining NRF-V33 cases stay for NRF-R12a, relabelled (a) to (f) |
+| Earlier foundations freeze-tail/poison-pre-step cases (a), (c), (d) | CSA-V11 (a) to (c) |
+| Earlier foundations freeze-tail/poison-pre-step cases (b) | CSA-V12 |
+| Earlier foundations gate-helper cases | CSA-V04 |
+| Earlier foundations cold-extension observation | CSA-O01 |
 | NRF-Q09 (status conditions) | CSA-Q03 |
 | NRF-Q17 (animation refresh, timer-node and handler parts for status) | CSA-Q02 |
 | NRF-Q20 (status attach/write parts) | CSA-Q01 |
-| NRF-Q21 (status rules and NRF-O04) | CSA-Q05 |
+| NRF-Q21 (status rules and the earlier foundations cold-extension observation) | CSA-Q05 |
 | NRF section 3 rows: status gates, status dependency operations, cold/freeze divisors, monster ColdEffect, status states/stats/timer kinds | CSA section 3 |
 | NRF gap rows "Animation and update bookkeeping", "Timer-node removal and downstream handlers", "Actual attach and replacing-write integration", "Wider runtime-condition meanings", "Gameplay confirmation" (status parts) | CSA gap rows of the same kinds |
 
 ### From combat-leech-and-status-effects
 
-| Old id | New owner |
+| Prior subject | Current owner |
 |---|---|
-| LSE-R04b (hireling predicate) | Stays for leech; its stun and freeze uses are CSA-R02 `unitGate` |
-| LSE-R10a | CSA-R03, CSA-R04 |
-| LSE-R10b | CSA-R02 (boss and class-group helpers), CSA-R03 (cap 13) |
-| LSE-R11a | CSA-R05 (null-defender fault point settled above) |
-| LSE-R11b | CSA-R05 (cold effect), CSA-R06 (`deadCol` test) |
-| LSE-R12a | CSA-R07, CSA-R08, CSA-R09 |
-| LSE-R12b | CSA-R07, CSA-R02 |
-| LSE-R12c | Scheduler edge: STL owner, CSA-Q02; frame floor: CSA-R08 note |
-| LSE-R13a | CSA-R10, CSA-R11, CSA-R12 |
-| LSE-R13b, LSE-R13c | Stay in LSE (immediate total) |
-| LSE-R14a | CSA-R10, CSA-R11, CSA-R12 |
-| LSE-R14b | CSA-R10 |
-| LSE-R16 | Leech, absorb heal and life subtraction order stay in LSE; the status part from the mana drain onward is CSA-R01 |
-| LSE-R18 | CSA-R03 |
-| LSE-R19 | CSA-R06 |
-| LSE-R20 | CSA-R07 |
-| LSE-R21 | CSA-R01 (draw statement), CSA-R12 |
-| LSE-V11 | CSA-V05 (e) to (h) |
-| LSE-V12 | CSA-V09 |
-| LSE-V13 | CSA-V10 (c), (f); CSA-V11 (a), (d) |
-| LSE-V14 | CSA-V13 (d), (f); monster case CSA-V12 |
-| LSE-V16 | CSA-V14 (a), (b), (d) |
-| LSE-V17 | Leech portion stays; status portion CSA-V03 |
-| LSE-V19 | CSA-V06 (d), CSA-V07 (d) to (f) |
-| LSE-V20 | CSA-V10 (d), (e) |
-| LSE-O03 | CSA-O02 |
-| LSE-Q08, LSE-Q09 (resolved) | Answers folded into CSA-R12 and CSA-R06 |
-| LSE-Q10 (status part) | CSA-Q04 |
-| LSE-Q12 | CSA-Q02 |
-| LSE-Q13 | CSA-Q03 |
+| Earlier leech hireling-predicate rule | Current LSE-R05 for leech; stun and freeze use CSA-R02 `unitGate` |
+| Earlier leech stun-entry rule | CSA-R03, CSA-R04 |
+| Earlier leech stun-gate rule | CSA-R02 (boss and class-group helpers), CSA-R03 (cap 13) |
+| Earlier leech cold-application rule | CSA-R05 (null-defender fault point settled above) |
+| Earlier leech cold-data rule | CSA-R05 (cold effect), CSA-R06 (`deadCol` test) |
+| Earlier leech freeze-application rule | CSA-R07, CSA-R08, CSA-R09 |
+| Earlier leech freeze-gate rule | CSA-R07, CSA-R02 |
+| Earlier leech freeze-scheduler-edge rule | Scheduler edge: STL owner, CSA-Q02; frame floor: CSA-R08 note |
+| Earlier leech poison-application rule | CSA-R10, CSA-R11, CSA-R12 |
+| Earlier leech immediate-poison-total rule and variant | Current LSE-R01 (immediate total) |
+| Earlier leech burn-application rule | CSA-R10, CSA-R11, CSA-R12 |
+| Earlier leech burn-field rule | CSA-R10 |
+| Prior leech stage-order rule | Leech, absorb heal and life subtraction order stay in LSE; the status part from the mana drain onward is CSA-R01 |
+| Earlier leech stun-cancel rule | CSA-R03 |
+| Earlier leech shatter-request rule | CSA-R06 |
+| Earlier leech freeze-fallback rule | CSA-R07 |
+| Earlier leech poison/burn-draw rule | CSA-R01 (draw statement), CSA-R12 |
+| Earlier leech stun cases | CSA-V05 (e) to (h) |
+| Earlier leech cold cases | CSA-V09 |
+| Earlier leech freeze cases | CSA-V10 (c), (f); CSA-V11 (a), (d) |
+| Earlier leech poison cases | CSA-V13 (d), (f); monster case CSA-V12 |
+| Earlier leech burn cases | CSA-V14 (a), (b), (d) |
+| Earlier leech hand-off/status case | Leech portion stays; status portion CSA-V03 |
+| Earlier leech stun-cap cases | CSA-V06 (d), CSA-V07 (d) to (f) |
+| Earlier leech fallback cases | CSA-V10 (d), (e) |
+| Earlier leech poison-replacement observation | CSA-O02 |
+| Earlier leech poison-refresh and shatter-request questions (resolved) | Answers folded into CSA-R12 and CSA-R06 |
+| Earlier leech status-message question (status part) | CSA-Q04 |
+| Earlier leech status-integration question | CSA-Q02 |
+| Earlier leech condition-producer question | CSA-Q03 |
 | LSE section 5 rows for stun, cold, freeze, poison, burn and their fatal paths | CSA section 5 |
 
 ## Vector conversion record
@@ -331,16 +346,22 @@ Vectors take the template shape. Values are the source vectors' values; the foll
 added or restated, each established by the cited rule and evidence:
 
 - State 107 off requests in cold cases whose shatter condition fails (contradiction record above).
-- NRF-V12 and NRF-V30 supplied gate results (`recordGate` 64, `recordGate` 1) are expressed through the
+- The earlier foundations stun cases and the earlier foundations freeze-fallback cases supplied gate
+  results (`recordGate` 64, `recordGate` 1) are expressed through the
   class record's `boss` flag, which gives 64; routing depends only on nonzero.
-- NRF-V18's freeze-only control states its full request list (it pointed to NRF-V34 for them):
+- The earlier foundations monster hand-off case's freeze-only control states its full request list (it
+  pointed to the earlier foundations freeze-tail/poison-pre-step cases for them):
   40 / 2 = 20, expiry 1020, timer 2 at 1021.
-- LSE-V12's `len = 1` case and existing-list case state their shatter outcome and candidate expiry
+- The earlier leech cold cases' `len = 1` case and existing-list case state their shatter outcome and
+  candidate expiry
   (1006), computed from CSA-R05/CSA-R06 with the vector's seed; LSE gave only the expiry.
-- LSE-V17's status portion starts from the attacker seed after the leech draw, `{0x6AC690C5, 0}`, and
+- The earlier leech hand-off/status case's status portion starts from the attacker seed after the leech
+  draw, `{0x6AC690C5, 0}`, and
   adds the final lethal decision with a supplied positive life.
-- NRF-V34 (b) asserted the pre-step alone; CSA-V12 adds the following no-list requests and a player
-  contrast. CSA-V15 (g) adds an alive unit with a nonzero stay-death result. LSE-V19 and LSE-V20 class
+- The earlier foundations freeze-tail/poison-pre-step cases (b) asserted the pre-step alone; CSA-V12
+  adds the following no-list requests and a player
+  contrast. CSA-V15 (g) adds an alive unit with a nonzero stay-death result. The earlier leech stun-cap
+  cases and the earlier leech fallback cases class
   ids `0x152` and `0x167` are written 338 and 359. MonStats counts are stated wherever a vector uses a
   class other than 0.
 - Hand computations rechecked on 2026-10-14: `{1,0x29A}` -> `{0x6AC6935F,0}` (51), then
@@ -462,9 +483,12 @@ COVERAGE 23 (advisory), HARDEST 3.
 ### Correction: nodes scheduled earlier in the same hit (CSA-R11)
 
 - Affected ids: CSA-R11; CSA-V02, CSA-V03, CSA-V11 (a), CSA-V12.
-- Original discrepancy: NRF-V18 and NRF-V34 used a supplied scheduler that logged requests without
-  adding nodes to the traversed chain, so NRF-V18 listed two kind-3 requests and no removal, and
-  NRF-V34 (a) gave a remaining chain of R only. CSA's first draft copied that fixture.
+- Original discrepancy: the earlier foundations monster hand-off cases and the earlier foundations
+  freeze-tail/poison-pre-step cases used a supplied scheduler that logged requests without
+  adding nodes to the traversed chain, so the earlier foundations monster hand-off cases listed two
+  kind-3 requests and no removal, and
+  the earlier foundations freeze-tail/poison-pre-step cases (a) gave a remaining chain of R only. CSA's
+  first draft copied that fixture.
 - Evidence (2026-10-14): STL-R01 states that each scheduled record is linked into the unit's chain,
   newest first. Rereading confirmed it: the scheduler D2Game `0x8EA80` allocates through `0x8E680`,
   which stores the unit's chain head (Unit `+0xDC`) as the new node's successor (`+0x24`) and makes
@@ -512,9 +536,11 @@ Fresh Sonnet reader. Counts: MISMATCH 0, GUESS 3, GAP 7, DISCRIM 5, GATED 14, CO
 ### Contradiction: lethal bit for nonpositive final life (CSA-R01)
 
 - Affected ids: CSA-R01, CSA-V01; related DPO-R19b.
-- Conflict: CSA-R01 (built from NRF-R15a, "otherwise retains it") said the bit is unchanged when the
-  final life is not positive. DPO-R19b says a nonpositive final life sets result bit `0x2`. NRF-V33's
-  cases did not distinguish the two, because the bit was already set in every nonpositive case.
+- Conflict: CSA-R01 (built from the earlier foundations status hand-off rule, "otherwise retains it")
+  said the bit is unchanged when the
+  final life is not positive. DPO-R19b says a nonpositive final life sets result bit `0x2`. The earlier
+  foundations hand-off
+  cases (now CSA-V01) did not distinguish the two, because the bit was already set in every nonpositive case.
 - Settled 2026-10-14 by rereading D2Game `0xDE0C0` after the burn call: the stat 6 read is followed by
   `jle` to `or byte ptr [record+4], 2`; the positive path executes `and byte ptr [record+4], 0FDh`.
   The hand-off itself sets the bit for nonpositive life and clears it for positive life; DPO-R19b is
@@ -600,3 +626,136 @@ Fresh reader over the delta check 1 changes (V07 Inputs, case (l), Discriminates
 MISMATCH 0, UNRESOLVED 0, GUESS 0, GAP 0, DISCRIM 0; case (l) recomputed with the expected request
 list. The blind-implementer pass is complete: full runs 1 to 5, delta checks 1 and 2. Status stays
 draft because CSA-Q01 to CSA-Q06 and the pending observations remain.
+
+## Focused refresh and evidence applicability (2026-10-15)
+
+The source-manifest D2Game and D2Common identities, the dated 2026-10-12/13/14 readings above,
+and the current NRF, GDF, STL, DPO, LSE, MMF and HRC contracts were assessed before new collection.
+Their unchanged local instruction coverage supports all thirteen CSA rules at the stated supplied-input
+boundary. No new source reading, table collection, gameplay action or hook operation was performed;
+reuse preserves the original dates, methods and limits rather than renewing verification.
+
+The pre-refresh companion produced 87 undefined historical-reference warnings: 46 NRF and 41 LSE.
+The source subjects and explicit ownership mapping above establish the current destinations; the
+refresh did not infer destinations from numeric suffixes. Historical contradiction text, reader counts,
+case results and dates remain records of their original passes. Their former source identifiers are
+now expressed as historical subjects and current owners; complete original text and the three-file
+pre-refresh snapshot are preserved privately with SHA-256 integrity records. References to retained
+NRF cases describe their present subset rather than implying the removed status cases still exist.
+
+| Question | Compatible record and current boundary | Assessment |
+|---|---|---|
+| CSA-Q01 | Original applier call arguments above; NRF-R12a; STL-R06b/STL-R06c/STL-R07a; NRF-Q17 | Attach/write/disguise remain unresolved under STL; state-update integration remains NRF-Q17. Supplied ordered requests and locally traced arithmetic stay verified; no stored propagation or update-queue effect is accepted. |
+| CSA-Q02 | Original freeze and poison/burn walks and cold callback; STL-R01/STL-R03/STL-R05 | Frame-event node removal, downstream handler bodies, refresh and actual free/callback integration remain gated. STL-R11a is a different unit-timer chain at D2Game RVA 0x37110; it does not settle CSA's frame-event removal at RVA 0x8E6F0. Direct supplied-entry cold callback requests remain available. |
+| CSA-Q03 | The 2026-10-14 condition-bit identity reading and supplied alive test | Consumer branches remain verified; no new producer search or meaning is claimed. These producers are outside this local boundary. |
+| CSA-Q04 | Current unresolved STL-R14 message integration and LSE-Q04 sender question | No sender/body trace exists here. This remains outside the status request boundary. |
+| CSA-Q05 | Pending CSA-O01/CSA-O02 procedures and the 2026-10-13 no-hit record | No matching gameplay capture; no runtime promotion. |
+| CSA-Q06 | The 2026-10-14 D2Common RVA 0x603C0 clamping read and unguarded per-difficulty cold-effect read | Only supplied difficulties 0..2 are accepted here. The caller's range remains an outside-boundary producer question; the missing gap row is now explicit. |
+
+The input inventory names the state/list/helper arguments and stat-definition inputs already supplied
+by the fixtures. Output wording distinguishes requests, helper results and the sole local lethal-bit
+write. The earlier lethal correction is reflected in the current rationale; no new lethal behavior or
+expected value was introduced. The lifecycle's unresolved removal/propagation is explicitly separated
+from CSA-R13's supplied callback entry, and state-update integration is named without gating the
+verified supplied requests. These are dependency-boundary clarifications, not label promotions.
+
+The named DifficultyLevels cells reuse the 2026-10-14 GDF record: effective virtual text file
+`data/global/excel/difficultylevels.txt`, whole-file coverage 0+586/586 bytes, columns selected by
+decoded header and rows Normal/Nightmare/Hell at zero-based data indices 0/1/2; cold and freeze
+divisors are respectively 1/1, 2/2 and 4/4. Its compiled record is 0+268/268 bytes with named words
+corresponding. The same record carries the historical vanilla-profile identification and uncaptured
+physical archive, file-hash and complete-override limits. The GDF MonStats named-cell records distinguish
+text row 561/562 from hcIdx 560/561 for act5hire1/act5hire2; CSA consumes those named identities, not
+a claim of global cached/text index correspondence. All other per-class effect, velocity, boss and
+deadCol values in CSA vectors are supplied inputs. No fresh GDF text corroboration transfers its
+profile to these historical compiled records or supplies gameplay execution.
+
+## Focused self-review (2026-10-15)
+
+The targeted mechanical check of this spec, companion and gap file returned 0 errors and 0 warnings.
+Private before/after comparison confirmed the same CSA rule/question/vector/observation identities,
+all thirteen rule labels and the entire executable/observation vector section unchanged. The thirteen
+verified rules retain their supplied-input vector coverage; no fixture was executed and no observation
+flag changed. Existing arithmetic, seeds, draws, expected values and historical reader outcomes remain.
+
+Self-review checked the local dispatch/write anchors, named imported dependency locations, exact
+request-versus-stored-effect boundary, six-question gap inventory, table/source identity limits and
+existing discriminators. The preserved public mapping anchor remains available to inbound evidence
+links. No additional result-distinct fixture was identified for unchanged local operations. A fresh
+reader must still assess the clarified lifecycle invocation and state-update gates; this self-review
+does not claim that review, user approval or complete behavior reproduction.
+
+## Campaign blind-reader pass FULL1 (2026-10-15)
+
+A fresh reader recomputed every existing case from the contract and its allowed dependency specs,
+without source, implementation or runtime access. Counts: MISMATCH 0, GUESS 0, GAP 0, DISCRIM 0,
+GATED 29, COVERAGE 13, HARDEST 3. The 29 documented boundaries were CSA-Q01 to CSA-Q06; rules
+CSA-R01/CSA-R04/CSA-R05/CSA-R06/CSA-R08/CSA-R09/CSA-R11/CSA-R12/CSA-R13; and the supplied-input
+stage vectors CSA-V01/CSA-V02/CSA-V03/CSA-V05 to CSA-V15. CSA-V04 is isolated. These are known
+limits, not additional findings or approval.
+
+Every advisory group received the following disposition. No rule, label, gate, existing case or
+existing expected value changed.
+
+| COVERAGE group | Disposition |
+|---|---|
+| CSA-R02: invalid/unavailable record fallback and invalid monster data | No change: CSA-V04 (a) already returns 0 for negative/out-of-range class lookup and (b) for absent monster data; a missing loaded record follows the same explicitly guarded 0 result. No new result is asserted. |
+| CSA-R03: negative stun and monster 250 cap | No change: the signed nonpositive guard has the same no-draw/no-request outcome as CSA-V05 (e); monster length 300 is capped to 250 in CSA-V05 (f) and CSA-V07 (f), with the 250/251 boundary in CSA-V07 (g)/(h). |
+| CSA-R04: null defender/attacker faults | No change: CSA-R04 and section 5 explicitly locate the null-defender lookup fault and later null-attacker assertion. These are fault recipes with no defined subsequent state; successful request cases do not claim to execute them. |
+| CSA-R05: missing-record ColdEffect, zero divisor and expiry wrap | Add CSA-V09 (o) for the successful zero-cold-divisor branch: supplied divisor 0 skips division and produces expiry 1025, rejecting a fatal policy. Missing-record E=-50 is explicit and has the already demonstrated default effect; expiry arithmetic consumes the foundations wrapping notation, while wrapped-negative scheduler integration remains STL-Q10. No extra case for those repeated/dependency branches. |
+| CSA-R06: missing deadCol record and other nonmonster shatter-off | No change: missing lookup is explicitly false; the same false deadCol result is used by CSA-V09 (a). CSA-V08 and CSA-V09 (e) already show the nonmonster off request; additional nonmonster types select that same explicit off arm. |
+| CSA-R07: other unit type and null defender | No change: the generic continuation is explicit and ultimately reaches the CSA-R09 type assertion; null reaches the earlier state-list lookup fault. Sections 4 and 5 retain those fault recipes rather than claiming successful nonmonster freeze integration. |
+| CSA-R08: zero-freeze-divisor fault and negative adjusted length | No change: the zero-divisor fatal assertion is explicit in CSA-R08/section 5. Negative adjusted lengths use the same no-minimum arithmetic path; CSA-V11 (a) already rejects a minimum and demonstrates timer clamping. Signed division/wrapping and scheduler limits remain the cited dependency contracts; no original data row is claimed to supply a negative divisor. |
+| CSA-R09: null/nonmonster assertion and frame wrap | No change: section 5 and CSA-R09 explicitly name the fatal type check after list requests, with no defined post-fault state. Frame addition consumes the foundations low32 notation; malformed/wrapped-negative queue behavior remains STL-Q10, not a new CSA result. |
+| CSA-R10: negative poison/burn magnitude | No change: the signed nonpositive gate has the same no-lookup/no-request outcome as CSA-V13 (e)/(g) and CSA-V14 (b)/(g). Existing positive-magnitude cases distinguish the successful arm; no additional result arises from another nonpositive input. |
+| CSA-R11: monster chain with no kind-3 node | No change: CSA-V02's initial poison pre-step traverses only the cold kind-12 node, removes nothing and still requests kind 3; CSA-V03 likewise supplies no initial kind-3 node. CSA-V12 covers matching and multiple matching nodes. |
+| CSA-R12: low32 negation boundary and negative guards | Add CSA-V13 (i): old own hpregen -2147483648 negates in i32 to -2147483648, so magnitude 100 is accepted, expiry becomes 1050 and stat becomes -100. This rejects a widened comparison that would reject the application. Nonpositive new magnitudes return under CSA-R10; existing zero cases already demonstrate that result. |
+| CSA-R13: other unit types and null callback | No change: other types use the explicit not-alive branch; CSA-V15 (b)/(c)/(e)/(f) already distinguishes stay-death retention from clearing without clearing shatter. The direct null-call recipe and its unsuccessful state request are explicit after CSA-R13; actual lifecycle invocation remains CSA-Q02. |
+| CSA-R01: final-life missing entry or null list | No change: zero results from missing stat entries/null lists belong to NRF-R12b, with NRF-V25 and NRF-V15 (a) covering those read outcomes. CSA-V01 (a)/(d) already demonstrates the resulting zero-life lethal decision; no duplicated stat-getter fixture is needed. |
+
+HARDEST dispositions, all no change:
+
+| Entry | Outcome |
+|---|---|
+| CSA-V02/CSA-V03: ordered shared list/event state and two seeds | The reader recomputed both without a mismatch or guess. The fixture preamble defines persistent supplied operations, node insertion/removal and distinct seeds; the cases state exact requests and resulting seed pairs. |
+| CSA-V08/CSA-V09: signed difficulty arithmetic, minimum, extension and per-cold draw | Existing cases state the selected difficulty/effect, divisor, independent starting state and draw. The new zero-divisor case adds a result-distinct branch without changing those inputs or results. |
+| CSA-V11: expiry versus timer frame and safe removal | Existing cases distinguish retained expiry from kind-2 time, timer clamping and saved-successor traversal. Node-removal stored effects remain supplied; actual frame-event integration is still gated. |
+
+The two added cases use the existing verified CSA-R05 and CSA-R12 operations and foundations integer
+notation; no new source or table evidence is claimed. They supersede the earlier self-review's
+decision that no additional discriminator was needed. The pre-FULL1 vector section remains preserved
+privately, as does the complete pre-refresh original. A fresh FULL2 must recompute the changed cases
+before this revised fixture set completes reader review. No gameplay confirmation or approval follows.
+
+## Campaign blind-reader pass FULL2 (2026-10-15)
+
+A fresh reader with the main contract and its allowed dependency specs independently hand-recomputed
+all fifteen vector families and their cases, including CSA-V09 (o) and CSA-V13 (i). It had no source
+or implementation/test access. Counts: MISMATCH 0, GUESS 0, GAP 0, DISCRIM 0, GATED 6 (CSA-Q01 to
+CSA-Q06), COVERAGE 8, HARDEST 3. The two new cases matched the specified requests, expiry, stat and
+seed results. No further main-contract change was made.
+
+| COVERAGE group | Disposition |
+|---|---|
+| CSA-R02: supplied-record precedence with an invalid class | No change: the rule first uses a supplied record and looks up the class only when that record is null. CSA-V04 (a) already separates supplied boss true/false, loaded fallback and invalid-class fallback. Combining supplied-record precedence with an invalid class adds no new operation or result beyond that explicit recipe. |
+| CSA-R03/CSA-R04: null attacker and missing Velocity record faults | No change: CSA-R03 names the cancel-step fault and unguarded Velocity read; CSA-R04 names the later attacker assertion after lookup. Section 5 inventories these fault recipes, which define no successful later state. |
+| CSA-R05: invalid or missing-record ColdEffect fallback | No change: the explicit fallback is -50 and uses the existing effect path. CSA-V08/CSA-V09 already exercise -50; class-record producer/lookup failure does not supply a different local effect or request recipe. |
+| CSA-R06: unavailable MonStats or MonStats2 deadCol lookup | No change: unavailable lookup is explicitly false and selects the same shatter condition as CSA-V09 (a). The true/false deadCol outcomes are already distinguished by CSA-V09 (a)/(c), with the off arm and roll threshold covered separately. |
+| CSA-R07 to CSA-R09: nonmonster freeze and zero-freeze-divisor fault | No change: the generic continuation, lookup fault, zero-divisor fatal assertion and later nonmonster assertion are explicit in the rules and section 5. These unsuccessful recipes have no defined post-fault state; they do not establish gated lifecycle effects. |
+| CSA-R10 to CSA-R12: negative guards | No change: signed nonpositive guards share the no-lookup/no-request result already exercised at zero by CSA-V13 (e)/(g) and CSA-V14 (a)/(b)/(g). Positive acceptance/rejection and wrapped old-magnitude comparison are separately exercised, including CSA-V13 (i). |
+| CSA-R13: mode 0 and direct callback on another unit type | No change: both take the explicitly defined not-alive branch. CSA-V15 already distinguishes nonzero/zero stay-death, state retention/clear and retained shatter for that branch. Direct null entry is an unsuccessful recipe; actual lifecycle callback invocation remains CSA-Q02. |
+| CSA-R04 to CSA-R09 and CSA-R11/CSA-R12: frame wrap | No change: these sites explicitly use low32 frame addition from the foundations notation. Supplied request frames do not establish malformed or wrapped-negative scheduler integration, which remains STL-Q10. Existing frame-clamp cases and the precise CSA-Q02 integration boundary remain. |
+
+HARDEST outcomes, all no change:
+
+| Entry | Outcome |
+|---|---|
+| Freeze routing, division and timers in CSA-V10/CSA-V11 | The reader recomputed fallback, selected divisor, retained expiry and separate timer frames without a mismatch or missing input. Existing request assertions and gates remain sufficient. |
+| Attacker/defender seeds through stun and cold in CSA-V02 to CSA-V09 | The reader recomputed seed ownership, ordered draws, thresholds and unchanged seeds; no ambiguity or additional discriminator was reported. |
+| Timer walks, poison comparison and cold callback in CSA-V12 to CSA-V15 | Saved successors, supplied chain mutation, wrapping comparison and callback branches were recomputed from the existing rules. Actual removal/propagation/refresh effects retain their named gates. |
+
+FULL2 is the final applicable full review of this fixture set: MISMATCH, GUESS, GAP and DISCRIM are
+all zero, and every advisory entry has a disposition. Reader review is complete under the stated
+stopping rule; no further full runs are required merely to reach a count. This is document review
+and hand computation, not fixture execution, gameplay confirmation, complete parity or user approval.
+The six evidence questions remain open and status remains draft.
