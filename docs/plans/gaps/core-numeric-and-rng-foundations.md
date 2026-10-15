@@ -6,6 +6,18 @@ Evidence: [migration attempts and source records](../../research/spec-evidence/c
 Status-application gaps (stored list effects, status timer-node and handler execution, status-path conditions
 and status observations) are rows of the [status application gap file](combat-status-application.md).
 
+All eleven rows were assessed on 2026-10-15 against their recorded source identities, methods,
+actual boundaries and the current dependency contracts; see the
+[reuse assessment](../../research/spec-evidence/core-numeric-and-rng-foundations.md#focused-regeneration-and-evidence-reuse-2026-10-15).
+The 2026-10-14 attempts below retain their actual dates. Reuse does not renew verification,
+complete a failed search or establish gameplay execution. The new seed-source/initializer
+reading clarified NRF-R03a/NRF-R03b inputs and return scope; it did not locate a gameplay
+no-parent creator, incoming game/player seed producer or a complete resource initializer.
+Current STL-R07 establishes active/changed membership separately from STL-R07a disguise,
+NRF-Q17 update-queue effects and STL-R05/STL-R06b/STL-R06c lifecycle integration.
+IEP-R07/IEP-R13b/IEP-R14 to IEP-R18 provide known direct-draw slices only; NRF-Q10 continues
+to block complete unread-handler/callee totals and full data bindings.
+
 ## Open evidence gaps
 
 | Gap | Kind | Affects | Blocked assertions / boundary | Missing evidence | Attempted (date, sources, result) | Would close it |

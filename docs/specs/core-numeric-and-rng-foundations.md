@@ -69,6 +69,10 @@ state. Illustrative operation names impose no language, API or storage design.
 | corpse-explosion draw inputs | corpse unit and seed, sentry unit and seed, `min`, range | units; seeds `{lo,hi}`; i32 | Supplied by DSC-R09 to the NRF-R04a corpse row |
 | object animation inputs | resolved type/mode, record, per-mode total, starting-frame byte, base rate, fixed-rate condition | i32 total; u8 start; i16 base rate; u8 condition | Prepared animation inputs to NRF-R18; selection and complete animation reset remain NRF-Q17 |
 | process/time inputs | parentless counter, Windows FILETIME, tick count, fps and milliseconds/frame | u32 counter/ticks; u64 FILETIME; i32 rates | Wall-clock samples can be supplied explicitly; time sampling makes actual seeds variable |
+| draw arguments | modulus `n`, range offset `off`, mask argument `m` | i32 modulus/offset; u32 mask argument | Select NRF-R02's draw form; the source seed is supplied separately |
+| arithmetic arguments | `a`, `b`, `c`; percent operands `v`, `s`; unsigned quotient input `x`; diminishing index | i32 except u32 `x` | NRF-R05/NRF-R06 arguments and the valid 0..4 diminishing-table index for NRF-R07 |
+| state and mode arguments | state identity `s`, state-write value `on`, requested mode | i32 | Distinct from current membership/mode; any nonzero `on` requests active membership |
+| unit-seeder source | optional source seed, including a parent's seed or the game seed | seed pair or null | NRF-R03a steps this pair directly; it does not require a parent unit record |
 
 | Mapping / constant | Origin | Binding |
 |---|---|---|
@@ -200,15 +204,15 @@ word pairs.
 **NRF-R03** **Seed initialization.**
 
 - **NRF-R03a** [verified in 1.13c code (static)]. `InitSeed(seed,v)` writes `{u32(v),666}`;
-  `InitTimerState(seed)` writes `{1,666}`. A new unit's seeder requires a non-null unit (a null unit is a fatal assertion) and receives a parent unit or
-  null from its caller. It first initializes the unit's seed to `{1,666}`, then tests the supplied parent: a
-  non-null parent selects the parent path, null the no-parent path. Both paths overwrite the seed. With a parent, step the parent once, copy the parent's
+  `InitTimerState(seed)` writes `{1,666}`. A new unit's seeder requires a non-null unit (a null unit is a fatal assertion) and receives a source seed pair or
+  null from its caller. It first initializes the unit's seed to `{1,666}`, then tests that source: a
+  non-null source selects the supplied-seed path, null the no-parent path. Both paths overwrite the seed. With a source, step that source once, copy its
   new lo to `unit.initialLo`, and initialize the child seed from that value. With no parent, take NRF-R03c's
   value `r`, write `unit.initialLo = r` and initialize the child seed to `{r,666}`. The child's seed is not
   stepped on either path.
 - **NRF-R03b** [verified in 1.13c code (static)]. The seeder performs `InitTimerState` before selection and
-  `InitSeed` after selection; both are seed writes, not separate random draws. Their argument/return identity is
-  the behavioral requirement.
+  `InitSeed` after selection; both are seed writes, not separate random draws. The initializer contracts specify
+  those writes and their supplied values; they make no numeric return assertion.
 - **NRF-R03c** [verified in 1.13c code (static)]. Without a parent, take `c=counter`, set `arg=low32(2*c)`, and
   store `counter=low32(c+1)` before sampling time. The process-load counter is 0. Compute
   `t=low32(u64(FILETIME-116444736000000000) / 10000000)` (unsigned wrapped subtraction and unsigned division);
@@ -264,7 +268,7 @@ Unknown record-chain behavior at a listed site does not change its seed owner.
   preparation and additional callee draws are NRF-Q11, separate from these supplied-entry direct sites. Object
   animation uses NRF-R18.
 - **NRF-R04c** [unresolved]. Item-event handlers can draw on seeds selected by each handler. The dispatcher
-  consumes no random number itself; the event id or callback slot alone does not establish the total
+  consumes no random number itself under IEP-R07; the event id or callback slot alone does not establish the total
   count/owner. Handler-owned counts remain NRF-Q10; supplied callbacks with known draw behavior are a distinct
   integration fixture.
 
@@ -522,7 +526,7 @@ other animation reset writes remains NRF-Q17.
 | Changed lo/hi only on stepped seed; derived random result | NRF-R01/NRF-R02/NRF-R04 |
 | Child seed/initialLo, counter, game seed/copy/local seed, item secondary seed/copy; ItemData allocation with `itemData.sentinel` -1 | NRF-R03/NRF-R17 |
 | Resource-initialization request with seed, difficulty, expansion and copy | NRF-R03d |
-| Signed helper result; no side effects or draws | NRF-R05/NRF-R06/NRF-R07 |
+| Signed mulDiv/percent/diminishing result, or unsigned quotient result; no side effects or draws | NRF-R05/NRF-R06/NRF-R07 |
 | Path speed/target/reset marker; ramp state/step components | NRF-R08b/NRF-R11a |
 | fps/milliseconds globals; coordinate results | NRF-R09a/NRF-R10 |
 | Returned stat value only; arrays/lists/states/seeds unchanged | NRF-R12b/NRF-R12c |
@@ -533,6 +537,10 @@ other animation reset writes remains NRF-Q17.
 
 Requested dependency effects become actual stored/queued effects only under that dependency's acceptance. No
 pure helper sends messages, creates units or persists saves.
+
+Seed initializers, the unit-seeding stage and the item-secondary-seeding stage assert writes and draws rather
+than a numeric return. Creation vectors assert a created unit or rejection only within NRF-R17a's supplied
+successful-allocation boundary; they do not assert the complete creator's later result or initialization.
 
 ## 6. Branches and edge cases
 
@@ -558,7 +566,7 @@ pure helper sends messages, creates units or persists saves.
 | **NRF-Q03** | behavior / unresolved | Establish the startup/runtime callers of the rate helper or valid captures of rate writes; helper arithmetic is verified |
 | **NRF-Q04** | integration / partially established | Complete coordinate/direction producer contracts for static routes and all direction-table entries; supplied path getters, scale and cited entries are verified |
 | **NRF-Q09** | outside-boundary / open | Establish wider roles of neutral runtime conditions and record fields (such as `unit.modeChanged`, `itemData.sentinel`, MonStats `creationCondition` and the section 3.3 structures) in their owning specs; no binary field name is required to use the known branch. Status-path conditions are CSA-Q03 |
-| **NRF-Q10** | outside-boundary / unresolved | Per-handler callback draw contracts and data-to-handler binding under the item-event owner; no blanket seed total inferred |
+| **NRF-Q10** | outside-boundary / unresolved | Complete per-handler callback/callee draw contracts and data-to-handler bindings under the item-event owner; IEP-R07, IEP-R13b and IEP-R14 to IEP-R18 establish only their stated direct-draw slices, not a blanket seed total |
 | **NRF-Q11** | integration / open | Complete upstream monster-slot/stored-target eligibility and extra callee draw contracts; reached direct sites NRF-R04b verified |
 | **NRF-Q13** | outside-boundary / integration open | Incoming game-seed producer and resource initializer contract; one direct step/request NRF-R03d verified |
 | **NRF-Q17** | integration / open | Animation preparation, rate-input production and other reset writes (NRF-R06b, NRF-R14a, NRF-R18); changed-state, disguise and update-queue side effects (NRF-R12a, NRF-R14a, NRF-R14b). Supplied inputs and ordered requests remain eligible. Status-path refresh and timer-node effects are CSA-Q02 |
@@ -576,9 +584,15 @@ Defaults for every vector unless its Inputs state otherwise:
 
 - Fixtures: stat definition count 359 with available named entries; `stateCount` 185; valid non-null
   associations; no unmentioned lists, states or conditions; successful allocation. Every case starts fresh from
-  its own Inputs and the vector's Inputs.
+  its own Inputs and the vector's Inputs. The illustrative state-write argument `on` is 1 unless a case gives
+  another value.
+- Local execution: execute each cited verified NRF operation and its in-boundary NRF callees. In particular,
+  seeding executes the seed initializers and LCG step, diminishing executes the selected-array getter, and the
+  mode setter executes NRF-R14b's traversal. Parent/source selection, seed writes and list visits are observed
+  local actions, not supplied replacement operations. NRF-V11's parent-path fixture supplies `parent.seed` as
+  the source seed; NRF-V17/NRF-V24 supply `game.seed`.
 - Operations: supplied dependency operations (state-bit set/clear, update mark, list free, animation reset,
-  parent selection and resource initialization) log their semantic arguments in call order and apply exactly the
+  and resource initialization) log their semantic arguments in call order and apply exactly the
   stored effect the vector states; none draws. A log entry names the operation and its arguments; where a vector
   states an observed field (`mode`, `modeChanged`, `expiryFlag`), the entry records that field's value at call
   time. Only the observed fields a vector states are asserted; a field it does not state at a request is not
@@ -693,10 +707,13 @@ Defaults for every vector unless its Inputs state otherwise:
   - (j) Index 1, `v` -50: `-6000 / 70`. Outputs: -85.
   - (k) Index 1, list `usesResolvedStats` true, `ownStats = [(99, 0, 60)]`, `resolvedStats = [(99, 0, 10)]`, each
     active count 1: the unit read gives 10; `1200 / 130`. Outputs: 9.
+  - (l) Index 1, `v` -120: present entry passes through the getter; numerator -14400, denominator 0. Outputs:
+    arithmetic divide-by-zero fault; no value is returned and no post-fault state is asserted.
   - Discriminates: (k) rejects the list read of `ownStats` (it would give 40); (i) rejects rounding to nearest
     (55) and (j) rejects floor division (-86); (a) rejects
     returning `v` unchanged; (e) rejects an absolute or unsigned computation; (f)
-    rejects index 1's A for index 4 (12000 / 220 = 54).
+    rejects index 1's A for index 4 (12000 / 220 = 54). Case (l) rejects returning zero or the stored value when
+    the nonzero stored value makes `A + v` zero.
   - runtime_observed: no
 
 - **NRF-V07** Path and tile conversion (NRF-R10a; boundary: isolated rule)
@@ -915,8 +932,13 @@ Defaults for every vector unless its Inputs state otherwise:
   - Outputs: `itemData.sentinel` -1; `game.seed = {0x2F2ED81B, 0x2C890AFD}`; `unit.seed = {0x6AC6935F, 0x29A}`, `unit.initialLo`
     0x6AC6935F (unchanged by step 2); `itemData.initialLo` 0x2F2ED81B; `itemData.seed = {0x2F2ED81B, 0x29A}`;
     exactly 2 game steps. Later item-generation draws are excluded.
+  - Ordered local assertions after ItemData allocation: (1) InitTimerState writes `itemData.seed = {1, 666}`
+    while `game.seed = {0x6AC6935F, 0}`; (2) the game step changes that pair to
+    `{0x2F2ED81B, 0x2C890AFD}` while `itemData.seed` is still `{1, 666}`; (3) write
+    `itemData.initialLo = 0x2F2ED81B`; (4) InitSeed writes `itemData.seed = {0x2F2ED81B, 666}`.
   - Discriminates: the distinct secondary seed rejects sharing the unit seed; the unchanged unit copy rejects
-    overwriting it in step 2.
+    overwriting it in step 2. The ordered local assertions reject moving the initial secondary-seed write after
+    the second game step, even though final seed values would match.
   - runtime_observed: no
 
 - **NRF-V25** Stat guards, identity and array selection (NRF-R12b; boundary: isolated rule)
@@ -997,8 +1019,13 @@ Defaults for every vector unless its Inputs state otherwise:
   - Trace: local seed `{1, 0x29A}`; one game step; copy; local seed reinitialized from the new lo.
   - Outputs: `game.seed = {0x6AC6935F, 0}`; `game.seedCopy` 0x6AC6935F; local seed `{0x6AC6935F, 0x29A}`;
     logged request `(P, D, local seed, 2, 1, 0x6AC6935F)`.
+  - Ordered local assertions: (1) InitTimerState writes local seed `{1, 666}` while `game.seed = {1, 666}`;
+    (2) the game step changes its pair to `{0x6AC6935F, 0}` while local seed is still `{1, 666}`;
+    (3) write `game.seedCopy = 0x6AC6935F`; (4) InitSeed writes local seed `{0x6AC6935F, 666}`;
+    (5) request resource initialization with the stated arguments and that initialized local seed.
   - Discriminates: the local seed and request lo reject taking the pre-step low word (1); this vector does not
-    establish the incoming seed producer or the resource initializer's totals (NRF-Q13).
+    establish the incoming seed producer or the resource initializer's totals (NRF-Q13). The ordered local
+    assertions reject moving the initial local-seed write after the game step.
   - runtime_observed: no
 
 - **NRF-V29** Prepared integer and movement boundaries (NRF-R06b, NRF-R08b, NRF-R10b, NRF-R11b; boundary: isolated rule)
@@ -1165,7 +1192,7 @@ accepting actual dependency-backed stored/queued effects, and matching observati
 Passing mocked requests or a pure helper never proves full creation, combat or animation parity. All vectors
 remain runtime_observed:no.
 
-**Depends on:** [core-game-data-fields](core-game-data-fields.md), GDF-R01 and the cited per-table/name rules for fields and original-profile identities; [state-timed-state-lifecycle](state-timed-state-lifecycle.md), STL-R05 list free in mode-bound traversal and STL-R07/STL-R07a state bookkeeping. Missing complete animation producer contracts are NRF-Q17; they are not hidden prerequisites to pure numeric fixtures.
+**Depends on:** [core-game-data-fields](core-game-data-fields.md), GDF-R01a and the cited per-table/name rules for fields and original-profile identities; [state-timed-state-lifecycle](state-timed-state-lifecycle.md), STL-R05 list free in mode-bound traversal and STL-R07/STL-R07a state bookkeeping. STL-R07 verifies active/changed membership; STL-R07a disguise and NRF-Q17 update-queue effects remain gated. Missing complete animation producer contracts are NRF-Q17; they are not hidden prerequisites to pure numeric fixtures.
 
 **Depended on by:** gameplay specs consuming shared arithmetic, units, seeds, getters or the damage record, including the consumer rules named in NRF-R04a's table (SBA, DPO, CSA, KNB, HRC, MHD, DSC, MSD and SFR rules), which hold the sequences and vectors for their draw sites, [combat-status-application](combat-status-application.md) (seed step, state routing, stat reads, damage record), [monster scaling](monster-scaling-by-players-and-difficulty.md) (draw forms, mulDiv, 8.8 format, creation seeding), [damage mitigation](combat-damage-mitigation.md), [damage pipeline](combat-damage-pipeline-order.md), movement, timed states, creation and the related combat/skill specs below. A reverse consumer relationship is not an automatic delivery prerequisite.
 
@@ -1186,7 +1213,7 @@ remain runtime_observed:no.
 - [skill-assassin-sentry-firing-and-range](skill-assassin-sentry-firing-and-range.md): the candidate-seed roll of NRF-R04a and the stored-target draw of NRF-R04b.
 - [skill-assassin-death-sentry-corpse-damage](skill-assassin-death-sentry-corpse-damage.md): the corpse-seed roll of NRF-R04a.
 - [skill-assassin-blade-sentinel-and-fury](skill-assassin-blade-sentinel-and-fury.md): unit creation steps the game seed (NRF-R17a).
-- [combat-item-event-triggers-and-procs](combat-item-event-triggers-and-procs.md): the callback table of NRF-R04c.
+- [combat-item-event-triggers-and-procs](combat-item-event-triggers-and-procs.md): IEP-R07's draw-free dispatcher, IEP-R13b's direct owner draw and IEP-R14 to IEP-R18's no-direct-draw callback slices support NRF-R04c's boundary; complete handler totals remain NRF-Q10.
 
 ## Appendix A. Provenance
 

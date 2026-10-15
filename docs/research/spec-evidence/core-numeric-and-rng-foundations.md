@@ -21,11 +21,239 @@ fingerprinted originals. Tables below distinguish fully read local paths from pa
 inspected candidates and dependency calls. The original files are sufficient to repeat
 the analysis; unpublished reconstruction files and collection tools are not required sources.
 
-This provenance rewrite on 2026-10-14 changes citation presentation only. It does not
+The provenance rewrite on 2026-10-14 changed citation presentation only. It did not
 renew code verification, change labels or claim gameplay confirmation. Detailed internal
 history and original binary fixture encodings were preserved in a separate private audit.
-The unchanged spec contains current inputs, rules, vectors, acceptance and gates. No binaries,
+The linked spec contains current inputs, rules, vectors, acceptance and gates. No binaries,
 whole game tables, private saves or raw captures are published here.
+
+## Focused regeneration and evidence reuse (2026-10-15)
+
+The existing contract, companion, gap attempts, original artifact manifest and current
+dependency contracts were assessed before new source reading. The 2026-10-12/13 and
+2026-10-14 records remain support for exactly their recorded original 1.13c slices;
+their dates, labels and observation limits are unchanged. Original-image fingerprint
+correspondence is the one already established in the manifest. Effective table-profile
+identity is not inferred from those code hashes. No new table or gameplay collection
+was performed by this numeric pass.
+
+The current lifecycle contract confirms the previously recorded distinction: STL-R07
+establishes active/changed membership, while STL-R07a's disguise result, the update queue,
+STL-R05 free, STL-R06b attach and STL-R06c replacing-write effects remain gated. Those
+gates still delimit NRF-Q17/NRF-Q20; the compatible shared-state reading does not turn
+a supplied free or bit-only fixture into complete lifecycle execution.
+
+The reviewed item-event contract supplies narrower reusable records than a universal
+callback total: IEP-R07's dispatcher has no direct draw; IEP-R13b takes one owner modulo
+100 draw only after its stated guards; IEP-R14 to IEP-R18 have no direct callback draw.
+Their downstream apply/reaction/state/write operations keep their own contracts and
+gates. These records retain their 2026-10-12/13 and targeted 2026-10-14 dates in the
+[item-event companion](combat-item-event-triggers-and-procs.md#original-function-references).
+They refine the boundary of NRF-Q10 without establishing unread callbacks, original
+item-to-handler bindings, later reanimation or complete callback/callee draw totals.
+
+Current damage-pipeline, shield/block, knockback and hit-recovery owner contracts agree
+with NRF-R04a's reached-site seed owners. The hit-recovery damage-class width is already
+i32 in section 3.2 here; its corrected full-width interpretation requires no numeric
+foundation arithmetic or record-width change. Consumer eligibility and complete sequence
+remain with those owners. These dependency comparisons are not fresh binary verification.
+
+| Question | Reused record and actual date | 2026-10-15 assessment / remaining assertion |
+|---|---|---|
+| NRF-Q02 | 2026-10-14 complete unit-seeder/sampled-time chain | Optional source-seed semantics clarified below; actual null-source gameplay creator remains outside the supplied-clock helper |
+| NRF-Q03 | 2026-10-14 rate helper, recompute, call/import/pointer searches | Same indirect startup/live-rate question remains; repeating the same negative direct-call query adds no evidence |
+| NRF-Q04 | 2026-10-14 getters, direction writer/helper and constant-table read | Supplied getter/velocity results remain verified; no complete static-position or direction producer contract was added |
+| NRF-Q09 | 2026-10-14 condition consumers and semantic mappings | Neutral predicates remain usable as supplied; wider meanings remain with the subsystem owner |
+| NRF-Q10 | 2026-10-14 numeric dispatcher/slot inspection; item-event records above | Known direct-draw slices are reusable; unread callback/callee totals and full data bindings remain outside this primitive contract |
+| NRF-Q11 | 2026-10-14 reached monster/searcher listings; current HRC-R15 | Complete mode-event eligibility/additional draws remain gated; no full zero-draw event is inferred |
+| NRF-Q13 | 2026-10-14 one-step game stage and resource entry/call inspection | Incoming seed and resource initialization remain outside the supplied-seed stage |
+| NRF-Q17 | 2026-10-14 prepared animation/update/disguise inspections; current STL-R07/R07a | Active/changed membership is separate from unresolved disguise, update-queue and complete animation effects |
+| NRF-Q19 | 2026-10-14 player-loader candidate inspection | Actual player-load/reseed root remains unverified; creation's player skip remains available |
+| NRF-Q20 | 2026-10-14 setter/attach/free entry inspections; current STL-R05/R06b/R06c | Actual propagation/free/attach effects remain gated under their owner; getter and ordered-request fixtures remain available |
+| NRF-Q21 | Historical observations dated 2026-10-12/13; procedures reviewed 2026-10-14 | No gameplay/helper execution was newly observed; all executable vectors remain unconfirmed |
+
+The remaining questions match the previous searches' source identities and assertion
+boundaries. They do not justify repeating identical failed queries or reading unrelated
+gameplay paths. This pass added only the following missing source-argument/return-scope
+check, rather than claiming all gaps closed.
+
+### Seed-source and initializer contract check (2026-10-15)
+
+| Artifact | Function RVA | Export ordinal | Analyst description | Rules | Method / boundary |
+|---|---|---|---|---|---|
+| LOD113C-D2COMMON | `0x36740`, `0x36750` | 10614, 10936 respectively | Supplied-value and initial seed writes | NRF-R03a, NRF-R03b | Complete C reconstruction checked against original bytes; seed writes only, not a universal caller-return claim |
+| LOD113C-D2GAME | `0xE0110` | — | Unit-seeding source argument | NRF-R03a, NRF-R03b | Complete local seeder disassembly read; optional source-pair test, direct source step and tail request to #10614 |
+| LOD113C-D2GAME | `0xE1D90` | — | Generic creation source-seed handoff | NRF-R17a | Entry through seeding slice, specifically `0xE1E72..0xE1E99`; source handoff corroborated by original-image decode `0xE1E38..0xE1E9C`; later creator paths not newly verified |
+
+The initializer leaves write `{supplied value,666}` and `{1,666}`. Their matched
+reconstructions have void prototypes; that alone does not prove every caller ignores an
+incidental machine-register value. NRF-R03b therefore specifies writes and makes no
+numeric return assertion. It no longer uses the undefined phrase “argument/return identity.”
+
+At `D2Game.dll+0xE0110`, the optional source in ESI is dereferenced directly as two seed
+words; it is not a Unit address. At `0xE1E74`, the generic creator forms `Game+0xD0`,
+passes it to the seeder at `0xE1E7C`, and does not consume a numeric seed-initializer
+result before its item-type test. The child seed remains `Unit+0x20`, initial copy
+`Unit+0x28`. Thus the semantic input is an optional source seed: a parent's seed is one
+valid source, and creation uses the game seed. This corrects the earlier “parent unit”
+wording without changing any source owner, step, copy or vector value. The seeder's
+initializer calls are #10936 at D2Game thunk `0xA616` and #10614 at thunk `0xA628`;
+their resolved targets are the D2Common leaves above.
+
+### Contract preservation and self-review
+
+The private before snapshot preserves all three documents with SHA-256 records. No id,
+old case, numeric input, draw owner/order, expected value, evidence label or integration
+gate was removed or renumbered. The vector preamble now assigns illustrative `on=1`
+explicitly and states that local NRF callees execute, while supplied dependency operations
+apply only their stated fixture effects. The ordered parent-selection/seed-write log is
+an observation of local execution, not an injected parent-selection operation. Arithmetic
+and return/input inventories are explicit, including the unsigned quotient result.
+
+Self-review checked every verified rule against its preserved vectors and execution
+boundary, the source-argument correction against the source slice above, and all eleven
+remaining gap rows against compatible attempts and current dependencies. No additional
+result-distinct missing numeric branch was identified in this pass. Historical reader
+counts below apply to their historical revisions. A fresh reader must assess this
+regenerated contract before its review is complete. Status remains draft; gameplay
+confirmation and user approval are not inferred.
+
+Mechanical and preservation checks on 2026-10-15 found identical defined id sets, all
+31 leaf rule-label pairs unchanged, all 25 executable-vector blocks unchanged, and all
+three observation definitions unchanged. The spec check reported 0 errors and 46 warnings;
+all 46 warnings are inherited historical cross-references in the status-application
+companion. None points to an id added, removed or changed by this pass. The three documents
+owned by this numeric regeneration have 0 errors and 0 warnings. Resolving those historical
+status references belongs to that companion's regeneration; they were left unchanged here.
+
+### Campaign full reader pass 1 and advisory triage (2026-10-15)
+
+A fresh smaller reader used the main contract and dependency contracts, with no additional
+access limits, and independently recomputed 25 vector families and 159 labeled cases.
+Counts: MISMATCH 0, GUESS 0, GAP 0, DISCRIM 0, GATED 12, COVERAGE 11, HARDEST 3.
+The twelve grouped gated entries were NRF-Q02, NRF-Q03, NRF-Q04, NRF-Q10, NRF-Q11,
+NRF-Q13, NRF-Q17, NRF-Q19, NRF-Q20, NRF-Q21, NRF-R04c and NRF-R09b. Other explicit
+limits, including NRF-Q09, remain in force; this grouping does not remove a question.
+
+Every advisory coverage entry received the following outcome. The one new recipe is
+derived from the already verified NRF-R07 supplied-value arithmetic, not a fresh source
+reading or a newly asserted failure default. All retained cases and expected results
+remain unchanged.
+
+| Advisory branch | Outcome and concrete reason |
+|---|---|
+| NRF-R02 negative RandInRange modulus | No change: NRF-V02 (b) demonstrates the signed negative-modulus no-step guard; (d) demonstrates the offset-form guard returns the supplied offset without a step. Combining those same operations adds no distinct arithmetic recipe |
+| NRF-R05 negative nonzero divisor | No change: NRF-V04 (a) and NRF-V13 (c) distinguish signed truncation from floor division; NRF-V04 (c), (d), (h), (j) and (l) demonstrate the divide-first branch recipes. A negative divisor uses the stated signed comparison/division rules rather than an additional saturation or absolute-value operation |
+| NRF-R07 null unit and zero denominator | Spec edit: NRF-V05 (l) supplies a present value -120 so the nonzero-value branch reaches denominator 0 and faults, rather than the missing/zero-value return shown in (g)/(h). The null-unit fatal/fault recipe is already exercised by NRF-V11 (c); NRF-R07 explicitly states its distinct null-unit precondition |
+| NRF-R09a fps 0 | No change: the zero-divisor fault recipe is now NRF-V05 (l), while NRF-V14 (a) to (d) test rate arithmetic/recompute. NRF-R09a already states fps 0 faults. No claim about fields retained or written before that fault is added; fault fixtures assert only abnormal completion |
+| NRF-R10b null path | No change: NRF-V11 (c) supplies the fatal null-input recipe; NRF-V29 (g) exercises this getter's independent extraction result. NRF-R10b states the null-path assertion, without a post-fault state guarantee |
+| NRF-R11 tick wrap | No change: NRF-V27 (c) demonstrates low-32-bit increment wrap, NRF-V22 (a) the five-tick ramp and (c) the no-acceleration unchanged-tick branch. The tick uses the same explicit low32 increment and signed comparison, not a new clock policy |
+| NRF-R12a null/storage guards | No change: NRF-V15 (b)/(i) show the zero state-test result, NRF-V33 (b) a null lookup result, and (c) no stored bit effect with a missing base while update is still requested. Additional null/storage permutations reuse those guard/return/request recipes; their distinct preconditions remain explicit in NRF-R12a |
+| NRF-R12a SetState on another unit kind | No change: NRF-V33 (e)/(j)/(l) demonstrate enable/clear/unchanged-value forwarding. NRF-R12a explicitly applies no unit-type filter; repeating the same call/bit operation for another fixed type adds no new result recipe |
+| NRF-R14b missing base or retained extended list | No change: NRF-V31 (b) demonstrates early return without visits, while (a) demonstrates reloading the current head. A retained flagged extended list can repeat indefinitely as the rule and section 6 state; it is not a successful finite fixture, and no new dependency mutation or termination default is supplied |
+| NRF-R17a unavailable MonStats record | No change: NRF-V17 (d)/(f) demonstrate the common pre-allocation rejection result, unchanged seed and no seeder request. Missing record reaches that same refusal; no new allocation/seed recipe is added |
+| NRF-R18 prepared mode >=8 | No change: NRF-V11 (c) provides the fatal-assertion recipe, while NRF-V32 tests the valid prepared object branch. The upper-bound assertion is explicit in NRF-R18; negative indexing and full animation preparation remain outside its valid-record slice. No per-mode record, preceding write or post-fault field value is invented |
+
+HARDEST entries were NRF-V04's ordered mulDiv branches, NRF-V27's unsigned FILETIME
+wrapping and NRF-V31's head restart. Each received no change: its explicit operand order,
+width/rounding trace or observed visit log already resolves the difficulty. No MISMATCH,
+GUESS, GAP or DISCRIM required a separate resolution. NRF-V05 (l) expands the contract's
+executable case set to 160 labeled cases within the same 25 vector families, so a fresh
+full pass is required before the campaign reader review is complete. The previous
+mechanical/preservation record above describes the pre-advisory revision; all old cases
+and values remain preserved after this addition.
+
+### Campaign full reader pass 2 and local-order assertions (2026-10-15)
+
+A fresh smaller reader used only the main contract and its dependencies. Counts:
+MISMATCH 0, GUESS 0, GAP 0, DISCRIM 2, GATED 22, COVERAGE 12, HARDEST 3.
+The 22 grouped gated entries were NRF-R04c, NRF-R09b, NRF-Q02, NRF-Q03, NRF-Q04,
+NRF-Q09, NRF-Q10, NRF-Q11, NRF-Q13, NRF-Q17, NRF-Q19, NRF-Q20, NRF-Q21 and the
+nine supplied-input stage vectors NRF-V16, NRF-V17, NRF-V20, NRF-V24, NRF-V28,
+NRF-V30, NRF-V31, NRF-V32 and NRF-V33. Their verified local assertions remain
+available; this grouping does not gate the entire vector or remove any existing limit.
+
+| Discrimination finding | Outcome |
+|---|---|
+| NRF-V24 could pass with secondary initial write after the game step | Spec edit: observed local assertions require secondary `{1,666}` write, second game step, initial-copy write, then final secondary write. All final pairs/copies and both game steps are unchanged |
+| NRF-V28 could pass with local initial write after the game step | Spec edit: observed local assertions require local `{1,666}` write, game step, game-copy write, final local write, then resource request. All final values/request arguments are unchanged |
+
+Both edits observe the actual NRF-R17b/NRF-R03d local writes and steps already stated
+in the rules. They introduce no supplied implementation of those local rules and no
+source of seed values beyond the existing fixture inputs. Their source support is the
+compatible seeding and game-stage readings dated 2026-10-14, not new binary analysis.
+
+The reader grouped twelve coverage entries, with several guard subbranches. Every
+reported branch is addressed below; no additional case was needed.
+
+| Advisory branch or grouped subbranches | Outcome and concrete reason |
+|---|---|
+| NRF-R07 table flag clear / zero-value bypass | No change: all five original constant-table flags are 1, so flag-clear is outside the valid original table profile. NRF-V05 (g)/(h) already give the zero-value return, while (l) rejects extending that bypass to a nonzero value with zero denominator |
+| NRF-R09a fps 0 fault | No change: NRF-V05 (l) supplies the division-by-zero recipe and NRF-V14 supplies this helper's normal/recompute arithmetic. NRF-R09a states the fault; no retained-field or write-order assertion is inferred across it |
+| NRF-R10b null path fatal | No change: NRF-V11 (c) supplies the fatal null-input recipe; NRF-V29 (g) demonstrates the independent getter result. The stated null-path assertion supplies no post-fault state |
+| NRF-R11 wrapped speed ramp / step products | No change: NRF-V04 (k) distinguishes retaining the narrow product before division; NRF-V26 (f) retains low-32-bit shifted output; NRF-V27 (c)/(e) demonstrate wrapped increments/sums. NRF-V22 exercises this rule's ramp and signed product/shift recipes. No additional overflow policy is introduced |
+| NRF-R12a FindStateList null unit, missing list/storage and multiple matches | No change: fatal null-input is NRF-V11 (c); null lookup is NRF-V33 (b); primary-before-secondary duplicate selection is NRF-V33 (a), with secondary fallback (g). The rule explicitly returns the first matching list and states its distinct guards; extra absent-storage/duplicate fixed identities add no new traversal/result recipe |
+| NRF-R12a HasState null/type/storage/range guards | No change: NRF-V15 (b)/(i) demonstrate rejected types returning 0, (c)/(g)/(h) range rejection, (e)/(f) accepted types and bit masks. Other guard failures share that zero-result recipe without changing the explicit per-operation guards |
+| NRF-R12a SetState valid null unit / type-independent routing | No change: NRF-V33 (c) demonstrates the bit request with no stored effect followed by update; (e)/(j)/(l) demonstrate set, clear and unchanged nonzero argument. A valid null unit retains the stated update fault/integration boundary, not a successful default. NRF-R12a explicitly has no type filter; repeating a type binding adds no new operation recipe |
+| NRF-R14b missing base list | No change: NRF-V31 (b) already demonstrates early return with no visits/requests; the missing-base guard selects that same recipe |
+| NRF-R14b retained flagged extended-list restart | No change: NRF-V31 (a) explicitly observes reloading the current head. A retained flagged extended list can make that loop nonterminating, as NRF-R14b and section 6 state. No extra fixture mutation or termination policy is invented |
+| NRF-R17a unavailable MonStats record | No change: NRF-V17 (d)/(f) demonstrate the same pre-allocation null result, unchanged game seed and no seeder request |
+| NRF-R18 prepared mode upper-bound fatal | No change: fatal assertion is NRF-V11 (c); valid prepared-object arithmetic is NRF-V32. NRF-R18 explicitly states the mode>=8 assertion; no invalid record indexing or preceding/post-fault write assertion is supplied |
+
+HARDEST entries were NRF-R03c's FILETIME/counter wrapping, NRF-R05's threshold order
+and NRF-R14b's primary-head restart. All received no change: NRF-V27, NRF-V04 and
+NRF-V31 already state their inputs, arithmetic or observed visit order explicitly.
+No rule, gate, evidence label or old case/result changed. The two local-order assertion
+edits require a third fresh full reader pass. The case set remains 25 vector families
+and 160 labeled cases. Inherited status-application cross-reference warnings remain
+outside this numeric change's ownership and were addressed by that companion's
+regeneration. This companion retains its public identifier-mapping destination; that
+destination describes historical subjects and their current owners. Defined ids, all
+31 leaf labels, all old case values and all observation definitions remain unchanged.
+Exact old vector text is preserved apart from the one added fault case and the two
+added local-order assertion/discrimination clauses.
+After the linked destination was restored by its owner, the numeric spec check reported
+0 errors and 0 warnings on 2026-10-15.
+
+### Campaign full reader pass 3 and completion (2026-10-15)
+
+A fresh smaller reader independently recomputed all 25 vector families and 160 labeled
+cases from the main contract and dependencies. Counts: MISMATCH 0, GUESS 0, GAP 0,
+DISCRIM 0, GATED 22, COVERAGE 11, HARDEST 3. The gated grouping is the same as
+full pass 2: eleven questions NRF-Q02, NRF-Q03, NRF-Q04, NRF-Q09, NRF-Q10,
+NRF-Q11, NRF-Q13, NRF-Q17, NRF-Q19, NRF-Q20 and NRF-Q21; unresolved NRF-R04c
+and NRF-R09b; and the nine supplied-input stage vectors NRF-V16, NRF-V17, NRF-V20,
+NRF-V24, NRF-V28, NRF-V30, NRF-V31, NRF-V32 and NRF-V33. These are the same
+explicit assertion boundaries, not new blanket gates.
+
+All advisory entries received no change, for the following reasons. No fixture,
+expected output, behavioral assertion, ownership or gate changed after this full pass.
+
+| Advisory entry and all reported branches | Disposition |
+|---|---|
+| NRF-R02 negative modulus / additional masks | No change: NRF-V02 (b) rejects stepping for a negative modulus and (d) checks the offset guard; NRF-V01 (b)/(e) and NRF-V02 (f)/(g) distinguish mask arithmetic, including zero/one and a non-power-of-two argument. Further masks reuse that same new-low-word mask recipe |
+| NRF-R06a low32 product wrap | No change: NRF-V04 (k) explicitly distinguishes the narrow product from widened arithmetic before division; NRF-V13 (a)/(c) distinguish the signed truncating quotient operations. NRF-R06a composes those already explicit width/rounding operations |
+| NRF-R07 indices 0/2/3, unflagged table and zero | No change: indices 0/2/3 have the same fixed flag/A values as index 1; NRF-V05 (a) to (e)/(i)/(j) cover that arithmetic, and (f) distinguishes the different A of index 4. All original table flags are 1, so an unflagged row is outside the valid original table profile. The zero-result bypass recipe is (g)/(h); (l) rejects bypassing a nonzero value merely because its denominator is zero |
+| NRF-R09a fps 0 | No change: NRF-V05 (l) supplies the zero-divisor fault recipe; NRF-V14 exercises this helper's normal/recompute results. NRF-R09a states the fault without asserting retained fields or preceding writes |
+| NRF-R10b null path | No change: NRF-V11 (c) supplies the fatal null-input recipe; NRF-V29 (g) directly checks this getter's extraction result. The null-path assertion has no post-fault state guarantee |
+| NRF-R12a null unit, missing storage and negative SetState on null unit | No change: NRF-V15 (b)/(i) supply the zero state-test guard result, NRF-V33 (b) the null lookup result, and (c) the no-stored-bit-effect plus update request. NRF-V33 (k) directly checks the negative-state no-request guard; NRF-R12a applies it before any valid-state bit/update requests, including on a null unit. Valid null-unit update handling retains its explicit fault/integration boundary rather than a successful default |
+| NRF-R12b positive count without matching identity | No change: NRF-V25 (f) directly supplies positive count 2 with entries (34,1)/(36,0), requests (34,0), and expects 0 with no fallback |
+| NRF-R14a type 2/3/4 equal and changed modes | No change: NRF-V16 (b)/(c)/(g)/(i) exercise ordinary equality/change routing, unrestricted requested mode and the monster-only exception's limit; (d)/(h) isolate type 5 refusal. Types 2/3/4 use the ordinary path, with no additional type-specific local arithmetic or request recipe |
+| NRF-R14b missing base / flagged negative state | No change: NRF-V31 (b) supplies early return without visits/requests; (c) rejects placing free under the strict lower state bound, and (d) rejects placing it under the upper bound. A negative state follows the same lower-bound failure and independent free recipe. The rule still explicitly requires a base list before traversal |
+| NRF-R17a missing MonStats record | No change: NRF-V17 (d)/(f) exercise the common pre-allocation rejection result, unchanged game seed and absent seeder request. The unavailable-record predicate reaches that same refusal |
+| NRF-R18 upper mode assertion / nonobject dispatch | No change: the fatal-assertion recipe is NRF-V11 (c); NRF-V32 exercises the valid prepared object branch. NRF-R18 explicitly limits the random branch to prepared type 2 and states its upper mode assertion. Other types' animation behavior and full preparation remain outside that supplied-object slice; no new nonobject result or invalid indexing is inferred |
+
+HARDEST entries also received no change: NRF-V04 already states signed thresholds,
+branch order and divide fault; NRF-V27 states wrapped time/counter inputs and all three
+scramble results; NRF-V26 states the minimum-condition matrix, unshifted comparison and
+low32 replacement. Their difficulty did not reveal a missing behavioral choice.
+
+The campaign blind-implementer review is complete for this revision: three full passes
+returned MISMATCH 0, every earlier required finding has its recorded resolution, and
+the final applicable pass has no GUESS, GAP or DISCRIM. Advisory branches retain the
+explicit outcomes above. The document remains draft because the recorded in-scope
+gates and pending gameplay observations remain open. Review completion does not imply
+user approval, source re-verification beyond the recorded slices or complete parity.
 
 ## Original function references
 
@@ -46,7 +274,7 @@ whole game tables, private saves or raw captures are published here.
 | LOD113C-D2GAME | `0xCACC0` | — | Game seed stage | NRF-R03d | Independent listing 2026-10-14; step, copy/local initialization and resource request |
 | LOD113C-D2GAME | `0xCAB30` | — | Resource initialization boundary | NRF-R03d, NRF-Q13 | Entry/calls only; not complete resource draw verification |
 | LOD113C-D2GAME | `0x14D0` | — | Signed multiply/divide primitive | NRF-R05 | Disassembly; thresholds, precision branches and narrow IDIV fault; reread 2026-10-14 |
-| LOD113C-D2GAME | `0xF44B0` | — | Wide signed-division runtime support | NRF-R05 | Disassembly reading recorded 2026-10-13 in the [pipeline arithmetic audit](combat-damage-pipeline-order.md#appendix-a-provenance); reused here, not independently reread in the 2026-10-14 numeric pass |
+| LOD113C-D2GAME | `0xF44B0` | — | Wide signed-division runtime support | NRF-R05 | Disassembly reading recorded 2026-10-13 in the [pipeline arithmetic audit](combat-damage-pipeline-order.md#original-function-references); reused here, not independently reread in the 2026-10-14 numeric pass |
 | LOD113C-D2GAME | `0xDD450` | — | Signed percent consumers | NRF-R06a | Disassembly; signed /100 and /128 idioms; full damage build owned elsewhere |
 | LOD113C-D2COMMON | `0x33110` | 10819 | Unsigned /100 animation consumer | NRF-R06b | Independently decoded quotient slice 2026-10-14; input production/update remains NRF-Q17 |
 | LOD113C-D2COMMON | `0x323E0` | — | Diminishing-return getter | NRF-R07 | Disassembly; valid-input stat selection and signed formula |
@@ -74,7 +302,7 @@ Relevant branches and writes:
 - `D2Game.dll+0x14D0` uses signed `0x10000` threshold/shift comparisons. Divide-first
   branches truncate before multiplication; the narrow product branch uses IDIV and
   faults for INT_MIN/-1. Operand order is asymmetric. No generic caller percent order
-  follows. The [pipeline arithmetic audit](combat-damage-pipeline-order.md#appendix-a-provenance)
+  follows. The [pipeline arithmetic audit](combat-damage-pipeline-order.md#original-function-references)
   records a 2026-10-13 disassembly reading of both `0x14D0` and its wide signed-division
   support at `0xF44B0`, explicitly mapped to NRF-R05. That earlier reading supplies the
   helper coverage; the 2026-10-14 numeric pass did not independently reread its internals.
@@ -439,7 +667,7 @@ not approve later edits. GATED counts vary with grouping of dependencies/stage f
 | 5 | 0 | 0 | 0 | 13 | 1 reported / 4 | 3 | Required item belonged to GDF decimal overflow; numeric fault/poison controls and source-backed stun correction |
 | 6, final applicable | 0 | 0 | 0 | 28 | 0 / 6 reported | 3 | No required findings; integration/observation gates remain |
 
-Final advisory outcomes: below-13 hireling duration already covered by LSE-V19; other
+Final advisory outcomes: below-13 hireling duration was covered by the then-current status fixtures; other
 nonzero freeze helpers reach V30's same cold fallback (now CSA-V10), V35 covers helper results (now CSA-V04);
 negative object-rate clamp shares zero branch; invalid prepared mode is outside valid
 0..7; denominator-zero, fps-zero and unavailable monster Velocity are stated exceptional
@@ -530,8 +758,9 @@ reading was performed; the moved rules keep their original evidence, now cited b
   status gate helpers, the cold expiry callback, the poison/burn pre-step, the status hand-off and
   final lethal decision, the freeze-to-cold routing, their vectors, the cold-extension observation
   and the status parts of NRF-Q09, NRF-Q17, NRF-Q20 and NRF-Q21 now belong to
-  [combat-status-application](../../specs/combat-status-application.md). The old-to-new map is the
-  [status application identifier mapping](combat-status-application.md#identifier-mapping).
+  [combat-status-application](../../specs/combat-status-application.md). The
+  [status application subject and current-owner mapping](combat-status-application.md#identifier-mapping)
+  records their current owners.
 - **Moved to monster scaling.** The monster life roll and bonus are MSD-R11; the life clamp and
   the ordered stat 7/stat 6 write requests are MSD-R12, with MSD-V11 and MSD-V12. NRF-R04a keeps the
   seed-owner row (the new monster's seed) and cites MSD-R11. NRF-R08a keeps the 8.8 and 16.16
