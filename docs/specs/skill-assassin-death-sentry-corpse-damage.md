@@ -76,7 +76,7 @@ Other vector values are synthetic inputs. Calculation requests use `(caster,skil
 
 **DSC-R08** Endpoints [verified in 1.13c code (static)]. Evaluate aurarangecalc, then `calc1`, then `calc2` in caster context. Set min=mulDiv(maxLife,`calc1`,100), max=mulDiv(maxLife,`calc2`,100). No local endpoint draw.
 
-**DSC-R09** Corpse roll [verified in 1.13c code (static)]. `n=low32(max-min)`; `dmg=low32(min+RandAlt(corpse seed,n))`. Signed n<=0 adds 0 without stepping; n>0 draws once. Nonwrapping ordered endpoints give [min,max-1]. Extreme inputs use wrapped n, not an independent max<=min test.
+**DSC-R09** Corpse roll [verified in 1.13c code (static)]. `n=low32(max-min)`; `dmg=low32(min+Rand(corpse seed,n))` under NRF-R02. Signed n<=0 adds 0 without stepping; n>0 draws once. Nonwrapping ordered endpoints give [min,max-1]. Extreme inputs use wrapped n, not an independent max<=min test.
 
 **DSC-R10** Level scale [verified in 1.13c code (static)]. Read corpse level then caster level. If corpseLevel!=0 and signed casterLevel<corpseLevel, dmg=mulDiv(casterLevel,dmg,corpseLevel), before splitting; otherwise retain dmg. No local draw. NRF-R05's complete divisor/operand conditions apply; dmg>1048576 alone does not prove divide-first for arbitrary corpseLevel.
 
@@ -119,11 +119,11 @@ Other vector values are synthetic inputs. Calculation requests use `(caster,skil
 | Id | Summary | Status label | Gates | Vectors |
 |---|---|---|---|---|
 | DSC-R01 | Budget/skill | verified in 1.13c code (static) | DSC-Q05 entry; DSC-Q06 producers | DSC-V07 |
-| DSC-R02 | Target/delay | verified in 1.13c code (static) | DSC-Q06 actual search/schedule | DSC-V08 |
+| DSC-R02 | Target/delay | verified in 1.13c code (static) | DSC-Q05 entry; DSC-Q06 actual search/schedule | DSC-V08 |
 | DSC-R03a | First search result | verified in 1.13c code (static) | DSC-Q06 actual collection | DSC-V05 |
 | DSC-R03b | Integrated search | unresolved | DSC-Q06 | none |
-| DSC-R04 | Corpse branch | verified in 1.13c code (static) | DSC-Q06 actual mode | DSC-V05 |
-| DSC-R05 | Fallback | verified in 1.13c code (static) | DSC-Q06 actual mode/delay | DSC-V09 |
+| DSC-R04 | Corpse branch | verified in 1.13c code (static) | DSC-Q05 entry; DSC-Q06 actual mode | DSC-V05 |
+| DSC-R05 | Fallback | verified in 1.13c code (static) | DSC-Q05 entry; DSC-Q06 actual mode/delay | DSC-V09 |
 | DSC-R06a | State requests | verified in 1.13c code (static) | DSC-Q06 actual preparation/update | DSC-V10 |
 | DSC-R06b | Corpse-valid producer | unresolved | DSC-Q06 | none |
 | DSC-R07a | Stat-life input | verified in 1.13c code (static) | none for supplied stats | DSC-V12 |

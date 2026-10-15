@@ -254,6 +254,67 @@ The complete original-image selector 6/7 cells were read at0xFB5B8/0xFB5C0 and d
 dispatch instructions read through their callback selection; actual room/path producers
 remain explicit missing boundaries rather than guessed 'nearest hostile' behavior.
 
+## Review additions (2026-10-15)
+
+A spec-standard review on 2026-10-15 reread these paths in original D2Game disassembly
+and the original image. It changes no evidence label.
+
+**AI table root for the think (narrows SFR-Q02).** D2Game RVA 0x9D0F0 selects an AI table
+entry: when its special-index argument is nonzero (and, for 10..12, a D2Common test passes)
+it returns the special table `0x10E668 + 16*index`. Otherwise it reads the monster record's
+signed word at MonStats+0x1E, bounded to 0..147, and returns `0x10E788 + 16*index`,
+defaulting to entry 0. The original-image cells of entry 101 at RVA 0x10EDD8 are
+{0, 0x6FCC39B0, 0x6FCC7DC0, 0}: init RVA 0xA39B0 and think RVA 0xA7DC0. Entry 102 is
+{0, 0x6FCC3990, 0x6FCC6B70, 0}. Installer 0x9D230 calls the entry's init field (+4) and
+stores the think field (+8) in AI-control+4, using fallback 0x9CB00 when that field is null.
+Executor 0x9D3B0 checks that pointer and calls it with game, unit and the parameter block.
+This makes the earlier pointer-scan lead at 0x10EDE0 the think slot of table index 101.
+Init 0xA39B0 writes AI-control+0x18 = -1, which is the counter that SFR-R02 lazily
+initializes. It also copies a game field (+0xA8) to AI-control+0x14. Still open: the
+MonStats column name for +0x1E and the sentry rows' values (Q04), the special-table
+selector, and the event root that calls 0x9D3B0. The linked file lists no caller for it.
+R01g therefore stays unresolved.
+
+**Think skill-mode request shape (SFR-R01f).** The final call sequence pushes
+(0, 0, target, Skill1) for D2Game 0xF2380 (`ret 0x10`, four stack arguments) and then the
+skill instance for thunk 0xAE1A. That thunk resolves to D2Common #10136, RVA 0x4E180, a
+null-safe getter of skill-node field +8, which is the skill's mode. Its result passes in
+EAX to 0xF2380 with the unit and game in registers. The spec's ordered "select skill and
+target, then request that skill's mode" therefore describes one compound request.
+0xF2380 itself reaches current-skill set #11103 and mode request 0x95E10. The vectors' two
+logged supplied operations are one decomposition of that request, not two original calls.
+
+**Additional import identities** (resolved 2026-10-15 from D2Game thunks):
+
+| D2Game thunk RVA | LOD113C-D2COMMON export / RVA | Caller role |
+|---|---|---|
+| 0xA3B8 | #10750 / 0x34B80 | dynamic integer Y for the distance operations (NRF-R10b) |
+| 0xA68E | #10494 / 0x33CD0 | state test: think state 12, validity state 146 (NRF-R12a) |
+| 0xA3CA | #10945 / 0x34510 | state set-off request for state 12 (NRF-R12a) |
+| 0xA496 | #11103 / 0x303E0 | current-skill set/clear request on the missing-skill and owner-loss paths |
+| 0xA400 | #10306 / 0x505C0 | bonus-inclusive skill level in R02 (argument 1); producer SFR-Q12 |
+| 0xAC9A | #10786 / 0x51BF0 | calculation evaluation for `calc4`/`calc1` (SCX contract) |
+| 0xAE1A | #10136 / 0x4E180 | skill-node mode getter for the R01f request |
+
+Labels on these targets in the reconstruction are analyst labels and do not match these
+roles, so roles come from the caller arguments only.
+
+**SFR-R02 non-monster path (text clarification).** Budget entry 0xA4A10 sends an absent
+unit, a non-monster unit, absent monster data, an absent owner reference, or an owner link
+with a zero first field to the same clear-skill plus mode-0 path (0xA3A5C, returns 1) as a
+missing owner, missing room or town room. The review added this to the R02 text. No vector
+or expected output changed. The added sentence still needs a delta blind-reader check.
+
+**Gap-file historical comparison.** The retained 2026-10-12 implementation comparison
+says "hard candidate cap 49" and "retarget every think". The current contract rejects room
+candidates with reduced distance above 48 (SFR-R03c, V06), and the stored-target shortcut
+persists (SFR-R03a/R03e). The gap file now says that the spec governs.
+
+**Reverse dependencies.** Blade Sentinel and Fury cites no SFR rule; its AI is table entry
+102 (think 0xA6B70), not this think. The review moved it from "Depended on by" to Related
+specs and corrected the Scope sentence. Death Sentry cites SFR-R02, SFR-R03a, SFR-R10 and
+SFR-R13, but not the shared speed stage, so the reverse-dependency text now names those ids.
+
 ## Observation procedures
 
 No observation has been collected. Use an owned original 1.13c installation matching

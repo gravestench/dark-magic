@@ -40,7 +40,8 @@ upgrade unrelated MHD branches, collection profiles or runtime coverage.
 | `LOD113C-D2GAME` | 0x40860 | none | owner-follow missile action 20 | R03/R05a/R09a | Full original disassembly 2026-10-15: owner condition, lookup, unavailable result; sync/frame 10/collision then return 1 or end then return 2 |
 | `LOD113C-D2GAME` | 0x3A1D0; 0xDFA90 | none | owner-position sync request; unavailable decision | R03 | New 2026-10-15: room/position/path request and explicit kind/mode/completion tests; full relocation integration gated |
 | `LOD113C-D2GAME` | 0xE03A0 | none | owner unit lookup | R03/Q04 | Encoded table/hash lookup candidate read 2026-10-15; supplied owner result, not a newly verified real lookup chain |
-| `LOD113C-D2GAME` | 0x3EDE0 | none | contact/handoff | R04/R12 | Compatible MMC/MHD contact records; new 2026-10-15 full instruction-form read locates early exits and arming calls at miss/success branches |
+| `LOD113C-D2GAME` | 0x3F320 | none | plain missile step (collision pass requested by action 20) | R03 | Review 2026-10-15: 0x40860 calls it after the counter write with the game on the stack and ignores its result; interior consumed through MMC-R05 (MMC companion record), not reread here |
+| `LOD113C-D2GAME` | 0x3EDE0 | none | contact/handoff; also R03's end request | R03/R04/R12 | Compatible MMC/MHD contact records; new 2026-10-15 full instruction-form read locates early exits and arming calls at miss/success branches. Review 2026-10-15: 0x40860's end path calls this function with missile in EDI, stack(game, target 0, force 1) |
 | `LOD113C-D2GAME` | 0x3E590 | none | contact cooldown arming | R04 | New 2026-10-15 complete local sequence: allocation failure test, event 12, list state/callback, attach, active state request; imports by named STL contracts |
 | `LOD113C-D2GAME` | 0x3A4E0 | none | damage fill base-roll slice | R12c/R08/Q06 | Full 688-byte original-image decode 2026-10-15; zeroing, physical, fire and magic-min argument corroborated at 0x3A4FD..0x3A55D; seven-slot slice through 0x3A622; later target/critical adjustments retain MHD gates |
 | `LOD113C-D2GAME` | 0x39B40 | none | per-element roller | R12a/R12b/R08 | New complete 2026-10-15 read: max guard, min guard, initial swap, percentage, wrapped difference, missile Rand and add |
@@ -73,9 +74,17 @@ symbolic AI-name compiler or numeric 102 binding. No absence or complete six-run
 | find owned skill node |10630|0x4F070|SCD-R06; supplied node result |
 | remaining-lifetime counter setter |10970|0x6A6D0|New 2026-10-15 full disassembly: missile kind 3 with data stores signed i16 after clamp[-32768, 32767]; absent/wrong-kind/data returns without write; action 20 supplies 10 |
 | active-state read |10494|0x33CD0|NRF-R12a, not associated-list lookup |
+| caster room read (R01 placement) |10331|0x2FE10|Review 2026-10-15 thunk resolution; room-getter semantics reuse the KNB/HRC companion records |
+| cooldown list allocation (R04) |11013|0x38100|Review 2026-10-15 thunk resolution; STL-R06a owns allocation |
+| list state tag (R04) |10785|0x38060|Review 2026-10-15 thunk resolution; STL list-field contract; called with state 86 |
+| list expiry callback (R04) |10911|0x37D70|Review 2026-10-15 thunk resolution; STL list-field contract; called with D2Game 0x38E60 |
+| list attach (R04) |10807|0x3A7D0|Review 2026-10-15 thunk resolution; STL-R06b (gated); called with full=1 |
+| state-on request (R04) |10945|0x34510|Review 2026-10-15 thunk resolution; NRF-R12a/STL-R07 routing; called with state 86, value 1 |
 
 The original local call thunks are D2Game 0xA42A/0xA472/0xAC94/0xAD12/0xA3F4/0xAC7C/0xA68E
-respectively. Getter/setter descriptions in older reconstruction labels refer to unrelated
+respectively for the first seven rows, then 0xA478/0xA6A0/0xA5B6/0xA75A/0xA60A/0xA3CA.
+Thunk resolution names ordinals only; analyst labels attached to those targets in older
+corpora are unrelated and are not relied on. Getter/setter descriptions in older reconstruction labels refer to unrelated
 items; the actual read/store establishes the release-time semantics. These imported targets
 belong to the manifest's D2Common artifact, not D2Game.
 
@@ -344,3 +353,21 @@ A fresh second full reader recomputed all 11 vector families and 38 lettered/bas
 | HARDEST: V03/R02 marker, target, timer, creation and dispatcher result | No change: the failed creator, equality and refresh cases assert action effects/return; SCD owns the distinct final dispatcher result |
 
 All findings have dispositions. The final applicable blind-reader condition is met; no rule, input, output, vector, ownership or gate changed after FULL2. The document remains draft with its existing gaps and pending observations. This record adds no gameplay confirmation, implementation test, implementation plan or maintainer approval.
+
+### Specification review (2026-10-15)
+
+An independent reviewer reread D2Game 0x96310, 0x95560, 0x40860, 0xDFA90 (unavailable-unit test), 0x3A1D0, 0x3E590, the 0x3EDE0
+contact slice through the miss/success arming calls, 0x3A4E0 base slice, 0x39B40, 0x11D0,
+0x14D0 and the 0xE1D90 seeder call (game seed pair passed for non-player kinds). R01, R02,
+R03/R09a, R04, R06a, R08, R10a/R11 and R12a..c agree with these instructions; all executable
+vectors V01..V11 were recomputed from the rules (seed, mulDiv and roller arithmetic by
+script) and match.
+
+| Affected claims | Earlier discrepancy / evidence | Current resolution and limits |
+|---|---|---|
+| Description | Double-encoded apostrophe in the opening paragraph | Text corrected; no behavioral change |
+| R05a / Description | R05a and the Description asserted the missile follows the creature as verified. 0x40860/0x3A1D0 resolve and follow the missile's owner reference; which unit the real Sentinel missile names as owner is set by its creator, which is not read (Q01 candidate 0xA6B70 unproved) | R05a restated as owner-reference following, creature only under V05(c)'s supplied owner; gate Q01/Q04 added in the Id map and gap rows. V05(c) values unchanged |
+| R03 dependencies | The collision pass (0x3F320) and end request (0x3EDE0 with no target, force 1) had no named dependency contract or function record | R03 now cites MMC-R05 (plain step), MMC-R11..R16 (contact end) and MMC-R01 (dispatcher removal on return 2); records added above. No behavior change |
+
+These edits change R05a's gate and R03's cited ownership, so a fresh delta reader over
+R03/R05a/V05 is required before the blind-implementer condition applies to this revision.

@@ -13,7 +13,7 @@ Open evidence gaps: [gap file](../plans/gaps/skill-assassin-sentry-firing-and-ra
 
 ## 1. Scope
 
-Defines the existing shared Assassin trap-family boundary: reached sentry thinking, budget, stored/room target selection, candidate-size distance, charged-bolt burst initialization and shared missile-speed context. Blade and Death Sentry consumers reuse the named helpers. Missile flight/collision, damage/hit resolution and the full skill/monster AI catalogs belong to their owners. Summon/AI entry, animation completion and dependency integration are gated below; no caller-independent shot interval is inferred.
+Defines the existing shared Assassin trap-family boundary: reached sentry thinking, budget, stored/room target selection, candidate-size distance, charged-bolt burst initialization and shared missile-speed context. Death Sentry reuses the named budget, target and size helpers. Missile flight/collision, damage/hit resolution and the full skill/monster AI catalogs belong to their owners. Summon/AI entry, animation completion and dependency integration are gated below; no caller-independent shot interval is inferred.
 
 ## 2. Trigger and ownership
 
@@ -67,7 +67,7 @@ R01 subrules give think order; R02 and R03 subrules are called at their stated s
 
 **SFR-R01g** AI binding [unresolved]. The relationship between the original AI identity 101 and this think operation is not fully established. Q02 gates entry from that identity, not the reached-think supplied-input stages.
 
-**SFR-R02** Lazy shot budget [verified in 1.13c code (static)]. For a monster sentry, resolve its owner. Missing owner, missing owner room or a town room requests clearing the current skill and death mode 0 and returns lost=1. Otherwise read the signed i32 counter. If counter<0, reject an invalid Skill1 identity or absent Skills record with a death request and lost=1; obtain the selected skill instance, rejecting absence the same way. Request bonus-inclusive level and evaluate that skill's `calc4` with (sentry, Skill1, level), persisting its i32 result as the counter. If counter<=0, request death and return lost=1. If positive and decrement is nonzero, subtract 1 with i32 arithmetic and persist it. Return lost=0. No direct RNG draw occurs; owner/room/mode operations and expression evaluation have their declared effects and draws. A counter becoming zero after decrement survives until the next check.
+**SFR-R02** Lazy shot budget [verified in 1.13c code (static)]. For a monster sentry, resolve its owner. A unit that is absent or not a monster, a missing monster owner reference, missing owner, missing owner room or a town room requests clearing the current skill and death mode 0 and returns lost=1. Otherwise read the signed i32 counter. If counter<0, reject an invalid Skill1 identity or absent Skills record with a death request and lost=1; obtain the selected skill instance, rejecting absence the same way. Request bonus-inclusive level and evaluate that skill's `calc4` with (sentry, Skill1, level), persisting its i32 result as the counter. If counter<=0, request death and return lost=1. If positive and decrement is nonzero, subtract 1 with i32 arithmetic and persist it. Return lost=0. No direct RNG draw occurs; owner/room/mode operations and expression evaluation have their declared effects and draws. A counter becoming zero after decrement survives until the next check.
 
 **SFR-R03a** Stored target precedes room walk [verified in 1.13c code (static)]. Request stored-target resolution first. A returned target is used with its returned R13 distance without the room-walk cap; no nearby-room candidate callback runs. Otherwise initialize two empty nearest slots with distance 2147483647 and enter the room search. On success the wrapper also requests the reach predicate(searcher, target, 0) for its auxiliary result; the think does not use that auxiliary result. Missing target returns no unit and distance 2147483647.
 
@@ -174,7 +174,7 @@ Attempted evidence and precise blocked boundaries are in the [gap file](../plans
 | Id | Status / kind | Remaining evidence |
 |---|---|---|
 | **SFR-Q01** | unresolved / integration | First AI scheduling and skill-mode completion to later-think scheduling; O01/O02 |
-| **SFR-Q02** | unresolved / integration | AI101 dispatcher/table index to reached think, with output anchor |
+| **SFR-Q02** | unresolved / integration | AI table entry 101 already holds this think and its installer/executor path is read (companion); remaining: the MonStats column feeding the table index, when the special-AI table overrides it, and the event root that reaches the executor |
 | **SFR-Q03** | unresolved / integration | Missile footprint/collision units and actual charged-path steering; O03 |
 | **SFR-Q04** | unresolved / integration | Original relevant calc/aip/Skill1 values and compiled/runtime association; text do 17 cells alone do not establish these |
 | **SFR-Q05** | unresolved / observation and integration | Shared speed output binding and actual trap travel, with authenticated Vel inputs |
@@ -535,8 +535,7 @@ Ordinary candidate T is a player at the case's raw offset from S, mode 1, eligib
   - Seeds: no direct draw; initializer seed replacement only.
   - Draws: none.
   - Trace: indices 3/4 have success and both coordinates nonzero; failure at 3 does not stop index 4. M initialization uses 40+4=44; the independent callback uses 40+2=42; 77<78 retains both frame fields.
-  - Outputs: ordered creation requests for indices 3 then 4, returning failure then M; final action return 1, latch true; M seed={44, 0x29A}, frames 77, duration 77, type 10. The independent initializer yields seed{42, 0x29A}, frames 77, duration 77, type 10; null initializer unit has no effects.
-  - Outputs: Within M's successful initializer, the ordered effect subsequence is seed overwrite{44, 0x29A}, path-kind request 10, path-duration request 77, path-preparation request for M. The independent frame 77/index 2 initializer has the same ordered request sequence with seed{42, 0x29A}; these are request assertions, not assertions about path-preparation internals.
+  - Outputs: ordered creation requests for indices 3 then 4, returning failure then M; final action return 1, latch true; M seed={44, 0x29A}, frames 77, duration 77, type 10. The independent initializer yields seed{42, 0x29A}, frames 77, duration 77, type 10; null initializer unit has no effects. Within M's successful initializer, the ordered effect subsequence is seed overwrite{44, 0x29A}, path-kind request 10, path-duration request 77, path-preparation request for M. The independent frame 77/index 2 initializer has the same ordered request sequence with seed{42, 0x29A}; these are request assertions, not assertions about path-preparation internals.
   - (a) Inputs: independent initialized missile, current X=700, stored-point X=40, index=2, signed total/current frame counts=-1. Draws: none. Outputs: seed={42, 0x29A}; total/current frame count=-1 unchanged; requested path duration=77 because u8(-1)=255, capped 77.
   - (b) Inputs: independent initialized missile, current X=700, stored-point X=40, index=2, signed total/current frame counts=-256. Draws: none. Outputs: seed={42, 0x29A}; total/current frame count=-256 unchanged; requested path duration=0 because u8(-256)=0.
   - (c) Inputs: independent action with non-null caster, latch=false, skill identity 400/count 400. Draws: none. Outputs: latch=true before rejection; return 0; no expression or creation request.
@@ -603,10 +602,11 @@ Partial acceptance reproduces all verified local request/return, arithmetic and 
 
 **Depends on:** [PvP relations and owners](combat-pvp-damage-and-kill-credit.md), PVP-R05a/PVP-R07 for the exact final predicate/owner/list contract and PVP-R13 no direct draw, retaining PVP-Q03/PVP-Q05 producer limits; [foundations](core-numeric-and-rng-foundations.md), NRF-R01/NRF-R02 seed stepping/draw forms, NRF-R03a supplied seed initialization, NRF-R04a/b direct-site seed owners, NRF-R10a/b coordinates, NRF-R12b/c list stat reads, NRF-R12a state request semantics and NRF-R14a mode boundary; [data fields](core-game-data-fields.md), GDF-R05a/GDF-R06a/GDF-R07/GDF-R08a fields, GDF-R12 states and GDF-R14a/GDF-R15a modes; [calculation expressions](skill-calc-expressions-and-synergies.md), SCX-R11/SCX-R15/SCX-R24 and their producer gates; [leveled skill calculations](skill-leveled-damage-tohit-and-elements.md), SLD-R19 calculation-front-end boundary; [cast dispatch](skill-cast-start-and-do-dispatch.md), SCD-R06/SCD-R12 action selection and SCD-R07/SCD-R13 creation request/seed boundaries. These contracts do not supply a fully verified highest-level-instance producer; SCX-Q09/SCD-Q10 and Q12 retain that limit.
 
-**Depended on by:** [Blade Sentinel and Fury](skill-assassin-blade-sentinel-and-fury.md), budget/search/distance context; [Death Sentry corpse damage](skill-assassin-death-sentry-corpse-damage.md), budget helper and shared speed context. Supporting combat citations are not prerequisites for local supplied arithmetic.
+**Depended on by:** [Death Sentry corpse damage](skill-assassin-death-sentry-corpse-damage.md), SFR-R02 budget, SFR-R03a/SFR-R10 target return and SFR-R13 size-by-kind. Supporting combat citations are not prerequisites for local supplied arithmetic.
 
 ## 10. Related specs
 
+- [Blade Sentinel and Fury](skill-assassin-blade-sentinel-and-fury.md): a separate Assassin summon AI; it consumes no rule of this spec.
 - [Damage pipeline](combat-damage-pipeline-order.md): later sentry hit damage.
 - [Hit recovery](combat-hit-recovery.md): reactions and mode-owned draws.
 - [Shield block and avoidance](combat-shield-block-and-avoidance.md): hit avoidance.
