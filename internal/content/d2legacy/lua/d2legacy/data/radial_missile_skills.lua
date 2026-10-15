@@ -77,6 +77,7 @@ local function decode(skill, missiles)
         lifetime_ticks = integer(missile, "Range", label, 1),
         collision_radius = integer(missile, "Size", label, 1) / 2,
         destroy_on_contact = false,
+        next_hit = true,
         next_hit_delay = integer(missile, "NextDelay", label, 1),
         impact_radius = 0,
         impact_radius_per_level = 0,
