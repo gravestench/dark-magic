@@ -2,14 +2,12 @@
 
 **Description**
 
-When a monster appears, the game sets its level, life and experience value from the chosen
-difficulty, the area and the number of living players in the game. Each extra player adds half
-of the monster's base life and experience, so a full game of eight players faces monsters with
-four and a half times the life and experience of a single-player game. When a monster dies, the
-same player count, together with how many party members are nearby on the same map level,
-lowers the chance that a treasure pick drops nothing. Monster creation also spends random
-numbers on the monster's look, special properties and starting equipment, and that order
-decides every later random result of the monster.
+When a monster appears, the game uses the difficulty, area and eligible player count to set
+its level, life and experience value. More eligible players generally give ordinary monsters
+more life and experience, and can reduce the chance that a treasure pick drops nothing.
+Party members on the killer's map level can improve that drop chance even when they are far
+from the kill. The monster's appearance, special properties and starting equipment also use
+random choices whose order affects later random results.
 
 Status: draft
 Evidence build: Lord of Destruction Expansion 1.13c
@@ -32,8 +30,9 @@ mode update. It also defines the player-count term of the monster damage setup a
 treasure drop, the eligible-player count, the NoDrop weight conversion and the pick draw.
 Out of scope, with their owners: the kill experience award and party share
 ([player-party-experience-and-loot-sharing](player-party-experience-and-loot-sharing.md));
-seed stepping, draw forms, `mulDiv`, the 8.8 format, stat reads and writes, state tests and the
-status gate helpers ([core-numeric-and-rng-foundations](core-numeric-and-rng-foundations.md));
+seed stepping, draw forms, `mulDiv`, the 8.8 format, stat reads and writes and state tests
+([core-numeric-and-rng-foundations](core-numeric-and-rng-foundations.md)); the `unitGate`
+status helper ([combat-status-application](combat-status-application.md), CSA-R02);
 column and id names ([core-game-data-fields](core-game-data-fields.md)); skill grants, property
 application, item generation, the monster resistance and life-regeneration stats written in the
 same creation step, the base monster damage values, treasure item selection and the gold drop.
@@ -53,8 +52,9 @@ Player units take another creation path and are outside this boundary.
   mode update, evaluates MSD-R20.
 - Drop trigger: the treasure-class drop routine runs MSD-R21 to MSD-R23 once per pick of the
   dropping unit's treasure class; the killer is supplied by the caller.
-- The client sees the results through the ordinary stat-update path; message content belongs
-  to `net-` specs.
+- These stages request local stat writes and send no direct client message. Stored-write
+  integration remains NRF-Q20; update bookkeeping remains NRF-Q17. Client delivery is outside
+  this verified boundary; message contracts belong to `net-` specs.
 - Dispatch chains, function references and instruction locations are in the
   [companion](../research/spec-evidence/monster-scaling-by-players-and-difficulty.md#dispatch-and-function-references).
 
@@ -75,6 +75,9 @@ NRF-R05; `HasState` is NRF-R12a; `GetStat(unit, id)` is the layer-0 read of NRF-
 | `game.expansion` | game expansion condition | i32 | Nonzero is an expansion game |
 | `game.seed`, `monster.seed`, `dropper.seed` | NRF-R01 seeds | two u32 | `dropper` is the unit whose treasure class drops |
 | monster class | `monster.classId`; its MonStats row (GDF-R05a) | i32 | MonStats fields below |
+| creation eligibility | MonStats record availability and its per-class creation eligibility under NRF-R17a | boolean | Tested before allocation or seeding; distinct from the post-initialization `creationCondition` below |
+| table collections | MonStats, MonStats2, MonLvl, Levels, MonProp, MonEquip and DifficultyLevels collections and their counts | indexed logical records; i32 counts | Row availability and bounds used by the rules; DifficultyLevels uses GDF-R02's accepted three-row collection |
+| preset storage | game presets by room level id; optional level record with `entryCount`; ordered entries with stored class, `variantCount` and variants | association; u8 counts; i32 class; variants of 16 u8 components | Supplied existing storage for MSD-R02/MSD-R03; initialization of an unregistered slot is MSD-Q11 |
 | MonStats fields | `Align`, `noRatio`, `boss`, `Level`/`Level(N)`/`Level(H)`, `MinHP`, `MaxHP`, `AC`, `Exp` (each with `(N)`, `(H)`), `Skill1..8`, `Sk1lvl..Sk8lvl`, `MonStatsEx`, `MonProp` | u8; booleans; the GDF-R05a 16-bit words read sign-extended as i16 (a word of 0x8000 or more is negative); i16 links; signed bytes for skill levels | Difficulty `d` selects base, `(N)` or `(H)` |
 | MonEquip first row | prepared per-class index of the first MonEquip row whose `monster` is this class | i16; -1 when none | Built at load (companion) |
 | MonLvl row | MonLvl row `min(level, rowCount - 1)`; columns `HP`, `AC`, `XP` and `L-HP`, `L-AC`, `L-XP`, each with `(N)`, `(H)` | i32 cells | Base-value multipliers in percent |
@@ -91,6 +94,7 @@ NRF-R05; `HasState` is NRF-R12a; `GetStat(unit, id)` is the layer-0 read of NRF-
 | killer owner | `owner(k)`: the owner unit of a non-player unit (for example a summon), or null | association or null | "Not a player" means a null result or a unit whose type is not 0 |
 | killer party | `k.partyId` (0xFFFF means none; also none when `k` has no player data); `game.partyRecord(partyId)`, null when the game holds no record with that id; the record's member ids; each member's room level id | u16; association | The PXL-R04a enumeration terms; party identity is owned by the party system |
 | damage-setup values | minimum damage, maximum damage and attack rating as they enter the term step (after the classic-game difficulty adjustment in a classic game); `damageTermSkip` | i32 in the units supplied by the damage setup; boolean | Supplied by the monster damage setup; units and producer are MSD-Q05 |
+| stage results | `E`; `n`, `lifePct`, `xpPct`; `d`; `level`; `minHP`, `maxHP`, `ac`, `exp`; `hp`; `eligible`; `N'` | i32 | Produced in rule order by MSD-R05, MSD-R06, MSD-R07, MSD-R08, MSD-R10, MSD-R11, MSD-R21 and MSD-R22a; isolated vectors may supply the result at their stated entry |
 
 | Mapping / constant | Origin | Binding |
 |---|---|---|
@@ -99,7 +103,7 @@ NRF-R05; `HasState` is NRF-R12a; `GetStat(unit, id)` is the layer-0 read of NRF-
 | Life clamp `0x7FFFFF` at `0x800000`; 8.8 shift | Engine code | Fixed by original code (MSD-R12; 8.8 format NRF-R08a) |
 | Classes 311 and 312 for the class draw; classes 195, 196, 294, 296 without a preset; preset entry limit 13; property chance modulus 100; MonEquip location range 1..10 and mod range 0..7 | Engine code | Fixed by original code; MonStats row identities per GDF-R17a |
 | State 7 for the player-count exclusion; stat ids 6, 7, 12, 13, 19, 21, 22, 31, 100 | Engine code selects original-profile identities (GDF-R11a, GDF-R12) | Fixed by original code |
-| MonLvl, Levels, MonProp, MonEquip, MonStats and DifficultyLevels column bindings | Table data selected by named loader columns (companion records) | Resolved from data; code fixes which column each rule reads |
+| MonLvl, Levels, MonProp, MonEquip, MonStats and DifficultyLevels named columns | Engine loader descriptors bind table column names to prepared fields (companion records); actual cells are table data | Code fixes the consumed column and interpretation; cell values are resolved from data |
 
 All numeric data values used by the vectors are supplied fixture values, not cited cells of the
 original tables.
@@ -110,8 +114,9 @@ MSD-R01 to MSD-R19 run in this order for one created monster. MSD-R20 runs in th
 MSD-R21 to MSD-R23 run per treasure pick. Each stat write is a `SetStat` request; the stored
 effect of the replacing write is the NRF-Q20 integration gate.
 
-**MSD-R01** **Creation seeding** [verified in 1.13c code (static)]. Generic creation of a monster
-whose class is valid (`0 <= classId < MonStatsCount`) steps `game.seed` once and initializes
+**MSD-R01** **Creation seeding** [verified in 1.13c code (static)]. After the monster class,
+record availability and per-class creation eligibility pass NRF-R17a, successful allocation
+steps `game.seed` once and initializes
 `monster.seed` to `{game.seed.lo, 666}` with `monster.initialLo = game.seed.lo` (NRF-R17a,
 NRF-R03a). No other game-seed step precedes the monster's own draws below. A class that
 NRF-R17a rejects creates no monster; no rule of this spec runs for it (NRF-V17 (d)).
@@ -431,7 +436,18 @@ is no separate treasure seed. Item selection is outside this boundary.
 | Stat 21 `mindamage`, 22 `maxdamage`, 19 `tohit` write requests | MSD-R20 |
 | NoDrop outcome or item-selection roll; one `dropper.seed` draw per non-negative pick; pick consumed on NoDrop | MSD-R23 |
 
-No message is sent by these rules; stat changes reach clients through the stat-update path.
+No direct message is sent by these rules. Their stat-write requests do not establish stored
+effects (NRF-Q20), update bookkeeping (NRF-Q17) or client delivery.
+
+Named stage results may also be asserted: the preset entry or null (MSD-R02); effective count
+`E` (MSD-R05); `n`, both bonus percents and the selected skill bonus (MSD-R06); `d`
+(MSD-R07); level (MSD-R08); four base values (MSD-R10); rolled and bonused `hp` (MSD-R11),
+clamped `hp` and raw life (MSD-R12); bonused experience (MSD-R13); damage term and adjusted
+values (MSD-R20); party and eligible counts (MSD-R21); converted `N'` (MSD-R22a); and pick
+roll or item-selection roll (MSD-R23). These are semantic results, not required public APIs.
+Skill, property and equipment requests assert their arguments only; no result from those
+outside operations is consumed here. The creation and drop procedures make no further
+numeric-return assertion.
 
 ## 6. Branches and edge cases
 
@@ -485,8 +501,12 @@ open question's attempt covered.
 
 Defaults unless a case overrides them: one monster of type 1 with a valid class and records;
 supplied fixture data values; `game.expansion = 0`; `game.difficulty = 0`; `selectorByte = 0`;
-`selectorFlag = 0`; override 0; `Align = 0`; `noRatio` and `boss` clear; `unitGate = 0`. Every
-vector is a supplied-input stage unless it states otherwise, and every case starts from its own
+`selectorFlag = 0`; override 0; `Align = 0`; `noRatio` and `boss` clear; `unitGate = 0` unless
+a case names a nonzero-return class under CSA-R02 or supplies the gate result. The generic
+creation fixture supplies a present, eligible MonStats record and successful allocation under
+NRF-R17a; this eligibility does not set the separate post-initialization `creationCondition`.
+DifficultyLevels is an accepted three-row collection; bonus cells are 0 unless specified.
+Every vector is a supplied-input stage unless it states otherwise, and every case starts from its own
 listed state; no case inherits another case's state or outputs. `M` is the monster seed
 `{0x6AC6935F, 0x29A}` (the output of MSD-V01), used fresh by each case that names it.
 
@@ -497,8 +517,10 @@ inventory location test and `damageTermSkip` return supplied values and do not l
 arguments asserted: `GrantSkill(skill, level)`, `ApplyProperty(block d, slot i)` (the slot's
 property fields are passed through and not asserted) and `CreateEquipmentItem(item, level, mod)`.
 The preset level record, when present, holds the entries listed by each case in registration
-order. Outputs
-may assert named intermediate results. Each vector has `runtime_observed: no`.
+order. All rules owned within a vector's stated boundary execute; the supplied dependency
+operations above do not verify their producers or stored integration. In particular, the
+fixture's persisted stat value is a supplied effect, not evidence that NRF-Q20 is resolved.
+Outputs may assert named intermediate results. Each vector has `runtime_observed: no`.
 
 - **MSD-V01** Creation seeding (MSD-R01; boundary: supplied-input stage)
   - Inputs: `game.seed = {1, 0x29A}`; valid monster class
@@ -518,6 +540,7 @@ may assert named intermediate results. Each vector has `runtime_observed: no`.
   - (e) `cnt = 2, 2`, other slots 0; `v = 2`. Seeds: `{1, 0x29A}`. Draws: `Rand(2)` → `{0x6AC6935F, 0}`, 1; `Rand(2)` → `{0x2F2ED81B, 0x2C890AFD}`, 1; `Rand(2)` → `{0x280687C4, 0x13ADFE65}`, 0 (A = slot 0); `Rand(1)` → `{0xB6AAB839, 0x10B1BFE6}`, 0 (B = slot 1); variant 1: (`{0xBFC793C3, 0x4C305F9E}`, 1), (`{0x2AB4C4AD, 0x4FFD63FF}`, 1) duplicate, then (`{0x9B880D20, 0x11CFF966}`, 0), (`{0xAFA41306, 0x40DEF89D}`, 0) kept; variant 2: (`{0xE778FC3B, 0x49422C1A}`, 1), (`{0xFADF7581, 0x608BA2E9}`, 1) duplicate, then (`{0x6C5F9F2E, 0x68A31D5B}`, 0), (`{0xC1567BC1, 0x2D33A727}`, 1) kept; appearance `Rand(3)` → `{0x3BA372AC, 0x50A3C577}`, 1. Outputs: variants `1, 1`, `0, 0`, `0, 1`; appearance = `0, 0`; thirteen steps
   - (f) `cnt = 2, 3, 5`, other slots 0; `v = 1`. Seeds: `{2, 0x29A}`. Draws: `Rand(2)` → `{0xD58D2424, 0}`, 0; `Rand(3)` → `{0x95C90FB4, 0x591214E4}`, 2; `Rand(5)` → `{0x62D86A68, 0x3E796EB7}`, 4; `Rand(3)` → `{0x674DD0BF, 0x293A4757}`, 0, so A = slot 0 and the list becomes {2, 1}; `Rand(2)` → `{0xF7415A52, 0x2B165909}`, 0, so B = slot 2; re-roll A (`c = 2`) → `{0x029AFA23, 0x6720D7C5}`, 1; re-roll B (`c = 5`) → `{0x8A2904B4, 0x011630E9}`, 3; appearance `Rand(2)` → `{0x90840F6D, 0x39A025CD}`, 1. Outputs: variants `0, 2, 4` and `1, 2, 3`; appearance = `1, 2, 3`; eight steps
   - (g) `entryCount = 1` (entry 0 for class 50); `v = 1` (not read); MonStats2 row with `TotalPieces = 2`; supplied unregistered-slot variant count 0; slot component counts as MSD-V03. Seeds: `M`. Draws: as MSD-V03. Outputs: `entryCount` stays 1; appearance `1, 1, 0, 0`, rest 0; three steps
+  - (h) level record holds entry 0 for class 50 (`entryCount = 1`), with new entry 1's variant count supplied as 0; class 100 has `TotalPieces = 3`, all 16 component counts 0 and `v = 2`. Seeds: `M`. Draws: appearance `Rand(1)` → `{0x2F2EDAB5, 0x2C890AFD}`, result 0; no build draw. Trace: requested 3 variants; initial all-zero variant is stored, then `k = 0` ends the build. Outputs: `entryCount = 2`; entry 1 for class 100 has variant count 1 and an all-zero variant; appearance all zero; one step. Discriminates: continuing to generate variants with no eligible slots would give variant count 3.
   - Discriminates: (g) rejects registering an entry when `TotalPieces <= 2`; (b) rejects slot picks before variant 0 and the old-lo mask; (c) rejects rebuilding for a later monster; (d) rejects discarding a duplicate after three attempts or a fourth attempt; (e) rejects keeping the first duplicate; (f) rejects removing A by shifting, which would make B slot 1
   - runtime_observed: no
 
@@ -676,6 +699,7 @@ may assert named intermediate results. Each vector has `runtime_observed: no`.
   - Discriminates: R5 rejects threshold-testing every row; R3 rejects skipping the draw when `k == 1`; R2's mod rejects passing 9; (b) S1 rejects skipping a row whose level equals the monster level and accepting mod 8; S2 rejects skipping the draw for an occupied location
   - (c) monster level 10; `monster.inventory` present; all locations free; rows: T1 (class, level -5, `oninit` 1, items `itemX1`, `itemX2`, `itemX3`, locs 1, 2, 10, mods 0, 7, 0); T2 (class, level 0, locs 11, 1, 1); T3 (another class). Seeds: `{0x2F2EDAB5, 0x2C890AFD}`. Draws: T1 `k = 3` → `{0xF09B2846, 0x13ADFF7A}`, unsigned `lo mod 3 = 1`; T2 `k = 0` (location 11 stops the count), none. Outputs: logged (`itemX2`, 10, 7); one step
   - Discriminates (c): a negative first-row level is not skipped; location 10 counts and 11 stops the count; mod 7 is kept; a signed remainder (0) would select `itemX1`
+  - (d) monster level 20; inventory present with all locations free; first row (class, level 0, `oninit` 0, `item1` `itemStopped`, locs 1, 0, 0, `mod1` 0), then a row of another class. Seeds: `M`. Draws: none. Trace: the first row's `oninit` stops the operation before processing its valid location. Outputs: no item request; seed unchanged. Discriminates: ignoring the first-row guard would draw once and request (`itemStopped`, 20, 0).
   - runtime_observed: no
 
 - **MSD-V17** Damage player-count term (MSD-R20; boundary: supplied-input stage)
@@ -689,6 +713,7 @@ may assert named intermediate results. Each vector has `runtime_observed: no`.
   - (e) as (a) with `damageTermSkip` true. Outputs: term 0; logged 10, 20, 100
   - (f) as (a) with `minDamage -10`. Trace: `-240/128` truncates to -1. Outputs: logged -11, 23, 118
   - (g) expansion, difficulty 1, stat 100 = 8. Trace: `term = D[8] = 56`; `560/128 = 4`; `1120/128 = 8`; `5600/128 = 43`. Outputs: logged 14, 28, 143
+  - (h) expansion, difficulty 1, stat 100 = 2. Trace: `term = D[2] = 8`; `80/128 = 0`; `160/128 = 1`; `800/128 = 6`. Outputs: term 8; logged (21, 10), (22, 21), (19, 106), in that order. Discriminates: treating two players as a zero-term case would leave 10, 20, 100.
   - Discriminates: (a) rejects `D[p - 1]` (term 16 gives 11, 22, 112); (b) rejects applying the term in classic games; (c) rejects a Normal term; (b), (c), (e) reject omitting the writes when the term is not applied; (f) rejects flooring (-12); (g) rejects the formula `8p - 16` (48) at `p = 8`. Every logged triple is stats 21, 22, 19 in that order
   - runtime_observed: no
 
@@ -698,13 +723,14 @@ may assert named intermediate results. Each vector has `runtime_observed: no`.
   - Draws: none
   - Trace: `eligible = elig + (E - elig) / 2`, then the dropper cap
   - Outputs: (party 1, `E` 1) 1; (1, 4) 2; (1, 8) 4; (2, 8) 5; (8, 8) 8; (5, 3) 4; (three living members, one on another level, `E` 3) party 2, 2; (party 4, `E` 8, stat 100 = 2) 2; (monster killer without owner, `E` 8) 4; (party 4, `E` 1) 3; (party of three: killer, one dead member and one member with a null room, `E` 8) party 1, 4; (summon killer whose owner is a player with party 2, `E` 8) 5; (party 1, `E` 8, dropper of type 2) 4; (party 1, `E` 8, null dropper) 4; (party 1, `E` 8, monster dropper with stat 100 = 0) 1; (party of two: killer and a member with state 7 in mode 1, `E` 8) party 2, 5
+  - Additional case: ten living same-level party members including the killer, supplied `E = 8`, dropper of type 2. Seeds: `no draw`. Draws: none. Trace: `party = 10`, `elig = min(10, 8) = 8`, `eligible = 8 + (8 - 8) / 2 = 8`; no monster cap. Outputs: `elig = 8`, `eligible = 8`. Discriminates: omitting the party cap gives `10 + (8 - 10) / 2 = 9`, and a monster dropper's spawn cap cannot mask that error here.
   - Discriminates: (5, 3) rejects clamping `elig` to `E`; the other-level case rejects a party count without the level test; (party 4, `E` 1) rejects flooring (2); the dead or roomless members reject counting them; the summon case rejects `elig = 1` for owned summons; the type 2 and null droppers reject capping non-monsters; stat 100 = 0 rejects skipping the lower bound of 1; the state-7 member rejects reusing MSD-R05's exclusion (party 1, 4)
   - runtime_observed: no
 
 - **MSD-V19** NoDrop conversion (MSD-R22a; boundary: isolated rule)
   - Seeds: `no draw`
   - Draws: none
-  - (a) `N = 100`, `T = 100` (`r = 0.5` exactly). Trace: `p = 2^-e`; `(1 - q)/q * 100` is exact for these powers of two. Outputs: eligible 1 → `N' = 100` (no conversion); 2 → 33; 3 → 14; 4 → 6; 5 → 3; 6 → 1; 7 → 0; 8 → 0
+  - (a) `N = 100`, `T = 100` (`r = 0.5` exactly). Trace: `p = 2^-e`; `p` and `q = 1 - p` are exact binary values. The quotient need not be exact; the listed truncations are stable in single and double precision. Outputs: eligible 1 → `N' = 100` (no conversion); 2 → 33; 3 → 14; 4 → 6; 5 → 3; 6 → 1; 7 → 0; 8 → 0
   - (b) `N = 60`, `T = 40` (`r = 0.6`). Trace: eligible 2: `p = 0.36`, `q = 0.64`, `0.5625 * 40 = 22.5`; eligible 3: `0.216/0.784 * 40 = 11.02`; eligible 4: `0.1296/0.8704 * 40 = 5.96`. Outputs: 22, 11, 5
   - (c) `N = 0`, `T = 100`, eligible 4. Outputs: `N' = 0`, no conversion
   - (d) `N = 60`, `T = 40`, eligible 1. Outputs: `N' = 60`, no conversion (converting in double precision would give 59)
@@ -739,7 +765,7 @@ All are pending gameplay observations ([procedures](../research/spec-evidence/mo
 - **MSD-O02** Experience value of that monster at counts 1 and 8; expect +350% at 8.
 - **MSD-O03** NoDrop rate of a fixed treasure class at counts 1, 2 and 8 with party members near, far on the same level, on another level and dead; expect no distance effect and MSD-V19's weights.
 - **MSD-O04** A kill by a summoned minion: expect the owner's party to set `elig`.
-- **MSD-O05** Stat 100, life and experience of a monster created before a player joins or leaves; expect no change (MSD-Q03).
+- **MSD-O05** Stat 100, life and experience of a monster created before a player joins or leaves; record whether they change. MSD-Q03 leaves the result open.
 - **MSD-O06** Party larger than `E`, if reachable; expect the MSD-R21 negative term.
 
 ## 9. Acceptance and dependencies
@@ -750,7 +776,10 @@ draw counts, draw order, seed states, computed values and requested writes in or
 assertions: the stored effect of the requested writes (NRF-Q20); results of MSD-R22a that depend
 on intermediate rounding (MSD-Q02, MSD-R22b); real MonStats2 prepared preset inputs (MSD-Q06);
 real damage-setup inputs (MSD-Q05); and the asm-only creation draws of MSD-R17 to MSD-R19
-(MSD-Q04). A complete replay of a monster's creation draws needs MSD-Q04 resolved. Full
+(MSD-Q04). Supplied MonEquip rows followed by another class are eligible; real tables whose
+class rows reach the end require MSD-Q10's storage guarantee. A supplied unregistered preset
+slot with variant count 0 is eligible; its actual initialized variant count requires MSD-Q11.
+A complete replay of a monster's creation draws needs MSD-Q04 resolved. Full
 reproduction also needs the observations of MSD-Q07.
 
 **Depends on:** [core-numeric-and-rng-foundations](core-numeric-and-rng-foundations.md):
@@ -775,7 +804,8 @@ bonus). A reverse consumer is not a delivery prerequisite.
 - [combat-crushing-blow](combat-crushing-blow.md): reads stat 100 written by MSD-R09.
 - [combat-hit-recovery](combat-hit-recovery.md): monster mode-change draws in the damage setup (MSD-R19).
 - [combat-damage-pipeline-order](combat-damage-pipeline-order.md): where monster damage values are consumed.
-- [core-numeric-and-rng-foundations](core-numeric-and-rng-foundations.md): shared arithmetic, seeds, the life format and the status gate helpers.
+- [core-numeric-and-rng-foundations](core-numeric-and-rng-foundations.md): shared arithmetic, seeds, the life format and state primitives.
+- [combat-status-application](combat-status-application.md): the `unitGate` helper under CSA-R02.
 - [core-game-data-fields](core-game-data-fields.md): column, stat, state and mode names.
 
 ## Appendix A. Provenance

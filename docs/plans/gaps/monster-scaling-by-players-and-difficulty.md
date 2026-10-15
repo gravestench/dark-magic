@@ -4,6 +4,13 @@ Spec: [Monster scaling by player count and difficulty](../../specs/monster-scali
 
 ## Open evidence gaps
 
+On 2026-10-15, all eleven gaps were assessed against the existing records and current shared
+contracts ([applicability record](../../research/spec-evidence/monster-scaling-by-players-and-difficulty.md#focused-refresh-and-evidence-applicability-2026-10-15)).
+No matching record closes the missing assertion named below. The original attempted dates
+and limits are retained; no identical source search, archive-cell read or gameplay observation
+was repeated. Direct item seeding does not establish the equipment wrappers in MSD-Q04;
+the supplied terminated rows and zero preset count do not close MSD-Q10 or MSD-Q11.
+
 | Gap | Kind | Affects | Blocked assertions / boundary | Missing evidence | Attempted (date, sources, result) | Would close it |
 |-----|------|---------|-------------------------------|------------------|-----------------------------------|----------------|
 | MSD-Q01 | outside-boundary | MSD-R05, MSD-R10, MSD-R21 | none locally; the rules use the tested values of `game.selectorByte`, `game.selectorFlag` and `notAliveCondition` | Producer meanings of the game-creation byte and flag bit 21, and of the unit condition | 2026-10-14: game creation `0x2C2D0` read for the writes (creation argument byte; flag bit 21; expansion from bit 20); callers not read ([companion](../../research/spec-evidence/monster-scaling-by-players-and-difficulty.md#search-records)) | Read the game-creation callers and the writers of the unit condition |

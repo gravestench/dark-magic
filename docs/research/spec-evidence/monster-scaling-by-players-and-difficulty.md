@@ -562,3 +562,193 @@ Delta reader on the seven changes of delta check 1. Counts: MISMATCH 0, UNRESOLV
 GAP 0, DISCRIM 0. All seven changes were confirmed, including NRF-V17 (d) as the vector for
 MSD-R01's rejected-class sentence. The blind-implementer pass is complete for the current
 contract.
+
+## Focused refresh and evidence applicability (2026-10-15)
+
+The existing 2026-10-12 and 2026-10-14 records were checked against the source manifest and
+the current numeric-foundations, game-data-fields, status-application, timed-state and party
+contracts. Their cited artifact identities, supplied-input boundaries and instruction coverage
+remain applicable. This is reuse of those dated readings, not a new source or archive-table
+reading; no gameplay observation was made. No evidence label was promoted and all eleven
+questions remain open. All 24 leaf rule ids and labels and all 21 executable-vector blocks
+were preserved. No implementation plan, code or test consumes these spec ids; stable ids are
+retained because this focused refresh needs no renumbering.
+
+The opening description no longer promises exact half-base increases or an exact full-game
+multiplier: MSD-R11's operand-sensitive integer arithmetic, MSD-R12's clamp and MSD-R06's
+alignment exception require the precise technical rules. The description also says same map
+level rather than suggesting a proximity condition; MSD-R21 has no distance test. The
+MonLvl/Levels/MonProp/MonEquip column record remains evidence of engine-defined loader
+bindings, not a read of archive cell values. Fixture cells remain supplied values.
+
+Input and result inventories now identify existing preset storage, record counts, creation
+eligibility and named stage results. NRF-R17a rejects an absent or ineligible monster record
+as well as an out-of-range class before allocation/seeding. The successful creation fixture
+supplies that eligibility separately from the post-initialization mode-update condition.
+The three-row DifficultyLevels fixture follows GDF-R02; its unused bonus cells are explicitly
+supplied as zero. The dependency-operation fixture remains a supplied-input boundary: its
+persisted stat values do not verify the original replacing-write integration of NRF-Q20.
+
+MSD-O05 previously said to expect no change after a player joins or leaves, although MSD-Q03
+leaves recomputation unestablished. It now asks whether values change, with no predicted
+result. This corrects the observation assertion without claiming a source result. Acceptance
+also explicitly retains MSD-Q10 for actual end-of-storage equipment rows and MSD-Q11 for
+the initial variant count of real unregistered preset storage; neither gates the terminated
+equipment rows or supplied zero variant count used by the executable fixtures.
+
+| Question | Applicable evidence and remaining boundary |
+|---|---|
+| MSD-Q01 | Existing selector writes and alive-test decisions are sufficient for supplied values. Neither the current shared contracts nor those producer slices establish the selectors' wider meaning or the unit-condition producer. No local assertion is gated. |
+| MSD-Q02 | The existing conversion sequence and truncation helper remain applicable. Numeric foundations defines integer operations, not the hosting process's floating-point control state. No record closes precision-sensitive results or inputs outside the covered domain. |
+| MSD-Q03 | Creation writes remain established; the limited historical stat-100 search is not exhaustive. No shared record establishes join/leave recomputation or its absence. MSD-O05 is an open observation. |
+| MSD-Q04 | Current NRF-R17a/NRF-R17b verifies direct successful item seeding, and NRF-R04b verifies reached elemental draw sites. Neither reads the equipment request wrappers, resolves both initialization indirect calls, or establishes upstream mode-slot eligibility. Timed-state list contracts do not establish the targets of these creation-path indirect calls. Complete creation replay remains gated. |
+| MSD-Q05 | Existing term arithmetic with supplied values remains available. Current damage-pipeline and reaction contracts do not supply this monster damage setup's base values, skip producer or stored effects of its distinct write operation. |
+| MSD-Q06 | GDF-R05a establishes the MonStats-to-MonStats2 link; the existing loader record binds TotalPieces. Neither establishes preparation of the per-slot component counts or variant-limit byte. Supplied values remain available. |
+| MSD-Q07 | No gameplay observation record exists; source and table identity checks do not replace the six pending procedures. |
+| MSD-Q08 | The existing pick slice establishes the bypass's effect, not which callers choose it. A caller survey remains outside this supplied-condition contract. |
+| MSD-Q09 | No applicable gold-amount or magic-find producer record was identified. Absence from the scaling slices is not a whole-program result. |
+| MSD-Q10 | Existing equipment-loop evidence establishes the lack of a row-count bound. Current prepared-table contracts do not establish a following different-class sentinel for this storage. Supplied terminated rows remain available. |
+| MSD-Q11 | Existing preset lookup and build evidence does not initialize the level record's entry storage. No shared creation-seeder contract establishes that allocation's variant count. A supplied zero count remains available. |
+
+No identical source search was repeated solely because its prior attempt is older. The
+PXL-R04a missing-party-record discrepancy recorded under Corrections remains a finding for
+that contract's owner; for MSD-R21 both candidate party counts still reduce to elig = 1.
+This refresh does not settle the party owner's behavior or duplicate its experience filters.
+
+Mechanical check after this edit pass: check_spec.py on this spec, companion and gap file,
+0 errors and 0 warnings. A fresh full blind-implementer review is required for the revised
+input, acceptance and observation assertions; the historical passes above do not review them.
+
+## Regeneration blind-implementer full pass 1 (2026-10-15)
+
+A fresh smaller reader received the main contract and its cited dependency contracts, without
+source code, private audits, runtime tools or previous review records. It recomputed all 21
+executable-vector families. Counts: MISMATCH 0, GUESS 0, GAP 0, DISCRIM 0, GATED 12,
+COVERAGE 12 groups, HARDEST 3. The reader did not approve the spec.
+
+MISMATCH, GUESS, GAP and DISCRIM have no entries to resolve. GATED 12: MSD-Q01 through
+MSD-Q11 plus NRF-Q20 are already documented with their boundaries; no change. In particular,
+MSD-R17 to MSD-R19 remain asm-only and MSD-R22b remains unresolved. A supplied-input
+arithmetic or request assertion is not a complete creation replay or stored-write assertion.
+
+Coverage dispositions:
+
+1. MSD-R02 special classes, absent level record, full entry limit, absent MonStats2 record and
+   no eligible component slots: no additional fixed-class or null-return variants are needed;
+   MSD-V03 exercises the excluded-class fallback, MSD-V02(g) exercises an unregistered slot
+   with supplied zero count, and the initializer's absent-record return is stated in section 6.
+   A zero-component build has a distinct result even with a positive request; MSD-V02(h)
+   adds a three-variant request that stores only one all-zero variant and takes only the
+   appearance draw.
+2. MSD-R02 existing variant count making req nonpositive: no change. The builder's explicit
+   bound returns with no draws; MSD-V02(c) already tests returning an existing preset without
+   rebuilding. Its variants are supplied storage, not a claim that a new registration calls
+   the builder with nonzero initial count (MSD-Q11).
+3. MSD-R05 state 7 on a monster entry: no change. MSD-V05 rejects a state-7 entry before its
+   type-specific alive test and independently distinguishes the type-specific modes; another
+   type using the same exclusion has no new count recipe.
+4. MSD-R10 unavailable MonLvl row: no change. MSD-V10(d)/(g) establish the zero-base return,
+   including its precedence over noRatio; absent storage uses the same result without a new
+   calculation or a claim about its loader.
+5. MSD-R12 hp exactly 0x7FFFFF: no change. Clamping that value to the same maximum and leaving
+   it unchanged both produce raw 0x7FFFFF00. MSD-V12(c) already asserts that output for a value
+   exceeding the maximum; an earlier clamp at the maximum is behaviorally equivalent there.
+6. MSD-R16 no first row, oninit clear or absent inventory: MSD-V16(d) adds the first-row
+   oninit guard with otherwise eligible equipment. No change for the other two predicates:
+   they select the same explicit no-draw/no-request guard recipe without another calculation.
+7. MSD-R20 p equal to 0 or 1 and the first positive term at 2: the first positive term is being
+   added as MSD-V17(h). Values below 2 use the explicit zero-term recipe, whose unconditional
+   writes are already asserted by MSD-V17(c)/(e); no additional zero-term cases are needed.
+8. MSD-R21 party count above 8: MSD-V18 adds a party-10/nonmonster-dropper case, so
+   the spawn-count cap cannot hide an incorrect party cap.
+9. MSD-R21 null killer, no room, no party id or missing party record: no change. These branches
+   normalize party counts of 0 or 1 to elig = 1, whose eligible result is already asserted in
+   MSD-V18. The missing-record discrepancy with PXL-R04a remains explicitly reported rather
+   than being treated as settled behavior of that owner.
+10. MSD-R22a q equal to zero: no change. The direct branch specifies N' = 0; inputs that reach
+    it through rounding remain precision-limited under MSD-Q02. No precision-dependent
+    executable result is invented.
+11. MSD-R23 repeated picks: no change. Each pick applies the same stage to the current
+    dropper seed; MSD-V20 establishes the range, draw owner, outcomes and unaffected other
+    seeds. The scope does not define the outer treasure selection or pick-loop bookkeeping.
+12. MSD-R02 v above 2: no change. With zero existing count, MSD-V02(d) already demonstrates
+    the three-variant request limit; a larger power-of-two bound leaves the same capped req.
+
+Hardest dispositions, all no change:
+
+1. MSD-R02/MSD-V02: the bounded duplicate attempts, slot-list replacement, stored duplicates
+   and exact ordered seed states are explicit in MSD-V02(b)/(d)/(e)/(f).
+2. MSD-R21/MSD-V18: owner replacement, same-level liveness, signed halving and the dropper cap
+   are explicit in the rule and distinguished by the existing cases. The new party-cap case
+   addresses the separate coverage advisory.
+3. MSD-R22a/MSD-V19: exponent multiplication order, recomputation of 1 - q and truncation are
+   explicit. MSD-Q02 retains intermediate precision limits; these cases do not settle them.
+
+Primary review also corrected ownership and evidence wording: unitGate belongs to CSA-R02,
+and local stat-write requests do not establish stored integration (NRF-Q20), update
+bookkeeping (NRF-Q17) or client delivery. The previous client-update statements exceeded
+the verified boundary. No new message or update behavior is asserted. These boundary wording
+corrections and added fixtures require a fresh full second reader.
+
+## Regeneration blind-implementer full pass 2 (2026-10-15)
+
+A fresh smaller reader received the resulting main contract and its cited dependency
+contracts, without source code, private audits, runtime tools or previous review records.
+It recomputed all 21 executable-vector families, reporting 129 cases across the 20 verified
+behavioral rules. Counts: MISMATCH 0, GUESS 0, GAP 0, DISCRIM 0, GATED 14 groups,
+COVERAGE 8 groups, HARDEST 3. This is a reader review, not user approval or gameplay evidence.
+
+MISMATCH, GUESS, GAP and DISCRIM have no entries to resolve. All 14 GATED groups are already
+documented, with no change: MSD-Q01 through MSD-Q11; MSD-R22b's precision limit; the
+supplied-input or isolated boundaries of MSD-V01 through MSD-V21, which do not establish
+all producers or stored-write integration; and complete creation replay under MSD-Q04/full
+reproduction under MSD-Q07. These grouped limits overlap; they are not fourteen new questions.
+
+Coverage dispositions, all no change:
+
+1. MSD-R02 entry limit, missing MonStats2 and individual excluded classes: these take the
+   explicitly stated return or unregistered-slot recipes. MSD-V02(g) and MSD-V03 already
+   distinguish the supplied zero-count fallback and an excluded class. The initializer's
+   missing-record return remains separate from an appearance-stage fixture; no complete
+   creation assertion is inferred for absent records.
+2. MSD-R06 n = 9: MSD-V06(f) exercises the formula branch and MSD-V06(c) the table branch.
+   At n = 9 the two formula results are both 350; this introduces no new arithmetic recipe.
+3. MSD-R07/MSD-R08 negative difficulty or area id: negative game difficulty is outside its
+   u8 input domain. MSD-V08(k) already exercises the level-id <= 0 return of 1; a negative
+   id uses the same bound and result. No invalid-difficulty fixture is added.
+4. MSD-R15 invalid MonProp link: the initial record-bound guard explicitly ends the stage
+   with no slot draw or application. No new numeric or selection recipe is needed; a missing
+   record is not treated as a property application or a verified loader result.
+5. MSD-R16 null inventory or absent first equipment row: both use the same no-draw/no-request
+   entry-guard recipe now demonstrated by MSD-V16(d). Distinct downstream row selection,
+   occupied locations and signed location/mod handling remain in MSD-V16(a) to MSD-V16(c).
+6. MSD-R21 missing party record, no party id/player data or no room: these normalize party
+   counts of 0 or 1 to elig = 1. MSD-V18 already demonstrates that result and its eligible
+   calculation. The documented PXL-R04a discrepancy is not resolved by adding equivalent
+   final eligible outputs.
+7. MSD-R23 N = 0 or zero Picks: MSD-V19(c) establishes N' = 0 without conversion, and
+   MSD-V20(c) already establishes the Rand(T) range and unchanged other seed owners. At
+   N' = 0 no nonnegative roll can satisfy roll < N'. Zero Picks concerns how many times the
+   outer treasure operation invokes this per-pick stage; its bookkeeping is outside scope.
+8. MSD-R12 positive hp below the clamp: MSD-V12(a)/(b) already show positive unclamped
+   shifted values. A value exactly equal to the maximum stores the same value whether a
+   clamp branch is taken or not, as recorded in pass 1.
+
+Hardest dispositions, all no change:
+
+1. MSD-V02's eight cases: the rules and fixtures specify entry registration, preset sharing,
+   bounded attempts, duplicate retention, slot replacement and each ordered draw.
+2. MSD-V16's four cases: first-row guards, signed level comparison, per-row draws, location
+   availability and mod bounds are explicit and yield exact request logs.
+3. MSD-V18's seventeen cases: killer ownership, party membership, liveness, signed halving
+   and both caps are specified; the final case prevents the monster cap from masking a
+   wrong party cap.
+
+Primary review corrected two statements without changing behavior, inputs, expected values,
+assertions or gates. Related specs now attributes state primitives to numeric foundations
+and unitGate to CSA-R02. MSD-V19(a)'s trace previously called the entire quotient exact;
+only p and q are exact binary values for these inputs (eligible 2 gives the inexact quotient
+100/3). The listed integer truncations remain stable across the stated single/double cases;
+the trace now says so. MSD-Q02 still limits precision-sensitive results. These wording
+corrections do not require another reader run. The final applicable full pass has MISMATCH 0
+and no unresolved GUESS, GAP or DISCRIM finding. Document status remains draft.
