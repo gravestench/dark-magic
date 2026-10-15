@@ -68,10 +68,13 @@ and loaded definitions. Constructing and updating those arrays is outside this s
 `HasState(unit, id)` is NRF-R12a's state test, false for a null unit.
 Every vector except DMI-V27 supplies the stat values for non-null attacker and
 defender units; DMI-V17 separately tests null input to the classification predicate.
+Attacker and defender are optional logical unit associations at the isolated mitigation
+boundary; the game and record are supplied. Entry eligibility and the surrounding apply
+operation's null-unit guards belong to the pipeline, rather than being added here.
 
 | Input | Semantic source | Width and format | Meaning |
 |-------|-----------------|------------------|---------|
-| `record.values[field]` | built damage record, NRF-R08a/CSA-R01 | i32 raw values; damage quantities use 8.8 | twelve values in the table below; status/drain interpretation belongs to the cited contracts |
+| `record.values[field]` | built damage record, NRF section 3.2/NRF-R08a and CSA-R01 | i32; damage magnitudes 8.8, lengths frames, drain inputs raw quantities | twelve values in the table below; status/drain interpretation belongs to the cited contracts |
 | `record.absorbHeal` | damage record | i32, 8.8 | incoming accumulator, increased or decreased by DMI-R08 |
 | `record.reductionScale` | damage record field supplied by the path that built the record; its producer is not owned by any spec yet (DMI-Q05) | i32; 0 = unscaled, 0x400 = 1.0 | scale used only when both reduction and scale are positive; vectors supply it |
 | `record.bypassUndead`, `record.bypassDemons`, `record.bypassOther` | record flags set during the build by DPO-R05 (from attacker stats 103 `skill_bypass_undead`, 104 `skill_bypass_demons`, 106 `skill_bypass_beasts`, player or hireling attackers only) | logical flags | consumed by DMI-R05; vectors supply them directly |
@@ -82,11 +85,15 @@ defender units; DMI-V17 separately tests null input to the classification predic
 | attacker state 47 `sanctuary` | `HasState(attacker, 47)` | logical state | physical resistance exception, DMI-R07 step 6 |
 | attacker and defender type/class | unit identity, GDF-R17 | type u32; class i32 | regular-monster and class tests; "monster" is the unit type whose class is a MonStats row; every other type, including a player, is a non-monster |
 | `monsterClassCount`, class `lUndead`, `hUndead`, `demon` | MonStats data, GDF-R05/GDF-R18 | count i32; logical flags | bounds check and category tests, DMI-R04 |
-| `game.difficulty` | game | u8: 0 Normal, 1 Nightmare, 2 Hell | penalty selection |
+| `game.difficulty` | game | u8: 0 Normal, 1 Nightmare, 2 Hell; remaining u8 values follow DMI-R07 | penalty selection; expansion clamps the row index, classic applies no penalty above 2 |
 | `game.expansion` | game | logical (original non-zero flag) | expansion data penalty versus classic constants |
 | `difficulty.ResistPenalty` | selected difficulty row, GDF-R02 | i32 | expansion penalty: Normal 0, Nightmare -40, Hell -100 (section 3.1) |
+| `difficultyRowCount` and prepared difficulty rows | GDF-R02 field preparation; selection in DMI-R07 | positive i32 count; original-profile count 3 | selected row is `min(game.difficulty, difficultyRowCount - 1)`; an unavailable/empty prepared collection is outside the supplied-table boundary |
 | defender event list | entries created by IEP-R01 (event id, callback, two callback values, entry type) | logical ordered entries | walked for event 11 by DPO-R23; DMI-R03 |
 | attacker, defender, game RNG seeds | NRF-R01 | each `{lo, hi}`, two u32 words | unchanged by mitigation itself |
+| stat/state-read context | NRF section 3.8 and NRF-R12a/NRF-R12b/NRF-R12c | optional lists/storage/owners; i32 state and definition counts; ordered stat identities and i32 values; signed 16-bit active array counts; boolean `usesResolvedStats`/`fMin`, i32 `MinAccr`, u8 `ValShift` | supplied getter inputs in DMI-V27; other numeric vectors supply returned values, not array production |
+| whole-entry scale-selector conditions | PVP-R02a/PVP-R02b | logical conditions and selected i32 percent `P` | common whole-entry setup supplies the attacker's PVP-R02b flag clear and `P=100`; isolated mitigation does not select `P` |
+| supplied event callbacks | IEP-R07 | logical callback behavior; i32 results and two registered i32 values | callback effects, draws and record/list mutations are explicit fixture inputs; DMI-V19 supplies logging callbacks with no writes or draws |
 
 **Derived context.** `context` denotes the game, selected difficulty data, attacker, defender,
 record, `regularAttacker`, `regularDefender`, and `reduction[0..2]`. These are logical inputs
@@ -98,8 +105,10 @@ original sentinel is recorded in the companion). These bindings are an engine-de
 not an MPQ damage-policy table. Each named stat/id maps to GDF-R11. Field names map to the
 foundations' damage-record fields (section 3.2, CSA-R01): physical; fire, lightning, cold,
 magic and poison damage; poisonLength = poison length; coldLength and freezeLength = cold and
-freeze length; lifeDrain, manaDrain and staminaDrain = the life leech, mana burn and stamina
-burn inputs.
+freeze length; lifeDrain, manaDrain and staminaDrain = the foundations' `lifeLeech`,
+`manaBurn` and `staminaBurn` raw inputs. DPO calls `poison` `poisonMagnitude` and
+`record.reductionScale` `flatReductionScale`; these are aliases for the same semantic
+quantities, with no unit conversion. The unvisited `burnLength` is also a frame count.
 
 | Entry | Field | Resist | Max | Pierce | % absorb | Flat absorb | Reduction slot | Regular attacker required |
 |------:|-------|--------|-----|--------|----------|-------------|---------------:|---------------------------|
@@ -270,8 +279,12 @@ Use the entry's `resistId`, `maxId`, `pierceId`, and `regularDef=context.regular
    pierce stat raises `r`. A regular monster at `r>=100` is not pierced; any other defender is
    pierced at any resistance.
 3. When `regularDef=0` and `resistId` is neither 36 `damageresist` nor 37 `magicresist`,
-   expansion adds the selected row's `difficulty.ResistPenalty` value unchanged (row
-   selection, including the clamp for an index past the last row, is GDF-R02). Classic
+   expansion adds the selected row's `difficulty.ResistPenalty` value unchanged. With the
+   supplied positive `difficultyRowCount`, select row
+   `min(game.difficulty, difficultyRowCount - 1)`; the game's difficulty is u8, so its index
+   is nonnegative. GDF-R02 supplies field preparation; the clamping getter's existing
+   [source evidence](../research/spec-evidence/combat-damage-mitigation.md#rule-linked-rationale)
+   supports this consumed selection within DMI-R07. Classic
    subtracts 20 at difficulty 1, 50 at difficulty 2, and nothing for any other difficulty
    value (0, or a value above 2). This also applies when the
    resistance binding is absent (entries 9-11) and to stat 110 (entry 7), increasing drain
@@ -356,6 +369,12 @@ are excluded from this no-draw claim.
 | `record.total` | DPO-R12a (consumed, not redefined here) | `record.total = physical + fire + lightning + magic + cold + poison` (i32 adds), plus `lifeDrain` when `context.regularAttacker = 1` |
 | stat writes, states, scheduled events, units created/destroyed, messages | none directly | mitigation itself performs none; callbacks own their effects; DPO-R16 applies healing later |
 
+**Rule-level return values.** DMI-R01 returns the hireling category and regular-monster
+predicate; DMI-R04 returns the two category tests; DMI-R07 returns effective resistance;
+DMI-R08 returns the post-absorb value; DMI-R06 stores the resulting field. DMI-R09 consumes
+NRF-R05's arithmetic return. These are semantic intermediate results available to vectors,
+not required APIs. No shared-entry return value is part of this spec's acceptance.
+
 ## 6. Branches and edge cases
 
 - **Unit types.** Regular-monster defenders are not pierced at resistance at least 100,
@@ -386,7 +405,7 @@ are excluded from this no-draw claim.
 - **Overflow.** Stat shifts and `100-r` are i32. NRF-R05 defines mulDiv's product handling.
   A sufficiently negative max-resist can produce a negative cap in step 5; it is applied
   after step 4, so the resistance floor is not reapplied to that negative cap (DMI-V21).
-- **Missing data.** Difficulty selection clamps to the available row range under GDF-R02;
+- **Missing data.** Difficulty selection clamps to the supplied positive row range under DMI-R07;
   with three rows an index above 2 selects the last row. Classic subtracts nothing for a
   difficulty above 2. Out-of-range monster class IDs make checks A/B false; the hireling
   category still compares IDs directly (DMI-V18 (e)).
@@ -411,7 +430,8 @@ gaps that remain after static and table-data attempts are listed in the
 
 Common setup unless overridden: raw 8.8 quantities; `record.reductionScale=0`,
 all three bypass flags false, `record.absorbHeal=0`, all unnamed fields 0;
-`game.expansion=0` (classic), `game.difficulty=0` (Normal); all unnamed stats 0, including
+`game.expansion=0` (classic), `game.difficulty=0` (Normal), `difficultyRowCount=3` with
+the named Normal/Nightmare/Hell rows in section 3.1; all unnamed stats 0, including
 defender 118 `item_halffreezeduration` and 153 `item_cannotbefrozen`. No states except an
 explicitly named attacker sanctuary state, so DPO-R10 leaves cold/freeze/poison lengths and
 the burn length (CSA-R01; not read by this stage) unchanged. The defender's event list is empty.
@@ -477,6 +497,9 @@ values for the isolated numeric checks. IDs and names map through section 3's bi
   `Stat(39) = 95`, `Stat(40) = 20`: `cap = 95` (sum 95 is `>= 95`), `r = 95`, `v = mulDiv(5, 2560, 100) = 128`.
   (c) `physical = 5120`, `Stat(36) = 90`, `Stat(34) = 0`: `cap = 50`, `r = 50`,
   `v = mulDiv(50, 5120, 100) = 2560`. Outputs: `fire = 640` / `128`; `physical = 2560`; heal 0.
+  (d) Fresh common setup, player defender; `fire=2560`, `Stat(39)=120`, `Stat(40)=40`:
+  `75+40=115` is capped to 95; `r=95`, so `fire=mulDiv(5,2560,100)=128`, heal 0.
+  Omitting the 95 ceiling would give `r=115`, then DMI-R06's 100 clamp and fire 0.
   `runtime_observed: no`.
 - **DMI-V04** (DMI-R07 step 2) pierce against a regular monster. Monster defender;
   `fire = 2560`; attacker `Stat(333) = 10`. (a) `Stat(39) = 100`: `r = 100`; `r >= 100` and
@@ -491,7 +514,13 @@ values for the isolated numeric checks. IDs and names map through section 3's bi
   `v = 2560 - 0`; `r == 0`: no percent step. Absorb: `pct = 60 >= 40`, so `pct = 40`;
   `a = mulDiv(40, 2560, 100) = 1024`; heal 1024; `v = 1536`; `f = 3 << 8 = 768 > 0`;
   `768 < 1536` so `f = 768`; heal 1792; `v = 768`. Outputs: `cold = 768` (3.0),
-  `record.absorbHeal = 1792` (7.0). `runtime_observed: no`.
+  `record.absorbHeal = 1792` (7.0).
+  Fresh cases use the common setup and player defender, `cold=2560`, with unnamed stats 0.
+  (b) `Stat(148)=-20`, `Stat(149)=3`: negative percent is skipped; flat is 768;
+  outputs cold 1792, heal 768. Applying the negative percent would instead give cold 2304,
+  heal 256. (c) `Stat(148)=40`, `Stat(149)=-3`: percent contributes 1024, cold becomes 1536;
+  shifted flat is -768 and skipped. Outputs cold 1536, heal 1024. Applying the negative
+  flat would instead give cold 2304, heal 256. `runtime_observed: no`.
 - **DMI-V06** (DMI-R02) scaled flat reduction. Player defender; `physical = 5120`; `Stat(36) = 0`.
   (a) `Stat(34) = 5`, `record.reductionScale = 0x200`: `red = 1280 > 0`, scale `> 0`:
   `reduction[1] = mulDiv(0x200, 1280, 0x400)`: `b = 1280 <= 0x100000`, `a = 512 <= 0x10000`,
@@ -502,7 +531,11 @@ values for the isolated numeric checks. IDs and names map through section 3's bi
   `Stat(35) = 2`, `record.reductionScale = 0x200`: `reduction[2] = (512 * 512) / 1024 = 256`; with `Stat(34) = 0`,
   `physical = 0`, `fire = 2560` and `Stat(39) = 0`: entry 1 gives `r = 0`,
   `v = 2560 - 256 = 2304`, no percent step, absorb stats 0 skipped; output `fire = 2304`
-  (slot 2 serves entries 1-4 only). `runtime_observed: no`.
+  (slot 2 serves entries 1-4 only).
+  (e) Fresh common setup, player defender; `physical=5120`, `Stat(34)=5`,
+  `record.reductionScale=-512`: shifted reduction 1280 is positive but scale is negative,
+  so reduction stays 1280. Outputs physical 3840, heal 0. Scaling whenever the scale is
+  merely nonzero would give reduction -640 and physical 5760. `runtime_observed: no`.
 - **DMI-V07** (DMI-R04, DMI-R05, DMI-R06) bypass. Defender: monster defender (preamble) whose class has
   `lUndead` set and `demon` clear (check A = 1, check B = 0); attacker player with
   `Stat(333) = 0`; `fire = 2560`; defender `Stat(39) = 50`, `Stat(35) = 2` (so
@@ -519,7 +552,11 @@ values for the isolated numeric checks. IDs and names map through section 3's bi
   `Stat(36) = 0`. Trace: `reduction[1] = 768`; entry 0: `v = 256 > 0`; `r = 0`; `b = 0`:
   `v = 256 - 768 = -512`; `v > 0` false: no percent step; absorb: `pctId = none`, returns -512.
   Output `physical = -512`, `record.absorbHeal = 0`, `record.total = -512` (so DPO-R17 subtracts nothing). Static
-  reading; runtime check DMI-Q03. `runtime_observed: no`.
+  reading; runtime check DMI-Q03.
+  (b) Fresh common setup, player defender; `physical=-256`, `Stat(34)=3`, `Stat(36)=0`:
+  the field is initially nonpositive, so DMI-R06 stores 0 before reduction or resistance.
+  Outputs physical 0, heal 0, total 0 (DPO-R12a). Preserving the initial negative field
+  would fail the field and total assertions. `runtime_observed: no`.
 - **DMI-V09** (DMI-R07 step 3, classic) difficulty penalty. Player defender; `fire = 2560`;
   `Stat(39) = 30`, `Stat(40) = 0`; `game.expansion = 0`. (a) `game.difficulty = 1`: `r = 30 - 20 = 10`;
   `cap = 75`, `r = 10`; `v = mulDiv(90, 2560, 100) = 2304`. (b) `game.difficulty = 2`:
@@ -533,7 +570,16 @@ values for the isolated numeric checks. IDs and names map through section 3's bi
   step 4 returns -70; `v = mulDiv(170, 2560, 100) = 4352`. (b) classic Normal; `fire = 2560`; player defender
   `Stat(39) = 120`, `Stat(40) = 0`; attacker `Stat(333) = 10`: `r = 120`; `r >= 100` but the
   defender is not regular: pierced, `r = 110`; no penalty; `cap = 75`, `r = 75`;
-  `v = mulDiv(25, 2560, 100) = 640`. Outputs: `fire = 4352` / `640`. `runtime_observed: no`.
+  `v = mulDiv(25, 2560, 100) = 640`. Outputs: `fire = 4352` / `640`.
+  Fresh cases start from the common setup, player defender, `fire=2560`, `Stat(39)=30`,
+  `Stat(40)=0`, with unnamed stats 0. (c) `Stat(attacker,333)=-10`: subtracting negative
+  pierce raises `r` to 40; output fire `mulDiv(60,2560,100)=1536`, heal 0. Ignoring or
+  clamping negative pierce would leave `r=30` and fire 1792.
+  (d) `game.expansion=1`, `game.difficulty=3`, supplied three named difficulty rows:
+  selection clamps to Hell row 2, penalty -100; `r=-70`, output fire 4352, heal 0.
+  (e) `game.expansion=0`, `game.difficulty=3`: classic applies no penalty above 2;
+  `r=30`, output fire `mulDiv(70,2560,100)=1792`, heal 0. Treating this classic case as
+  Hell would instead produce 3072. `runtime_observed: no`.
 - **DMI-V11** (DMI-R04, DMI-R07 step 6) sanctuary. Defender: monster defender (preamble) whose class has `lUndead`
   set; attacker player; `physical = 5120`; defender `Stat(36) = 40`, `Stat(34) = 0`. (a) attacker
   has state 47: `r = 40`; no pierce id; regular: no penalty, no cap; stat 36, `HasState = 1`,
@@ -587,7 +633,9 @@ values for the isolated numeric checks. IDs and names map through section 3's bi
 - **DMI-V17** (DMI-R01) regular-monster predicate. Monster unit, class 0x152: hirelingCategory
   returns 2, not regular (regular flag 0). Monster, class 0x4E: returns 0, regular (flag 1).
   Monster, class 0x231: returns 4, not regular. Monster, class 0x232: returns 0, regular. Player (any
-  class field): the type test fails, flag 0. Null unit: flag 0. `runtime_observed: no`.
+  class field): the type test fails, flag 0. Null unit: flag 0. The shared category operation's
+  complete five-class mapping is exercised by CSA-V04(c), including classes 359 and 560;
+  DMI-R01 combines its returned category with the monster-type test. `runtime_observed: no`.
 - **DMI-V18** (DMI-R01, DMI-R04, DMI-R05) bypass by class flags. Monster defenders (preamble; regular) with
   class flags (a) `hUndead` only, (b) `demon` only, (c) `lUndead` and `demon`, (d)
   none; attacker player; `fire = 2560`, defender `Stat(39) = 50`, nothing else. `bypassUndead=true`:
@@ -598,10 +646,14 @@ values for the isolated numeric checks. IDs and names map through section 3's bi
   `monsterClassCount = 0x200` (out of range; 0x200 is not a hireling class), whose class
   flags are ignored (the range test fails before any flag is read): checks A and B are false and the defender is still regular (DMI-R01 compares ids
   directly). `bypassUndead=true`: `b = 0`, `fire = 1280`; `bypassOther=true`: `b = 1`,
-  `fire = 2560`. `runtime_observed: no`.
+  `fire = 2560`.
+  (f) Fresh inputs as in (e), except class id -1. Both category tests return false before
+  reading any class flags. This non-hireling monster is still regular. With only
+  bypassUndead true: b 0, fire 1280; with only bypassOther true: b 1, fire 2560.
+  `runtime_observed: no`.
 - **DMI-V19** (DMI-R03; dispatcher behavior consumed from DPO-R23 and IEP-R07) event 11
   dispatch point. Execution: shared-entry integration, with dispatcher-specific assertions
-  gated below. Inputs: DMI-V01's record and stats under the common setup (default pairing),
+  supplied by the verified IEP-R07 contract. Inputs: DMI-V01's record and stats under the common setup (default pairing),
   except `coldLength = 40` and defender `Stat(153 item_cannotbefrozen) = 1`, and the
   defender's event list holds, head to tail, three entries, each of
   entry type 2 (not one-shot: IEP-R07 removes only type-0 entries) with no removal mark and an arbitrary
@@ -725,7 +777,8 @@ values for the isolated numeric checks. IDs and names map through section 3's bi
   `5 << 8=1280`; physical becomes `mulDiv(75,5120-1280,100)=2880`, heal 0.
   (b) `fire=2560`; defender ownStats `[(143,0,1)]`, resolvedStats `[(143,0,3)]`, counts 1.
   Flat absorb reads 3 unchanged, converts to `3 << 8=768`; fire becomes 1792, heal 768.
-  (c) Same as (a), but remove stat 34 from resolvedStats and set its active count to 1:
+  (c) Fresh inputs: `physical=5120`; defender ownStats `[(34,0,1),(36,0,0)]`, count 2,
+  resolvedStats `[(36,0,25)]`, active count 1; use this vector's common lists, owners and definitions:
   stat 34 reads 0 despite ownStats containing 1; physical becomes
   `mulDiv(75,5120,100)=3840`, heal 0.
   All other type fields remain 0, and no list, array, definition or seed changes. **No draw**.
@@ -782,7 +835,7 @@ local supplied-input rule. A gap-file reference to a rule does not expand these 
 
 - [core-numeric-and-rng-foundations](core-numeric-and-rng-foundations.md): NRF-R05 exact
   mulDiv, NRF-R08a units, NRF-R12a/NRF-R12b/NRF-R12c stat/state reads,
-  NRF-R01/NRF-R02 seed contracts for DMI-V14, CSA-R01 damage/status field meanings.
+  NRF-R01/NRF-R02 seed contracts for DMI-V14, section 3.2 damage-field meanings.
 - [core-game-data-fields](core-game-data-fields.md): GDF-R02 difficulty data,
   GDF-R05/GDF-R18 monster category flags, GDF-R11 stat identities, GDF-R12 sanctuary state,
   GDF-R17 class identities. These are data/meaning contracts, not original layout requirements.
@@ -803,8 +856,10 @@ local supplied-input rule. A gap-file reference to a rule does not expand these 
   poison and lengths; [combat-leech-and-status-effects](combat-leech-and-status-effects.md): regular-monster drain inputs.
 
 **Supporting relationships.** GDF-R08/SCD-R06 identify the original dispatch root; they are
-evidence references here. Reverse consumers and supporting references do not automatically set
-implementation-plan prerequisites.
+evidence references here. CSA-R01 in
+[combat-status-application](combat-status-application.md) consumes the record's status and
+drain fields; it does not execute during mitigation. Reverse consumers and supporting
+references do not automatically set implementation-plan prerequisites.
 
 ## 10. Related specs
 
@@ -837,7 +892,7 @@ through the numeric foundations evidence. Function descriptions are analyst labe
 
 Original-profile table reads dated 2026-10-13 (TD-1 to TD-5) establish their named cells and
 selected compiled correspondence. Effective-file hashes and supplying MPQs were not captured;
-the manifest states the runtime identity limits. A historical memory read corroborated the
+the manifest states the runtime identity limits. A read-only memory comparison on 2026-10-13 corroborated the
 type table; no executable vector was runtime-observed. Gameplay observations remain pending
 and the spec remains draft. Public verification requires matching original artifacts and
 recorded data scope, without access to the private reconstruction project.

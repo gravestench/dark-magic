@@ -63,7 +63,7 @@ new rules of this spec.
 | `LOD113C-D2COMMON` | `0x1A2D0` | 11104 | hireling-class category | DMI-R01/R10 | Full instruction read; null/type guards and five fixed class comparisons |
 | `LOD113C-D2COMMON` | `0x1A5B0` | 10239 | undead category test (check A) | DMI-R04/R07/R10 | Full instruction read; class bounds and low/high undead bits |
 | `LOD113C-D2COMMON` | `0x1A610` | 10255 | demon category test (check B) | DMI-R04/R10 | Full instruction read; class bounds and demon bit |
-| `LOD113C-D2COMMON` | `0x603C0` | 10237 | difficulty-row getter | DMI-R07/R10; GDF-R02 | Reconstruction checked against original bytes; clamped index and row pointer |
+| `LOD113C-D2COMMON` | `0x603C0` | 10237 | difficulty-row getter | DMI-R07/R10 | Reconstruction checked against original bytes; clamped index and row pointer; GDF-R02 owns supplied field preparation, not this getter |
 | `LOD113C-D2COMMON` | `0x33CD0` | 10494 | unit state-test wrapper | DMI-R07/R10; NRF-R12a | Disassembly; calls state bit test |
 | `LOD113C-D2COMMON` | `0x37DB0` | — | state bit test | DMI-R07/R10; NRF-R12a | Disassembly; reads state bitfield with exported mask table |
 | `LOD113C-D2COMMON` | `0x38B70` | 10973 | unit stat getter wrapper | DMI-R02/R07/R08/R10; NRF-R12b | Guard read on 2026-10-13; full getter-boundary verification on 2026-10-14 in foundations |
@@ -153,7 +153,7 @@ combat subsystem relationship.
 | entry field/resist/max/pierce/%absorb/flat/slot/regular-attacker marker | entry `+0x00/+0x04/+0x08/+0x0C/+0x10/+0x14/+0x18/+0x1C` | DMI-R06/R07/R08 |
 | other type-entry fields | `+0x20` scaling flag, `+0x24` name-string pointer, `+0x28` unused here | DPO-R08a; no local behavior assigned to unused field |
 | game difficulty/expansion | Game `+0x6D` u8 / `+0x70` nonzero flag | DMI-R07 |
-| selected difficulty row | D2Common #10237; stride `0x58`, ResistPenalty at `+0x00`; array/count at D2Common data-section offsets `+0x7B54/+0x7B58` | GDF-R02; DMI-R07 |
+| selected difficulty row | D2Common #10237; stride `0x58`, ResistPenalty at `+0x00`; array/count at D2Common data-section offsets `+0x7B54/+0x7B58` | DMI-R07 getter selection; GDF-R02 supplied field preparation |
 | unit type/class | Unit `+0x00/+0x04`; original type 0 player, 1 monster | DMI-R01/R04 |
 | MonStats array/count | DataTables `+0xA78/+0xA80`, record stride `0x1A8` | DMI-R04 |
 | lUndead/hUndead/demon | MonStatsRecord `+0x0C` bits 11/12/13; byte `+0x0D` tested with mask indices 3/4/5 | DMI-R04; GDF-R18 |
@@ -192,7 +192,7 @@ spec's table supplies the stat names; these are raw numeric bindings and record-
 | DMI-R04 | D2Common `0x1A5B0/0x1A610` return false before reading flags for null, non-monster, negative/out-of-range class or zero computed record address. Check A combines byte `+0x0D` mask bits 3/4; B uses bit 5, mapping to MonStats low/high undead and demon. |
 | DMI-R05 | After strip, `0xDC0B0` combines checks A/B with record masks `0x100/0x200/0x400`. For non-monsters only `0x400` applies. Class selection is computed once before the loop. |
 | DMI-R06 | `0xDC0B0` advances through the twelve type entries, ending when an entry requires a regular attacker and that context flag is zero. `0xDBD00` loads the bound field, zeroes initially nonpositive input, otherwise gets resistance before testing bypass. It subtracts the selected reduction without a clamp unless bypassed; positive remaining values with nonzero resistance call `(100-r,v,100)`, with `r` capped at 100. Non-bypassed values call absorb even after becoming nonpositive. Final store writes the bound field. |
-| DMI-R07 | `0xDB3C0` reads resistance if bound; subtracts nonzero attacker pierce unless a regular defender has resistance at least 100; applies difficulty penalty to non-regular defenders except bindings 36/37. Classic selection uses two decrement/equality branches, so only difficulties 1/2 subtract 20/50. Expansion adds row `+0x00` unchanged. A nonpositive result returns immediately with floor -100. Positive non-regular resistance uses cap 50 for binding 36, otherwise 75 or `min(75+maxStat,95)`, with no lower cap bound. Finally binding 36, attacker state 47 and check A can set positive resistance to zero. |
+| DMI-R07 | `0xDB3C0` reads resistance if bound; subtracts nonzero attacker pierce unless a regular defender has resistance at least 100; applies difficulty penalty to non-regular defenders except bindings 36/37. Classic selection uses two decrement/equality branches, so only difficulties 1/2 subtract 20/50. Expansion uses #10237 (`0x603C0`), whose checked reconstruction clamps the index to `[0,count-1]`; with supplied positive count and this caller's u8 difficulty, this is `min(difficulty,count-1)`. It adds selected row `+0x00` unchanged. A nonpositive result returns immediately with floor -100. Positive non-regular resistance uses cap 50 for binding 36, otherwise 75 or `min(75+maxStat,95)`, with no lower cap bound. Finally binding 36, attacker state 47 and check A can set positive resistance to zero. |
 | DMI-R08 | `0xDAD00` returns immediately when percent-absorb binding is absent. Otherwise it caps percent at 40, performs `(pct,v,100)` only for positive percent, and adds the contribution to `record+0x48`. It then shifts flat stat by 8; only a positive result is used, limited to the current value even if that value is negative. The second contribution is added to `+0x48`; the post-subtraction value returns to the field writer. |
 | DMI-R09 | Callers `0xDC0B0`, `0xDBD00` and `0xDAD00` supply `(scale,red,1024)`, `(100-r,v,100)` and `(pct,v,100)` respectively to `0x14D0`. NRF-R05 owns the helper's exact branching/rounding; DMI-V26 discriminates caller argument order separately from DMI-V13's arithmetic checks. |
 | DMI-R10 | The recorded stage/read/arithmetic call audit found no LCG step or RNG-helper call in the boundary described below. Event callbacks and opaque release internals are not expanded into a new local contract. |
@@ -207,7 +207,7 @@ callback result. Callback arguments are game in `ecx`, requested event in `edx`,
 `(owner,other,record,value1,value2)`. Removal mark 2 or entry type zero causes unlinking and a
 call to release thunk `0xA2EC`; final result is the last matching callback's result.
 
-This resolved DMI-Q02's former sibling discrepancy: one description had read the next entry
+This resolved the former dispatcher question's sibling discrepancy: one description had read the next entry
 before every callback and omitted the event argument. The targeted IEP-R07/DPO-R23 correction
 made both owning contracts agree with the instructions; IEP-V08 distinguishes removal of the
 next entry, while DPO-V26 states the complete semantic argument list. DMI-V19's placement and
@@ -536,3 +536,157 @@ dispatch chain from the skill do-function table to mitigation and measured fire 
 text. No implementation tests, vector recomputation, new table reads or gameplay actions
 were performed. Existing labels, gaps, pending observations and draft status are unchanged;
 this record neither approves the spec nor establishes runtime parity.
+
+## Regeneration and evidence reuse (2026-10-15)
+
+This focused pass assessed the current contract, all four open evidence-gap rows and the
+current numeric foundations, game-data fields, pipeline, item-event and status contracts.
+The source-manifest artifact identities, recorded 2026-10-12/13 instruction-reading boundaries,
+2026-10-13 table-cell records and targeted 2026-10-14 getter evidence remain applicable to
+the same original-profile supplied inputs. No changed binary or data profile, contrary source
+reading or newly observed gameplay was established. Reusing these records preserves their
+dates and limits; this pass did not renew source, data or gameplay verification.
+
+| Question / gap | Compatible evidence and current applicability | Outcome / smallest remaining check |
+|---|---|---|
+| Reduction-scale producer, DMI-Q05 | The current pipeline calls this field `flatReductionScale`; foundations and DMI call it `reductionScale`. Both supply the same i32 quantity. The 2026-10-13 D2Game candidate-store search did not identify its record-building writer; current sibling contracts still do not name one. | Remains outside boundary and blocks no supplied-input mitigation assertion. Each record-builder owner must trace its writer. Repeating the same broad search would not distinguish unrelated structures. |
+| Per-type observation, DMI-O01 | Existing source branches and TD-1 to TD-5 support numeric reduction/resistance/absorb with supplied values. The 2026-10-13 memory comparison establishes only type-table correspondence. | Remains observation pending. Run the existing O01 procedure on identified original artifacts and measured inputs; no new gameplay was authorized in this pass. |
+| Penalty growth, DMI-Q04 / DMI-O02 | DMI-R07's recorded branches and TD-3's text/compiled 0/-40/-100 values support the static DMI-V15/V16 expectations. Current GDF-R02 retains supplied data-field preparation; DMI's recorded #10237 getter evidence supports clamped row selection. | Remains observation pending, with static arithmetic available. The existing O02 capture must measure drain/length inputs and outputs on expansion Hell and its control. |
+| Negative physical value, DMI-Q03 / DMI-O03 | The recorded per-type store has no subtraction clamp; current DPO-R12a sums the supplied field and DPO-R17 skips life subtraction for nonpositive total. These support DMI-V08's supplied-input expectation. | Remains observation pending. The existing O03 capture must isolate an input smaller than flat reduction, then measure field, total and later life. |
+
+The verified IEP-R07 contract still owns traversal, registered callback values, successor reload,
+shared-record mutation and the last callback result. IEP-V08 distinguishes callback removal of
+the successor. DMI-V19 owns local placement and continuation and retains its nonzero final
+dispatcher result. Its stale sentence describing those now-static integration assertions as
+gated was removed; no new integration guarantee was added. The same fixture, results and
+ownership paragraph remain. Foundations NRF-R12b/NRF-R12c still own existing-array reads and
+conditional minimum adjustment; DMI-V27 supplies those arrays, definitions and associated owners,
+rather than claiming their production.
+
+The main contract now inventories optional unit associations, getter/state-read context,
+whole-entry scale-selector conditions and supplied callback behavior. It identifies semantic
+intermediate returns and excludes a shared-entry return assertion, as the earlier correction
+already required. Alias clarification preserves units: foundations `poison` is pipeline
+`poisonMagnitude`; DMI `lifeDrain`/`manaDrain`/`staminaDrain` denote foundations
+`lifeLeech`/`manaBurn`/`staminaBurn` raw quantities; durations remain frame counts. CSA-R01 is
+a supporting reverse-consumer relationship rather than a rule owned by numeric foundations.
+DMI-R07's existing difficulty-clamp assertion was incorrectly attributed to GDF-R02, which
+defines field preparation and the original three-row initialization count. The established
+selection is now attributed to D2Common #10237 at RVA `0x603C0` in this companion's existing
+checked-reconstruction record. Its supplied positive-count/u8-index case is stated explicitly;
+the existing difficulty-above-2 clamp was retained, without a new source reading or narrowing
+the input range to 0..2. Empty or unavailable prepared collections are outside that input boundary.
+DMI-V27(c) now lists its fresh starting arrays explicitly; its inputs and expected outputs
+are unchanged. Source search details that depended on private reconstruction paths were
+preserved privately and replaced publicly with the original-module search scope and result.
+
+No rule identifier, static label, formula, field result, seed, observation result or acceptance
+gate was promoted or removed. All 27 vector families and the historical implementation-comparison
+findings remain. That comparison retains its earlier assessment rather than being presented as
+a new implementation review. Pending observations keep the document draft. Fresh reader review
+of the resulting contract is recorded separately when completed.
+
+### Preservation and self-review
+
+The three pre-edit files were copied to a private archive and their SHA-256 hashes matched
+the originals. Exact comparison preserves all ten rule labels, the open-question section,
+all three proposed observations and the acceptance assertions. The only rule-text change
+attributes the already-stated difficulty clamp to its existing getter evidence and spells
+out the supplied positive-count/u8-index case. All 27 vector families remain: 25 complete
+blocks are exactly identical after newline normalization; V19 changes only its obsolete
+gate wording, and V27(c) replaces inherited-case wording with the same fresh arrays and
+counts. The seven historical implementation-comparison rows are unchanged.
+
+The documentation checker returned 0 errors and 0 warnings after the focused pass. Self-review
+checked the input/output inventory, dependency ownership, original-artifact references, gap
+classification, public/private source separation and preservation. No implementation test,
+new table read, source reread or gameplay action was run. These document checks do not replace
+the fresh blind-implementer review or user approval.
+
+## Regeneration reader 1 — full review (2026-10-15)
+
+A fresh independent reader used only the main contract and its named dependency contracts,
+matched the supplied main-file hash and recomputed all 27 vector families. It used no source
+material, repository implementation, table/runtime tools, other review reports or web, and made
+no edits or test runs. Report counts: MISMATCH 0, GUESS 0, GAP 0, DISCRIM 6, GATED 3,
+COVERAGE 7, HARDEST 3. The following dispositions apply to every reported entry; all added
+cases are calculated expectations with no gameplay observation.
+
+### Discrimination findings
+
+| Finding | Disposition |
+|---|---|
+| V03's maximum-resistance sum equals 95, so omitting the 95 ceiling still passes | Added DMI-V03(d): maximum stat 40 makes sum 115, but resistance is capped at 95 and fire is 128. Without that ceiling fire becomes 0. |
+| V06 has no positive reduction with negative scale; scaling any nonzero scale still passes | Added DMI-V06(e): scale -512 leaves reduction 1280 and physical 3840; the incorrect nonzero check gives physical 5760. |
+| V08 does not start with a negative field; preserving initially nonpositive values still passes | Added DMI-V08(b): initially physical -256 is stored as 0 before reduction, with total 0. This is separate from the original positive input that becomes -512 after reduction. |
+| V10 has no negative pierce; ignoring or clamping it still passes | Added DMI-V10(c): pierce -10 raises resistance from 30 to 40, producing fire 1536 rather than 1792. |
+| V17 does not test fixed classes 359 / 560, so omitting them still passes locally | No duplicate binding fixture: CSA-R02 unitGate and CSA-V04(c) exercise all five fixed classes, including 359 → 3 and 560 → 4; CSA-V07(l)/(j) also exercise them through stun. Both companions identify the same D2Common #11104, RVA `0x1A2D0`; DMI-R01's category call and monster-type conjunction are separately traced here. V17 now points to the shared operation's complete mapping fixture. No inference was made from similar names alone. |
+| V05/V12 do not test negative percent or flat absorb; nonzero-only checks still pass | Added DMI-V05(b)/(c): negative percent is skipped while flat contributes 768; negative shifted flat is skipped after percent contributes 1024. Exact cold/heal pairs are 1792/768 and 1536/1024, rather than the incorrect 2304/256 in either case. |
+
+### Advisory coverage findings
+
+| Finding | Disposition |
+|---|---|
+| R01 remaining excluded classes 359 / 560 | No additional local fixture: shared operation identity and CSA-V04(c)/CSA-V07 coverage are established in discrimination finding 5. |
+| R02 positive reduction with negative scale | Covered by new V06(e). |
+| R03 null defender suppresses callbacks | No new fixture: DMI-R03 explicitly dispatches with owner=defender and states no callback for null defender. IEP-V08(b) discriminates the consumed dispatcher's absent-owner behavior. Null owner therefore has the same no-callback result without duplicating that owner fixture. |
+| R04 negative-class lower bound despite supplied flags | Added V18(f): class -1 returns both category tests false before any class-flag read; its bypassUndead/bypassOther cases give fire 1280/2560. |
+| R06 initially negative field zeroing | Covered by new V08(b). |
+| R07 maximum sum above 95, negative pierce and difficulty above 2 | V03(d) and V10(c) cover the first two. Added V10(d)/(e) with difficulty 3: expansion clamps to supplied Hell row and yields fire 4352; classic applies no penalty and yields 1792 rather than Hell's 3072. |
+| R08 negative percent / flat absorb skipped | Covered by new V05(b)/(c). |
+
+### Documented limits and hardest material
+
+GATED 3: DMI-Q03 and DMI-Q04 limit runtime-confirmation claims only; DMI-Q05 is an
+outside-boundary producer with no local gate. No change: the existing question, Id-map,
+acceptance and gap boundaries already state these limits. The reader also noted R10's
+excluded callback draws and supplied-stage boundaries; those existing exclusions remain.
+
+| Hardest entry | Disposition |
+|---|---|
+| V19: callback order, call-time values, placement before strip and ignored final result | No change: the exact call log, physical 5120/coldLength 40 observations, final result 7, subsequent physical 2880/coldLength 0, unchanged list and ownership distinctions already specify each assertion. |
+| V22: signed mulDiv truncation, negative healing and flat absorb limited to negative remaining value | No change: the existing trace gives -102 contribution, -410 remaining, second contribution -410 and final fire 0/heal -512, using NRF-R05's signed arithmetic. No alternative result was reported. |
+| V27: resolved-array selection, missing entry and unchanged stored values | No change: existing arrays, counts, owners and fMin=false definitions are explicit; cases (a)/(c) distinguish 2880/3840 without fallback, while (b) checks the unshifted stored whole-point value before DMI's shift. |
+
+No rule, evidence label, old expected value or gate changed in this triage. The narrow fixture
+additions and explicit shared-class fixture reference require a fresh full reader pass.
+
+## Regeneration reader 2 — full review (2026-10-15)
+
+A different fresh independent reader recomputed all 27 vector families using only the current
+main contract and its named dependencies. Report counts: MISMATCH 0, GUESS 0, GAP 0,
+DISCRIM 0, GATED 4, COVERAGE 6, HARDEST 3. The review required no behavioral correction.
+All remaining advisory entries have the dispositions below; no case was added or changed.
+
+### Documented limits
+
+| Gated group | Disposition |
+|---|---|
+| DMI-Q05 outside-boundary reduction-scale producer | No change: the caller supplies the field; no local arithmetic assertion is blocked. |
+| DMI-Q03 / DMI-Q04 pending runtime checks | No change: negative-field and penalty-growth static results remain available; matching gameplay confirmation is still pending. |
+| V01–V13, V15–V18, V20–V26 supplied-value stage boundaries | No change: the preamble identifies returned stat values and classifications as supplied inputs, and distinguishes whole-entry assertions. These cases do not establish their producers. |
+| V27 supplied-array getter integration | No change: the case exercises reads and mitigation from existing arrays/definitions, without asserting array production or complete gameplay. |
+
+### Advisory coverage findings
+
+| Finding | Disposition |
+|---|---|
+| Shifted flat-reduction overflow | No change: R02 explicitly requires the wrapping i32 shift without an overflow guard. NRF's low-32-bit notation and NRF-V26(f) already distinguish wrapped shift from saturation. V06 exercises positive shifted reduction and the scale guard; V20 exercises the resulting negative-reduction branch. Combining the same specified shift with either existing signed branch adds no missing decision. No exhaustive high-word fixture is claimed. |
+| Event 11 nonmatching entries / null owner | No change: V19 already leaves its event-5 entry uncalled during event 11; IEP-V08(a)/(b) independently cover an all-nonmatching list and absent owner. R03 explicitly routes owner=defender. |
+| Additional per-type fields | No change: the fixed binding table and entry order are recorded in original-image evidence and R06 applies the same operation to each selected entry. Existing cases distinguish physical, fire, cold, magic, poison length and drain policy, including the drain-loop stop. Repeating every numeric fixture for each binding adds no separate operation or outcome. |
+| Resistance-cap combinations above the ceiling | No change: V03(d) now has maximum-stat sum 115, effective resistance 95 and fire 128; it rejects an omitted ceiling. V21 separately covers the negative-cap result after the earlier floor step. No concrete additional branch with a different unspecified outcome was identified. |
+| High-end stat / table inputs | No change: NRF-V25(d)/(g) distinguish getter bounds, NRF-V26 defines minimum metadata and wrapped replacement, and DMI-V27 consumes the supplied getter contract. DMI-V18(e)/(f) cover upper and negative class bounds; V10(d)/(e) cover difficulty beyond 2. Empty prepared difficulty data is explicitly outside the positive-count boundary. The broad suggestion identifies no additional missing input or decision. |
+| Callback record mutation and draws at dispatcher boundary | No change: IEP-V08(c) distinguishes shared-record mutation and insertion during traversal; its base case distinguishes successor removal. IEP-R07 owns callback invocation and does not suppress callback effects. DMI-R03 permits callback writes/draws and R10 excludes them from its no-draw claim. Callback bodies and their seed behavior remain their owners' contracts (NRF-R04c); duplicating them here would expand mitigation's boundary. |
+
+### Hardest material
+
+| Hardest entry | Disposition |
+|---|---|
+| V19 dispatch, strip placement and ignored final result | No change: callback call-time observations and final record outputs distinguish each order, and final dispatcher result 7 distinguishes continuation. The reader recomputed it without a guess. |
+| V26 all three mulDiv call orders | No change: the three caller fixtures give 75001, physical 75840, and fire/heal 60002/40001, with explicit swapped-order alternatives 75000, physical 74998, and fire/heal 60003/40000. No arithmetic discrepancy was reported. |
+| V22 signed negative absorb | No change: its signed truncation and two negative contributions are traced explicitly to final fire 0/heal -512. No missing decision or different computed value was reported. |
+
+This final applicable full pass has MISMATCH 0 and no unresolved GUESS, GAP or DISCRIM.
+The documented boundaries and advisory coverage remain visible. It establishes completion of
+the reader pass for this contract, not user approval, gameplay parity or closure of the pending
+evidence gaps. The document remains draft.
