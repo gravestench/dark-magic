@@ -238,11 +238,11 @@ Assessment date 2026-10-15; reused attempts keep their original dates and limits
 | Question / missing boundary | Evidence assessed / attempted | Result and smallest remaining check |
 |---|---|---|
 | CBL-Q01 monster-condition classification | 2026-10-13 consumer and setter leads; 2026-10-15 complete `0x22A80` read plus narrow setter slices at `0x24FC5`/`0x252D3` in functions `0x24E70`/`0x251F0` | Both slices OR the consumed bit, but their caller/classification/creation eligibility is unread; no monster-kind label follows. Trace their actual dispatch/caller inputs or attribute condition/divisor on observed spawns |
-| CBL-Q02 pair count/order | Current IEP-R01/R03/R05/R07, actual named ItemStatCost cells and callback table | Supplied notification identity/count/order supported; no new table or automatic-notification claim |
+| Pair count/order (settled; folded into CBL-R01) | Current IEP-R01/R03/R05/R07, actual named ItemStatCost cells and callback table | Supplied notification identity/count/order supported; no new table or automatic-notification claim |
 | CBL-Q03 relative order | IEP traversal and historical unperformed CBL-O01/O03 | Static newest-first available; no attributed gameplay sequence exists |
 | CBL-Q04 overlay count and missile conditions | Existing LSE-Q03 search dated 2026-10-14 found readers only; 2026-10-15 shared GDF/overlay contracts, contact transfer and #10623 leaf read | Definition fields or another consumer do not establish collection publication or original rows; incoming conditions not assumed clear. Trace loader publication and owning missile condition producers |
 | CBL-Q05 owner | Historical melee/missile chains, current MHD-R13/MHD-R26, direct `0x3AE10` hand-off | Resolved owner passed as attacker; wider lookup/contact eligibility remains MHD-owned. Consume completed owner contract rather than infer live identity from a stack argument |
-| CBL-Q06 build equivalence | Current evidence-build policy and original-profile records | Closed: no other build is claimed |
+| Build equivalence (evidence-build policy) | Current evidence-build policy and original-profile records | Closed: no other build is claimed |
 | CBL-Q07 other non-queued routes | Current DPO-R13a/R23 and IEP-R14 retaliation suppression | Supplied flag/event behavior fixed, not all call sites' reachability. Complete each producer under its owner |
 | CBL-Q08 messages | Existing local setter/overlay records, current LSE-Q04/NRF-Q17/STL networking limits | No sender/body/delivery contract; do not promote a request to delivery |
 | CBL-Q09 overlay helpers | Compatible LSE-R14/STL-R06a read, retained STL-R06b/STL-R06c/NRF-Q17 gates | Local helper gap closes, original stored integration does not; complete owning attach/write/update contracts |
@@ -502,3 +502,22 @@ The resulting contract retains 15 vector families and 50 explicit cases. The app
 blind-reader stopping condition is met. Original classification, producer, stored-effect,
 notification and gameplay gaps remain visible; the document remains draft and awaits user
 review. This review does not establish gameplay execution, complete parity or approval.
+
+## Specification review spot-check, 2026-10-15
+
+An independent review re-read the original D2Game callback 0xACC30 from entry to its returns,
+the hireling-class predicate D2Common 0x1A2D0 (classes 271, 338, 359, 560 and 561), the
+missile-contact transfer 0x3AE10 (runtime-condition bit 0 ORs damage flag 32 and bit 1 ORs 128,
+with no clearing), the apply-stage dispatch in 0xDE0C0 (result mask 32 clear and hit set;
+queued 5 then 1; non-queued requires flag 32, skips 6 under flag 128, then 2), and the
+nine-entry bonus table at RVA 0xFB614 from the manifest-matching image, `{0,0,50,100,150,200,
+250,300,350}`. These agree with CBL-R02a, CBL-R02b, CBL-R03, CBL-R04a, CBL-R05 to CBL-R08.
+Vectors CBL-V01 to CBL-V11 and CBL-V15 were recomputed from the rules, including the four
+wrapped/fault count cases and the NRF-R01 seed pairs; no mismatch was found.
+
+Hygiene correction: two settled entries were removed from the unconsumed contract's
+open-question table: the registration pair count/order question (answered by CBL-R01 at the
+supplied notification boundary) and the build-equivalence entry (the evidence-build policy,
+not an open question).
+Their gap-assessment rows above remain as dated assessment records. No rule, vector, label or
+gate changed.

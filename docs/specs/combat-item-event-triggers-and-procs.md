@@ -31,7 +31,7 @@ registration; an event dispatch reaches registered callbacks through the same se
 Combat dispatches occur during damage building, mitigation, application and melee completion.
 Other roots are regeneration death, level change, missile contact, and a monster entering its
 dead mode. Each dispatch runs when its caller reaches that point; this is not a periodic scan
-of equipped items. IEP-R09 states relative order; the companion records every binary link.
+of equipped items. IEP-R09a states relative order; the companion records every binary link.
 
 The client sees downstream damage, resource, state and overlay updates. Their messages belong
 to their downstream owners. Producer eligibility and multi-stat notification order remain
@@ -291,9 +291,9 @@ remain IEP-Q09. Ordered callback requests do not establish those effects.
 
 | Output / side effect | Rule |
 |---|---|
-| Entry registration, ordering, immediate/deferred removal | IEP-R01 through IEP-R07, IEP-R13 |
+| Entry registration, ordering, immediate/deferred removal | IEP-R01 through IEP-R07, IEP-R13a |
 | Ordered callback calls, shared record mutations, final result | IEP-R07 |
-| Dispatch requests on named owner/other pairs | IEP-R09 through IEP-R11 |
+| Dispatch requests on named owner/other pairs | IEP-R09a, IEP-R09b, IEP-R10, IEP-R11 |
 | Owner seed advance; victim one-shot entry | IEP-R13b |
 | Retaliation record; ordered apply/reaction requests | IEP-R14 |
 | Replacing resource-stat then overlay requests | IEP-R15 through IEP-R17 |

@@ -30,7 +30,7 @@ Effective file hashes, physical archive attribution and complete overrides remai
 | LOD113C-D2GAME | 0x37190 | none | Create event entry | IEP-R01 | 2026-10-12 disassembly; allocation followed by head insertion; allocator internals outside semantic entry contract |
 | LOD113C-D2GAME | 0x9E290; table 0x1077A8 | none | Resolve selector/create entry; shared callback table | IEP-R02, IEP-R06, IEP-R12a | 2026-10-12 disassembly and original-image table read, 50 words; bounds and null-slot branch to no creation |
 | LOD113C-D2GAME | 0xD9470 | none | Stat-change item registration | IEP-R03 | 2026-10-12 registration block; 2026-10-14 targeted disassembly reread through 0xD955D, before unrelated stat switch |
-| LOD113C-D2GAME | 0x370E0 | none | Find matching item entry | IEP-R03 | 2026-10-12 disassembly; kind, owner key and callback identity match |
+| LOD113C-D2GAME | 0x370E0 | none | Find matching item entry | IEP-R03 | 2026-10-12 disassembly; kind, owner identity and first callback value match (entry +4/+8/+0x0C; the callback pointer +0x14 is not compared). Registration supplies the stat identity as both owner identity and first value, so the match is per stat/layer. Description corrected 2026-10-15 review |
 | LOD113C-D2GAME | 0x37110 | none | Remove matching registrations | IEP-R05 | 2026-10-12 and 2026-10-13 disassembly; immediate versus executing-entry deferred removal |
 | LOD113C-D2GAME | 0x38620 | none | Player setup supplies stat-change callback | IEP-R04, IEP-Q01, IEP-Q02 | 2026-10-14 disassembly and original-image listing, 208 bytes; setup request established, entire notification producer boundary unresolved |
 | LOD113C-D2COMMON | 0x3AF00 | 11166 | Create base stat list with supplied callback/context | IEP-R04 | 2026-10-12 and targeted 2026-10-14 disassembly; writes callback/context; notification traversal not read |
@@ -44,7 +44,7 @@ Effective file hashes, physical archive attribution and complete overrides remai
 | LOD113C-D2GAME | 0x76740 | none | Regeneration death root | IEP-R09a | 2026-10-12 events 10/9; consumes Open Wounds regeneration-death contract |
 | LOD113C-D2GAME | 0xDED30 | none | Melee completion root | IEP-R09a | 2026-10-12 events 7 then 3 with copied record after durability |
 | LOD113C-D2GAME | 0xDE6D0, 0xDDCB0 | none | Two level-change roots | IEP-R09b, IEP-Q05 | 2026-10-12 disassembly; 2026-10-14 original-image listings of 128/304 bytes corroborate event-12 requests; full eligibility/callee integration unresolved |
-| LOD113C-D2GAME | 0x76040 | none | Monster dead-mode event | IEP-R09a, IEP-R13 | 2026-10-12 event 13 after dead mode |
+| LOD113C-D2GAME | 0x76040 | none | Monster dead-mode event | IEP-R09a, IEP-R13a | 2026-10-12 event 13 after dead mode |
 | LOD113C-D2GAME | 0xAD910, 0xAD860 | none | Physical/lightning retaliation | IEP-R08, IEP-R14 | 2026-10-12 disassembly; guards, generated record, apply then reaction |
 | LOD113C-D2GAME | 0xACDA0 | none | Damage taken to mana | IEP-R08, IEP-R15 | 2026-10-12 disassembly; positive/player/resource guards, signed percentage, clamp, write and overlay requests |
 | LOD113C-D2GAME | 0xACBA0 | none | Mana after kill | IEP-R08, IEP-R16 | 2026-10-12 disassembly; player/nonzero guard, raw conversion/clamp and ordered requests |
@@ -375,3 +375,21 @@ binding and observation gaps remain. This does not approve the spec or establish
 Publication self-review also corrected the import table's generic description of Common
 #10973/+0x38B70 to identify the existing-stat getter, consuming the foundations' established
 function record. This reference clarification changes no behavioral rule, fixture or gate.
+
+### Specification review spot-check, 2026-10-15
+
+An independent review re-read the original D2Game disassembly for the dispatcher 0x37030,
+entry creation 0x37190, removal 0x37110, item lookup 0x370E0, selector resolution 0x9E290,
+registration block 0xD9470, callbacks 0xAD910/0xAD860/0xACDA0/0xACBA0/0xACB10/0xACA70/0xAF210,
+and 0xAC910 (reconstruction checked against the original machine code). It re-read the 50-slot callback table at RVA
+0x1077A8 from the manifest-matching D2Game image and scanned the image's code section for
+direct `E8` calls to 0x37030: 16 sites, events 0, 0, 13, 10, 9, 11, 3, 12, 6, 2/1 (shared
+site), 5, 10, 9, 12, 7 and 3; none supplies event 4 or 8. Readings agree with IEP-R01 through
+IEP-R03, IEP-R05, IEP-R07, IEP-R09a, IEP-R10, IEP-R11, IEP-R12a, IEP-R13a, IEP-R13b and
+IEP-R14 through IEP-R18. Every executable vector IEP-V01 through IEP-V14 was recomputed from the
+rules with no mismatch; the NRF-R01 step `{1,0}` to `{0x6AC690C5,0}`, roll 85, was rechecked.
+
+Corrections were reference-only: the 0x370E0 description now names the first callback
+value rather than the callback pointer, and section 5 / this function table cite the split
+sub-ids IEP-R09a/IEP-R09b/IEP-R13a. No rule, vector, label or gate changed, so no new
+blind-implementer run is required by these edits.

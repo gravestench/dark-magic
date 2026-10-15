@@ -11,7 +11,7 @@ Status: draft
 Evidence build: Lord of Destruction Expansion 1.13c
 Foundations: [core-numeric-and-rng-foundations](core-numeric-and-rng-foundations.md); names: [core-game-data-fields](core-game-data-fields.md)
 Ids: CBL-R, CBL-Q, CBL-V, CBL-O; policy in [README conventions](README.md#conventions)
-Evidence: [public companion](../research/spec-evidence/combat-crushing-blow.md).
+Evidence: [companion investigation records](../research/spec-evidence/combat-crushing-blow.md)
 Open evidence gaps: [gap file](../plans/gaps/combat-crushing-blow.md)
 
 ## 1. Scope
@@ -289,11 +289,9 @@ occurs in this callback. Overlay list creation belongs to LSE-R14.
 | Id | Kind / status | Evidence that would settle it |
 |---|---|---|
 | **CBL-Q01** | outside-boundary / open | Monster kinds/creation paths assigning the separate divisor condition. Trace classification through setters and record condition with divisor; no local gate on supplied values. CBL-R04b remains unresolved. |
-| **CBL-Q02** | answered (static) | IEP-R01/IEP-R03 establish one pair and newest-first order at supplied notification; automatic notification is CBL-Q11. |
 | **CBL-Q03** | observation / pending | Attributed gameplay sequence with Crushing Blow, Knockback and Open Wounds registered in known order; static traversal is IEP-R07. |
 | **CBL-Q04** | outside-boundary / open | Overlay-count loader/row identity and original missile-condition/record producers, owned by LSE-Q03/MHD. Supplied values remain usable. |
 | **CBL-Q05** | outside-boundary / open | Complete MHD-R13/MHD-R26 owner lookup/contact eligibility. The hand-off uses its resolved owner; supplied attacker remains eligible locally. |
-| **CBL-Q06** | closed | Evidence and claims cover original Expansion 1.13c only; no other-build equivalence. |
 | **CBL-Q07** | outside-boundary / open | Other non-queued callers' record preparation/eligibility. Their owners establish reachability; supplied event-6 behavior is fixed here. |
 | **CBL-Q08** | outside-boundary / open | Networking owner traces stat/overlay sender, player notification and delivery; this callback sends no message directly. |
 | **CBL-Q09** | integration / open | Stored overlay attach/list writes (STL-R06b/STL-R06c), update effects (NRF-Q17) and propagation. LSE-R14 establishes local search/creation and ordered requests. |
