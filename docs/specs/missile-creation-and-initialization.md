@@ -646,7 +646,7 @@ Each vector is isolated at its named stage unless explicitly stated. All table v
     - Inputs: owner room absent; point (9,9).
     - Draws: none.
     - Outputs: absent creation; no allocation/seeder request.
-  - Discriminates: inclusive bound chooses A in(b); sorting/reversing matching candidates may choose C.
+  - Discriminates: inclusive bound chooses A in (b); sorting/reversing matching candidates may choose C.
   - runtime_observed: no
 
 - **MCI-V14** Registration and movement request order (MCI-R12b/R13a/R18b; boundary: supplied-input stage)
@@ -673,7 +673,7 @@ Each vector is isolated at its named stage unless explicitly stated. All table v
   - Inputs: bucket 1 initially contains [513,129]; supplied type missile.
   - Seeds: no draw.
   - Draws: per independent case below.
-  - Trace: 513>257, then 129<257; splice between. Equality in(b) invokes fatal duplicate assertion. Case (c) compares unsigned 2147483905 > 513 at the head; case (d) reaches the empty tail.
+  - Trace: 513>257, then 129<257; splice between. Equality in (b) invokes fatal duplicate assertion. Case (c) compares unsigned 2147483905 > 513 at the head; case (d) reaches the empty tail.
   - (a)
     - Inputs: new id 257.
     - Draws: none.
@@ -697,7 +697,7 @@ Each vector is isolated at its named stage unless explicitly stated. All table v
   - Inputs: flag 0x400, current path position (10,20), retained point (16,24), final speed 2304, totalRange 30/activationCounter 27, tracking unit at (99,99). No path/seed writes occur.
   - Seeds: no draw.
   - Draws: per independent case below.
-  - Trace: (a)dx 6/dy 4, s=16/d=8, numerator 524288/denominator 36864 =>14. (b)d=0→1,65536/36864=>1. (c)/(d)denominator 0=>0. (e)dx 65535,d=65535,numerator 4294901760/16=>268431360, clamp 32767. (f)wrapped delta INT_MIN negates to itself then clamps 0; d=0→1 =>1. (g)dx 1073741824,s INT_MIN,d-1073741824, low32(d<<16)=0 =>0. Case (h): dx=4, dy=6, s=16, d=8; unsigned 524288/36864=14.
+  - Trace: (a) dx 6/dy 4, s=16/d=8, numerator 524288/denominator 36864 =>14. (b) d=0→1,65536/36864=>1. (c)/(d)denominator 0=>0. (e) dx 65535,d=65535,numerator 4294901760/16=>268431360, clamp 32767. (f) wrapped delta INT_MIN negates to itself then clamps 0; d=0→1 =>1. (g) dx 1073741824,s INT_MIN,d-1073741824, low32(d<<16)=0 =>0. Case (h): dx=4, dy=6, s=16, d=8; unsigned 524288/36864=14.
   - (a)
     - Inputs: shared defaults.
     - Draws: none.
@@ -786,7 +786,7 @@ Each vector is isolated at its named stage unless explicitly stated. All table v
   - Inputs: arithmetic stages only; valid records/units as needed.
   - Seeds: no draw.
   - Draws: per independent case below.
-  - Trace: (a)trunc(-20/8)=-2;8<<8=2048;153600/100=1536. (b)75/100=0. (c)low32(2147483647*75)=2147483573; /100=21474835. (d)negating INT_MIN retains INT_MIN, signed comparison>=100 false; Y0 passes.
+  - Trace: (a) trunc(-20/8)=-2; 8<<8=2048;153600/100=1536. (b) 75/100=0. (c) low32(2147483647*75)=2147483573; /100=21474835. (d) negating INT_MIN retains INT_MIN, signed comparison>=100 false; Y0 passes.
   - (a)
     - Inputs: Vel 10/VelLev 4/level -5/no override.
     - Draws: none.
@@ -888,7 +888,7 @@ Each vector is isolated at its named stage unless explicitly stated. All table v
 - **MCI-O01** Initial speed/max/acceleration (MCI-R05/R07/R20): capture one returned missile's supplied row and level plus final path values; expected arithmetic is MCI-V03/R06 when applicable. [Procedure](../research/spec-evidence/missile-creation-and-initialization.md#mci-o01).
 - **MCI-O02** Seeder boundary (MCI-R10/R30): record game seed immediately around the seeder and initial child writes, then account separately for downstream draws. Expect NRF-R03a's one game step and unstepped child seed. [Procedure](../research/spec-evidence/missile-creation-and-initialization.md#mci-o02).
 - **MCI-O03** Range/loops/elapsed (MCI-R14): capture request and row values and metadata at creation; expect the exact independent clamp arithmetic in MCI-V07/V08. [Procedure](../research/spec-evidence/missile-creation-and-initialization.md#mci-o03).
-- **MCI-O04** Pierce producer/consumer (MCI-R26/MCI-Q02): read owner own-base328 and chance before successive shots, local draw/count requests and resulting missile stat; expect deterministic helper results for each captured input. [Procedure](../research/spec-evidence/missile-creation-and-initialization.md#mci-o04).
+- **MCI-O04** Pierce producer/consumer (MCI-R26/MCI-Q02): read owner own-base 328 and chance before successive shots, local draw/count requests and resulting missile stat; expect deterministic helper results for each captured input. [Procedure](../research/spec-evidence/missile-creation-and-initialization.md#mci-o04).
 - **MCI-O05** Distance rejection (MCI-R08): find a naturally reachable request with a 100-axis delta and compare 99 under equal relevant inputs. Expect early refusal at 100 and acceptance through this gate at 99. [Procedure](../research/spec-evidence/missile-creation-and-initialization.md#mci-o05).
 
 ## 9. Acceptance and dependencies

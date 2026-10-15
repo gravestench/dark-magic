@@ -214,10 +214,10 @@ Search never writes last collision. Type-7 CanDestroy filter bypasses this.
 **MMC-R11** Contact filters [verified in 1.13c code (static)]. Resolve direct creator. For
 present target test NextHit/state 86, then LastCollide equality; either rejection returns 1 with
 no later operations. Next request last-collision update: LastCollide plus present metadata stores
-target type/id; otherwise retain fields. Type gate rejects CT0, accepts only player for CT1,
-only monster for CT2, any type for unsigned CT>=3 (also supplied negative selectors). Then present
+target type/id; otherwise retain fields. Type gate rejects CT=0, accepts only player for CT=1,
+only monster for CT=2, any type for unsigned CT>=3 (also supplied negative selectors). Then present
 owner requires hostility or CollideFriend; absent owner skips this test. Failures return 1.
-Type/hostility-refused targets can become last collision. CT1 finds a tier-2 monster but rejects
+Type/hostility-refused targets can become last collision. CT=1 finds a tier-2 monster but rejects
 it at contact, ending this frame's scan while continuing the missile.
 
 **MMC-R12** Pierce.
@@ -490,7 +490,7 @@ separately from verified local requests.
   - (g) Inputs: CT=2,room R present,path absent at this collision stage. Draws: none.
     Outputs: result 2,Remove,no query/Contact. This stage fixture does not assert safe absent-path
     entry into earlier movement code.
-  - Discriminates: wall-bit gate before CT6,CT0 before room,activation equality,CT4 silent removal.
+  - Discriminates: wall-bit gate before CT=6,CT=0 before room,activation equality,CT=4 silent removal.
   - runtime_observed: no
 
 - **MMC-V06** First cell/barrier result (MMC-R09a; boundary: supplied-input stage)
@@ -548,16 +548,16 @@ separately from verified local requests.
   - Trace: search accepts tier 2; contact early gates pass,last becomes (1,7),players-only gate rejects.
   - Outputs: search=1,Contact(T,0)=1,last=(1,7),no cooldown/event/hit/damage/footprint/Remove,
     no later-cell scan.
-  - (a) Inputs: CT2,NextHit1,state 86 active,last=(1,8). Draws: none. Outputs: search 0,direct
+  - (a) Inputs: CT=2,NextHit=1,state 86 active,last=(1,8). Draws: none. Outputs: search 0,direct
     contact 1,last unchanged,no event.
-  - (b) Inputs: CT2,NextHit0,LastCollide1,last=(1,7). Draws: none. Outputs: search 0,direct
+  - (b) Inputs: CT=2,NextHit=0,LastCollide=1,last=(1,7). Draws: none. Outputs: search 0,direct
     contact 1,no last write/event/hit.
-  - (c) Inputs: CT2,state 86 absent,LastCollide1,last=(1,8),owner P,hostility=false,CollideFriend0.
+  - (c) Inputs: CT=2,state 86 absent,LastCollide=1,last=(1,8),owner P,hostility=false,CollideFriend=0.
     Draws: none. Outputs: search 0; independent direct contact 1 after last=(1,7). Independent
-    CollideFriend1 with same entering last=(1,8): search 1,contact passes gates.
-  - (d) Inputs: CT7,type 3 candidate with valid CanDestroy1 row,eligibility conditions false,
-    state 86 active,NextHit1. Draws: none. Outputs: search 1,bypassing shared filter. Independent
-    CanDestroy0: search 0.
+    CollideFriend=1 with same entering last=(1,8): search 1,contact passes gates.
+  - (d) Inputs: CT=7,type 3 candidate with valid CanDestroy=1 row,eligibility conditions false,
+    state 86 active,NextHit=1. Draws: none. Outputs: search 1,bypassing shared filter. Independent
+    CanDestroy=0: search 0.
   - (e) Inputs: CT=2,candidate T type 1/mode 1,state 86 absent,owner absent; independent
     (candidateEligibleA=false,candidateEligibleB=true) and (true,false). Draws: none.
     Outputs: each search 0 before cooldown/last/hostility tests; no metadata write.
@@ -565,12 +565,12 @@ separately from verified local requests.
     owner absent,Explosion=1,CollideKill=0,ToHit=0,NextHit=0. Draws: none. Trace: last-collision
     compare/write guards skip absent metadata; type gate accepts. Outputs:
     [Event(0,T,missile,null,0,0)],result 1,no last-collision write,no damage/footprint/Remove.
-  - Discriminates: CT1 search/contact mismatch,last write before later rejection,early rejection
-    before mutation,CT7 bypass.
+  - Discriminates: CT=1 search/contact mismatch,last write before later rejection,early rejection
+    before mutation,CT=7 bypass.
   - runtime_observed: no
 
 - **MMC-V09** Local pierce seed/storage boundary (MMC-R12a/MMC-R12b/MMC-R12c/MMC-R17; boundary: supplied-input stage)
-  - Inputs: source type 0,missile type 3,Pierce1,source own-base328=0; chance=source 156+166 as
+  - Inputs: source type 0,missile type 3,Pierce=1,source own-base 328=0; chance=source 156+166 as
     independently supplied below; source/missile/game seeds {1,0}.
   - Seeds: local starts {0,666}.
   - Draws: ordered reached steps (local,modulus 100): {lo 666,hi 0}->66;
@@ -584,16 +584,16 @@ separately from verified local requests.
   - (b) Inputs: five supplied sequential contacts with present direct owner P(type 0,id 1),
     valid missile owner link resolving P,and five present eligible type 1 targets T1..T5;
     supplied hostility(P,each target)=true. Entering count 4,current owner 166=67,156=0,
-    Pierce1,CollideKill1,Explosion1,no hit handler; supplied replacing operation persists counts.
-    Draws: none. Trace: four decrements set stopMask2; fifth sees 0/stopMask3. Outputs: replacing
+    Pierce=1,CollideKill=1,Explosion=1,no hit handler; supplied replacing operation persists counts.
+    Draws: none. Trace: four decrements set stopMask=2; fifth sees 0/stopMask=3. Outputs: replacing
     log [328=3,328=2,328=1,328=0],contact results [1,1,1,1,2],Remove only fifth. Actual engine
     persistence remains gated MMC-R12c.
   - (c) Inputs: independent present direct owner P(type 0,id 1),valid missile owner link resolving P,
     present eligible type 1 target T,supplied hostility(P,T)=true,count 4,current owner 156=166=0,
-    Pierce1,CollideKill1,Explosion1.
+    Pierce=1,CollideKill=1,Explosion=1.
     Draws: none. Outputs: no count read/write,result 2,Remove despite entering count 4.
   - (d) Inputs: independent present direct owner P(type 0,id 1),valid missile owner link resolving P,
-    present eligible type 1 target T,hostility(P,T)=true,Pierce1,CollideKill1,Explosion1,
+    present eligible type 1 target T,hostility(P,T)=true,Pierce=1,CollideKill=1,Explosion=1,
     owner 166=0,owner 156=67,missile 328=-1. Draws: none. Trace: zero skill component falls back to
     item component; nonzero negative count decrements. Outputs: request missile 328=-2/layer 0,
     stopMask=2,result 1,no footprint/Remove; actual stored count remains gated.
@@ -606,25 +606,25 @@ separately from verified local requests.
   - runtime_observed: no
 
 - **MMC-V10** Hand-off/final results (MMC-R13/MMC-R14/MMC-R15/MMC-R17; boundary: supplied-input stage)
-  - Inputs: default target T(type 1,id 7),owner absent,NextHit0,no event callbacks; all supplied
+  - Inputs: default target T(type 1,id 7),owner absent,NextHit=0,no event callbacks; all supplied
     operations have no draw. Hit selector 1 exists only where explicitly stated below.
   - Seeds: no local draw; dependency results supplied.
   - Draws: none in this supplied model.
   - Trace: initial act,to-hit branch,event/hit replacement,damage mask,finish,outer dispatcher.
-  - (a) Inputs: ToHit1,missile 19=25,hit=false,AlwaysExplode0,CollideKill0. Outputs:
+  - (a) Inputs: ToHit=1,missile 19=25,hit=false,AlwaysExplode=0,CollideKill=0. Outputs:
     [HitRoll(null,T,25,1)=false,Event(0,T,missile,null,0,0),Remove]; final 2,no hit/damage/footprint.
-  - (b) Inputs: ToHit1,missile 19=25,hit=false,AlwaysExplode1,hit selector 1 returns 4. Outputs:
+  - (b) Inputs: ToHit=1,missile 19=25,hit=false,AlwaysExplode=1,hit selector 1 returns 4. Outputs:
     [HitRoll(null,T,25,1)=false,Event(0,T,missile,null,0,0),Hit(T)=4]; final 1,no damage/footprint/Remove.
-  - (c) Inputs: ToHit0,Explosion0,CollideKill0,hit/damage selector 0. Outputs:
+  - (c) Inputs: ToHit=0,Explosion=0,CollideKill=0,hit/damage selector 0. Outputs:
     [Event(0,T,missile,null,0,0),Fill(T),Apply(T)]; final 1,no Remove.
-  - (d) Inputs: Explosion1,CollideKill1,hit selector 0. Outputs:
+  - (d) Inputs: Explosion=1,CollideKill=1,hit selector 0. Outputs:
     [Event(0,T,missile,null,0,0),Footprint(R,10,10,1,64),Remove]; final 2,no damage.
-  - (e) Inputs: Explosion1,CollideKill1,hit selector 1 returns 2,damage selector 1 returns 99.
+  - (e) Inputs: Explosion=1,CollideKill=1,hit selector 1 returns 2,damage selector 1 returns 99.
     Outputs: [Event(0,T,missile,null,0,0),Hit(T)=2,Fill(T),Damage1(T)=99,Apply(T)]; final 1,
     no footprint/Remove. Handler replaces initial stop mask; damage result ignored.
-  - (f) Inputs: target absent,force 1,Explosion0,hit selector 1 returns 0. Outputs:
+  - (f) Inputs: target absent,force 1,Explosion=0,hit selector 1 returns 0. Outputs:
     [Event(0,null,missile,null,0,0),Hit(null)=0,Footprint(R,10,10,1,64),Remove]; no damage,final 2.
-    Independent absent target,force 0,AlwaysExplode0,CollideKill0: final 1,log [].
+    Independent absent target,force 0,AlwaysExplode=0,CollideKill=0: final 1,log [].
   - (g) Inputs: direct contact stage,target absent,force=1,room absent,Explosion=0,hit selector=0.
     Draws: none. Outputs: [Event(0,null,missile,null,0,0),Remove],final result 2,no footprint request.
   - Discriminates: miss abort permits continuing,main hit replaces act,damage result ignored,
@@ -632,17 +632,17 @@ separately from verified local requests.
   - runtime_observed: no
 
 - **MMC-V11** Cooldown requests/failure (MMC-R16/MMC-R17; boundary: supplied-input stage)
-  - Inputs: target T(type 1,id 7),NextHit1,NextDelay15,frame 1000,allocation returns fresh L,
+  - Inputs: target T(type 1,id 7),NextHit=1,NextDelay=15,frame 1000,allocation returns fresh L,
     no state 86 at entry.
   - Seeds: no draw.
   - Draws: none.
   - Trace: expiry=1000+15=1015; allocation gates later operations.
   - Outputs: [Allocate(type 2,owner 1/7,1015)=L,Schedule(T,12,1015,null,0,0),ListState(L,86),
     ListCallback(L,contactExpiry),Attach(T,L,1),State(T,86,true)]. Stored attach/expiry not asserted.
-  - (a) Inputs: targetT,NextHit1,NextDelay15,frame 1000,allocation absent. Draws: none.
+  - (a) Inputs: target T,NextHit=1,NextDelay=15,frame 1000,allocation absent. Draws: none.
     Outputs: [Allocate(type 2,owner 1/7,1015)=null],no later requests.
-  - (b) Inputs: NextHit0,targetT. Draws: none. Outputs: []; independent NextHit1,target absent: [].
-  - (c) Inputs: second missile NextHit1,targetT with supplied persisted active state 86=true.
+  - (b) Inputs: NextHit=0,target T. Draws: none. Outputs: []; independent NextHit=1,target absent: [].
+  - (c) Inputs: second missile NextHit=1,target T with supplied persisted active state 86=true.
     Draws: none. Outputs: search rejects/direct contact 1 before arming; actual persistence/expiry
     at 1015 remain MMC-Q09.
   - (d) Inputs: target T(type 1,id 7),NextHit=1,NextDelay=0,frame=1000,allocation returns fresh L.

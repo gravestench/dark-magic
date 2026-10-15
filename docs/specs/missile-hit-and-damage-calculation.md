@@ -251,7 +251,7 @@ Defaults apply independently to each case: missile kind 3, valid supplied defini
     - Trace: same-target predicate passes exclusion.
     - Outputs: return 1, saved kind 1/id 7 unchanged, no later calls.
   - (c)
-    - Inputs: target monster id 8, LastCollide=1, saved kind 1/id 7; owner reference valid and supplied creator player C; hostility supplied false, CollideFriend0.
+    - Inputs: target monster id 8, LastCollide=1, saved kind 1/id 7; owner reference valid and supplied creator player C; hostility supplied false, CollideFriend=0.
     - Seeds: no draw.
     - Draws: none.
     - Trace: new kind 1/id 8 saved before false hostility refuses.
@@ -298,7 +298,7 @@ Defaults apply independently to each case: missile kind 3, valid supplied defini
     - Inputs: target monster id 7; owner absent; ToHit=1, missile 19=50; NextHit=1, NextDelay=10; allocator failure; event 0 supplied returns 99; AlwaysExplode=0, CollideKill=1.
     - Seeds: no draw.
     - Draws: none.
-    - Trace: hit roll called with absent attacker, defender 7, bonus 50,isMissile1 ->0 before any draw; cooldown allocation fails; event 0 runs next, result ignored.
+    - Trace: hit roll called with absent attacker, defender 7, bonus 50,isMissile=1 ->0 before any draw; cooldown allocation fails; event 0 runs next, result ignored.
     - Outputs: return 2; ordered log hit-roll, allocate(type 2,owner 1/7,expiry 1010), event 0(target 7,other missile,record absent); no timer/state/attach request, no fill/callback/footprint.
   - (b)
     - Inputs: case a independently with AlwaysExplode=1, hit selector 1 and supplied hit callback returns 4.
@@ -362,16 +362,16 @@ Defaults apply independently to each case: missile kind 3, valid supplied defini
 - **MHD-V14** Magic/cold seed order (MHD-R23b/MHD-R23f; boundary: isolated rule)
   - (a)
     - Inputs: fill only; target absent; stats 52=256,53=512,54=100,55=300; all other pairs/masteries zero.
-    - Seeds: missile{1,0x29A}.
+    - Seeds: missile {1,0x29A}.
     - Draws: missile/256/95, then missile/200/131.
-    - Trace: first lo0x6AC6935F gives magic 351; second lo0x2F2ED81B gives cold 231.
-    - Outputs: magic 351,cold 231, all other damage/length/drain/flags 0; seed{0x2F2ED81B,0x2C890AFD}.
+    - Trace: first lo 0x6AC6935F gives magic 351; second lo 0x2F2ED81B gives cold 231.
+    - Outputs: magic 351,cold 231, all other damage/length/drain/flags 0; seed {0x2F2ED81B,0x2C890AFD}.
   - (b)
     - Inputs: case a independently, except 357=50.
-    - Seeds: missile{1,0x29A}.
+    - Seeds: missile {1,0x29A}.
     - Draws: missile/384/351, then missile/200/131.
     - Trace: magic endpoints 384/768,384+351=735; cold 231.
-    - Outputs: magic 735,cold 231, other fields 0; seed{0x2F2ED81B,0x2C890AFD}.
+    - Outputs: magic 735,cold 231, other fields 0; seed {0x2F2ED81B,0x2C890AFD}.
   - Discriminates: magic 735 rejects scaling the already rolled 351; ordered seed outputs reject cold-first evaluation.
   - runtime_observed: no
 
@@ -380,7 +380,7 @@ Defaults apply independently to each case: missile kind 3, valid supplied defini
     - Inputs: fill only, stats 59=200,326=3,56=12,60=20,62=30,64=40,315=50,66=60.
     - Seeds: no draw.
     - Draws: none.
-    - Trace:200/3 truncates 66; other terms copied.
+    - Trace: 200/3 truncates 66; other terms copied.
     - Outputs: poisonLength=66,coldLength=12,lifeLeech=20,manaBurn=30,staminaBurn=40,burnLength=50,stunLength=60; all damage/flags 0.
   - (b)
     - Inputs: fill only, stats 59=200,326=1.
@@ -392,9 +392,9 @@ Defaults apply independently to each case: missile kind 3, valid supplied defini
     - Inputs: fill only, stats 59=-7,326=2.
     - Seeds: no draw.
     - Draws: none.
-    - Trace:-7/2 truncates toward 0.
-    - Outputs: poisonLength-3, other fields 0.
-  - Discriminates: case c rejects floor division producing-4.
+    - Trace: -7/2 truncates toward 0.
+    - Outputs: poisonLength -3, other fields 0.
+  - Discriminates: case c rejects floor division producing -4.
   - runtime_observed: no
 
 - **MHD-V16** Damage callback bounds and mutable record (MHD-R25a/MHD-R25c; boundary: supplied-input stage starting at damage fill after contact callbacks)
@@ -408,13 +408,13 @@ Defaults apply independently to each case: missile kind 3, valid supplied defini
     - Inputs: case a independently with damage selector 15.
     - Seeds: no draw.
     - Draws: none.
-    - Trace:15 is positive and below 31 but null.
+    - Trace: 15 is positive and below 31 but null.
     - Outputs: physical 100 filled, null-call fault before hand-off/final return.
   - (c)
     - Inputs: case a independently with damage selector 31.
     - Seeds: no draw.
     - Draws: none.
-    - Trace:31 out of range.
+    - Trace: 31 out of range.
     - Outputs: same as a, no callback.
   - (d)
     - Inputs: case a independently with selector 1, supplied callback sets physical 123 and returns 4.
@@ -430,13 +430,13 @@ Defaults apply independently to each case: missile kind 3, valid supplied defini
     - Inputs: armor stage after direct apply; target monster class 5, stat 31=100; missile 120=-30; supplied writer persists.
     - Seeds: no draw.
     - Draws: none.
-    - Trace:100-30=70, nonnegative.
+    - Trace: 100-30=70, nonnegative.
     - Outputs: replace(target,31,layer 0,value 70); fixture armor 70.
   - (b)
     - Inputs: case a independently except 120=-150.
     - Seeds: no draw.
     - Draws: none.
-    - Trace:100-150=-50 floored 0.
+    - Trace: 100-150=-50 floored 0.
     - Outputs: replace 31/0; fixture armor 0.
   - (c)
     - Inputs: fresh target monster class 271,armor 100,missile 120=-30.
@@ -465,22 +465,22 @@ Defaults apply independently to each case: missile kind 3, valid supplied defini
 - **MHD-V19** Fill boundaries, relation and critical (MHD-R23a/MHD-R23b/MHD-R23c/MHD-R23d/MHD-R23e/MHD-R23f; boundary: supplied-input stage)
   - (a)
     - Inputs: fill only, target absent, every pair 21/22,48/49,52/53,50/51,54/55,57/58,316/317=1/101; incoming record all semantic fields 99; masteries/other stats 0.
-    - Seeds: missile{1,0}.
+    - Seeds: missile {1,0}.
     - Draws: missile/100/85,9,72,62,66,6,47 in physical/fire/magic/lightning/cold/poison/burn order.
     - Trace: each pair adds 1 to its draw; incoming fields zeroed before fill.
-    - Outputs: physical 86,fire 10,magic 73,lightning 63,cold 67,poison 7,burnMagnitude=48; all other fields 0; seed{0xEEA0F793,0x5A0CC847}.
+    - Outputs: physical 86,fire 10,magic 73,lightning 63,cold 67,poison 7,burnMagnitude=48; all other fields 0; seed {0xEEA0F793,0x5A0CC847}.
   - (b)
     - Inputs: fill only, physical 21=22=100; target valid monster with demon and undead true, monsterTypeIndex=2, typeCount=5; missile 25=-200,121=20,122=30; missile list usesResolvedStats=true, resolvedStats stat 180 entries(layer 1,value 10),(layer 2,value 90); relation(2,1)=true,relation(2,2)=false; missile 141=1,103=104=106=1.
     - Seeds: no draw.
     - Draws: none.
-    - Trace: pct=-200+20+30+10=-140 ->-90; physical 100-90=10, critical doubles 20.
+    - Trace: pct=-200+20+30+10=-140 -> -90; physical 100-90=10, critical doubles 20.
     - Outputs: physical 20,resultFlags=8192,flags 1792; other fields 0.
   - (c)
     - Inputs: fill only, target absent, fire 48=5,49=9,329=-200; other pairs 0.
-    - Seeds: missile{1,0}.
+    - Seeds: missile {1,0}.
     - Draws: none.
-    - Trace: adjusted min5-10=-5,max9-18=-9,range-4; Rand returns 0.
-    - Outputs: fire-5,other fields 0; seed{1,0} unchanged.
+    - Trace: adjusted min 5-10=-5,max 9-18=-9,range -4; Rand returns 0.
+    - Outputs: fire -5,other fields 0; seed {1,0} unchanged.
   - (d)
     - Inputs: fill only, target present with no demon/undead/type bonus; physical 21=22=1073741824,25=4.
     - Seeds: no draw.
@@ -489,16 +489,16 @@ Defaults apply independently to each case: missile kind 3, valid supplied defini
     - Outputs: physical 1073741824,other fields 0.
   - (e)
     - Inputs: fill only, target absent; physical stats 21=12,22=8; fire stats 48=9,49=5; all other stats 0.
-    - Seeds: missile{1,0}.
+    - Seeds: missile {1,0}.
     - Draws: missile/4/1 for physical, then missile/4/1 for fire.
     - Trace: original physical endpoints swap to 8/12 ->9; fire endpoints swap to 5/9 ->6.
-    - Outputs: physical 9,fire 6,other fields 0; seed{0x669A3799,0x2C8909E7}.
+    - Outputs: physical 9,fire 6,other fields 0; seed {0x669A3799,0x2C8909E7}.
   - (f)
     - Inputs: fill only, target absent; physical stats 21=0,22=10; fire stats 48=0,49=9; all other stats 0.
-    - Seeds: missile{1,0}.
+    - Seeds: missile {1,0}.
     - Draws: none.
     - Trace: each positive max is read, then the zero min refuses the range before any draw.
-    - Outputs: every record field 0; seed{1,0} unchanged.
+    - Outputs: every record field 0; seed {1,0} unchanged.
   - (g)
     - Inputs: fill only; physical stats 21=22=100; target monster with no demon/undead bonus, monsterTypeIndex=2,typeCount=3; missile list usesResolvedStats=true; resolvedStats stat 180 entries(layer 0,value 90),(layer 1,value 10),(layer 3,value 100); relation(2,1)=true, other valid relation cells false.
     - Seeds: no draw.
@@ -554,12 +554,12 @@ Defaults apply independently to each case: missile kind 3, valid supplied defini
     - Seeds: no draw.
     - Draws: none.
     - Trace: preset result 8197; defender code 0 preserves hit; hitClass=3 OR32=35, reservedCondition=1; double physical 200; source flags 160; reductionScale=7; process sees hit, then clears it; result call still occurs.
-    - Outputs: log block(owner C,target 7,blockEnable1,missile 1,word 8197),double(C,target 7,physical 100,hitClass=35,reservedCondition=1),process(C,target 7,flag 1,physical 200,flags 160,reductionScale=7,word 8197),results(C,target 7,word 8196); final physical 200,resultFlags=8196,hitClass=35,reservedCondition=1,flags 160,reductionScale=7.
+    - Outputs: log block(owner C,target 7,blockEnable=1,missile 1,word 8197),double(C,target 7,physical 100,hitClass=35,reservedCondition=1),process(C,target 7,flag 1,physical 200,flags 160,reductionScale=7,word 8197),results(C,target 7,word 8196); final physical 200,resultFlags=8196,hitClass=35,reservedCondition=1,flags 160,reductionScale=7.
   - (b)
     - Inputs: direct apply only, owner reference valid/creator C found,target 7,state 54=false; GetHit=0,SoftHit=0,KnockBack=0,HitClass=0; incoming physical 100,resultFlags=0,hitClass=0,reservedCondition=9; source flags false,327=0; supplied defender code 1; double no mutation; result consumer logs.
     - Seeds: no draw.
     - Draws: none.
-    - Trace: preset 1; code 1 with GetHit=0/KB0 rewrites to soft 16384 and discards code; class 0 leaves reservedCondition=9; process skipped.
+    - Trace: preset 1; code 1 with GetHit=0/KnockBack=0 rewrites to soft 16384 and discards code; class 0 leaves reservedCondition=9; process skipped.
     - Outputs: resultFlags=16384,hitClass=0,reservedCondition=9,physical 100; ordered block,double,results; no process.
   - Discriminates: a rejects results skipped after process clears hit or stale record copies; b rejects ORing block 16 after the soft rewrite and rejects clearing reservedCondition when class has no high-nibble bit.
   - runtime_observed: no
@@ -591,7 +591,7 @@ Defaults apply independently to each case: missile kind 3, valid supplied defini
     - Inputs: lookup only, game present,owner kind 1,id 130; selected bucket 2 chain[(id 2,A),(id 130,B),(id 130,C)].
     - Seeds: no draw.
     - Draws: none.
-    - Trace:130 AND127=2; first node mismatches, second matches.
+    - Trace: 130 AND 127=2; first node mismatches, second matches.
     - Outputs: creator B; no chain mutation/draw.
   - (b)
     - Inputs: target monster 7,contact selection 1,LastCollide=1,saved 0/9.

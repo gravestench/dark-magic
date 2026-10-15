@@ -125,7 +125,7 @@ These dependencies prevent a universal unchanged-stat/no-draw claim.
 Critical helper `0x6B180` reads a chance then performs unsigned `mul`/carry and unsigned
 `div 100` on the new low word, retaining the high word in the seed. The first two comparisons
 use signed `jl` for success; the third uses signed `jge` for failure. This establishes the
-signed-chance interpretation independently of the unsigned remainder operation. Chance141
+signed-chance interpretation independently of the unsigned remainder operation. Chance 141
 and third chance test nonzero before stepping, so a negative nonzero chance still consumes
 its draw and fails the signed comparison with a nonnegative remainder. A success exits
 before reading any subsequent chance. The initial null-unit check only supplies chance 0;
@@ -175,10 +175,10 @@ newly claimed. Dependency text names retain the manifest/GDF/SLD source-profile 
 
 ### Parameter layout mapping for independent binary inspection
 
-Original block dword 0 holds flags 1 sourcePhysical,2 critical,4 secondaryMarker,
-0x100/0x200/0x400 bypass conditions. Dwords 1/2 are physical endpoints;3/4/5 fire endpoints
-and fireLength;6/7 lightning;8/9 magic;10/11/12 cold and coldLength;13/14/15 poison and
-poisonLength;16 poisonCount;17/18 life drain;19/20 mana drain;21/22 stamina drain;
+Original block dword 0 holds flags 1 sourcePhysical, 2 critical, 4 secondaryMarker,
+0x100/0x200/0x400 bypass conditions. Dwords 1/2 are physical endpoints; 3/4/5 fire endpoints
+and fireLength; 6/7 lightning; 8/9 magic; 10/11/12 cold and coldLength; 13/14/15 poison and
+poisonLength; 16 poisonCount; 17/18 life drain; 19/20 mana drain; 21/22 stamina drain;
 23 stunLength;24/25/26 burn and burnLength;27/28/29/30 stat 121/stat 122/stat 120/physical
 percent. Store calls map these fields exactly as the spec's ordered table. The duplicate
 stat 315 requests occur at the fireLength and burnLength positions. This binary fixture
@@ -209,14 +209,14 @@ shared file was changed by this writing pass.
 Specific corrections, with source rationale:
 
 - The original R05 list omitted selector 12. Full mastery byte/pointer tables establish
-  the same cold-stat331 branch as selector 4. V10 now discriminates both.
+  the same cold-stat 331 branch as selector 4. V10 now discriminates both.
 - The original endpoint summary implied an absent missile always yielded a fallback level 0.
   All four entry guards show absence leaves the supplied level untouched; present missile
   with absent data gives 0. Existing numeric vectors are unaffected; V08 separates the cases.
 - The original R04 opening and later selector entries relied on undecoded bytes/a decompiler
   lead. Full original image and data reads supply those instructions and table targets;
   selection is now verified with supplied endpoint operations and their dependency gates.
-- The original R12 said the second 315 write replaces the element-type1 length. The
+- The original R12 said the second 315 write replaces the element-type 1 length. The
   verified fact is two replacing requests, including a possible later zero. Propagation is
   still gated; V05/V06's stored-stat assertions are preserved as integration expectations,
   not promoted by their verified flag/seed/request assertions.
@@ -238,7 +238,7 @@ V01: `7+4=11`, `3+11=14`, shifted 3584. V02: supplied 50 adds 7 before shifting 
 supplied 0 returns 3584. V03 retains the twelve outputs
 `0,0,1,7,9,23,26,41,45,65,70,75`. V04 retains 25/25/60/63/84/88.
 V05 retains mask 5→undead/beast, with stat 103/106 requests 1 and no 104 request.
-V06 source `{1,666}` first widened product is `0x6AC6935F`, giving high0/remainder 51;
+V06 source `{1,666}` first widened product is `0x6AC6935F`, giving high 0/remainder 51;
 second is `0x2C890AFD2F2ED81B`, giving remainder 31; third is
 `0x13ADFE65280687C4`, remainder 12. Two-draw success's final seed remains
 `{0x2F2ED81B,0x2C890AFD}`; one-draw failure ends `{0x6AC6935F,0}`.

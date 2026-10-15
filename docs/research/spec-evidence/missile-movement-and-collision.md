@@ -46,7 +46,7 @@ embedded bytes were corroborated against the original image as described below.
 | LOD113C-D2COMMON | `0x3BA20` / 10383; `0x3BA60` | Stored room collection/bounds copy | MMC-R09b | Byte-checked reconstructions read 2026-10-15; stored array/count and bounds, no sort/discovery inferred |
 | LOD113C-D2COMMON | `0x30F80` / 10589 | Unit size selection | MMC-R09b/MMC-Q04 | Byte-checked reconstruction read 2026-10-15; player/monster/missile cases, underlying class-record production retains gate |
 | LOD113C-D2COMMON | `0x347C0` / 10214 | Recorded-cell accessor | MMC-R05c/MMC-R09a | Byte-checked reconstruction 2026-10-15; recording-condition assertion then stored list/count |
-| LOD113C-D2COMMON | `0x36030` / 11003; `0x34F80` | Fresh type-3 allocation/path selector writes | MMC-R05c | Directed allocation listing and full 192-byte selector original-image check 2026-10-15; entry 4 at table RVA `0x94180` is `0x60000`,setting both conditions; later planner effects remain gated |
+| LOD113C-D2COMMON | `0x36030` / 11003; `0x34F80` | Fresh type-3 allocation/path selector writes | MMC-R05c | Directed allocation listing and full 192-byte selector original-image check 2026-10-15; entry 4 (table base RVA `0x94180`, entry at `0x94190`) is `0x60000`,setting both conditions; later planner effects remain gated |
 | LOD113C-D2COMMON | `0x6A270` / 10737; `0x6A6D0` / 10970; `0x6A030` / 10130 | Remaining read/clamped write/activation read | MMC-R06/MMC-R07 | Remaining byte-checked reconstruction and setter listing 2026-10-15; activation compatible 2026-10-12 record |
 | LOD113C-D2COMMON | `0x6A130` / 10227; `0x6A1B0` / 10024 | Last-collision compare/write | MMC-R10/MMC-R11 | Full listings 2026-10-15; valid missile/row/flag/metadata guards; direct identity writes |
 | LOD113C-D2COMMON | `0x35BA0` / 11009 | Stationary collision cache | MMC-R07 | Full listing 2026-10-15; speed-zero query with mask 32767 and word store; actual query integration open |
@@ -118,7 +118,7 @@ room-list and map creation remain integrations.
    are local tracer outputs, not proof of the outer path-step's return/publication.
 7. Direction scale now consumes the current verified NRF-R11a/b/MCI supplied-input contracts;
    actual planner production remains gated. Strict greater-than clamp and later zero-speed skip
-   retain source behavior. Source own-base328 is distinct from selected aggregate 328.
+   retain source behavior. Source own-base 328 is distinct from selected aggregate 328.
 8. Numeric mask consumers are established; complete terrain/player/monster map-writer meanings,
    recurring queue order and owner seed producer were not closed by a label or data name.
    Other builds remain outside the evidence profile.
@@ -163,7 +163,7 @@ shown by callers; presence of these names in text does not define arithmetic or 
 | Question | Attempt/result on 2026-10-15 |
 |---|---|
 | MMC-Q01 | Reused MCI allocation/planner records; read `0x36030` type-3 branch,`0x34F80` and original table entry 4=`0x60000`,closing initial two writes. Directed `0x36230`/`0x35780` leaves later planner/retention integration open |
-| MMC-Q02 | Reused MCI own-base328 writer assessment and stat-reader contract; verified local pierce helper. Missile decrement is not an owner seed producer; no universal threshold inferred |
+| MMC-Q02 | Reused MCI own-base 328 writer assessment and stat-reader contract; verified local pierce helper. Missile decrement is not an owner seed producer; no universal threshold inferred |
 | MMC-Q03 | Reused MCI event association; read `0x8E9A0` walker and no-callback dispatch. Recurring production/requeue/order not established; partial root search does not prove absence |
 | MMC-Q04 | Read path-step/advance/normalizer/trace/CheckMove; checked query/size/room accessors and original bytes/tables. Nested query/map/position/reset/destruction paths remain incomplete,so actual effects gated |
 | MMC-Q05 | Compared numeric masks and creation footprint request with current GDF/MCI; no complete terrain/player/monster writer chain. Keep numerical descriptions |
@@ -179,7 +179,7 @@ shown by callers; presence of these names in text does not define arithmetic or 
 Use a Normal Amazon able to fire ordinary arrows with Pierce,recording class/character/skill
 levels,gear and actual chance contributions. Stand in a safe Blood Moor area; fire separated
 shots for chance 60,70 and zero control using natural available setups. At creation record source
-own-base328 and selected 156/166,then local seed/draws/count-write request in Game `0x6F660`;
+own-base 328 and selected 156/166,then local seed/draws/count-write request in Game `0x6F660`;
 read actual missile 328 afterward. Compare full seed pairs and count against MMC-V09. At later
 contacts record current owner stats,missile count,decrement requests and final dispatcher result.
 Repeated identical counts do not prove the owner seed producer; a readback discrepancy calls

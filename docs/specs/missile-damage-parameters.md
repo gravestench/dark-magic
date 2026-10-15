@@ -222,8 +222,8 @@ All cases have `runtime_observed: no`. Unspecified fields and stats are 0; sourc
   - Outputs: per case
   - Discriminates: shifting before synergy or treating zero as an added base
   - runtime_observed: no
-  - (a) Inputs: p50. Draws: none. Outputs: `14+7=21`, endpoint 5376; one evaluation with context `(M,S,0,10)`.
-  - (b) Inputs: p0. Draws: none. Outputs: endpoint 3584; one evaluation, no percentage addition.
+  - (a) Inputs: p=50. Draws: none. Outputs: `14+7=21`, endpoint 5376; one evaluation with context `(M,S,0,10)`.
+  - (b) Inputs: p=0. Draws: none. Outputs: endpoint 3584; one evaluation, no percentage addition.
   - (c) Inputs: minimum base 100001, all increments 0, L1, HitShift 0, supplied p 65537. Draws: none. Trace: `mulDiv(65537,100001,100)` takes the first-operand-large divide-first branch: `655*100001=65500655`; add base 100001. Outputs: endpoint 65600656; logged percentage arguments `(65537,100001,100)`. Reversing operands would produce 65637001 and fails this assertion.
   - (d) Inputs: direct R01b front-end calls with class 0, missile stored level 10, valid pool/reference 0, supplied evaluator returns 73; independent requested L-1 and L0. Draws: none. Outputs: 73 in each case; evaluation contexts have level 10 and level 0 respectively. This is a front-end stage fixture, separate from R01a's earlier nonpositive fallback.
   - (e) Inputs: direct R01b front end, L10; independent reference 4, reference `0xFFFFFFFE`, or absent pool. Draws: none. Outputs: 0, no evaluator request in every case; pool bound is unsigned and equality fails.
@@ -284,7 +284,7 @@ All cases have `runtime_observed: no`. Unspecified fields and stats are 0; sourc
   - Discriminates: arithmetic right shift would floor a negative nonmultiple and wrongly scaling fireLength changes 50
   - runtime_observed: no
   - (a) Inputs: share 64. Draws: none. Outputs: fire minimum 150,fireLength 50.
-  - (b) Inputs: share 64,fire minimum-3. Draws: none. Outputs: fire minimum-1 from `-192/128`,fireLength 50.
+  - (b) Inputs: share 64,fire minimum -3. Draws: none. Outputs: fire minimum -1 from `-192/128`,fireLength 50.
   - (c) Inputs: share 128. Draws: none. Outputs: fire minimum 300,fireLength 50 unchanged.
 
 - **MDP-V08** Endpoint rejection and fallback (MDP-R01a; boundary: isolated rule)
@@ -292,7 +292,7 @@ All cases have `runtime_observed: no`. Unspecified fields and stats are 0; sourc
   - Seeds: `no draw`
   - Draws: none
   - Trace: level 0 with present missile falls back to 10; absent unit leaves level 0 and zero progression
-  - Outputs: present missile,class-1,L0 ->3584; absent missile,class 0,L0 ->768; wrong-type unit ->0; absent missile,class-1 ->0; absent associated data,L0 ->768
+  - Outputs: present missile,class -1,L0 ->3584; absent missile,class 0,L0 ->768; wrong-type unit ->0; absent missile,class -1 ->0; absent associated data,L0 ->768
   - Discriminates: fallback presence/type and nonpositive condition
   - runtime_observed: no
 
@@ -348,14 +348,14 @@ All cases have `runtime_observed: no`. Unspecified fields and stats are 0; sourc
   - (d) Inputs: parent P present with the listed nonzero stats, physical share 0, parent share 0. Draws: none. Outputs: contribution endpoints/percent/competing bonuses/three percent fields 0, sourcePhysical/critical false, P `{1,0x29A}` and S `{9,0}` unchanged; no parent critical request or parent stat read.
 
 - **MDP-V13** Assembly and complete selector map (MDP-R10; boundary: isolated rule)
-  - Inputs: contribution endpoints 10/20,row endpoints 3/4,contribution percent-120,missile stat 25=5,competing bonuses 7/9,element endpoints 30/40,length 50; per-case EType
+  - Inputs: contribution endpoints 10/20,row endpoints 3/4,contribution percent -120,missile stat 25=5,competing bonuses 7/9,element endpoints 30/40,length 50; per-case EType
   - Seeds: `no draw`
   - Draws: none
-  - Trace: sum `-120+5+9=-106`, floor-90; endpoint sums 13/24; assign exactly the routing-table fields
+  - Trace: sum `-120+5+9=-106`, floor -90; endpoint sums 13/24; assign exactly the routing-table fields
   - Outputs: per case
   - Discriminates: all twelve table entries, no type 10 random selection, percent stored without endpoint multiplication
   - runtime_observed: no
-  - (a) Inputs: the listed independent selector cases. Draws: none. Outputs: physical endpoints 13/24,physical percent-90 for every case. Independent types 1/2/3/4/5/6/7/8/11/12 assign listed min/max 30/40; types 1/4/5/11/12 assign listed length 50; type 9 assigns only stunLength 50; 0/10/13/255 assign no element field. Every unassigned field 0.
+  - (a) Inputs: the listed independent selector cases. Draws: none. Outputs: physical endpoints 13/24,physical percent -90 for every case. Independent types 1/2/3/4/5/6/7/8/11/12 assign listed min/max 30/40; types 1/4/5/11/12 assign listed length 50; type 9 assigns only stunLength 50; 0/10/13/255 assign no element field. Every unassigned field 0.
   - (b) Inputs: contribution percent 2147483647, missile stat 25=1, competing bonuses -7/-9, EType 0; listed endpoints unchanged. Draws: none. Trace: first addition wraps to -2147483648, then adding signed max -7 wraps to 2147483641. Outputs: physical percent 2147483641, physical endpoints 13/24, every element field 0.
   - (c) Inputs: contribution percent 0, missile stat 25=0, competing bonuses -7/-9, EType 0; listed endpoints unchanged. Draws: none. Outputs: physical percent -7, physical endpoints 13/24, every element field 0; the negative maximum is used rather than zero.
 
