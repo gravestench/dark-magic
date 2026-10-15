@@ -2,13 +2,13 @@
 
 **Description**
 
-When a hit with life or mana leech lands, the attacker gets back a share of the physical damage it
-dealt as life or mana, never above its maximum. Leech is weaker against monsters with low drain
-resistance data and is divided down on Nightmare and Hell for players; a dead or dying attacker
-regains no life. A small animation is shown on the leeching unit, and a hit with both kinds of
-leech uses one random number to pick which, so it changes later random results in the fight.
-Monsters that leech use a different calculation that can also take the target's mana and
-stamina, and the target of a mana-leeching hit loses mana.
+A hit with life or mana leech can restore a share of its physical damage to the attacker's life
+or mana, up to the corresponding maximum. The target's drain effectiveness changes that share,
+and player leech is reduced on Nightmare and Hell; the ordinary life-restoration path refuses a
+dead or dying attacker. Monsters can instead use a separate life-restoration calculation based
+on the hit and the target's available mana and stamina, and a mana-leeching hit can also drain the
+target's mana. Leech requests a visual effect, choosing between the life and mana effects at
+random when both kinds apply.
 
 Status: draft
 Evidence build: Lord of Destruction Expansion 1.13c
@@ -41,7 +41,7 @@ post-apply events are the pipeline and [combat-hit-recovery](combat-hit-recovery
 
 - Module: D2Game (server). The leech operation and its D2Game helpers carry no source-file assert
   string; ownership follows the call chain: they are called only from the hit-application
-  operation, which the pipeline owns under `combat` (`UNIT\SUnitDmg`). The monster-form, stat and
+  operation, which the pipeline owns under `combat`. The monster-form, stat and
   overlay helpers are D2Common operations consumed here.
 - Trigger: once per applied hit, synchronously inside the hit-application operation reached from
   the queued-hit dequeue of melee and skill attacks and from the missile contact and callback
@@ -50,8 +50,9 @@ post-apply events are the pipeline and [combat-hit-recovery](combat-hit-recovery
   the defender mana drain is the first request of the status hand-off (CSA-R01).
 - Frequency: the leech operation and the mana drain each run exactly once per hit-application
   call; the overlay choice draw happens at most once.
-- Client view: the stat and overlay changes reach clients through the server's unit-update
-  messages; message content belongs to a `net-` spec (LSE-Q04).
+- Client view: this stage requests server update marking. Its queue effects remain LSE-Q01 and
+  NRF-Q17; which messages carry stat and overlay changes, and their delivery to clients, remain
+  LSE-Q04. STL-R14's candidate state-message selection does not establish that sender contract.
 - The full call chain with original locations is in the
   [companion](../research/spec-evidence/combat-leech-and-status-effects.md#dispatch-chain).
 
@@ -67,6 +68,7 @@ Integers use the foundations notation (NRF section 1). Life, mana and stamina ar
 | hit game `G` | the game the hit-application operation passes to leech | association | `G.difficulty` 0, 1 or 2 selects the defender's drain column; this contract covers 0..2 only (CSA-Q06) |
 | unit identity | `unit.type`, `unit.classId`, `unit.id`, `unit.mode`, `unit.game`, `unit.pool` | i32 type/class/mode, u32 id, associations | Types 0 player, 1 monster (NRF section 3.4); modes GDF-R14/GDF-R15; `unit.pool` is the unit's allocation context for new lists |
 | seed | `A.seed` | pair `{lo,hi}` of u32 | One step is NRF-R01; `Rand` is NRF-R02 |
+| current stats and definitions | existing unit stat arrays and ItemStatCost definitions of NRF section 3.8; stats 6, 7, 8, 9 and 10 at layer 0 | i32 raw values; getter selection and minimum metadata | `Stat` consumes NRF-R12b/NRF-R12c; supplied fixtures define their own stat view below, without verifying array construction or stored-write integration |
 | damage record `R` | NRF section 3.2 fields `physical`, `fire`, `lightning`, `magic`, `cold`, `poison`, `lifeLeech`, `manaBurn`, `staminaBurn`, `absorbHeal`, `total` | i32; magnitudes 8.8 | On entry `lifeLeech` and `manaBurn` are the leech percents built by the pipeline; leech rewrites both in place; `manaBurn` as left by leech is the defender mana drain amount (LSE-R17) |
 | monster data | `D.monsterData` present or absent; its MonStats record present or absent | association | Missing data aborts leech (LSE-R03) |
 | `MonStats.Drain`, `Drain(N)`, `Drain(H)` | per-class column for difficulty 0, 1, 2 | u8, read unsigned | Leech effectiveness `P` of a monster defender |
@@ -79,6 +81,7 @@ Integers use the foundations notation (NRF section 1). Life, mana and stamina ar
 | state membership | `HasState(unit, s)` | NRF-R12a | States 92 `death_delay` and the form states |
 | overlay count | `overlayCount` | i32 | Upper bound for an overlay id (LSE-R14); table identity LSE-Q03 |
 | attached lists | `A.statList`, its `hasStateStorage` condition, its primary attached-list chain, each list's `overlayListCondition`; the base list's `overlayPendingCondition` | NRF section 3 list fields; the two overlay conditions are neutral names for engine-defined list conditions (LSE-Q03) | Searched and set by LSE-R14 |
+| dependency operations | unit replacing `SetStat`, unit additive `AddStat`, `NewList`, `Attach`, list `SetStat`, `MarkForUpdate`; supplied `AbsorbHeal`, `LifeWrite` and later status requests in the stage fixture | named operations and supplied effects | The fixture preamble defines persistence and logging; requested writes do not establish their stored integration (LSE-Q01) |
 
 | Mapping / constant | Origin | Binding |
 |---|---|---|
@@ -90,10 +93,17 @@ Integers use the foundations notation (NRF section 1). Life, mana and stamina ar
 | Class groups | CSA-R02 | Fixed numeric bindings |
 
 Dependency operations, each with its owning contract: `Stat` (NRF-R12b, NRF-R12c); `HasState`
-(NRF-R12a); `mulDiv` (NRF-R05); `Rand` (NRF-R02); `DifficultyRecord` (GDF-R02); `unitGate`
-(CSA-R02); `NewList` (STL-R06a); `Attach` (STL-R06b); list `SetStat` (STL-R06c); the unit replacing
-write `SetStat(u, s, v, 0)` (NRF-R08a), the unit additive write `AddStat(u, s, v, 0)` and
-`MarkForUpdate(u)`, whose stored effects are LSE-Q01.
+(NRF-R12a); `mulDiv` (NRF-R05); `Rand` (NRF-R02); `unitGate`
+(CSA-R02); `NewList` (STL-R06a); `Attach` (STL-R06b); list `SetStat` (STL-R06c). The unit replacing
+write `SetStat(u, s, v, 0)` and additive write `AddStat(u, s, v, 0)` have supplied effects in these
+fixtures; their original stored effects remain LSE-Q01. `MarkForUpdate(u)` likewise consumes the
+pending update-queue boundary of NRF-Q17, retained locally by LSE-Q01. NRF-R08a defines numeric
+formats and does not establish either unit-write operation.
+
+`DifficultyRecord` names LSE-R06's local selection of the prepared difficulty row for the supplied
+index 0..2. Its getter evidence is in the [local function table](../research/spec-evidence/combat-leech-and-status-effects.md#function-references).
+GDF-R02 owns row preparation and field correspondence; it does not supply the getter's contract.
+No selection behavior outside 0..2 is required here.
 
 ## 4. Rules (execution order)
 
@@ -345,6 +355,7 @@ The caller ignores the return value. No draw occurs.
 
 | Output / effect | Rule |
 |---|---|
+| Named total-calculation intermediate `R.total`, written by the mitigation owner DPO-R12a; the leech operation leaves it unchanged | LSE-R01 |
 | `R.lifeLeech`, `R.manaBurn` rewritten: shifted by 6; divided by the player divisors; divided by 64 on the monster-attacker path | LSE-R04, LSE-R06, LSE-R15 |
 | Attacker stat 8 `mana` replaced by `min(cur + amount, cap)` | LSE-R09, LSE-R10 |
 | Attacker stat 6 `hitpoints` replaced by `min(cur + amount, cap)`, unless refused | LSE-R09, LSE-R10, LSE-R12 |
@@ -353,8 +364,8 @@ The caller ignores the return value. No draw occurs.
 | Overlay request: optional list allocation and attach, `overlayPendingCondition`, list stat 178 `unit_dooverlay` = 151 or 152, update mark | LSE-R13, LSE-R14, LSE-R15 |
 | Defender stat 8 `mana` replaced by `cur - v`, or 0 below 256 | LSE-R17 |
 | Defender stat 6 raised by the absorb heal through the same capped add and gates | LSE-R16 (DPO-R16), LSE-R10, LSE-R12 |
-| Return values: the adds return the amount added (0 when refused); the drain returns `v` or 0; callers ignore them | LSE-R10, LSE-R17 |
-| Messages: none sent here; changes reach clients through unit-update messages (LSE-Q04) | none |
+| Return values: each capped add returns 0 when refused, otherwise the requested amount when uncapped or `low32(cap - cur)` when capped (including a negative result when initially above cap); mana drain returns `v` or 0; callers ignore these returns | LSE-R10, LSE-R17 |
+| Messages: none sent here; server update marking is requested, while message selection and delivery remain LSE-Q04 | LSE-R14 |
 
 Requested dependency writes become stored effects only under LSE-Q01.
 
@@ -384,7 +395,7 @@ Requested dependency writes become stored effects only under LSE-Q01.
 
 | Question | Kind / status | Evidence that would settle it |
 |---|---|---|
-| **LSE-Q01** | integration / open | Stored effects of the requested writes: the unit replacing write (NRF-R08a), the unit additive write, `Attach` (STL-R06b), list `SetStat` (STL-R06c) and `MarkForUpdate`. Accept the owners' contracts with integration vectors. Requests, arithmetic and returns here are verified. |
+| **LSE-Q01** | integration / open | Stored effects of the requested writes: the unit replacing write, the unit additive write, `Attach` (STL-R06b), list `SetStat` (STL-R06c) and `MarkForUpdate` (NRF-Q17). Complete unit-write contracts and accept the owners' contracts with integration vectors. Requests, arithmetic and returns here are verified. |
 | **LSE-Q02** | outside-boundary / open | Producer of `disguiseCondition` (STL-R07a) and the loader and contents of `formStateList`, with the `gfxtype` values of its states. The apparent-form decision for supplied values is verified. |
 | **LSE-Q03** | outside-boundary / open | Which table supplies `overlayCount`, the names of overlays 151 and 152, and the wider roles of `overlayListCondition` and `overlayPendingCondition`. Trace the loader that publishes the count. The bound test for a supplied count is verified. |
 | **LSE-Q04** | outside-boundary / open | Which server-to-client messages carry the stat 6, stat 8 and overlay changes: trace the update sender in a `net-` spec. |
@@ -427,6 +438,13 @@ names overridden. A case never takes another case's state or outputs.
 - Seeds are full `{lo,hi}` pairs; "no draw" means `A.seed` equals its input. A draw is written
   (seed owner, modulus, result): one NRF-R02 draw on that unit's seed and its returned value.
 - Every vector has `runtime_observed: no`.
+- Local operations execute the rules themselves, including the leech routing, `ManaAdd`,
+  `LifeAdd`, `ManaDrain`, apparent-form selection and overlay request sequence; supplied
+  dependencies do not replace these local operations. In LSE-V07, observers record unit-field,
+  stat and state reads and unit-stat writes made during the local capped-add operation; an empty
+  read/write log asserts that none occurred. In LSE-V09, observers separately record ordered
+  unit replacing-write requests as `(unit, stat, value, layer)` while retaining the supplied
+  persistence above. These extra observers do not change another vector's stated log.
 
 - **LSE-V01** Leech-related terms of the total (LSE-R01; boundary: isolated rule)
   - Inputs: `R.physical` 1000, `R.poison` 500, `R.lifeLeech` 10, other damage fields 0; player `A`.
@@ -552,15 +570,24 @@ names overridden. A case never takes another case's state or outputs.
     (a) `LifeAdd(A, 2560)` with stat 6 = 0x6000, stat 7 = 0x6400: 0x6A00 >= 0x6400; stat 6 = 0x6400;
     returns 0x400.
     (b) `ManaAdd(A, 0x500)` with stat 8 = 0, stat 9 = 0x1000: stat 8 = 0x500; returns 0x500.
-    (c) `LifeAdd(A, 0)`: no read or write; returns 0.
-    (g) `LifeAdd(A, 0)` with stat 6 = 0x6500, stat 7 = 0x6400: stat 6 stays 0x6500; returns 0.
+    (c) `LifeAdd(A, 0)`: no read or write; returns 0; read/write log empty.
+    (g) `LifeAdd(A, 0)` with stat 6 = 0x6500, stat 7 = 0x6400: stat 6 stays 0x6500; returns 0;
+    read/write log empty.
     (d) `ManaAdd(A, -1)`: no write; returns 0.
     (e) `LifeAdd(A, 0x100)` with stat 6 = 0x6500, stat 7 = 0x6400: stat 6 = 0x6400; returns -0x100.
     (f) `ManaAdd(A, 0x500)` with stat 8 = 0xF00, stat 9 = 0x1000, stat 7 = 0x6400: stat 8 = 0x1000;
     returns 0x100.
+    (h) `LifeAdd(A, 0x7FFFFFFF)` with stat 6 = 0x100, stat 7 = 0x6400: `low32(0x100 +
+    0x7FFFFFFF)` = -2147483393, below the signed cap; stat 6 = -2147483393; returns 2147483647.
+    (i) `ManaAdd(A, 0)` with stat 8 = 0x1100, stat 9 = 0x1000: stat 8 stays 0x1100; returns 0;
+    read/write log empty.
   - Discriminates: (a) rejects an uncapped add; (e) rejects capping only when the current value is
     below the cap; (f) rejects capping mana by stat 7 (0x1400); (g) rejects an amount test of `< 0`
-    (which would lower stat 6 to 0x6400).
+    (which would lower stat 6 to 0x6400). Empty logs in (c) and (g) reject reading the unit or
+    rewriting its unchanged value before returning; (h) rejects widening or saturating the sum
+    before comparing with the cap (which would write 0x6400 and return 0x6300). Case (i) independently
+    rejects a mana amount test of `< 0` (which would lower stat 8 to 0x1000 and return -0x100),
+    and any mana reads or writes before its nonpositive-amount return.
   - runtime_observed: no
 
 - **LSE-V08** Life-add gates (LSE-R12; boundary: isolated rule)
@@ -586,7 +613,8 @@ names overridden. A case never takes another case's state or outputs.
   - Draws: (A, 2, 1)
   - Trace: mana 1280, life 2560; both values nonzero: step gives `{0x6AC690C5, 0}`, result 1.
   - Outputs: `A` stat 8 = 0x500, stat 6 = 0x1A00; overlay 152; `A.seed = {0x6AC690C5, 0}`; record
-    640 and 320.
+    640 and 320. For the main case, the ordered unit-write log is exactly `(A, 8, 0x500, 0)`, then
+    `(A, 6, 0x1A00, 0)`.
     (a) `R.manaBurn` 0: no draw; `A.seed = {1, 0}`; overlay 151; stat 8 = 0; stat 6 = 0x1A00.
     (b) `R.lifeLeech` 0: no draw; stat 8 = 0x500; overlay 152.
     (c) `A.seed = {0, 2}`: draw (A, 2, 0), seed `{2, 0}`; overlay 151; `A` stat 8 = 0x500, stat 6 =
@@ -594,7 +622,8 @@ names overridden. A case never takes another case's state or outputs.
     (d) `A.seed = {1, 1}`: step gives lo 0x6AC690C6, hi 0; draw (A, 2, 0); overlay 151; `A.seed =
     {0x6AC690C6, 0}`; `A` stat 8 = 0x500, stat 6 = 0x1A00.
   - Discriminates: (a) and (b) reject drawing for one leech kind; (c) fixes result 0 to overlay 151;
-    (d) rejects using the old low word (odd, overlay 152).
+    (d) rejects using the old low word (odd, overlay 152). The main case's ordered write log
+    rejects invoking the local life add before the local mana add even if final stats agree.
   - runtime_observed: no
 
 - **LSE-V10** Draw with zero amounts and shift wrap (LSE-R13, LSE-R09, LSE-R04)
@@ -636,17 +665,21 @@ names overridden. A case never takes another case's state or outputs.
     (h) `A.statList` present with `hasStateStorage` true, its own `overlayListCondition` true, chain
     `Lx` (false): no list found; `NewList(A.pool, conditions {overlayListCondition}, expiry 0, owner 0/7)`, `Attach(A, L1, 1)`,
     `overlayPendingCondition` set, `SetStat(L1, 178, 152, 0)`, `MarkForUpdate(A)`.
+    (i) `SetOverlay(A, 0)`, `overlayCount` 1000, primary chain `Ly` (`overlayListCondition` true):
+    no allocation or attach; `overlayPendingCondition` set, `SetStat(Ly, 178, 0, 0)`,
+    `MarkForUpdate(A)`.
   - Discriminates: (a) rejects taking the first list rather than the first flagged one; (b) rejects
     searching without state storage; (d) fixes the bound at `id >= overlayCount`; (f) rejects writing
     the full 32-bit id; (g) rejects testing the stat list before `Attach` without reading it again;
-    (h) rejects treating the base list as a candidate.
+    (h) rejects treating the base list as a candidate; (i) rejects refusing overlay id 0 when
+    the supplied count is positive.
   - runtime_observed: no
 
 - **LSE-V12** Monster-attacker branch (LSE-R05, LSE-R15)
   - Inputs: `A` monster class 0, id 9, stats 6 = 0x1000, 7 = 0x2000; `D` player, stats 8 = 0x300,
     10 = 0x100; `R.lifeLeech` 10, `R.manaBurn` 5, `R.staminaBurn` 0x200, `R.physical` 0x800.
   - Seeds: `A.seed = {1, 0}`
-  - Draws: none in every case except (g), which draws (A, 2, 1)
+  - Draws: none in every case except (g), (p) and (q), each of which draws (A, 2, 1)
   - Trace: 640, 320; apparent type 1; `R.lifeLeech` 10, `R.manaBurn` 5; total = min(10, 2048) +
     min(5, 768) + min(512, 256) = 271; room 0x1000; `AddStat(A, 6, 271, 0)`.
   - Outputs: `A` stat 6 = 0x110F; record 10 and 5; overlay 151; `A.seed = {1, 0}`; `D` unchanged.
@@ -682,12 +715,29 @@ names overridden. A case never takes another case's state or outputs.
     (o) `D` monster with `Drain` 50, stats 8 = 0x300, 10 = 0x100; `R.lifeLeech` 100099, `R.manaBurn`
     0, `R.staminaBurn` 0, `R.physical` 0x20000; `A` stat 7 = 0x40000: `R.lifeLeech` 6406336 then
     100099; total 100099; `mulDiv(50, 100099, 100)` = 50049; room 0x3F000; `A` stat 6 = 0xD381.
+    (p) Monster `A`, `A.game` difficulty 2 with the Hell divisors 3 and 3, `G` difficulty 0;
+    `A.statList` present with `hasStateStorage` true; `A.disguiseCondition` true;
+    `formStateList` = [140]; `A` holds state 140, whose fixture `gfxtype` is 2: apparent type 0;
+    no player divisors; record 640 and 320; mana 102, life add 204; `A` stat 8 = 102, stat 6 =
+    0x10CC; draw (A, 2, 1); `A.seed = {0x6AC690C5, 0}`; overlay 152.
+    (q) `A.type` 3, `A.statList` present with `hasStateStorage` true; `A.disguiseCondition` true;
+    `formStateList` = [140]; `A` holds state 140 with fixture `gfxtype` 2: apparent type 0;
+    record 640 and 320; mana add 102; life add amount 204 is refused because the actual unit is
+    type 3 (LSE-R12); `A` stat 8 = 102, stat 6 = 0x1000; draw (A, 2, 1);
+    `A.seed = {0x6AC690C5, 0}`; overlay 152.
+    (r) `A` stat 6 = 0x2100, stat 7 = 0x2000: total 271; room -256; total becomes -256, then
+    returns; no additive write or overlay; `A` stat 6 stays 0x2100; record 10 and 5; no draw;
+    `A.seed = {1, 0}`.
   - Discriminates: 271 rejects dividing `staminaBurn` by 64 (23); (e) shows the physical minimum; (n)
     rejects a base test on this path; (b) the room cap; (f) a null attacker writing; (g) and (h) the first form
     state of kind 1 or 2 in list order deciding the path; (j) rejects applying effectiveness per term
     (134, stat 6 = 0x1086); (k) rejects capping before scaling (64, stat 6 = 0x1FC0); (l) rejects
     ignoring `disguiseCondition` (base path with a draw); (m) rejects applying the life-add gates to
-    this branch; (o) rejects the swapped operand order `mulDiv(100099, 50, 100)` = 50000.
+    this branch; (o) rejects the swapped operand order `mulDiv(100099, 50, 100)` = 50000. Case (p)
+    rejects applying player divisors after selecting an apparent player form (which would give
+    record 213 and 106, mana 33, stat 6 = 0x1044). Case (q) rejects excluding type 3 from form
+    selection and using the apparent type for life-add eligibility. Case (r) rejects treating
+    negative room as available life or omitting the nonpositive-total return after the cap.
   - runtime_observed: no
 
 - **LSE-V13** Stage order and the drain value (LSE-R16, LSE-R17, LSE-R09)
@@ -729,9 +779,12 @@ names overridden. A case never takes another case's state or outputs.
     (g) `A` monster class 0, `G` and `A.game` difficulty 0, `R.lifeLeech` 0, `R.manaBurn` 0x02000000,
     `D` player with stats 8 = 0x1000, 10 = 0: the shift wraps to -2147483648; LSE-R15 divides to
     -33554432; total -33554432 is nonzero, scaled unchanged, below the room, then `<= 0`: return;
-    `v` = -33554432; no drain write; `D` stat 8 = 0x1000.
+    `v` = -33554432; no drain write; `D` stat 8 = 0x1000; drain returns 0.
+    (h) `ManaDrain(D, 1)` alone with `D` stat 8 = -2147483648: `low32(-2147483648 - 1)` =
+    2147483647, not below 256; `D` stat 8 = 2147483647; drain returns 1.
   - Discriminates: (b) fixes the floor test at `< 256`; (c), (d), (e) and (g) reject draining the
-    unrewritten input on the paths that rewrite it ((g) would drain to 0).
+    unrewritten input on the paths that rewrite it ((g) would drain to 0). Case (h) rejects
+    widening or saturating the subtraction before the floor test (which would write 0 and return 0).
   - runtime_observed: no
 
 ### 8.2 Observation vectors
@@ -754,16 +807,25 @@ Full reproduction additionally requires accepting those dependency contracts and
 observations for LSE-O01, LSE-O02 and the verified rules (LSE-Q05).
 
 **Depends on:** [core-numeric-and-rng-foundations](core-numeric-and-rng-foundations.md) NRF-R01,
-NRF-R02 (draws), NRF-R05 (mulDiv), NRF-R08a (raw formats and replacing writes), NRF-R12a (state
-test), NRF-R12b and NRF-R12c (stat reads), section 3.2 (damage record);
-[core-game-data-fields](core-game-data-fields.md) GDF-R02, GDF-R05, GDF-R11, GDF-R13, GDF-R14,
-GDF-R15, GDF-R17 (fields and names); [combat-status-application](combat-status-application.md)
-CSA-R02 (`unitGate`); [combat-damage-pipeline-order](combat-damage-pipeline-order.md) DPO-R12a
-(total), DPO-R13 (apply gate), DPO-R14 (clamp), DPO-R16 (absorb heal placement, which calls
-LifeAdd), DPO-R17 (current-life write placement), DPO-R18 (stamina drain following the mana drain);
+NRF-R02 (draws), NRF-R05 (mulDiv), NRF-R08a (raw formats), NRF-R12a (state test), NRF-R12b and
+NRF-R12c (stat reads), section 3.2 (damage record);
+[core-game-data-fields](core-game-data-fields.md) GDF-R02, GDF-R05a, GDF-R11a, GDF-R12, GDF-R13,
+GDF-R14a, GDF-R15a, GDF-R17a (fields and names);
+[combat-status-application](combat-status-application.md) CSA-R02 (`unitGate`);
+[state-timed-state-lifecycle](state-timed-state-lifecycle.md) STL-R04 (expiry condition), STL-R06a,
+STL-R06b and STL-R06c (overlay list requests). Stored attach and list-write effects remain gated;
+unit replacing/additive effects have no complete consumed contract (LSE-Q01), and update-queue
+effects remain NRF-Q17. Unknown disguise and form-list producers (LSE-Q02, STL-R07a) do not gate
+the supplied apparent-form inputs.
+
+**Placement and supporting contracts:**
+[combat-damage-pipeline-order](combat-damage-pipeline-order.md) DPO-R12a (the total represented by
+LSE-R01), DPO-R13 (apply gate), DPO-R14 (already-clamped physical input), DPO-R16 (absorb heal
+placement calling this spec's `LifeAdd`), DPO-R17 (current-life write placement) and DPO-R18
+(stamina drain following mana drain);
 [combat-status-application](combat-status-application.md) CSA-R01 (status hand-off order, whose
-first request is LSE-R17); [state-timed-state-lifecycle](state-timed-state-lifecycle.md)
-STL-R06a, STL-R06b and STL-R06c (overlay list requests), STL-R07a (disguise condition producer).
+first request calls LSE-R17). These references establish surrounding stages; the supplied-input
+vectors do not require reproducing their stored effects.
 
 **Depended on by:** [combat-damage-pipeline-order](combat-damage-pipeline-order.md) DPO-R15, DPO-R16,
 DPO-R18 (leech, the capped add used by the absorb heal, the drain value);
