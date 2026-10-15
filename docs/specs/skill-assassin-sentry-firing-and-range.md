@@ -1,0 +1,616 @@
+# Assassin sentry firing and range
+
+**Description**
+
+Assassin sentries repeatedly look for a target and decide whether to fire. Their attack range accounts for the target's size, and their limited shot supply runs down as they shoot. Charged bolts use a burst of individual missiles.
+
+Status: draft
+Evidence build: Lord of Destruction Expansion 1.13c
+Foundations: [core-numeric-and-rng-foundations](core-numeric-and-rng-foundations.md); names: [core-game-data-fields](core-game-data-fields.md)
+Ids: SFR-R, SFR-Q, SFR-V, SFR-O; policy in [README conventions](README.md#conventions)
+Evidence: [companion investigation records](../research/spec-evidence/skill-assassin-sentry-firing-and-range.md)
+Open evidence gaps: [gap file](../plans/gaps/skill-assassin-sentry-firing-and-range.md)
+
+## 1. Scope
+
+Defines the existing shared Assassin trap-family boundary: reached sentry thinking, budget, stored/room target selection, candidate-size distance, charged-bolt burst initialization and shared missile-speed context. Blade and Death Sentry consumers reuse the named helpers. Missile flight/collision, damage/hit resolution and the full skill/monster AI catalogs belong to their owners. Summon/AI entry, animation completion and dependency integration are gated below; no caller-independent shot interval is inferred.
+
+## 2. Trigger and ownership
+
+D2Game computes the think, budget and target decisions and the action-selector17 burst; D2Common supplies sizes, positions, skill selection/calculation and spatial predicates. The server AI event calls the think; its exact AI101 binding remains Q02. Skills.srvdofunc selects the burst through SCD-R06/SCD-R12. A think checks budget, skill, state, target, strict range and chance before requesting skill mode. The action callback runs when dispatch reaches it, not automatically once each frame. First and later scheduling remain Q01; no ordering against unrelated frame systems or named client message is established. [Binary chains](../research/spec-evidence/skill-assassin-sentry-firing-and-range.md#dispatch-and-function-records) identify the reached entry and its output paths.
+
+## 3. Inputs and data
+
+Arithmetic is signed i32 with low32 wrapping and signed division truncating toward zero unless stated. Positions/size arithmetic fixtures use differences whose absolute values and doubled sums remain nonnegative signed i32. Extreme static-coordinate overflow outside that domain remains Q06. Units/time/seeds consume NRF-R01/NRF-R02/NRF-R08/NRF-R09a/NRF-R10. Supplied dependency results describe local request/return boundaries and do not verify those producers.
+
+| Input | Semantic source | Width and format | Meaning |
+|---|---|---|---|
+| sentry, candidate, searcher, owner, room, target | runtime units/lookup results | optional objects; kinds player 0, monster 1, missile 3 | Eligibility and ownership |
+| difficulty and AI parameters | difficulty 0..2; MonStats.`aip1`..4 and N/H variants; GDF-R05a | difficulty u8; parameters signed i16 | chance, failed-roll delay, absent-target delay, range |
+| firing skill and record count | MonStats.Skill1; Skills collection | signed i16 identity; signed i32 count | lookup/shot action |
+| skill instance and level | skill selection and bonus-level operations | optional node; i32 level | expression context and mode request |
+| budget | AI shot counter | signed i32; initially -1 | lazy result and remaining shots |
+| calculations | Skills.`calc1`/`calc4` | compiled reference and i32 result | burst attempts / budget; SCX-R11/SLD-R19 |
+| states | 12 inferno, 146 invis, 87 slow-state identity | active-state booleans; GDF-R12 | state clear, candidate gate, speed condition |
+| unavailable/eligibility conditions | completion condition, mode; candidate eligibility A | boolean; mode i32 | structural rejects; A producer Q09 |
+| positions and size | integer path parts; candidate size operation | dynamic u16 parts; size signed i32, monster SizeX signed i8 | octagonal offsets |
+| stored-target selector and results | searcher state and resolution | selector i32; optional unit/distance | shortcut and reached selector 3 draw |
+| room lists, slot class, chooser results | ordered traversal, class byte, selector 7 result | ordered units; u8 class; i32 distance | two-slot selection |
+| spatial/root operations | reach(searcher, candidate, 0), collision(candidate, searcher, mask), owner resolution, sameTierNeutral, directional interaction | PVP-R05a/R07 existing-list contracts; interaction mask 8 | exact consumer routing; Q08/Q11/Q12 |
+| current frame and AI events | game clock and unit event storage | i32 frame; pending event type 2 | rescheduling/removal requests |
+| burst resolution and creation | selected missile, per-index target coordinates/result, creator result/callback | signed identity/count; i32 coordinates and frame count | conditional attempts and initialization |
+| speed values | Missiles.Vel/VelLev, invocation level, explicit velocity/conditions, slow mask, state list stat 161 | Vel/VelLev u8, others i32/booleans | shared speed stage; list-selected layer 0 read per NRF-R12b/NRF-R12c |
+
+| Mapping / constant | Origin | Binding |
+|---|---|---|
+| state 12/146/87, mode 0 and player 17/monster 12 tests | engine code; GDF-R12/GDF-R14a/GDF-R15a supply names where established | fixed original-code tests; names do not imply remapping |
+| action 17, cap 48, threshold 80, event 2, path 10, frame cap 77 | engine code | fixed original handlers/constants; event/path broader naming remains limited to this behavior |
+| Skills.srvdofunc text cells for Id38/186/306/322 | table data; [TD-SKILLS17](../research/spec-evidence/skill-assassin-sentry-firing-and-range.md#named-table-data) | text-resolved selectors choose engine-defined handlers; compiled binding Q04 |
+| aip fields, Skill1, `calc1`/`calc4`, Vel/VelLev, SizeX | table data | supplied prepared-record values; original row values require Q04 records |
+| unknown monster slot class and candidate condition A | unresolved | numeric/boolean supplied inputs; no guessed name |
+
+## 4. Rules (execution order)
+
+R01 subrules give think order; R02 and R03 subrules are called at their stated stages. R04/R13 are distance operations, followed by timing/context and burst/speed boundaries. R01/R03/R06/R07/R09/R11 are grouping prefixes, not additional rules.
+
+**SFR-R01a** Initial budget check [verified in 1.13c code (static)]. Run R02 with decrement=false. A lost result stops this think before skill lookup, target search or its direct chance draw.
+
+**SFR-R01b** Missing selected skill [verified in 1.13c code (static)]. After a surviving budget check, request the unit's selected instance of MonStats.Skill1. If absent, request clearing its current skill and monster death mode 0, then stop. Instance selection and bonus-level production consume supplied results; their actual integration is Q12.
+
+**SFR-R01c** Prepare and search [verified in 1.13c code (static)]. If state 12 inferno is active, request removing it before R03a's target search. Search on every reached think, while still allowing the stored-target shortcut. State testing and set-off request routing consume NRF-R12a; broader lifecycle effects remain that dependency's gates.
+
+**SFR-R01d** Strict active range [verified in 1.13c code (static)]. No returned target, or signed returned distance >= the difficulty-selected signed i16 `aip4`, requests the next think after signed i16 `aip3` ticks and stops. A smaller distance proceeds. The consumer uses the supplied search distance; R13 owns its arithmetic.
+
+**SFR-R01e** Chance and failed-roll delay [verified in 1.13c code (static)]. After a target passes range, draw exactly Rand(sentry seed, 100), consuming NRF-R01/NRF-R02. Compare the result as signed i32 with sign-extended `aip1`. A result >= `aip1` requests the next think after sign-extended `aip2` ticks and stops. There is no direct chance draw on an earlier exit. Target and expression operations retain their own draws.
+
+**SFR-R01f** Spend and request the shot [verified in 1.13c code (static)]. Run R02 with decrement=true. If it reports lost, stop. Otherwise remove pending unit AI events of type 2, request selecting the firing skill with the returned target and zero point coordinates, then request entering that skill's mode. These are ordered requests; actual animation, event storage and resulting skill execution remain Q12. No next-think delay is set on this local success branch.
+
+**SFR-R01g** AI binding [unresolved]. The relationship between the original AI identity 101 and this think operation is not fully established. Q02 gates entry from that identity, not the reached-think supplied-input stages.
+
+**SFR-R02** Lazy shot budget [verified in 1.13c code (static)]. For a monster sentry, resolve its owner. Missing owner, missing owner room or a town room requests clearing the current skill and death mode 0 and returns lost=1. Otherwise read the signed i32 counter. If counter<0, reject an invalid Skill1 identity or absent Skills record with a death request and lost=1; obtain the selected skill instance, rejecting absence the same way. Request bonus-inclusive level and evaluate that skill's `calc4` with (sentry, Skill1, level), persisting its i32 result as the counter. If counter<=0, request death and return lost=1. If positive and decrement is nonzero, subtract 1 with i32 arithmetic and persist it. Return lost=0. No direct RNG draw occurs; owner/room/mode operations and expression evaluation have their declared effects and draws. A counter becoming zero after decrement survives until the next check.
+
+**SFR-R03a** Stored target precedes room walk [verified in 1.13c code (static)]. Request stored-target resolution first. A returned target is used with its returned R13 distance without the room-walk cap; no nearby-room candidate callback runs. Otherwise initialize two empty nearest slots with distance 2147483647 and enter the room search. On success the wrapper also requests the reach predicate(searcher, target, 0) for its auxiliary result; the think does not use that auxiliary result. Missing target returns no unit and distance 2147483647.
+
+**SFR-R03b** Nearby-room enumeration [unresolved]. Selector 6 selects a room-list walker and R03c callback. In supplied room order, it visits each room's unit chain in chain order. Callback zero continues; nonzero stops. R03c returns zero even after replacing a slot, so selection examines the remaining chain. Exact room-list production, linked-list validity and complete real traversal remain Q08.
+
+**SFR-R03c** Two nearest slots [verified in 1.13c code (static)]. For each candidate, execute R03f/R03g/R03i validity before computing R13 distance. Reject invalid candidates, then distances>48. Slot class>1 selects slot A; class<=1 selects slot B. A candidate must be strictly nearer than the slot's existing distance. Only then request the collision predicate(candidate, searcher, 4); a nonzero result rejects it. A zero result replaces the selected slot's unit and distance. Equal distances keep the earlier candidate. Player slot class is 14; a valid monster reads its supplied unsigned class byte, other/missing records yield 0. Its table-column meaning remains Q08.
+
+**SFR-R03e** Search frequency [asm-only]. The think reaches target search on each call surviving budget and skill checks. Its stored-target shortcut remains active; this alone does not establish a newly chosen enemy or an unlocked target after every shot.
+
+**SFR-R03f** Structural candidate rejection [verified in 1.13c code (static)]. Reject absent searcher/candidate or a kind outside player/monster. Reject candidate then searcher when their unavailable-for-combat condition is true: null unit, completion condition, death mode 0, player dead mode 17 or monster dead mode 12. Reject a nonzero candidate-room town predicate, then a false candidate eligibility condition A. There is no direct draw before these exits. Eligibility condition A's producer/meaning remains Q09; supplied condition handling is exact.
+
+**SFR-R03g** Invisible-candidate reach gate [verified in 1.13c code (static)]. If candidate state 146 invis is absent, go directly to R03i with no local draw or reach test. For an invisible player draw Rand(candidate seed, 100); a roll>=80 bypasses the reach test. A lower roll requests reach(searcher, candidate, 0) and rejects a ZERO result. An invisible monster makes no local draw, requests the same ordered predicate and rejects a NONZERO result. Surviving candidates run R03i. The reach operation is not a supplied hostility relation: it consumes range/separation/collision operations whose complete integration remains Q11. Candidate draws persist even if a later distance/collision test rejects.
+
+**SFR-R03h** External validity operations [unresolved]. Room/town, owner lookup, reach, root relation and player interaction operations must provide their original results. Their local consumers are R03f/R03g/R03i. The reach operation reads spatial distance and range, while R03i itself contains no distance check. Q08/Q11/Q12 retain the complete producer contracts; no general hostile/alive predicate substitutes for them.
+
+**SFR-R03i** Final owner-root decision [verified in 1.13c code (static)]. Start searcher root at searcher. For a monster with an owner reference, resolve one owner step and replace the root only if found; for a missile with owner-resolution condition set, do the corresponding one-step resolution. Starting at candidate, repeatedly resolve a monster owner while present and different from the current unit, stopping on missing owner or self-owner. Equal roots return 0. Two player roots request interaction(rootSearcher, rootCandidate, 8) and return that result unchanged. Otherwise request sameTierNeutral(rootSearcher, rootCandidate), returning 1 for zero and 0 for nonzero. No local draw or distance read occurs. Unresolvable owner references retain the current root. This consumes PVP-R07's asymmetric owner resolution and PVP-R05a's directional relation/tier-read contract: player results are raw 0 or 8; other results are 0 or 1. Existing supplied relation nodes/alignment lists are read by those verified contracts; their production remains PVP-Q03/PVP-Q05. There is no depth cap or multi-unit owner-cycle detector.
+
+**SFR-R04** Unit-to-point octagonal distance [verified in 1.13c code (static)]. With supplied unit position (ux, uy) and point (x, y), compute wrapping i32 differences and their i32 absolute values; on the nonnegative coordinate-difference domain compute trunc(i32(2*max(dx, dy)+min(dx, dy))/2). There is no direct draw. Dynamic integer positions consume NRF-R10b; static-position production remains Q06. This operation does not subtract a size.
+
+**SFR-R05** First shot scheduling [unresolved]. The summon action requests creating a sentry and a mode update. The first AI event's due frame and therefore cast-to-first-shot latency are Q01; no interval timer in the reached think establishes that latency.
+
+**SFR-R06a** Difficulty-selected AI parameters [verified in 1.13c code (static)]. For difficulty 0, 1, 2 consume the matching base/Nightmare/Hell `aip1`..4 values as signed i16: `aip1` chance threshold, `aip2` failed-roll delay, `aip3` absent/out-of-range delay, `aip4` strict active range. No parameter is clamped by this local consumer. These are field roles, not assertions of any particular original row value.
+
+**SFR-R06b** Post-shot scheduling [unresolved]. Skill-mode completion supplies later thinking. Its exact due-frame production remains Q01; the shot branch itself requests no `aip2`/`aip3` reschedule.
+
+**SFR-R07a** Range arithmetic [verified in 1.13c code (static)]. The think range and room candidate cap use R13's size-reduced octagonal distance, not Euclidean distance. Only room candidates are capped at 48. R01d compares the supplied returned distance strictly below `aip4`.
+
+**SFR-R07b** Coordinate domain [verified in 1.13c code (static)]. Dynamic player/monster/missile positions expose unsigned 16-bit integer parts of a supplied 16.16 path, in NRF-R10a/R10b units: 5 integer units per map tile. This describes getter inputs/results and does not establish every path/static-coordinate producer.
+
+**SFR-R08** Collision footprint [unresolved]. A missile's collision footprint, its relation to Missiles.Size and units, and flight steering need the missile-path/collision owner. The sentry's candidate-size range arithmetic does not establish missile collision geometry.
+
+**SFR-R09a** Charged-bolt requests and initialization [verified in 1.13c code (static)]. At reached action selector 17, set the caster do-handled latch when the caster is present, before skill validation. Invalid skill/record or invalid selected missile identity returns 0. With a valid missile identity, evaluate `calc1`(sentry, skill, level) to signed count n; nonpositive n makes no creation attempt and returns 1. For each index 0<=i<n, request target-coordinate resolution. Read the initializer's stored-point X as u16 and frame count as signed i16. Only success with BOTH resolved coordinates nonzero requests missile creation. Pass caster position, skill identity/level, owner caster, initialization callback and i; creator failure does not stop subsequent indices and does not change the final return 1. On each actually initialized missile: read its own frame count f; if f>=78, write total/current frame count 77; else retain f. Initialize its seed from wrapping i32(its own path stored-point X+i) under NRF-R03a, request path type 10, path duration min(u8(f), 77), then path preparation. Creation, path preparation and steering remain Q12/Q03; request count is not successful bolt count. No fixed angular spread is computed here.
+
+**SFR-R09b** Text rows selecting action 17 [verified in 1.13c data]. The effective Skills text rows with srvdofunc=17 are Charged Bolt (Id38), PrimeBolt (Id186), BoltSentry (Id306), ImpBolt (Id322). Each value is a named cell from the linked TD-SKILLS17 record. This establishes text selectors, not their compiled/runtime correspondence or every skill's execution.
+
+**SFR-R10** Integrated selection [unresolved]. Stored-target resolution, room traversal, both nearest slots and the chooser determine the returned target. For supplied chooser inputs, a player searcher or empty B selects A; empty A selects B; B distance>5 selects A. Otherwise the chooser temporarily prepares the searcher path and runs selector 7, excluding B and retaining nearest class>1. No found unit or found distance>=20 selects B; a nearer found unit replaces A and selects A. Actual path preparation/restoration and selector-7 traversal remain Q08.
+
+**SFR-R11a** Shared missile speed [asm-only]. At the generic creation speed stage, absent explicit velocity uses u8 Vel + trunc(low32(u8 VelLev * level)/8), then low32 left shift by 8. Explicit velocity is shifted by 8 unless its already-scaled condition is set. If the missile matches the global slow mask, owner state 87 is active AND its stat list exists, read stat 161 at layer 0 FROM THAT LIST and replace speed with trunc(low32(speed*statValue)/100). A missing list skips this scale. Then a nonzero speed becomes trunc(low32(speed*75)/100). Full output binding/creator applicability remains Q05/Q12; no observed world speed follows from this arithmetic alone.
+
+**SFR-R11b** Observed sentry missile speed [unresolved]. Matching this creation speed stage to the travel of actual Lightning Sentry and Charged Bolt Sentry missiles remains Q05. No particular Vel table cell is asserted without its data record.
+
+**SFR-R12** Reached stored-target random branch [verified in 1.13c code (static)]. When the searcher's stored-target selector 3 branch is reached, draw exactly RandMask(searcher seed, 2), consuming NRF-R02/NRF-R04b. The mask argument is 2, so the returned bit result is 0 or 1. Subsequent stored-target routing/state writes are Q08; this rule owns the reached draw and seed owner only.
+
+**SFR-R13** Candidate-size search distance [verified in 1.13c code (static)]. Read positions of candidate and searcher. Obtain the candidate size s: player 2; monster signed i8 MonStats2.SizeX through MonStats.MonStatsEx, with missing row size 0; object supplied size field; missile u8 Missiles.Size, missing record 0; item 1; other/null 0. Compute dx=max(i32(abs(xC-xS)-s), 0), dy=max(i32(abs(yC-yS)-s), 0), then trunc(i32(2*max(dx, dy)+min(dx, dy))/2). Only candidate size is subtracted, in full on EACH axis. Negative supplied SizeX enlarges offsets. Player/monster candidates use this at both stored-target and room callback sites; the stored-target route bypasses the room cap. No direct draw.
+
+### Id map
+
+| Id | Summary | Status label | Gates | Vectors |
+|---|---|---|---|---|
+| SFR-R01a | Initial budget check | verified in 1.13c code (static) | none | SFR-V05, SFR-V17, SFR-V24 |
+| SFR-R01b | Missing selected skill | verified in 1.13c code (static) | SFR-Q12: actual skill/mode producers | SFR-V08 |
+| SFR-R01c | Prepare and search | verified in 1.13c code (static) | SFR-Q08: complete search integration | SFR-V09, SFR-V10 |
+| SFR-R01d | Strict active range | verified in 1.13c code (static) | none for supplied target/distance | SFR-V01, SFR-V02, SFR-V03, SFR-V16, SFR-V21 |
+| SFR-R01e | Chance and failed-roll delay | verified in 1.13c code (static) | none | SFR-V04, SFR-V18 |
+| SFR-R01f | Spend and request the shot | verified in 1.13c code (static) | SFR-Q12: actual event/skill-mode execution | SFR-V05, SFR-V17, SFR-V25 |
+| SFR-R01g | AI binding | unresolved | SFR-Q02: AI101 entry | none |
+| SFR-R02 | Lazy shot budget | verified in 1.13c code (static) | SFR-Q12: actual lookup/mode integration; supplied results available | SFR-V05, SFR-V17, SFR-V24, SFR-V25, SFR-V26 |
+| SFR-R03a | Stored target precedes room walk | verified in 1.13c code (static) | SFR-Q08: actual stored-target resolution | SFR-V10, SFR-V27 |
+| SFR-R03b | Nearby-room enumeration | unresolved | SFR-Q08: real room enumeration | SFR-V28 |
+| SFR-R03c | Two nearest slots | verified in 1.13c code (static) | SFR-Q08: actual slot-class/collision producers | SFR-V06, SFR-V20, SFR-V23, SFR-V28 |
+| SFR-R03e | Search frequency | asm-only | SFR-Q08: stored-target production/lifetime | SFR-V10 |
+| SFR-R03f | Structural candidate rejection | verified in 1.13c code (static) | SFR-Q09: eligibility producer; SFR-Q12: room predicate | SFR-V11, SFR-V29 |
+| SFR-R03g | Invisible-candidate reach gate | verified in 1.13c code (static) | SFR-Q11: actual reach result; local handling verified | SFR-V12, SFR-V13, SFR-V14, SFR-V23, SFR-V30 |
+| SFR-R03h | External validity operations | unresolved | SFR-Q08/SFR-Q11/SFR-Q12: complete validity integration | none |
+| SFR-R03i | Final owner-root decision | verified in 1.13c code (static) | PVP-Q03/PVP-Q05: relation/alignment producers; supplied existing lists available | SFR-V31 |
+| SFR-R04 | Unit-to-point octagonal distance | verified in 1.13c code (static) | none on supplied nonnegative offsets | SFR-V15 |
+| SFR-R05 | First shot scheduling | unresolved | SFR-Q01: cast-to-think integration | SFR-O01 |
+| SFR-R06a | Difficulty-selected AI parameters | verified in 1.13c code (static) | none | SFR-V04, SFR-V18, SFR-V32 |
+| SFR-R06b | Post-shot scheduling | unresolved | SFR-Q01: mode-end to think due frame | SFR-O02 |
+| SFR-R07a | Range arithmetic | verified in 1.13c code (static) | none for supplied positions/size | SFR-V01, SFR-V02, SFR-V03, SFR-V16, SFR-V21 |
+| SFR-R07b | Coordinate domain | verified in 1.13c code (static) | none for supplied dynamic path | SFR-V33 |
+| SFR-R08 | Collision footprint | unresolved | SFR-Q03: footprint integration | none |
+| SFR-R09a | Charged-bolt requests and initialization | verified in 1.13c code (static) | SFR-Q12: creator/target/path effects; supplied requests available | SFR-V07, SFR-V19, SFR-V34 |
+| SFR-R09b | Text rows selecting action 17 | verified in 1.13c data | SFR-Q04: compiled bindings/other required cells | TD-SKILLS17 |
+| SFR-R10 | Integrated selection | unresolved | SFR-Q08: complete chooser path effects | SFR-V35 |
+| SFR-R11a | Shared missile speed | asm-only | SFR-Q05/SFR-Q12: full creator/write integration | SFR-V36 |
+| SFR-R11b | Observed sentry missile speed | unresolved | SFR-Q05: observed movement | none |
+| SFR-R12 | Reached stored-target random branch | verified in 1.13c code (static) | none at reached draw; SFR-Q08 upstream/integration | SFR-V37 |
+| SFR-R13 | Candidate-size search distance | verified in 1.13c code (static) | none on supplied positions/size; static positions Q06 | SFR-V01, SFR-V02, SFR-V03, SFR-V06, SFR-V16, SFR-V20, SFR-V21, SFR-V22 |
+
+## 5. Outputs and side effects
+
+| Effect | Rules |
+|---|---|
+| budget initialized/decremented, lost result 0/1 | SFR-R02 |
+| current-skill clear/death-mode requests; state 12 removal request | SFR-R01b/SFR-R02; SFR-R01c |
+| next-think delay requests; type 2 pending-event removal; skill/target/mode requests | SFR-R01d/SFR-R01e; SFR-R01f |
+| chosen target/distance, two nearest-slot replacements, validity results, auxiliary reach result | SFR-R03a/SFR-R03c/SFR-R03f/SFR-R03g/SFR-R03i/SFR-R10 |
+| Point-distance and candidate-size distance i32 returns | SFR-R04/SFR-R13 |
+| candidate or sentry/searcher seed changes at direct draw sites | SFR-R01e/SFR-R03g/SFR-R12 |
+| burst latch, conditional creation requests, callback seed/frame/path-duration/type and path-preparation requests, action return | SFR-R09a |
+| supplied creator speed intermediate | gated SFR-R11a |
+
+Dependency operations retain their declared stored effects and draws, including calculation draws and mode changes. No persistence write or named client message is established here.
+
+## 6. Branches and edge cases
+
+Owner loss, absent owner room and town all stop the budget path. A negative counter initializes lazily; zero/negative evaluated budget dies immediately; positive decrement to zero permits that shot. Difficulty selects signed parameter variants without clamps. Chance thresholds<=0 always fail and >99 always pass the direct 0..99 draw. Range is strict; nearest ties are stable within their slot; stored targets bypass the room cap. Invisible players use their own seed and opposite reach-result polarity from invisible monsters. Both coordinates must be nonzero for a burst creation request; negative coordinates are not rejected by that zero test. Count<=0 returns successful action without a creation request. Null initialization callback unit does nothing. Creation may fail on each attempt. The initialization uses the missile's own path stored-point X, not an assumed caster X because the stored point is independent of current position. No difficulty/PvP special arithmetic exists in these local stages beyond supplied parameters and root interaction.
+
+## 7. Open questions
+
+Attempted evidence and precise blocked boundaries are in the [gap file](../plans/gaps/skill-assassin-sentry-firing-and-range.md).
+
+| Id | Status / kind | Remaining evidence |
+|---|---|---|
+| **SFR-Q01** | unresolved / integration | First AI scheduling and skill-mode completion to later-think scheduling; O01/O02 |
+| **SFR-Q02** | unresolved / integration | AI101 dispatcher/table index to reached think, with output anchor |
+| **SFR-Q03** | unresolved / integration | Missile footprint/collision units and actual charged-path steering; O03 |
+| **SFR-Q04** | unresolved / integration | Original relevant calc/aip/Skill1 values and compiled/runtime association; text do 17 cells alone do not establish these |
+| **SFR-Q05** | unresolved / observation and integration | Shared speed output binding and actual trap travel, with authenticated Vel inputs |
+| **SFR-Q06** | unresolved / outside-boundary | Complete static/other position production and extreme static-coordinate overflow; supplied dynamic getter units consume NRF-R10 |
+| **SFR-Q08** | unresolved / behavior and integration | Real stored-target eligibility/state writes, room-list production, class-column meaning and chooser path effects; collision/relation producer contracts |
+| **SFR-Q09** | unresolved / outside-boundary | Candidate eligibility condition A meaning and producer; state 146 name is GDF-R12 |
+| **SFR-Q11** | unresolved / integration | Complete actual reach result from weapon/range, separation and collision dependencies; local opposite polarities are established |
+| **SFR-Q12** | unresolved / integration | Owner/room/skill-level, mode/event storage, target resolution, creation/path initialization and root interaction/relation producers |
+| **SFR-Q13** | unresolved / observation | No gameplay vector has been observed on the original game; observation is possible and pending |
+
+## 8. Test vectors
+
+### 8.1 Executable vectors
+
+All records are synthetic supplied inputs, not archive rows. Each independent case starts with game frame 100; monster sentry S at (1000, 1000), mode 1, counter 3, owner P present in a non-town room; valid firing skill id 20, count 400, present instance, level 3; `aip1`=100, `aip2`=7, `aip3`=11, `aip4`=12 for all three difficulties. Selected skill/level, owner/room, mode/event, reach/collision, target-resolution and creator operations log requests/results. Pure getters and spatial/relation predicates are omitted from asserted call-count logs. Their routes in Trace explain the original decisions; an equivalent extra pure read is not rejected when values, seed changes and effects agree. Logs assert effectful requests, expression draws and their meaningful order. Supplied mode requests persist the requested mode; event removal removes only type 2; scheduling appends due=frame+delay. Skill selection persists skill/target, and the supplied mode request logs one shot. These supplied effects verify local ordering, not Q12 integration. State removal persists active-state membership only.
+
+Ordinary candidate T is a player at the case's raw offset from S, mode 1, eligibility A=true, not unavailable, non-town room, state 146 absent, size 2, slot class 14; final roots differ; supplied directional relation node on P for T has eligibility flags 8. Existing tier inputs for each unit are a present extended base list with state 105 list and own stat 172/layer 0 = 1; no other lists, minimum adjustment inactive. Collision 0 and reach 1 unless overridden. For validity-only gate vectors V12..V14/V23/V30, searcher owner resolution returns absent and leaves the monster S root; the different player/monster roots with tiers 1/1 produce final result 1 through PVP-R05a. No budget check runs in those gate fixtures. A supplied stored-target resolver returns no target unless specified. Room-callback vectors receive candidates directly; think vectors receive the stated target/distance, so they do not execute room traversal. Local R02 calls execute R02; calculation operation returns stated `calc4`=3 or `calc1`=3 without draws. Supplied dependency operations persist their stated writes, log in order and draw nothing unless a case says otherwise. Unmentioned state stays at entry; logs start empty. Direct draw seed for S and T is {lo=1, hi=0x29A} unless overridden. No-draw cases leave both unchanged. Initializer stored-point X is an unsigned 16-bit field supplied independently of current position; frame count is signed i16. Successful creator effects in these fixtures invoke only the supplied callback and make no game-seed draw; real creation-seeding draws remain SCD-R13/NRF-R17a. Unless overridden, a think fixture receives supplied search result T at raw offset (3, 0), distance 1. S state 12 is initially inactive unless a case overrides it. A burst fixture selects synthetic missile identity 1 with count 2 and a present record; successful target resolution returns (1010, 1001), caster latch starts false, and each initialized missile enters with seed {6, 0x29A}. Each frame-count fixture supplies both total/current fields equal to its stated f before the callback; current position does not determine stored-point X. Every vector states only its reached local or supplied-input assertions; integration gates remain in the Id map.
+
+- **SFR-V01** Strictly inside range (SFR-R01d, SFR-R01e, SFR-R01f, SFR-R07a, SFR-R13; boundary: supplied-input stage)
+  - Inputs: T raw(13, 0); returned distance 11; counter 3; `aip4`=12.
+  - Seeds: S={1, 0x29A}; T unchanged.
+  - Draws: S modulus 100 ->51; new S={0x6AC6935F, 0}.
+  - Trace: s=2; reduced(11, 0); distance 11<12; 51<100.
+  - Outputs: counter 2; ordered budget(false), search, budget(true), remove AI2, select(id 20, T), shot; no delay.
+  - Discriminates: Exact distance 11 and one shot reject premature raw-distance rejection.
+  - runtime_observed: no
+
+- **SFR-V02** Range equality (SFR-R01d, SFR-R07a, SFR-R13; boundary: supplied-input stage)
+  - Inputs: T raw(14, 0); returned distance 12.
+  - Seeds: no draw.
+  - Draws: none.
+  - Trace: reduced(12, 0); 12>=12.
+  - Outputs: counter 3; schedule due 111; 0 shots.
+  - Discriminates: Equality must not fire.
+  - runtime_observed: no
+
+- **SFR-V03** Diagonal range equality (SFR-R01d, SFR-R07a, SFR-R13; boundary: supplied-input stage)
+  - Inputs: T raw(10, 10); returned distance 12.
+  - Seeds: no draw.
+  - Draws: none.
+  - Trace: reduced(8, 8); (16+8)/2=12.
+  - Outputs: counter 3; schedule due 111; 0 shots.
+  - Discriminates: Euclidean reduced distance 11.31 would incorrectly fire.
+  - runtime_observed: no
+
+- **SFR-V04** Failed chance preserves budget (SFR-R01e, SFR-R06a; boundary: supplied-input stage)
+  - Inputs: returned T, distance 1; `aip1`=51.
+  - Seeds: S={1, 0x29A}.
+  - Draws: S modulus 100 ->51; S={0x6AC6935F, 0}.
+  - Trace: 51>=51.
+  - Outputs: counter 3; schedule due 107; 0 shots; no decrement call.
+  - Discriminates: Failed roll uses `aip2` rather than `aip3` and spends no budget.
+  - runtime_observed: no
+
+- **SFR-V05** Finite budget (SFR-R01a, SFR-R01f, SFR-R02; boundary: supplied-input stage)
+  - Inputs: counter=-1; `calc4` result 2; two reached in-range successful thinks then one further check.
+  - Seeds: S={1, 0x29A}.
+  - Draws: S modulus 100 ->51 then 31; final S={0x2F2ED81B, 0x2C890AFD}.
+  - Trace: initialize 2; decrement to 1 then 0; next check kills.
+  - Outputs: 2 shot requests; counter 0; mode 0 on third think; no third chance draw.
+  - Discriminates: Budget is lazy and death occurs at next check.
+  - runtime_observed: no
+
+- **SFR-V06** Room cap (SFR-R03c, SFR-R13; boundary: supplied-input stage)
+  - Inputs: independent cases below, with section defaults.
+  - Seeds: no draw.
+  - Draws: none.
+  - Trace: s = 2 ->distances 49 versus 48; first exceeds 48.
+  - (a) Inputs: T raw(51, 0), empty slot A. Draws: none. Outputs: reduced distance 49; slot A empty.
+  - (b) Inputs: T raw(50, 0), empty slot A. Draws: none. Outputs: reduced distance 48; slot A=T, distance 48.
+  - Discriminates: Cap is 48 inclusive and independent of `aip4`.
+  - runtime_observed: no
+
+- **SFR-V07** Burst attempt count (SFR-R09a; boundary: supplied-input stage)
+  - Inputs: valid missile; `calc1` result 3; per-index resolve succeeds with(1010, 1001); creator initializes every request at stored-point X = 1000, f = 100.
+  - Seeds: no direct draw; each initialized seed is overwritten from the stated value.
+  - Draws: none.
+  - Trace: indices 0, 1, 2; f = 100>=78 ->77; seed = stored-point X + i.
+  - Outputs: 3 creation requests; return 1; latch=true; seed lows 1000, 1001, 1002, each hi0x29A; total/current 77, path duration 77, type 10.
+  - Discriminates: Count means 3 conditional requests with successful creators explicitly supplied. This same-X case does not discriminate the initializer's X source; V34 supplies current X700 versus stored-point X40, producing seed 44 for index 4 rather than 704.
+  - runtime_observed: no
+
+- **SFR-V08** Missing skill on later think (SFR-R01a, SFR-R01b; boundary: supplied-input stage)
+  - Inputs: counter 3; selected instance absent.
+  - Seeds: no draw.
+  - Draws: none.
+  - Trace: budget survives; skill lookup fails.
+  - Outputs: mode 0; current skill absent; 0 searches/shot requests.
+  - Discriminates: Later think reaches its own missing-skill path.
+  - runtime_observed: no
+
+- **SFR-V09** Clear inferno before search (SFR-R01c, SFR-R01d; boundary: supplied-input stage)
+  - Inputs: state 12 active; search returns no target.
+  - Seeds: no draw.
+  - Draws: none.
+  - Trace: remove state 12 before search; no target requests `aip3`.
+  - Outputs: state 12 inactive; state removal before search observation, then schedule due 111; counter 3.
+  - Discriminates: The search operation observes state 12 inactive; a search observing it active fails.
+  - runtime_observed: no
+
+- **SFR-V10** Stored shortcut (SFR-R03a; boundary: supplied-input stage)
+  - Inputs: stored result=T, distance 20; nearby candidate B distance 1; wrapper auxiliary reach result 0.
+  - Seeds: no draw.
+  - Draws: none.
+  - Trace: stored success skips room callback; request reach(S, T, 0).
+  - Outputs: returnT, distance 20, auxiliary 0; B seed unchanged; no room callbacks.
+  - (a) Inputs: independent wrapper stage; stored resolver returns absent; supplied room/chooser result is no unit from empty slotsA/B, each distance 2147483647. Draws: none. Outputs: returned unit absent, distance 2147483647, auxiliary 0; all seeds unchanged. This asserts the verified wrapper's empty-result outputs only; actual enumeration/chooser execution remains Q08.
+  - (b) Inputs: independent wrapper stage; stored result=T, distance 20. The supplied reach operation returns 1 for (S, T, 0), 0 for (T, S, 0), and 0 otherwise. Draws: none. Outputs: returned T, distance 20, auxiliary 1; all seeds unchanged.
+  - Discriminates: Stored target wins despite nearer B and beyond active range; caller range is separate.
+  - runtime_observed: no
+
+- **SFR-V11** Structural kind and eligibility rejects (SFR-R03f; boundary: supplied-input stage)
+  - Inputs: independent cases below, with section defaults.
+  - Seeds: no draw.
+  - Draws: none.
+  - Trace: reject kind before helper calls in(a); reject eligibility in(b).
+  - (a) Inputs: candidate object kind 2. Draws: none. Outputs: validity 0, all seeds unchanged.
+  - (b) Inputs: monster candidate eligibility A=false. Draws: none. Outputs: validity 0, all seeds unchanged.
+  - (c) Inputs: searcher absent; candidate T otherwise ordinary. Draws: none. Outputs: validity 0; all seeds unchanged.
+  - (d) Inputs: candidate absent; searcher S otherwise ordinary. Draws: none. Outputs: validity 0; all seeds unchanged.
+  - (e) Inputs: candidate player T has a town room and state 146 active; T seed={1, 0x29A}. Draws: none. Outputs: validity 0; T seed remains{1, 0x29A}; S unchanged.
+  - (f) Inputs: searcher S is a monster in mode 0; candidate T is an otherwise valid invisible player with seed{1, 0x29A}. Draws: none. Outputs: validity 0; T seed remains{1, 0x29A}; S unchanged.
+  - Discriminates: Rejects cannot consume the invis draw.
+  - runtime_observed: no
+
+- **SFR-V12** Invisible player below threshold (SFR-R03g; boundary: supplied-input stage)
+  - Inputs: T state 146 active. The supplied ordered reach operation returns 0 for (S, T, 0), 1 for (T, S, 0), and 0 for other arguments. Final result is 1 under the preamble's PVP inputs.
+  - Seeds: T={1, 0x29A}; S unchanged.
+  - Draws: T modulus 100 ->51; T={0x6AC6935F, 0}.
+  - Trace: 51<80; reach(S, T, 0)=0 rejects.
+  - Outputs: validity 0.
+  - Discriminates: Player zero-result rejection distinguishes polarity and seed owner. Swapping the reach arguments uses result 1 and incorrectly accepts final 1; the correct result is validity 0 with the stated stepped T seed. Extra pure reads do not affect acceptance.
+  - runtime_observed: no
+
+- **SFR-V13** Invisible player bypass and exact threshold (SFR-R03g; boundary: supplied-input stage)
+  - Inputs: T state 146 active; reach result 0; final result 1 under the preamble's PVP inputs; independent cases below.
+  - Seeds: per case; S unchanged.
+  - Draws: exactly one T modulus-100 draw per case.
+  - Trace: (a)84>=80 bypasses reach. (b)low32(0*0x6AC690C5+80)=80, high word 0; 80 mod 100=80, and equality bypasses reach.
+  - (a) Inputs: T seed={6, 0x29A}. Draws: T modulus 100 ->84; T={0x80A76738, 2}. Outputs: validity 1; S unchanged.
+  - (b) Inputs: T seed={0, 80}. Draws: T modulus 100 ->80; T={80, 0}. Outputs: validity 1; S unchanged.
+  - Discriminates: Testing roll>80 instead of roll>=80 would run the supplied zero reach result in(b) and reject T. Both cases accept, preserving their exact stepped seeds.
+  - runtime_observed: no
+
+- **SFR-V14** Monster polarity and visible player (SFR-R03g; boundary: supplied-input stage)
+  - Inputs: independent cases below, with section defaults.
+  - Seeds: no draw.
+  - Draws: none.
+  - Trace: monster zero proceeds; visible player skips reach; monster nonzero rejects.
+  - (a) Inputs: monster T invisible, reach 0. Draws: none. Outputs: final 1, validity 1.
+  - (b) Inputs: player T visible, reach 0. Draws: none. Outputs: final 1, validity 1.
+  - (c) Inputs: monster T invisible, reach 1. Draws: none. Outputs: validity 0.
+  - Discriminates: Opposite monster/player zero handling is asserted explicitly.
+  - runtime_observed: no
+
+- **SFR-V15** Octagonal metric (SFR-R04; boundary: supplied-input stage)
+  - Inputs: supplied unit(0, 0), points(10, 4), (3, 7), (5, 5), (0, 0), (1, 1).
+  - Seeds: no draw.
+  - Draws: none.
+  - Trace: (20+4)/2=12; (14+3)/2=8; (10+5)/2=7; 0; 3/2=1.
+  - Outputs: distances 12, 8, 7, 0, 1.
+  - Discriminates: Odd minima truncate and diagonal differs from Euclidean.
+  - runtime_observed: no
+
+- **SFR-V16** Odd/even range boundary (SFR-R01d, SFR-R07a, SFR-R13; boundary: supplied-input stage)
+  - Inputs: independent cases below, with section defaults.
+  - Seeds: (a)S={1, 0x29A}; (b)no draw.
+  - Draws: (a)S modulus 100 ->51; (b)none.
+  - Trace: reduced(10, 3) gives 23/2=11; reduced(10, 4) gives 12.
+  - (a) Inputs: T raw(12, 5), returned distance 11, S={1, 0x29A}. Draws: S modulus 100 ->51; S={0x6AC6935F, 0}. Outputs: one shot, counter 2, no delay.
+  - (b) Inputs: T raw(12, 6), returned distance 12. Draws: none. Outputs: no shot, counter 3, due 111.
+  - Discriminates: Exact odd truncation separates boundary.
+  - runtime_observed: no
+
+- **SFR-V17** Three-shot sequence (SFR-R01a, SFR-R01f, SFR-R02; boundary: supplied-input stage)
+  - Inputs: counter=-1; `calc4`=3; three in-range successful thinks then fourth check.
+  - Seeds: S={1, 0x29A}.
+  - Draws: S modulus 100 ->51, 31, 12; final S={0x280687C4, 0x13ADFE65}.
+  - Trace: counter -1 ->3 ->2 ->1 ->0; fourth check sees 0.
+  - Outputs: 3 shots; counter 0; mode 0 on fourth; no fourth chance draw.
+  - Discriminates: Reinitializing zero or killing on decrement would fail.
+  - runtime_observed: no
+
+- **SFR-V18** Chance equality pair (SFR-R01e, SFR-R06a; boundary: supplied-input stage)
+  - Inputs: independent cases below, with section defaults.
+  - Seeds: each S={1, 0x29A}.
+  - Draws: each S modulus 100 ->51; new S={0x6AC6935F, 0}.
+  - Trace: 51>=51; 51<52.
+  - (a) Inputs: `aip1`=51, S={1, 0x29A}. Draws: S modulus 100 ->51; S={0x6AC6935F, 0}. Outputs: due 107, counter 3, no shot.
+  - (b) Inputs: `aip1`=52, S={1, 0x29A}. Draws: S modulus 100 ->51; S={0x6AC6935F, 0}. Outputs: one shot, counter 2, no delay.
+  - Discriminates: Strict threshold comparison.
+  - runtime_observed: no
+
+- **SFR-V19** Charged initializer cap (SFR-R09a; boundary: supplied-input stage)
+  - Inputs: `calc1`=3; three successful resolution/creation results; each created missile stored-point X = 1000, frame count 100.
+  - Seeds: no direct draw; initialize each seed from values.
+  - Draws: none.
+  - Trace: seed=1000+i; 100>=78 clamps.
+  - Outputs: 3 initialized missiles:seed lows 1000/1001/1002, hi0x29A; current/total frames 77; path duration 77, type 10.
+  - Discriminates: This case pins the stated seed values and cap 77, without independently distinguishing equal caster/stored-point X inputs. V34 discriminates stored-point X40 from current X700: seed 42 for index 2 rather than 702, and seed 44 for index 4 rather than 704.
+  - runtime_observed: no
+
+- **SFR-V20** Stable nearest tie and cap (SFR-R03c, SFR-R13; boundary: supplied-input stage)
+  - Inputs: same slot class 14; A raw(22, 0), B(2, 22), C(50, 1), D(51, 2) in order; all pass validity/collision.
+  - Seeds: no draw.
+  - Draws: none.
+  - Trace: reduced distances 20, 20, 48, 49; A writes; B ties; C farther; D capped.
+  - Outputs: slot A=A, distance 20; C alone would fill distance 48.
+  - Discriminates: First encountered wins; this occupied-slot sequence tests tie stability. It does not independently discriminate the cap because distance 49 cannot beat A20 even without a cap. V06(a) starts with an empty slot and rejects reduced 49; V06(b) independently accepts reduced 48, distinguishing the cap boundary.
+  - runtime_observed: no
+
+- **SFR-V21** Candidate full size (SFR-R01d, SFR-R13; boundary: supplied-input stage)
+  - Inputs: independent cases below, with section defaults.
+  - Seeds: (a/b)S={1, 0x29A}; (c)no draw.
+  - Draws: (a/b)S mod 100 ->51; (c)none.
+  - Trace: (a/b)reduced(11, 0); (c)(12, 0).
+  - (a) Inputs: player raw(13, 2), returned 11, S={1, 0x29A}. Draws: S modulus 100 ->51; S={0x6AC6935F, 0}. Outputs: reduced(11, 0), one shot, counter 2.
+  - (b) Inputs: monster SizeX=3, raw(14, 3), returned 11, S={1, 0x29A}. Draws: S modulus 100 ->51; S={0x6AC6935F, 0}. Outputs: reduced(11, 0), one shot, counter 2.
+  - (c) Inputs: monster SizeX=3, raw(15, 3), returned 12. Draws: none. Outputs: reduced(12, 0), no shot, counter 3, due 111.
+  - Discriminates: Full size per axis distinguishes half-size.
+  - runtime_observed: no
+
+- **SFR-V22** Axis clamp (SFR-R13; boundary: supplied-input stage)
+  - Inputs: monster SizeX3, raw(2, 7).
+  - Seeds: no draw.
+  - Draws: none.
+  - Trace: max(2-3, 0)=0; 7-3=4; (8+0)/2=4.
+  - Outputs: distance 4.
+  - (a) Inputs: monster SizeX=-3, raw(2, 7). Draws: none. Outputs: reduced(5, 10); distance 12.
+  - (b) Inputs: monster class 0, MonStats count 1, present MonStats row with MonStatsEx=-1, raw(2, 7). Draws: none. Outputs: no extended row, size 0; distance 8 from reduced(2, 7).
+  - (c) Inputs: missile identity 2, Missiles count 2, raw(2, 7). Draws: none. Outputs: no missile record, size 0; distance 8.
+  - (d) Inputs: object with supplied object size field 3, raw(2, 7). Draws: none. Outputs: reduced(0, 4); distance 4.
+  - (e) Inputs: missile identity 0, Missiles count 1, present record Size=3, raw(2, 7). Draws: none. Outputs: reduced(0, 4); distance 4.
+  - (f) Inputs: item, raw(2, 7). Draws: none. Outputs: size 1, reduced(1, 6); distance 6.
+  - (g) Inputs: isolated size operation only; unit kind 5. Draws: none. Outputs: size 0; no distance assertion.
+  - (h) Inputs: isolated size operation only; unit absent. Draws: none. Outputs: size 0; no distance assertion.
+  - Discriminates: Negative reduced axis must clamp before metric.
+  - runtime_observed: no
+
+- **SFR-V23** Validity draw precedes cap (SFR-R03c, SFR-R03g, SFR-R13; boundary: supplied-input stage)
+  - Inputs: invisible player T raw(62, 0), reach 1, final 1; empty slot A.
+  - Seeds: T={1, 0x29A}; S unchanged.
+  - Draws: T mod 100 ->51; T={0x6AC6935F, 0}.
+  - Trace: validity draw 51<80, reach 1 proceeds; distance 60>48.
+  - Outputs: T seed advanced; slot A empty.
+  - Discriminates: Cap-first code would leave candidate seed unchanged.
+  - runtime_observed: no
+
+- **SFR-V24** First-think missing skill (SFR-R01a, SFR-R02; boundary: supplied-input stage)
+  - Inputs: independent cases below, with section defaults.
+  - Seeds: no draw.
+  - Draws: none.
+  - Trace: lazy initialization fails before `calc4`/search.
+  - (a) Inputs: counter=-1, Skill1=400, count 400. Draws: none. Outputs: lost 1, mode 0, counter-1, no evaluation/search/chance/shot.
+  - (b) Inputs: counter=-1, Skill1=20, instance absent. Draws: none. Outputs: lost 1, mode 0, counter-1, no evaluation/search/chance/shot.
+  - (c) Inputs: counter=-1, Skill1=20, skill count 400, selected Skills record absent. Draws: none. Outputs: lost 1, mode 0, counter=-1; no expression evaluation, search, chance draw or shot.
+  - Discriminates: First-think failure belongs to budget helper.
+  - runtime_observed: no
+
+- **SFR-V25** Second budget failure (SFR-R01f, SFR-R02; boundary: supplied-input stage)
+  - Inputs: first budget and range pass; after chance, second owner lookup absent; events[2, 8].
+  - Seeds: S={1, 0x29A}.
+  - Draws: S mod 100 ->51; S={0x6AC6935F, 0}.
+  - Trace: second budget requests death and returns 1; stop before purge/fire.
+  - Outputs: mode 0; events[2, 8]; counter 3; no selection/shot.
+  - Discriminates: Failure return of decrementing call cannot be ignored.
+  - runtime_observed: no
+
+- **SFR-V26** Budget zero, negative, owner failures (SFR-R02; boundary: supplied-input stage)
+  - Inputs: independent cases below, with section defaults.
+  - Seeds: no draw.
+  - Draws: none.
+  - Trace: (a/b)persist eval then<=0; others fail before evaluation.
+  - (a) Inputs: counter=-1, `calc4` result 0. Draws: none. Outputs: lost 1, mode 0, counter 0, one evaluation.
+  - (b) Inputs: counter=-1, `calc4` result-2. Draws: none. Outputs: lost 1, mode 0, counter-2, one evaluation.
+  - (c) Inputs: owner absent, counter 3. Draws: none. Outputs: lost 1, mode 0, counter 3, no evaluation.
+  - (d) Inputs: owner room absent, counter 3. Draws: none. Outputs: lost 1, mode 0, counter 3, no evaluation.
+  - (e) Inputs: owner room town, counter 3. Draws: none. Outputs: lost 1, mode 0, counter 3, no evaluation.
+  - Discriminates: Signed nonpositive budget and owner gates.
+  - runtime_observed: no
+
+- **SFR-V27** Stored target bypasses room cap (SFR-R03a, SFR-R01d; boundary: supplied-input stage)
+  - Inputs: storedT reduced 60; returned target distance 60; `aip4`=61; `aip1`=100.
+  - Seeds: S={1, 0x29A}.
+  - Draws: S mod 100 ->51; S={0x6AC6935F, 0}.
+  - Trace: wrapper returnsT without cap; 60<61.
+  - Outputs: targetT; one shot; counter 2; no room callbacks.
+  - Discriminates: Applying room cap to shortcut incorrectly prevents shot.
+  - runtime_observed: no
+
+- **SFR-V28** Two slots and nonzero-collision rejection (SFR-R03c; boundary: supplied-input stage)
+  - Inputs: independent callback cases below. Candidate validity is nonzero under the preamble's existing PVP inputs; candidate state 146 is absent.
+  - Seeds: no draw; S/T and all named candidate seeds retain their entry pairs.
+  - Draws: none.
+  - Trace: (a)A/B fill distinct slots; C ties A. (b)The nearer T passes validity, cap and strict improvement, but nonzero collision prevents the slot write.
+  - (a) Inputs: empty slots; A player raw(22, 0), distance 20, class 14; B monster SizeX=0, raw(4, 0), distance 4, class 1; C player raw(2, 22), distance 20, class 14; collision 0 for all. Draws: none. Outputs: slotA=A, distance 20; slotB=B, distance 4.
+  - (b) Inputs: slotA=A, distance 20; slotB empty, distance 2147483647; T player raw(12, 0), size 2, class 14; the ordered collision operation returns 1 for (T, S, 4), 0 for (S, T, 4), and 0 for other arguments. Draws: none. Outputs: T reduced distance 10; slotA remains A, distance 20; slotB remains empty, distance 2147483647; all seeds unchanged.
+  - (c) Inputs: independent case; slotA=A, distance 20; slotB empty, distance 2147483647; T player raw(12, 0), size 2, class 14; ordered collision(T, S, 4)=0, reverse collision(S, T, 4)=1. Draws: none. Outputs: T reduced distance 10; slotA becomes T, distance 10; slotB remains empty, distance 2147483647; all seeds unchanged.
+  - Discriminates: A global nearest-only result loses A in(a); ignoring collision rejection or swapping its unit arguments replaces A with nearer T in(b). Acceptance asserts slots, distances and seeds, without an exact pure-query count.
+  - runtime_observed: no
+
+- **SFR-V29** Unavailable unit modes (SFR-R03f; boundary: supplied-input stage)
+  - Inputs: independent cases below, with section defaults.
+  - Seeds: no draw.
+  - Draws: none.
+  - Trace: unavailable candidate rejects before room/state tests.
+  - (a) Inputs: player candidate mode 17. Draws: none. Outputs: validity 0.
+  - (b) Inputs: monster candidate mode 12. Draws: none. Outputs: validity 0.
+  - (c) Inputs: monster candidate mode 0. Draws: none. Outputs: validity 0.
+  - (d) Inputs: player candidate mode 1, completion=true. Draws: none. Outputs: validity 0.
+  - Discriminates: Dead modes and completion are separate structural gates.
+  - runtime_observed: no
+
+- **SFR-V30** Visible monster skips reach (SFR-R03g; boundary: supplied-input stage)
+  - Inputs: monster T invis=false; reach result 1; final result 1.
+  - Seeds: no draw.
+  - Draws: none.
+  - Trace: state absent ->final directly.
+  - Outputs: validity 1.
+  - Discriminates: Monster rejection must be gated by invis.
+  - runtime_observed: no
+
+- **SFR-V31** Owner roots and raw directional return (SFR-R03i; boundary: integration of PVP-R05a/PVP-R07 with supplied existing lists/lookups)
+  - Inputs: per case below. Existing tier storage follows the preamble; player relation nodes are supplied explicitly. Owner lookups return the stated unit or absent. All cases start independently.
+  - Seeds: no draw.
+  - Draws: none in every case.
+  - Trace: resolve the searcher once and candidate repeatedly; equal roots reject; distinct player roots read directional flags AND8; other roots invert sameTierNeutral.
+  - (a) Inputs: S owner P; T monster owner P. Draws: none. Outputs: return 0; resolved roots P/P; roots equal before relation/tier decision.
+  - (b) Inputs: S owner P; T monster owner Q; P/Q players; P's relation node for Q has flags 8. Draws: none. Outputs: return 8; directional flags for P to Q are 8; reverse flags are 0 and do not affect result.
+  - (c) Inputs: S/T different monsters with no owner link; own alignment values 1/1. Draws: none. Outputs: sameTierNeutral=0; final return 1.
+  - (d) Inputs: S/T different monsters with no owner link; own alignment values 2/2. Draws: none. Outputs: sameTierNeutral=1; final return 0.
+  - (e) Inputs: S monster owner lookup absent; T different monster with no owner; own alignment values 1/1. Draws: none. Outputs: roots remain S/T; final return 1.
+  - (f) Inputs: S monster owner M (monster), M owner P; T monster owner N (monster), N owner Q; all supplied lookups succeed, M/Q own alignment 1/1. Draws: none. Outputs: searcher root M, candidate root Q; final return 1; no lookup of M's owner.
+  - (g) Inputs: S/T different monsters; S has no owner link; T's present owner link resolves successfully to T itself; existing own alignment values 1/1. Draws: none. Outputs: roots remain S/T; sameTierNeutral=0; final return 1. The self-owner replacement stops rather than repeating indefinitely.
+  - Discriminates: same-root rejection, raw player result 8, asymmetric depth and missing-owner fallback are exact.
+  - runtime_observed: no
+
+- **SFR-V32** Difficulty and signed parameter consumption (SFR-R01d, SFR-R01e, SFR-R06a; boundary: supplied-input stage)
+  - Inputs: difficulty 2; `aip1` Normal100/Hell0; `aip2` Hell-3; `aip3` Hell9; `aip4` Hell12; returnedT distance 1.
+  - Seeds: S={1, 0x29A}.
+  - Draws: S mod 100 ->51; S={0x6AC6935F, 0}.
+  - Trace: selectHell; 51>=0; frame 100+(-3)=97.
+  - Outputs: counter 3; 0shots; due 97.
+  - Discriminates: Wrong difficulty or clamp-to-one would change delay/result.
+  - runtime_observed: no
+
+- **SFR-V33** Dynamic integer positions (SFR-R07b, SFR-R13; boundary: supplied-input stage)
+  - Inputs: supplied path X16.16=0x03E88000, Y=0x03E80000; player target integer(1013, 1000).
+  - Seeds: no draw.
+  - Draws: none.
+  - Trace: integerS=(1000, 1000); raw(13, 0); size 2 ->distance 11.
+  - Outputs: position(1000, 1000); distance 11; tile integer 200 by NRF-R10a.
+  - Discriminates: Fractional path part does not round integer coordinate upward.
+  - runtime_observed: no
+
+- **SFR-V34** Per-index creation gates/failure (SFR-R09a; boundary: supplied-input stage)
+  - Inputs: `calc1`=5; index 0 resolvefalse; index 1 success(0, 10); index 2 success(10, 0); index 3 success(-2, 9), creator fails; index 4 success(12, 8), creator succeeds with missile M, current X=700, stored-point X=40, total/current frames 77 and seed{6, 0x29A}, invoking its initializer with index 4; independent initialized missile current X = 700, stored-point X = 40, index 2, frames 77; null initializer unit.
+  - Seeds: no direct draw; initializer seed replacement only.
+  - Draws: none.
+  - Trace: indices 3/4 have success and both coordinates nonzero; failure at 3 does not stop index 4. M initialization uses 40+4=44; the independent callback uses 40+2=42; 77<78 retains both frame fields.
+  - Outputs: ordered creation requests for indices 3 then 4, returning failure then M; final action return 1, latch true; M seed={44, 0x29A}, frames 77, duration 77, type 10. The independent initializer yields seed{42, 0x29A}, frames 77, duration 77, type 10; null initializer unit has no effects.
+  - Outputs: Within M's successful initializer, the ordered effect subsequence is seed overwrite{44, 0x29A}, path-kind request 10, path-duration request 77, path-preparation request for M. The independent frame 77/index 2 initializer has the same ordered request sequence with seed{42, 0x29A}; these are request assertions, not assertions about path-preparation internals.
+  - (a) Inputs: independent initialized missile, current X=700, stored-point X=40, index=2, signed total/current frame counts=-1. Draws: none. Outputs: seed={42, 0x29A}; total/current frame count=-1 unchanged; requested path duration=77 because u8(-1)=255, capped 77.
+  - (b) Inputs: independent initialized missile, current X=700, stored-point X=40, index=2, signed total/current frame counts=-256. Draws: none. Outputs: seed={42, 0x29A}; total/current frame count=-256 unchanged; requested path duration=0 because u8(-256)=0.
+  - (c) Inputs: independent action with non-null caster, latch=false, skill identity 400/count 400. Draws: none. Outputs: latch=true before rejection; return 0; no expression or creation request.
+  - (d) Inputs: independent valid action, latch=false, `calc1` result 0. Draws: none. Outputs: latch=true, return 1; no target-resolution or creation request.
+  - (e) Inputs: independent action with non-null caster, latch=false, selected missile identity 2, count 2; valid skill 20. Draws: none. Outputs: latch=true, return 0; no expression evaluation or creation request.
+  - (f) Inputs: independent action with non-null caster, latch=false, selected missile identity=-1, count 2; valid skill 20. Draws: none. Outputs: latch=true, return 0; no expression evaluation or creation request.
+  - (g) Inputs: independently reached action with caster absent, valid skill 20, selected missile identity 1/count 2, `calc1` result 0; supplied caster-position reads return(0, 0). Draws: none. Outputs: action return 1; no unit latch exists to write; no creation request. This is the handler stage, without asserting that outer dispatch accepts an absent unit.
+  - Discriminates: Stopping on the first creator failure omits the index 4 request and M seed 44. Count is not successful missiles; negative coordinates still pass the nonzero gate.
+  - runtime_observed: no
+
+- **SFR-V35** Supplied chooser cases (SFR-R10; boundary: supplied-input stage)
+  - Inputs: independent cases below, with section defaults.
+  - Seeds: no draw.
+  - Draws: none.
+  - Trace: player/empty/range branches then secondary distance<20.
+  - (a) Inputs: player S, A20, B4. Draws: none. Outputs: selectedA, distance 20.
+  - (b) Inputs: monster S, Aempty, B4. Draws: none. Outputs: selectedB, distance 4.
+  - (c) Inputs: monster S, A20, B6. Draws: none. Outputs: selectedA, distance 20.
+  - (d) Inputs: monster S, A20, B4, selector 7 none. Draws: none. Outputs: selectedB, distance 4.
+  - (e) Inputs: monster S, A20, B4, selector 7 C19. Draws: none. Outputs: slotA=C19, selectedC, distance 19.
+  - (f) Inputs: monster S, A20, B4, selector 7 C20. Draws: none. Outputs: selectedB, distance 4.
+  - (g) Inputs: monster S, A20, B5; selector 7 result absent. Draws: none. Outputs: selectedB, distance 5; slotA remains A20.
+  - (h) Inputs: monster S, slotA=A, distance 20; slotB absent, distance 2147483647. Draws: none. Outputs: selectedA, distance 20; slotA remains A20.
+  - Discriminates: B distance 5 must enter the secondary-result choice: selector 7 absent selects B5. A wrong B-distance>=5 early branch selects A20 instead. The distance 20 secondary boundary and two slots remain explicit supplied-stage checks.
+  - runtime_observed: no
+
+- **SFR-V36** Shared speed supplied arithmetic (SFR-R11a; boundary: supplied-input stage)
+  - Inputs: independent cases below, with section defaults.
+  - Seeds: no draw.
+  - Draws: none.
+  - Trace: (a)30*256*75/100=5760; (b)10*256*75/100=1920; (c)missing list skips 50%; (d)2560*50/100=1280 then 75%=960.
+  - (a) Inputs: Vel=30, VelLev=0, L=3, no explicit/slow. Draws: none. Outputs: speed intermediate 5760.
+  - (b) Inputs: explicit 10, unscaled, no slow. Draws: none. Outputs: speed intermediate 1920.
+  - (c) Inputs: explicit 2560, already scaled, slowmask true, state 87 active, list absent. Draws: none. Outputs: speed intermediate 1920.
+  - (d) Inputs: explicit 2560, already scaled, slowmask true, state 87 active, list present, selected stat 161/layer 0=50. Draws: none. Outputs: speed intermediate 960.
+  - (e) Inputs: explicit velocity 1073741824 (0x40000000), already scaled, no slow. Draws: none. Outputs: wrapped product low32(1073741824*75)=0xC0000000, interpreted as -1073741824; speed intermediate=-10737418 after signed truncation by 100.
+  - (f) Inputs: Vel=0, VelLev=1, L=-9, no explicit/slow. Draws: none. Outputs: trunc(-9/8)=-1; shifted speed=-256; speed intermediate=-192.
+  - (g) Inputs: explicit velocity 2560, already scaled, slowmask true, state 87 inactive, list present, selected stat 161/layer 0=50. Draws: none. Outputs: speed intermediate 1920; inactive state skips the slow scale despite the matching mask and available list.
+  - (h) Inputs: explicit velocity 2560, already scaled, slowmask false, state 87 active, list present, selected stat 161/layer 0=50. Draws: none. Outputs: speed intermediate 1920; false mask match skips the slow scale despite the active state and available list.
+  - Discriminates: State alone must not imply zero from missing list or skip list-selected stat.
+  - runtime_observed: no
+
+- **SFR-V37** Stored-target draw seed owner (SFR-R12; boundary: supplied-input stage)
+  - Inputs: reached selector 3 random branch; S seed{1, 0x29A}; candidate T seed{6, 0x29A}.
+  - Seeds: S={1, 0x29A}; T={6, 0x29A}.
+  - Draws: S RandMask(2) ->1; new S={0x6AC6935F, 0}.
+  - Trace: new lo 0x6AC6935F &1 =1.
+  - Outputs: result 1; S advanced; T unchanged{6, 0x29A}; no assertion about later routing.
+  - Discriminates: A candidate-seed draw would change T and leave S unchanged; the exact seed/output assertion rejects that owner.
+  - runtime_observed: no
+
+### 8.2 Observation vectors
+
+All are pending; these initial recipes do not exhaust every rule. Procedures are [in the companion](../research/spec-evidence/skill-assassin-sentry-firing-and-range.md#observation-procedures).
+
+- **SFR-O01** Measure cast tick to first shot at fixed trap rank. No exact latency is predicted until Q01 is resolved.
+- **SFR-O02** Measure the first next-think tick after a shot. Exact mode-completion latency remains Q01.
+- **SFR-O03** Measure charged-bolt burst count and successive path directions against a stationary target; compare only successful, initialized requests with V07/V19 and retain creator/steering limits.
+- **SFR-O04** Compare the matched player raw(13, 0)/raw(14, 0) boundary at `aip4`=12 and monster SizeX3 raw(14, 3)/raw(15, 3) boundary; expect inside/outside per V01/V02/V21 after actual inputs are established.
+
+## 9. Acceptance and dependencies
+
+Partial acceptance reproduces all verified local request/return, arithmetic and direct-seed assertions in V01..V34 and V37, respecting each vector's supplied boundary and mixed-rule gates. V35/V36 are explicit supplied arithmetic/chooser checks for gated integrated rules; passing them does not promote R10/R11a. TD-SKILLS17 establishes only the named text cells in R09b. Full reproduction additionally requires Q01/Q02/Q03/Q04/Q05/Q08/Q09/Q11/Q12 producer contracts and original-game observations for every behavioral rule. Q06's unknown external position producers do not block supplied dynamic positions. O01..O04 and further branch observations are pending; no partial pass claims complete parity.
+
+**Depends on:** [PvP relations and owners](combat-pvp-damage-and-kill-credit.md), PVP-R05a/PVP-R07 for the exact final predicate/owner/list contract and PVP-R13 no direct draw, retaining PVP-Q03/PVP-Q05 producer limits; [foundations](core-numeric-and-rng-foundations.md), NRF-R01/NRF-R02 seed stepping/draw forms, NRF-R03a supplied seed initialization, NRF-R04a/b direct-site seed owners, NRF-R10a/b coordinates, NRF-R12b/c list stat reads, NRF-R12a state request semantics and NRF-R14a mode boundary; [data fields](core-game-data-fields.md), GDF-R05a/GDF-R06a/GDF-R07/GDF-R08a fields, GDF-R12 states and GDF-R14a/GDF-R15a modes; [calculation expressions](skill-calc-expressions-and-synergies.md), SCX-R11/SCX-R15/SCX-R24 and their producer gates; [leveled skill calculations](skill-leveled-damage-tohit-and-elements.md), SLD-R19 calculation-front-end boundary; [cast dispatch](skill-cast-start-and-do-dispatch.md), SCD-R06/SCD-R12 action selection and SCD-R07/SCD-R13 creation request/seed boundaries. These contracts do not supply a fully verified highest-level-instance producer; SCX-Q09/SCD-Q10 and Q12 retain that limit.
+
+**Depended on by:** [Blade Sentinel and Fury](skill-assassin-blade-sentinel-and-fury.md), budget/search/distance context; [Death Sentry corpse damage](skill-assassin-death-sentry-corpse-damage.md), budget helper and shared speed context. Supporting combat citations are not prerequisites for local supplied arithmetic.
+
+## 10. Related specs
+
+- [Damage pipeline](combat-damage-pipeline-order.md): later sentry hit damage.
+- [Hit recovery](combat-hit-recovery.md): reactions and mode-owned draws.
+- [Shield block and avoidance](combat-shield-block-and-avoidance.md): hit avoidance.
+
+## Appendix A. Provenance
+
+Lord of Destruction Expansion 1.13c, Windows x86. The [source manifest](../research/source-manifest.md) identifies D2Game/D2Common original images. Reused static readings retain their 2026-10-12 dates and limits; targeted disassembly, original-image branch/table checks and byte-matched callback/size readings are dated 2026-10-15. The [companion](../research/spec-evidence/skill-assassin-sentry-firing-and-range.md) records exact functions, corrections and narrow effective Skills text cells. No gameplay observation was performed; table reads establish named text values only.
