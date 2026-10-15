@@ -752,3 +752,27 @@ only p and q are exact binary values for these inputs (eligible 2 gives the inex
 the trace now says so. MSD-Q02 still limits precision-sensitive results. These wording
 corrections do not require another reader run. The final applicable full pass has MISMATCH 0
 and no unresolved GUESS, GAP or DISCRIM finding. Document status remains draft.
+
+## Specification review (2026-10-15)
+
+An independent review of the contract against the spec-writing checklist re-read, from the
+original-image disassembly, the percent readers `0xAF5F0`/`0xAF5D0` and their consumers in
+`0xAFDB0` (life uses `0xAF5F0`, experience `0xAF5D0`), the image tables at `0xFB5F0`,
+`0xFB614` and `0xFBBF0`, the effective-count routine `0x379A0` with callback `0x37810`, the
+damage term `0x770A0` and its application at `0x77411..0x774B4`, the property loop in
+`0xAFDB0`, and the drop routine `0x12380` from the killer/owner test through the pick draw.
+All agreed with MSD-R05, MSD-R06, MSD-R12, MSD-R15, MSD-R20, MSD-R21, MSD-R22a and MSD-R23.
+The override variable at `0x111C1C` lies in the zero-initialized tail of the data section
+(beyond its raw size), consistent with the recorded initial value 0.
+
+Cross-contract change: the missing-party-record discrepancy recorded under Corrections is
+settled. The party contract's own 2026-10-15 correction now states that a missing record (and
+an empty member list) returns without a callback, matching this spec's reading of `0x9C070`.
+The Depends-on sentence that described a difference from PXL-R04a now states the agreement.
+Section 3 also cross-references the party contract's name for the same unit condition
+(`Unit +0xC6` bit 0). No rule, input, vector, label or gate changed, so no reader rerun is
+needed for these reference edits.
+
+Observed but not changed (reported as findings): when the prepared total `T` of a treasure
+class is 0, `0x12380` leaves that treasure-class level at `0x1248D` before the NoDrop count or
+any pick draw; MSD-R23 does not describe that branch.

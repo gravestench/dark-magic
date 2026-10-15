@@ -292,3 +292,20 @@ The fresh reader independently checked the sole final section-5 lookup inventory
 The advisory absent-player-data lookup skip receives no change: R01a/PVP-R11a explicitly require both present player data and count >7. PVP-V27's count-8 supplied attempt and V07/V14's count-7 skip establish the two existing attempt/no-attempt recipes; another failed prerequisite produces the same no-attempt result, without a new amount or producer. All three HARDEST entries receive no change: R01a/V07 separates nested stages; R08a names supplied lookup results and subsequent guards; PVP-V27 pins request order while retaining search integration limits.
 
 Five full independent readers covered the unchanged contract, followed by fresh delta checks 6 through 9 for each amended part. Every reported blocking finding has a recorded outcome, and the final applicable read has no unresolved mismatch, guess, gap or discrimination finding. Root review read all three documents, additions and dispositions, corroborated the missing-record branch/coordinate/forwarding evidence and hand-recomputed new cap, progression and signed allocation examples. Document review is complete. Status remains draft; exact integration, floating environment, producer and observation gaps and maintainer approval remain. No implementation test, gameplay or new implementation comparison ran. Publication repeats document checks on committed bytes.
+
+## Specification review - 2026-10-15
+
+An independent checklist review re-read from original-image disassembly the level-factor
+routine `0xDAA40` with the image arrays at `0xFA01C`/`0xFA048` (A and B exactly as in R05a,
+including the m>=25 ratio branch with operands `(m, x, v)`), the party pool `0xDE8F0`
+(`(n-1)*X*89` truncating `/256`, the n=1 path crediting the original player, the 32-bit
+stored quotient), the hireling share in `0xDEA00` (`*86` truncating `/256`, skipped when the
+hireling is the killer), the hireling award `0xDDCB0` (nonpositive guard, owner-level guard,
+`old + 2*x`, `classMax(0) - 1` guard) and the gold cap D2Common `0x31940` (`level * 10000`,
+zero when the stat-definition count is 12 or less). All agreed with R04a, R05a, R08a and R09b,
+and V01 to V05 and V10 recompute from the rules.
+
+Section 3 now notes that excludedFromPartyCollection (`Unit +0xC6` bit 0) is the same unit
+condition the monster-scaling contract calls `notAliveCondition`, so the two contracts do not
+read as different inputs. This is a reference clarification; no rule, input value, vector,
+label or gate changed and no reader rerun is required.

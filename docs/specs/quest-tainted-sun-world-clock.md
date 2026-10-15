@@ -28,12 +28,15 @@ D2Common computes clock arithmetic and assignment. D2Client calls a separate cli
 | act clocks | game act collection | five optional acts, each with optional environment | An act differs from its environment; indices 0..4 denote Acts I..V |
 | clock | environment | cycle/period/ticks/rate/index/flag/last resync: i32 | cycle 0..5; flag 0 normal, any nonzero flag eclipse |
 | intensity/colour | environment presentation | intensity i32, three colour bytes | Only TSW-R07c's supplied intensity branches and explicit override are reproduced |
-| quest | game quest 10, slot 11 | active/state/stage/transition markers u8; scheduled/applied/pending u8 | Neutral marker writes are specified below |
+| quest | game quest 10, slot 11 | active/state/stage/transition markers u8; scheduled/applied/pending u8; markers M4/M5/M6 u8; mode marker M8, unit-id marker MC, amulet count, stored object-source/derived results M10/M98 i32; roster word u16 | Neutral marker writes are specified below; initialization zeroes the private markers |
+| quest 9 counter | game quest 9's private state, when present | i32, low32 addition | Written only by TSW-R02c |
+| callback unit | animation/event callback input, optional | unit identity i32 | Absent unit records identity -1 |
+| diagnostic switch | server-wide value, not per game | i32; nonzero enables | Producer remains TSW-Q10 |
 | progress flags | current difficulty's slots 11 and 10; shared quest flags | boolean bits 0,1,2,3,4,13,14 | Broader meanings remain TSW-Q02 |
 | World-clock input | logical message | cycle/ticks i32, flag u8 | Client assignment values; binary encoding is evidence only |
-| recipients | ordered player iteration and client list | player/client or absent; act u8; client state i32 | Distinguishes a send request from completed delivery |
+| recipients | ordered player iteration and client list | player/client or absent; act u8; client state i32; client direct-player flag bit; cached player reference | Distinguishes a send request from completed delivery; lookup result is supplied |
 | client source | supplied source, 0 when absent | i32 | Used by client act mapping and presentation; producer/level identity remains TSW-Q07 |
-| event | supplied callback input | event key i32; auxiliary selector u16; auxiliary identity i32 | Gameplay meanings are not inferred from values |
+| event | supplied callback input | event key i32; auxiliary selector u16; auxiliary identity i32; optional unit | Gameplay meanings are not inferred from values |
 | altar | player, optional object, item-presence results | object mode marker i32; flag/item tests boolean | Item search region is supplied, TSW-Q10 |
 | game frame | server frame counter | u32, low32 increment | Advanced before act updates |
 | timer | scheduler and delivery | schedule parameter/counter i32; callback identity | Request and actual timed callback execution are distinct |
@@ -56,7 +59,7 @@ All clock additions, subtractions and products retain low32 and are interpreted 
 
 ### TSW-R01. Quest start stages
 
-**TSW-R01a. Shared start** [verified in 1.13c code (static)]. Write transition marker 0 and stage marker 1; request the pre-start callback over supplied players. After normal completion, change state 0 to 1, retaining other states. If Act II is absent, set pending 1 and return 0: retain earlier quest writes, leave clocks unchanged, request no start messages. Otherwise apply TSW-R04a, request TSW-R07a over players and return 1. This stage does not set applied or clear pending. Dependency-produced effects are TSW-Q10.
+**TSW-R01a. Shared start** [verified in 1.13c code (static)]. Write transition marker 0 and stage marker 1; request the pre-start callback over supplied players. After normal completion, change state 0 to 1 and apply TSW-R07e with text `changing state to 1` plus a newline, retaining other states without that request. If Act II is absent, set pending 1 and return 0: retain earlier quest writes, leave clocks unchanged, request no start messages. Otherwise apply TSW-R04a, request TSW-R07a over players and return 1. This stage does not set applied or clear pending. Dependency-produced effects are TSW-Q10.
 
 **TSW-R01b. Progress writer** [verified in 1.13c code (static)]. Per player, return 0 without writes if slot-11 bit 0 or 1 is set, or quest 10 is absent. Otherwise, unsigned state >=1 sets bit 2; additionally state 2 sets bit 3, or state 3 sets bit 4. Clear no other bits; return 0. Supplied flag operations persist in order.
 
@@ -64,19 +67,34 @@ All clock additions, subtractions and products retain low32 and are interpreted 
 
 **TSW-R01d. Join selection** [verified in 1.13c code (static)]. Test slot-11 bit 0, then bit 1. Either set: set shared slot-11 bit 13 and return without applying. If bit 2 is clear, return without writes. Otherwise run TSW-R01a. Success sets applied 1; failure retains pending 1 and requests TSW-R07b. After either result overwrite `(stage,state)` with `(2,3)` if bit 4 is set, else `(2,2)` if bit 3 is set, else `(1,1)`. Failure does not undo this overwrite.
 
-**TSW-R01e. Animation start slice** [verified in 1.13c code (static)]. For active exactly 1 and unsigned state <=1, run TSW-R01a; set applied 1 on success or pending 1 on failure, then write state 3 and transition 0 in both cases. Other animation bookkeeping and its final mode-update request are supplied, TSW-Q10.
+**TSW-R01e. Animation start slice** [verified in 1.13c code (static)]. First, on every call, write M5=1 and MC=callback unit identity (-1 when absent). If active is not exactly 1, skip to the final request. Otherwise, for unsigned state <=1, run TSW-R01a; set applied 1 on success or pending 1 on failure, then write state 3 and transition 0 in both cases. Then, still within active exactly 1 and for any state, if stage is 0, write transition 0 and stage 2 and request the pre-start callback over supplied players. Shared start writes stage 1, so this branch follows only a skipped start. Finally, on every path, request mode-update(callback unit, M8). The mode-update's effects are TSW-Q10.
 
-**TSW-R01f. Event retry slice** [verified in 1.13c code (static)]. Event key 0x28 and pending exactly 1: run TSW-R01a; on success run TSW-R01b over supplied players then clear pending. Failure retains pending 1 and earlier writes. Key 0x2C/0x2D, state 0, active exactly 1: invoke TSW-R01g. Remaining event effects are TSW-Q10.
+**TSW-R01f. Event retry slice** [verified in 1.13c code (static)]. These tests run in order as independent checks, not an else-chain. Key 0x2C/0x2D, state 0, active exactly 1: invoke TSW-R01g. Event key 0x28 and pending exactly 1: run TSW-R01a; on success run TSW-R01b over supplied players then clear pending. Failure retains pending 1 and earlier writes. TSW-R01i then runs on every call. Supplied operation effects are TSW-Q10.
 
 **TSW-R01g. Schedule** [verified in 1.13c code (static)]. Nonzero state or scheduled means no draw/request. Otherwise step the game quest structure's seed once through NRF-R01, select parameter `15+(new lo & 1)` (15 or 16), request scheduling TSW-R01h, then write scheduled 1. The scheduler stores supplied quest counter plus parameter with low32 arithmetic. Elapsed gameplay units/delivery remain TSW-Q10.
 
 **TSW-R01h. Timer callback** [verified in 1.13c code (static)]. Clear scheduled first. If applied is nonzero, return 1 without applying. Otherwise run TSW-R01a. Failure sets pending 1 and returns 1; success sets applied 1, runs TSW-R01b over supplied players and returns 1. Success does not itself clear pending.
 
+**TSW-R01i. Event auxiliary-identity slice** [verified in 1.13c code (static)]. Only when the event's auxiliary identity equals 0x28: if the roster word is nonzero, request roster-update(event unit identity, -1 when absent). Then, if state is exactly 2, write state 3 and apply TSW-R07e with text `changing state to 3` plus a newline. This test reads state after TSW-R01f's start stage. The event key does not gate this slice. Roster-update effects are TSW-Q10.
+
 ### TSW-R02. Altar stage
 
-**TSW-R02** [verified in 1.13c code (static)]. With quest 10 found, test player slot-11 bit 1, then bit 0 if needed. Only if either is set, test slot-10 bit 0, then supplied `vip ` presence, then `hst ` presence, stopping at the first true result. True: request rejection with value 19 and player; return 0 without reset. If both primary bits are clear, skip all three secondary tests. Next, an existing object with nonzero mode marker returns 0 without reset; a missing object does not take that return.
+**TSW-R02a. Eligibility** [verified in 1.13c code (static)]. O denotes the operated object, which may be absent. A missing quest 10 returns 0 with no other work. With quest 10 found, test player slot-11 bit 1, then bit 0 if needed. Only if either is set, test slot-10 bit 0, then supplied `vip ` presence, then `hst ` presence, stopping at the first true result. True: request rejection with value 19 and player; return 0 without reset. If both primary bits are clear, skip all three secondary tests. Next, an existing object with nonzero mode marker returns 0 without reset; a missing object does not take that return. Otherwise TSW-R02b runs when active is nonzero, else TSW-R02c. All returns are 0.
 
-On the non-skipped active branch (active nonzero), supplied preparation precedes quest reset. With Act II present, clear applied, run TSW-R04b and request reset messages. With Act II absent, retain applied/clock and request no reset message. After supplied intervening callbacks, if player bit 0 is clear, set bit 1, set bit 13, then **clear** bit 14. Request `vip ` drops through supplied operations, then the inline quest draw selects `5+(new lo mod 5)` gold-pile requests. The inactive branch also requests item/gold work and one inline draw, without resetting the environment. All normal/skip/missing-quest returns are 0. Requested amulet counts, actual drops, other callbacks and later quest transitions remain TSW-Q08/TSW-Q10.
+**TSW-R02b. Active branch** [verified in 1.13c code (static)]. Requests and writes, in order:
+1. Request object-source(O), store result as M10; request source-derived(M10), store result as M98. Request mode-update(O,1). Write M8=2, M5=1, MC=object identity (-1 when absent), M4=1.
+2. If active is still nonzero: run quest reset. With Act II present, clear applied, run TSW-R04b and request reset messages. With Act II absent, retain applied/clock and request no reset message. Then apply TSW-R07e with text `Finished quest`, and request quest-notification(4), then game-notification(6).
+3. Write amulet count 0; request participant iteration(player). The supplied iteration sets the amulet count.
+4. If active is still nonzero: if player slot-11 bit 0 is clear, set bit 1, set bit 13, then **clear** bit 14. Then request post-flag iterations A, B and C, each with O. Then request quest-record update(13).
+5. Request source-derived(M10) again. Write O's item-code field to `vip `. Request amulet drop(O) amulet-count times. Each nonzero drop result requests item-flag mark(item, 16, 1) and counts one success. Then request amulet-result(successes) and context request(4).
+6. Draw once from the quest seed (TSW-R12b) and request `5+(new lo mod 5)` gold-pile drops(O). A missing game quest structure takes the fatal assertion path instead.
+7. Request completion iteration, then a timer request with parameter 10 for TSW-R02d. Return 0.
+
+**TSW-R02c. Inactive branch** [verified in 1.13c code (static)]. Request mode-update(O,1); write M4=1, M8=2 and amulet count 0; request participant iteration(player). Request object-source(O) and source-derived(result), storing neither. Write O's item-code field, run the counted drop loop and context request(4) as in TSW-R02b step 5, without amulet-result. Run TSW-R02b step 6. Then find quest 9: if present, add the success count to its counter (low32); return 0 either way. No environment reset, flag write, timer, M5/MC write or completion iteration occurs.
+
+**TSW-R02d. Altar timer callback** [verified in 1.13c code (static)]. If state is exactly 4, write transition 0 and stage 3 and request the pre-start callback over supplied players. Then, in every case, write M6=0 and return 1. Timer delivery and elapsed units remain TSW-Q10.
+
+Supplied operation effects, including actual drops, iteration results and amulet counts, remain TSW-Q08/TSW-Q10.
 
 ### TSW-R03. Ownership
 
@@ -102,13 +120,15 @@ On the non-skipped active branch (active nonzero), supplied preparation precedes
 
 ### TSW-R07. Messages and intensity
 
-**TSW-R07a. Start/reset requests** [verified in 1.13c code (static)]. Per Act II player, start requests World-clock `(5,0,1)` then Quest-event `(quest 10,flags 16)`. Server start is cycle 0/ticks 1200, distinct from the message. Reset requests only World-clock `(2,0,0)`. Other acts get neither request. Both per-player callbacks return 0. Delivery/sound remain TSW-Q10.
+**TSW-R07a. Start/reset requests** [verified in 1.13c code (static)]. Per Act II player, start requests World-clock `(5,0,1)` then Quest-event `(quest 10,flags 16)`. Server start is cycle 0/ticks 1200, distinct from the message. Reset requests only World-clock `(2,0,0)`. Other acts get neither request. Both per-player callbacks return 0. Before the act test, each callback requires a present player unit with a client; an absent unit, non-player unit or player without a client takes the fatal assertion path rather than being skipped. Delivery/sound remain TSW-Q10.
 
-**TSW-R07b. Missing-act join** [verified in 1.13c code (static)]. Failed join apply requests Quest-event `(quest 10,flags 1)` to the joining player's supplied client without act filtering; no start World-clock. Earlier quest/pending writes remain. An absent client does not establish successful delivery.
+**TSW-R07b. Missing-act join** [verified in 1.13c code (static)]. Failed join apply requests Quest-event `(quest 10,flags 1)` to the joining player's client without act filtering; no start World-clock. The client is taken from player data only when the joining unit is present and is a player; otherwise the request carries no client. The send operation returns without queuing anything when it has no client. Earlier quest/pending writes remain in every case.
 
 **TSW-R07c. Supplied intensity branches** [verified in 1.13c code (static)]. For act other than 3 and flag nonzero, subtract 8 if signed intensity>32, then floor at 32. Ignore period. For act other than 3, flag 0, source 120, assign 200 directly. Other formulas/rendering are TSW-Q03. Results are per call, and start requests two calls.
 
 **TSW-R07d. Appearance** [unresolved]. Darkness/colour/audio/timing require TSW-Q03/TSW-Q10; a clock tuple does not establish appearance.
+
+**TSW-R07e. Diagnostic broadcast** [verified in 1.13c code (static)]. At the sites named in TSW-R01a, TSW-R01i and TSW-R02b, if the diagnostic switch is nonzero, request one game-wide chat-style text message carrying the stated text. A zero switch requests nothing; text formatting alone has no visible effect. Recipient iteration and delivery are TSW-Q10.
 
 ### TSW-R08. Retry and repetition
 
@@ -132,7 +152,7 @@ On the non-skipped active branch (active nonzero), supplied preparation precedes
 
 **TSW-R10d. Server resync** [verified in 1.13c code (static)]. Existing act/absent environment returns 0. Otherwise save cycle/period, run core with server act index. Rate nonzero: signed `q=ticks/rate`; `d=i32(q-last resync)`; if d<0 set `d=i32(-d)`. Signed d>16 stores last resync=q and returns 1. Otherwise return 1 only if cycle or period changed, else 0. Rate 0 skips division; negating i32 minimum leaves it negative.
 
-Return 1 requests a current-clock read, then traverses supplied clients in list order. Resolve player; skip unresolved. For each resolved player request player-notification(game,player,0), then change-tracking(player,1), then request World-clock only for state 4 and matching act. Thus other state/act clients can receive pre-filter requests but no clock message. Delivery/helper effects remain TSW-Q10. Cycle/period notification alone retains last resync. Drift testing includes wrap to 0.
+Return 1 requests a current-clock read, then traverses supplied clients in list order. Resolve each client's player: with the client's direct-player flag (bit 0) set, use its cached player reference as is. Otherwise a zero cached reference skips the client without a lookup; a nonzero one requests the supplied player lookup, and a failed lookup writes the cached reference to zero. Skip any client whose resolved player is absent. For each resolved player request player-notification(game,player,0), then change-tracking(player,1), then request World-clock only for state 4 and matching act. Thus other state/act clients can receive pre-filter requests but no clock message. Delivery/helper effects remain TSW-Q10. Cycle/period notification alone retains last resync. Drift testing includes wrap to 0.
 
 ### TSW-R11. Other consumers
 
@@ -152,11 +172,15 @@ Return 1 requests a current-clock read, then traverses supplied clients in list 
 | TSW-R01b | progress writer | verified in 1.13c code (static) | none | TSW-V20 |
 | TSW-R01c | upstream identity | unresolved | TSW-Q01: gameplay event production | none |
 | TSW-R01d | join selection | verified in 1.13c code (static) | TSW-Q05/TSW-Q10: saved flags/helper integration | TSW-V06, TSW-V07, TSW-V16 |
-| TSW-R01e | animation slice | verified in 1.13c code (static) | TSW-Q10: other effects | TSW-V21 |
+| TSW-R01e | animation slice | verified in 1.13c code (static) | TSW-Q10: mode-update/iteration effects | TSW-V21 |
 | TSW-R01f | event retry slice | verified in 1.13c code (static) | TSW-Q01/TSW-Q10: event production/other effects | TSW-V21 |
 | TSW-R01g | schedule | verified in 1.13c code (static) | TSW-Q10: actual timer/elapsed units | TSW-V18 |
 | TSW-R01h | timer callback | verified in 1.13c code (static) | TSW-Q10: delivery/other effects | TSW-V21 |
-| TSW-R02 | altar reset slice | verified in 1.13c code (static) | TSW-Q08/TSW-Q10: complete drops/quest effects | TSW-V02, TSW-V08, TSW-V18 |
+| TSW-R01i | event auxiliary-identity slice | verified in 1.13c code (static) | TSW-Q01/TSW-Q10: event production/roster-update effects | TSW-V21 |
+| TSW-R02a | altar eligibility | verified in 1.13c code (static) | none for supplied item tests | TSW-V08 |
+| TSW-R02b | altar active branch | verified in 1.13c code (static) | TSW-Q08/TSW-Q10: drops/callback effects | TSW-V02, TSW-V08, TSW-V26 |
+| TSW-R02c | altar inactive branch | verified in 1.13c code (static) | TSW-Q08/TSW-Q10: drops/callback effects | TSW-V18, TSW-V26 |
+| TSW-R02d | altar timer callback | verified in 1.13c code (static) | TSW-Q10: timer delivery | TSW-V26 |
 | TSW-R03 | ownership | verified in 1.13c code (static) | none for supplied recipients | TSW-V09, TSW-V16 |
 | TSW-R04a | start clock | verified in 1.13c code (static) | TSW-Q03/TSW-Q10: presentation | TSW-V01, TSW-V06, TSW-V07 |
 | TSW-R04b | reset clock | verified in 1.13c code (static) | TSW-Q03: presentation | TSW-V02, TSW-V08 |
@@ -168,6 +192,7 @@ Return 1 requests a current-clock read, then traverses supplied clients in list 
 | TSW-R07b | pending request | verified in 1.13c code (static) | TSW-Q10: client resolution/delivery | TSW-V07 |
 | TSW-R07c | intensity branches | verified in 1.13c code (static) | TSW-Q03: other formulas/rendering | TSW-V24 |
 | TSW-R07d | appearance | unresolved | TSW-Q03/TSW-Q10: visual/audio integration | none |
+| TSW-R07e | diagnostic broadcast | verified in 1.13c code (static) | TSW-Q10: switch producer/delivery | TSW-V01, TSW-V21, TSW-V26 |
 | TSW-R08a | direct retry | verified in 1.13c code (static) | TSW-Q10: dispatch/absence | TSW-V21 |
 | TSW-R08b | repetition/difficulty | unresolved | TSW-Q05: progress production | none |
 | TSW-R09a | join snapshot | verified in 1.13c code (static) | TSW-Q10: outer order/delivery | TSW-V16 |
@@ -184,25 +209,27 @@ Return 1 requests a current-clock read, then traverses supplied clients in list 
 
 | Effect | Rule |
 |---|---|
-| shared-start return 0/1, progress-writer return 0, altar return 0, client-wrapper period-change return 0/1 | TSW-R01a, TSW-R01b, TSW-R02, TSW-R06b |
-| quest state/stage/transition writes and retained failure state | TSW-R01a, TSW-R01d, TSW-R01e |
+| shared-start return 0/1, progress-writer return 0, altar return 0, altar-timer return 1, client-wrapper period-change return 0/1 | TSW-R01a, TSW-R01b, TSW-R02a through TSW-R02d, TSW-R06b |
+| quest state/stage/transition writes and retained failure state | TSW-R01a, TSW-R01d, TSW-R01e, TSW-R01i, TSW-R02d |
+| markers M4/M5/M6/M8/MC/M10/M98, amulet count, stored source results, quest 9 counter, object item-code field | TSW-R01e, TSW-R02b through TSW-R02d |
 | per-player bits 2/3/4 and shared bit 13 | TSW-R01b, TSW-R01d |
-| scheduled/applied/pending writes, timer request and callback return | TSW-R01d through TSW-R01h, TSW-R02, TSW-R08a |
-| rejection, supplied mode/callback/drop requests, player bits 1/13 set and 14 clear | TSW-R02 |
+| scheduled/applied/pending writes, timer requests and callback returns | TSW-R01d through TSW-R01h, TSW-R02b, TSW-R02d, TSW-R08a |
+| rejection, mode-update, iteration, notification, roster, drop and item-flag requests, player bits 1/13 set and 14 clear | TSW-R01e, TSW-R01i, TSW-R02a through TSW-R02c |
 | clock rate/index/cycle/ticks/period/flag | TSW-R04a through TSW-R04c, TSW-R05, TSW-R06a, TSW-R10c |
 | intensity, presentation requests, colour override | TSW-R04a through TSW-R04c, TSW-R06b, TSW-R07c, TSW-R10c |
 | game frame, last resync, notification result | TSW-R10a, TSW-R10d |
-| World-clock, Quest-event, act-assignment requests | TSW-R07a, TSW-R07b, TSW-R09a, TSW-R10d |
-| pre-filter notification requests | TSW-R10d |
-| quest-seed writes, schedule parameter, gold-pile count | TSW-R01g, TSW-R12b |
+| World-clock, Quest-event, act-assignment, diagnostic text requests | TSW-R07a, TSW-R07b, TSW-R07e, TSW-R09a, TSW-R10d |
+| fatal assertion path for invalid sender recipients or a missing game quest structure | TSW-R02b, TSW-R02c, TSW-R07a |
+| pre-filter notification requests, player lookups, cached-reference clear | TSW-R10d |
+| quest-seed writes, schedule parameter, gold-pile count | TSW-R01g, TSW-R02b, TSW-R02c, TSW-R12b |
 
 The read stages make no environment save write; wider persistence remains gated. Message payloads belong to the rules; this table names effects only.
 
 ## 6. Branches and edge cases
 
-Server act index and client derived source can differ. Clock flags use nonzero, while start active checks use equality to 1 and altar active uses nonzero. Negative source maps to act 0. Overflowed negative ticks use signed comparisons without saturation. Core wrap uses >=, transition uses >, client pre-clamp uses >. A cycle can change without a period change or client-wrapper return 1.
+Server act index and client derived source can differ. Clock flags use nonzero, while start active checks use equality to 1 and altar active uses nonzero. The animation slice writes M5/MC and requests mode-update even when active is not 1. The event auxiliary-identity slice is independent of the event key, so one event can run a start and then change state 2 to 3. Negative source maps to act 0. Overflowed negative ticks use signed comparisons without saturation. Core wrap uses >=, transition uses >, client pre-clamp uses >. A cycle can change without a period change or client-wrapper return 1.
 
-Missing Act II during shared start retains quest writes/pending; missing Act II during reset retains applied. Missing environment during server update returns 0. Invalid required assignment objects take assertion paths outside normal vectors. A later failed delivery does not erase earlier local writes. Classic mode and other builds have no established equivalence here.
+Missing Act II during shared start retains quest writes/pending; missing Act II during reset retains applied. Missing environment during server update returns 0. Invalid required assignment objects take assertion paths outside normal vectors; per-player senders abort the same way on an invalid recipient, whereas the failed-join request silently queues nothing without a client. A later failed delivery does not erase earlier local writes. Classic mode and other builds have no established equivalence here.
 
 ## 7. Open questions
 
@@ -217,26 +244,28 @@ The [gap file](../plans/gaps/quest-tainted-sun-world-clock.md#open-evidence-gaps
 - **TSW-Q07** [unresolved]: establish client source identity and full outer cadence. Supplied threshold arithmetic/server act-index behavior do not depend on this answer.
 - **TSW-Q08** [unresolved]: complete reachable RNG budgets for drop helpers, callbacks, other handlers, presentation and delivery. Direct-body/site budgets remain available.
 - **TSW-Q09** [unresolved]: observe server notification/send decisions, transition/wrap and client/server divergence. Idle reads do not reproduce exact resync vectors.
-- **TSW-Q10** [unresolved]: independently establish timer allocation/delivery, resolution/notifications, remaining quest/altar/mode/drop callbacks, presentation and transmission. Local requests/results are explicit; complete integrated effects remain gated.
+- **TSW-Q10** [unresolved]: independently establish timer allocation/delivery, player lookup/notifications, remaining quest/altar/mode/roster/drop/iteration callbacks, the diagnostic switch's producer, presentation and transmission. Local requests/results are explicit; complete integrated effects remain gated.
+- **TSW-Q11** [unresolved]: the start assignment (TSW-R04a) leaves the server at cycle 0 with eclipse flag 1, yet the start message (TSW-R07a) sends the fixed cycle 5. Is this divergence intended, and which later resync (TSW-R10d) or client step realigns the client? Both values are statically exact; only observation (TSW-O01) or a rooted client consumer can settle the effect.
 
 ## 8. Test vectors
 
 ### 8.1 Executable vectors
 
-Each case is fresh unless stated. Default clock tuple `(cycle,period,ticks,rate,index,flag,last resync)` is `(2,0,0,128,0,0,0)`. Default quest `(active,state,stage,transition,scheduled,applied,pending)` is `(1,0,0,7,0,0,0)`. Act II/environment and valid player P in Act II exist; flags are clear, other acts absent, no intervening frame, empty log. Core vectors run advance then transition with their supplied act. Stage vectors log dependency requests in order; supplied callbacks/presentation/sends return normally without unlisted state or seed changes. A call-time snapshot below records the semantic state observed immediately on entering that supplied operation; it adds no function argument and no new stored field. Flag writes persist within a case. Presentation leaves clock fields unchanged. These supplied effects do not verify integration.
+Each case is fresh unless stated. Default clock tuple `(cycle,period,ticks,rate,index,flag,last resync)` is `(2,0,0,128,0,0,0)`. Default quest `(active,state,stage,transition,scheduled,applied,pending)` is `(1,0,0,7,0,0,0)`; M4/M5/M6/M8/MC/M10/M98, amulet count and roster word are 0, the diagnostic switch is 0, event auxiliary identity is 0, and callback/event unit U has identity 77. Act II/environment and valid player P in Act II exist; flags are clear, other acts absent, no intervening frame, empty log. Core vectors run advance then transition with their supplied act. Stage vectors log dependency requests in order; supplied callbacks/presentation/sends return normally without unlisted state or seed changes. A call-time snapshot below records the semantic state observed immediately on entering that supplied operation; it adds no function argument and no new stored field. Flag writes persist within a case. Presentation leaves clock fields unchanged. These supplied effects do not verify integration.
 
 Except explicit draw cases, Seeds: no draw; Draws: none within the local slice. Hidden helper draws are excluded. All complete vectors remain runtime_observed: no; partial idle readings are limited to the assertions in the companion.
 
-- **TSW-V01** Shared start/payload distinction (TSW-R01a, TSW-R04a, TSW-R07a; boundary: supplied-input stage).
+- **TSW-V01** Shared start/payload distinction (TSW-R01a, TSW-R04a, TSW-R07a, TSW-R07e; boundary: supplied-input stage).
   - Inputs: defaults; pre-start iteration completes for P.
   - Seeds: no draw. Draws: none locally.
   - Trace: state 0 becomes 1; initial ticks 0 is replaced by 4*300=1200.
   - Outputs: return 1; quest state/stage/transition 1/1/0, applied/pending 0/0; clock `(0,3,1200,4,1,1,0)`. Log: pre-start(P), first intensity [call-time snapshot flag 0/cycle 0/period 3/ticks 0/rate 4/index 1], second intensity [snapshot flag 1/cycle 0/period 3/ticks 1200/rate 4/index 1], colour, World-clock(P,5,0,1), Quest-event(P,10,16).
   - Fresh Inputs: shared-start defaults except quest state 2. Outputs: return 1; state/stage/transition 2/1/0, applied/pending 0/0, clock `(0,3,1200,4,1,1,0)`. Request log: pre-start(P), first intensity [flag 0/cycle 0/period 3/ticks 0/rate 4/index 1], second intensity [flag 1/cycle 0/period 3/ticks 1200/rate 4/index 1], colour, World-clock(P,5,0,1), Quest-event(P,10,16). These are the same call-time snapshot meanings as above.
-  - Discriminates: final ticks 1200 differs from payload ticks 0; reversed message order, storing flag 1 before first intensity, or resetting a nonzero quest state to 1 fails.
+  - Fresh Inputs: shared-start defaults except diagnostic switch 1 (TSW-R07e). Outputs: as the first case; log pre-start(P), diagnostic text(`changing state to 1` plus newline), then the first case's remaining requests in order. With state 2 and switch 1 instead, no diagnostic text is requested.
+  - Discriminates: final ticks 1200 differs from payload ticks 0; reversed message order, storing flag 1 before first intensity, or resetting a nonzero quest state to 1 fails. A broadcast after the Act II test, or one for a retained nonzero state, fails.
   - runtime_observed: no.
 
-- **TSW-V02** Reset retaining resync (TSW-R02, TSW-R04b, TSW-R07a; boundary: supplied quest-reset stage).
+- **TSW-V02** Reset retaining resync (TSW-R02b, TSW-R04b, TSW-R07a; boundary: supplied quest-reset stage).
   - Inputs: clock `(4,2,800,4,1,1,17)`, applied 1. Enter reset after supplied altar preparation.
   - Seeds: no draw. Draws: none locally.
   - Trace: clear applied, normal row 2; intensity sees incoming flag 1, then clear flag.
@@ -286,10 +315,11 @@ Except explicit draw cases, Seeds: no draw; Draws: none within the local slice. 
   - (d) Flags {}: Outputs default state/clock; no flag/message writes.
   - (e) Flags {2,3,4}, Act II absent, P act 0: Outputs state/stage/transition 3/2/0, pending 1, applied 0, no clock assignment; log pre-start(P), Quest-event(P,10,1), no World-clock.
   - (f) Flags {2,3}, bit 4 clear, Act II present: Outputs clock `(0,3,1200,4,1,1,0)`, applied 1/pending 0, state/stage/transition 2/2/0; player flags remain {2,3}; V01 start message/presentation requests in order.
-  - Discriminates: (e) rejects rollback, bit-3 precedence, and filtering the pending request by act; (f) requires the bit-3-only state/stage selection.
+  - (g) Flags {2}, Act II absent, P's player data has no client: Outputs pending 1, applied 0, state/stage/transition 1/1/0; log pre-start(P), Quest-event request with no client, which queues nothing.
+  - Discriminates: (e) rejects rollback, bit-3 precedence, and filtering the pending request by act; (f) requires the bit-3-only state/stage selection; (g) rejects aborting or undoing writes when no client exists.
   - runtime_observed: no.
 
-- **TSW-V08** Altar short circuit/flags (TSW-R02; boundary: supplied reset/flag slice).
+- **TSW-V08** Altar short circuit/flags (TSW-R02a, TSW-R02b; boundary: supplied reset/flag slice).
   - Inputs: clock `(0,3,1200,4,1,1,0)`, applied 1, object mode marker 0, supplied `vip ` true; intervening callbacks complete without flag/state changes. Drop/later quest work is excluded.
   - Seeds: no draw before this slice's endpoint. Draws: none; later draw is V18.
   - Trace: primary bits decide whether secondary tests run.
@@ -311,7 +341,8 @@ Except explicit draw cases, Seeds: no draw; Draws: none within the local slice. 
   - Seeds: no draw. Draws: none locally.
   - Trace: apply addresses Act II; recipient loop rejects P2.
   - Outputs: Act I unchanged; Act II `(0,3,1200,4,1,1,0)`; P gets V01 requests in order, P2 none.
-  - Discriminates: all-act reset/unfiltered send fails.
+  - (b) Fresh start or reset whose player iteration supplies P2 with no client: Outputs the fatal assertion path at P2; no World-clock/Quest-event request for P2 and no normal return from that sender.
+  - Discriminates: all-act reset/unfiltered send fails; (b) rejects silently skipping an invalid recipient.
   - runtime_observed: no.
 
 - **TSW-V10** Strict transition exceeded (TSW-R05; boundary: core tick).
@@ -382,7 +413,7 @@ Except explicit draw cases, Seeds: no draw; Draws: none within the local slice. 
   - Discriminates: rate-scaled delta/notification at distance <=16 fails. Idle measurements are partial corroboration and do not reproduce this exact case.
   - runtime_observed: no.
 
-- **TSW-V18** Seed owners/budgets (TSW-R01g, TSW-R02, TSW-R12a, TSW-R12b; boundary: direct bodies and supplied draw sites).
+- **TSW-V18** Seed owners/budgets (TSW-R01g, TSW-R02c, TSW-R12a, TSW-R12b; boundary: direct bodies and supplied draw sites).
   - Inputs: game seed {7,666}, unit seed {9,666}; each case is fresh; direct bodies exclude helpers.
   - Seeds: each quest seed stated below. Draws: none in (a)/(d)/(f), one quest step in (b)/(c)/(e)/(g).
   - Trace: NRF-R01 step then the specified reduction; no scenario-wide budget inferred.
@@ -392,7 +423,7 @@ Except explicit draw cases, Seeds: no draw; Draws: none within the local slice. 
   - (d) state 0/scheduled 1, quest seed {0,666}: Draws none; Outputs unchanged seed, no schedule, scheduled 1.
   - (e) Altar inline site after supplied amulet requests, seed at site {0,666}: Draws quest modulus 5 result 1. Outputs seed {666,0}, six gold-pile requests afterward; no game/unit step at this site.
   - (f) State 1/scheduled 0, quest seed {0,666}: Draws none; Outputs unchanged seed, no schedule, scheduled 0. This differs from an eligible state-0 request.
-  - (g) Supplied inactive altar slice (TSW-R02), active 0, default clock, applied 1, player flags {14}, object mode 0; preceding preparation/drop helpers complete with no clock/flag/seed writes and requested amulet count 0; seed at inline site {0,666}. Draws quest modulus 5 result 1. Outputs quest seed {666,0}, six gold-pile requests, default clock retained, applied 1 and flags {14} retained, no reset/World-clock request; return 0 after supplied remaining operations. No full drop/helper effect is asserted.
+  - (g) Supplied inactive altar slice (TSW-R02c), active 0, default clock, applied 1, player flags {14}, object mode 0; preceding preparation/drop helpers complete with no clock/flag/seed writes and requested amulet count 0; seed at inline site {0,666}. Draws quest modulus 5 result 1. Outputs quest seed {666,0}, six gold-pile requests, default clock retained, applied 1 and flags {14} retained, no reset/World-clock request; return 0 after supplied remaining operations. No full drop/helper effect is asserted.
   - Discriminates: wrong seed owner, two steps, scheduling before the draw, ignoring nonzero state, or resetting an inactive quest fails. Helpers may draw independently.
   - runtime_observed: no.
 
@@ -403,7 +434,8 @@ Except explicit draw cases, Seeds: no draw; Draws: none within the local slice. 
   - Outputs: cycle 2/period 0/ticks 2176, last resync 17, result 1. Exact recipient-stage log after the current-clock read: player-notification(game,A-player,0), change-tracking(A-player,1), World-clock(A,2,2176,0), player-notification(game,B-player,0), change-tracking(B-player,1), player-notification(game,C-player,0), change-tracking(C-player,1). No message for B/C/D and no operations for D. This forbids deferring A's clock request until after B/C notification pairs.
   - Fresh Inputs: ticks 2047, otherwise same. Outputs ticks 2048/q16/result 0/last 0, no log.
   - Separate Inputs: one normal frame from game frame 9; only acts 0 and 3 present, each with cycle 2/period 0/ticks 2175/rate 128/index 0/flag 0/last resync 0. Clients A resolved/state 4/act 0 and E resolved/state 4/act 3, in that order; any client source values are irrelevant. Trace: frame becomes 10; act 0 advances to 2176/q17 and act 3 to 2191/q17, each notifying. Outputs: both last-resync fields 17, both cycle/period 2/0; final game frame 10. Exact recipient-stage log: A notification, A tracking, World-clock(A,2,2176,0), E notification, E tracking; then A notification, A tracking, E notification, E tracking, World-clock(E,2,2191,0). Here notification/tracking mean the same two operations and arguments as above for that recipient. No other acts are updated.
-  - Discriminates: before-tick sampling, >=16, filtering before pre-filter requests, batching A's send after B/C, reversed act visitation, or using a client-derived act for the server delta fails.
+  - Resolution Inputs: ticks 2175 as first case; clients in order F (direct flag clear, cached reference nonzero, supplied lookup returns F-player), G (direct flag clear, cached nonzero, lookup fails), H (direct flag clear, cached zero), I (direct flag set, cached reference I-player); all state 4/act 0. Outputs: lookup requests for F then G only; G's cached reference becomes 0; F's and I's are unchanged. Recipient log: F notification, F tracking, World-clock(F,2,2176,0), I notification, I tracking, World-clock(I,2,2176,0).
+  - Discriminates: before-tick sampling, >=16, filtering before pre-filter requests, batching A's send after B/C, reversed act visitation, or using a client-derived act for the server delta fails. The resolution case rejects looking up a zero cache, retaining a failed cache, or looking up a direct-flag client.
   - runtime_observed: no.
 
 - **TSW-V20** Progress exact bits (TSW-R01b; boundary: supplied flag stage).
@@ -414,23 +446,24 @@ Except explicit draw cases, Seeds: no draw; Draws: none within the local slice. 
   - Discriminates: >=3 setting bit 4 fails at 255; no stale bits are cleared.
   - runtime_observed: no.
 
-- **TSW-V21** Retry/timer/animation state (TSW-R01e, TSW-R01f, TSW-R01h, TSW-R08a; boundary: supplied start slices).
+- **TSW-V21** Retry/timer/animation state (TSW-R01e, TSW-R01f, TSW-R01h, TSW-R01i, TSW-R07e, TSW-R08a; boundary: supplied start slices).
   - Inputs: fresh defaults; overrides below.
   - Seeds: no draw except case (g), whose quest seed is explicit. Draws: none locally except (g).
   - Trace: run one named slice; retain writes preceding failure.
-  - (a) Animation with Act II absent: Outputs state 3/stage 1/transition 0, applied 0/pending 1; pre-start(P), no start message.
+  - (a) Animation with Act II absent: Outputs M5 1/MC 77, state 3/stage 1/transition 0, applied 0/pending 1; log pre-start(P), mode-update(U,0); no start message and no second pre-start request, because stage is then 1.
   - (b) Event 0x28, pending 1, act present: Outputs started clock `(0,3,1200,4,1,1,0)`, pending 0/applied 0/state 1/stage 1; P bit 2 set; log pre-start, presentation, start messages, progress writer(P) [call-time snapshot pending 1/applied 0/state 1/stage 1], then the pending-clear write to 0.
   - (c) Timer scheduled 1/applied 1/pending 1: Outputs scheduled 0/applied 1/pending 1, return 1; no requests/clock writes.
   - (d) Timer scheduled 1/applied 0/pending 0, Act II absent: Outputs scheduled 0/pending 1/state 1/stage 1/transition 0, return 1; pre-start only.
   - (e) Direct retry argument 1/pending 1: Outputs started clock, pending 0/applied 1; quest state 0/stage 0/transition 7 retained; presentation only, no pre-start/progress/message request.
-  - (f) Event 0x28/pending 1, Act II absent: Outputs pending 1/applied 0/state 1/stage 1/transition 0, default clocks retained; pre-start(P) only, no progress/message requests. The event callback's unrelated effects remain supplied.
+  - (f) Event 0x28/pending 1, Act II absent: Outputs pending 1/applied 0/state 1/stage 1/transition 0, default clocks retained; pre-start(P) only, no progress/message requests. With auxiliary identity 0, TSW-R01i makes no request.
   - (g) Fresh event key 0x2C or 0x2D independently, state 0/active 1/scheduled 0; quest seed {0,666}. Draws: one quest step, modulus 2 result 0, parameter 15. Outputs seed {666,0}, schedule(timer,15), scheduled 1, default clock and state/stage/transition 0/0/7 retained; no shared-start or message request. Event producers and timer delivery remain gated.
   - (h) Timer scheduled 1/applied 0/pending 0, Act II present: Outputs scheduled 0/applied 1/pending 0/state 1/stage 1/transition 0, started clock `(0,3,1200,4,1,1,0)`, P flags {2}, return 1. Log: pre-start(P), intensity, intensity, colour, World-clock(P,5,0,1), Quest-event(P,10,16), progress writer(P) [call-time snapshot applied 1/pending 0/scheduled 0/state 1/stage 1].
-  - (i) Fresh animation start slices with active 0 or 2 independently, state 0: Outputs default state/stage/transition/applied/pending/clock retained, no shared-start/message request from this slice. Fresh active 1/state 2 instead retains state 2 and every other default field, also with no shared-start/message request. Other animation work is supplied.
-  - (j) Fresh event key 0x29, pending 1/state 0/active 1: Outputs pending 1 and default state/stage/transition/applied/clock retained; no draw, schedule, shared-start or progress/message request from the start-related slice. Other event work remains supplied.
+  - (i) Fresh animation start slices with active 0 or 2 independently, state 0: Outputs M5 1/MC 77, default state/stage/transition/applied/pending/clock retained; log mode-update(U,0) only. Fresh active 1/state 2 instead skips the start, then finds stage 0: Outputs state 2, stage 2, transition 0, M5 1/MC 77, applied/pending/clock retained; log pre-start(P), mode-update(U,0). Fresh active 1/state 2/stage 1 with M8 2 and the callback unit absent: Outputs MC -1, M5 1, stage/state/transition 1/2/7 retained; log mode-update(absent,2) only. The mode-update's effects are supplied.
+  - (j) Fresh event key 0x29, pending 1/state 0/active 1: Outputs pending 1 and default state/stage/transition/applied/clock retained; no draw, schedule, shared-start, progress/message, roster or diagnostic request.
   - (k) Fresh direct-retry cases: argument 0/pending 1/quest present; argument 1/quest absent, with no private-state inputs for that absent quest; argument 1/pending 2/quest present. Outputs in each: default clock retained, no presentation/pre-start/progress/message request. In the two quest-present cases pending remains 1/2 respectively and state/stage/transition/applied stay 0/0/7/0; the absent quest has no private state to read or write.
   - (l) Fresh keys 0x2C/0x2D independently, active 2/state 0/scheduled 0, quest seed {0,666}: Outputs seed {0,666} unchanged, scheduled 0, active 2 and default state/stage/transition/applied/pending/clock retained; no draw/schedule/shared-start/progress/message request from the slice.
-  - Discriminates: (b) does not set applied and progress sees pending 1 before it is cleared; (c) clears scheduled before early return; (e) bypasses shared start writes/messages; (f) retains pending on failure; (g) schedules rather than applying immediately; (h) progress sees applied 1; (i)/(j)/(k)/(l) reject bypassing the exact eligibility guards, including treating schedule-active as nonzero.
+  - (m) Event auxiliary identity 0x28, each fresh: (m1) key 0x29, roster word 3, state 2, diagnostic switch 1: Outputs state 3, other quest fields retained; log roster-update(77), diagnostic text(`changing state to 3` plus newline). (m2) key 0x29, roster word 0, state 1: Outputs state 1 retained, no request. (m3) key 0x29, roster word 3, event unit absent, state 0: Outputs state 0 retained; log roster-update(-1) only. (m4) key 0x28, pending 1, state 2, roster word 0, switch 0, Act II present: Outputs started clock `(0,3,1200,4,1,1,0)`, pending 0, applied 0, state 3, stage 1, transition 0, P flags {2,3}; log pre-start(P), intensity, intensity, colour, World-clock(P,5,0,1), Quest-event(P,10,16), progress writer(P) [snapshot state 2/pending 1], pending-clear write, then the state-3 write. With auxiliary identity 0 instead, (m4) ends at state 2 with the same clock.
+  - Discriminates: (b) does not set applied and progress sees pending 1 before it is cleared; (c) clears scheduled before early return; (e) bypasses shared start writes/messages; (f) retains pending on failure; (g) schedules rather than applying immediately; (h) progress sees applied 1; (i)/(j)/(k)/(l) reject bypassing the exact eligibility guards, including treating schedule-active as nonzero; (a)/(i) reject skipping the always-made marker writes and mode-update, or the stage-0 branch; (m) rejects gating the auxiliary slice by event key, running it before the start stage, or an else-chain.
   - runtime_observed: no.
 
 - **TSW-V22** Signed overflow/wrap resync (TSW-R05, TSW-R10d; boundary: fresh core/server updates).
@@ -474,6 +507,17 @@ Except explicit draw cases, Seeds: no draw; Draws: none within the local slice. 
   - Discriminates: copying flag-1 packet ticks yields 0; copying server rate 4 yields 960; >= pre-clamp fails at 46080; storing message flag before first intensity fails its old-flag snapshot.
   - runtime_observed: no.
 
+- **TSW-V26** Altar ordered requests and timer callback (TSW-R02b, TSW-R02c, TSW-R02d, TSW-R07e, TSW-R12b; boundary: supplied altar operations).
+  - Inputs: player flags {14}, slot-10 bit 0 clear, object O identity 55 with mode marker 0; object-source(O) returns s; the participant iteration sets the amulet count to 2; quest seed {0,666} at the draw site; other supplied operations return normally without other writes or draws.
+  - Seeds: quest seed {0,666}. Draws: one quest step, modulus 5 result 1.
+  - Trace: 666 mod 5 = 1, so 5+1 = 6 gold-pile drops.
+  - (a) Active 1, applied 1, clock `(0,3,1200,4,1,1,0)`, diagnostic switch 1, source-derived(s) returns d; first amulet drop returns item I1, second returns none. Outputs: M10 s, M98 d, M8 2, M5 1, MC 55, M4 1, amulet count 2, applied 0, clock `(2,0,0,128,0,0,0)`, flags {1,13}, quest seed {666,0}, return 0. Log: object-source(O), source-derived(s), mode-update(O,1), intensity, World-clock(P,2,0,0), diagnostic text(`Finished quest`), quest-notification(4), game-notification(6), participant iteration(P), test bit 0, set 1, set 13, clear 14, post-flag iterations A(O), B(O), C(O), quest-record update(13), source-derived(s), O item-code field := `vip `, amulet drop(O), item-flag mark(I1,16,1), amulet drop(O), amulet-result(1), context request(4), six gold-pile drops(O), completion iteration, timer request(altar callback, 10).
+  - (b) Active 0, applied 1, default clock; both amulet drops return items I1/I2; quest 9 present with counter 4. Outputs: M4 1, M8 2, amulet count 2, M5/MC/M10/M98 0, quest 9 counter 6, clock/applied/flags unchanged, quest seed {666,0}, return 0. Log: mode-update(O,1), participant iteration(P), object-source(O), source-derived(s), O item-code field := `vip `, amulet drop(O), item-flag mark(I1,16,1), amulet drop(O), item-flag mark(I2,16,1), context request(4), six gold-pile drops(O). No reset, diagnostic, notification, flag, amulet-result, completion-iteration or timer request.
+  - (c) As (b) but quest 9 absent: Outputs the same, with no counter write; return 0.
+  - (d) Altar timer callback, state 4, stage 2, M6 1: Outputs transition 0, stage 3, M6 0, return 1; log pre-start(P). Separate state 3, stage 2, M6 1: Outputs stage 2 retained, M6 0, return 1, no request.
+  - Discriminates: (a) rejects omitting the second active test's flag/iteration block, counting attempted rather than successful drops, or scheduling before the gold drops; (b) rejects resetting or scheduling on the inactive branch and losing the quest-9 addition; (d) rejects a state-independent stage write.
+  - runtime_observed: no.
+
 ### 8.2 Observation vectors
 
 Pending [companion procedures](../research/spec-evidence/quest-tainted-sun-world-clock.md#observation-procedures) specify setup/capture limits.
@@ -487,7 +531,7 @@ Pending [companion procedures](../research/spec-evidence/quest-tainted-sun-world
 
 ## 9. Acceptance and dependencies
 
-Partial acceptance reproduces supplied-input assertions of TSW-V01 through TSW-V25 for all static leaves in the Id map. Arithmetic, writes, returns, direct draw sites and request order are available independently of event/save producers and downstream delivery/presentation. V08 excludes complete drops/quest callbacks; V18 excludes helper draws; V17 is an exact static scenario. Passing these does not establish complete quest, packet, save, visual or RNG parity.
+Partial acceptance reproduces supplied-input assertions of TSW-V01 through TSW-V26 for all static leaves in the Id map. Arithmetic, writes, returns, direct draw sites and request order are available independently of event/save producers and downstream delivery/presentation. V08 excludes drops/later quest work and V26 supplies drop, iteration and callback results; V18 excludes helper draws; V17 is an exact static scenario. Passing these does not establish complete quest, packet, save, visual or RNG parity.
 
 Full reproduction also requires gated assertions of TSW-R01c, TSW-R07d, TSW-R08b, TSW-R09b, TSW-R10b and TSW-R11; independently established integrations TSW-Q08/TSW-Q10; and applicable matching TSW-O01 through TSW-O04 and TSW-Q04/TSW-Q09 observations. Status/partial acceptance imply no user approval.
 

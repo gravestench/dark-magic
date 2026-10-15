@@ -68,7 +68,7 @@ NRF-R05; `HasState` is NRF-R12a; `GetStat(unit, id)` is the layer-0 read of NRF-
 | Input | Semantic source | Width and format | Meaning |
 |---|---|---|---|
 | player units | the game's player-unit table | logical set; each entry's type is tested | Normally player (type 0) units; MSD-R05 also defines entries of other types |
-| player-unit conditions | `HasState(u, 7)`; `u.notAliveCondition`; `u.type`; `u.mode` (GDF-R14a, GDF-R15a) | boolean; i32 | `notAliveCondition` is a unit condition the alive test treats as not alive (MSD-Q01); modes as named |
+| player-unit conditions | `HasState(u, 7)`; `u.notAliveCondition`; `u.type`; `u.mode` (GDF-R14a, GDF-R15a) | boolean; i32 | `notAliveCondition` is a unit condition the alive test treats as not alive (MSD-Q01); it is the same unit condition that PXL-R04a and PXL-R09a call `excludedFromPartyCollection`; modes as named |
 | player-count override | one process-wide value shared by every game in the server process, set by the client player-count command | i32, 0..8, 0 at load | Read at each MSD-R05 evaluation; its producer is outside this boundary |
 | `game.selectorByte`, `game.selectorFlag` | game-creation argument byte; game-creation flag | u8; i32 0 or 1 | Neutral names; roles in MSD-Q01 |
 | `game.difficulty` | game difficulty | u8 | 0 Normal, 1 Nightmare, 2 Hell |
@@ -791,8 +791,8 @@ CSA-R02 `unitGate`;
 GDF-R10a/GDF-R10b treasure fields, GDF-R11a stats, GDF-R12 states, GDF-R14a and GDF-R15a modes,
 GDF-R17a class identities;
 [player-party-experience-and-loot-sharing](player-party-experience-and-loot-sharing.md): PXL-R04a
-enumeration of the killer's party members with matching room level id. For a missing party
-record, MSD-R21 states its own reading, which differs from PXL-R04a's text (companion).
+enumeration of the killer's party members with matching room level id. Both contracts state
+that a missing party record yields no callback (companion).
 
 **Depended on by:** [combat-crushing-blow](combat-crushing-blow.md) (stat 100, MSD-R09);
 [core-numeric-and-rng-foundations](core-numeric-and-rng-foundations.md) (supplied life bounds and

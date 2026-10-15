@@ -27,6 +27,12 @@ the supplied terminated rows and zero preset count do not close MSD-Q10 or MSD-Q
 
 ## Implementation gaps
 
+Historical comparison recorded before the 2026-10-14 migration and retained without a new
+implementation inspection. Its "Original behavior" and status cells describe that earlier
+reading; the spec and the open evidence gaps above are the current authority. In particular,
+the MSD-R05 cell predates the state-7 exclusion, alive test and override reading, and the
+MSD-R22a cell predates the `(1 - q) / q * T` operation sequence.
+
 Comparison of the original behavior with the current Dark Magic code, kept as an input for a
 future implementation plan; not a plan. Code named: lua/d2legacy/policy/player_count.lua,
 commands/spawn_monster.lua, commands/monster_death.lua, loot/treasure_class.lua,
