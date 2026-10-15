@@ -63,7 +63,7 @@ state. Illustrative operation names impose no language, API or storage design.
 | position | `path.x`, `path.y`, integer position | 16.16 bit patterns; exposed integer part u16 | Fixed-point positions; static entities use a separate position representation |
 | movement | `path.dirX`, `dirY`, `stepX`, `stepY`, `speed`, `targetSpeed`, `accel`, `tick`, `scale`, reset marker | direction i32 at scale 4096; steps 16.16; speeds 8.8; other fields i32 | Supplied movement state for NRF-R08b/NRF-R11a |
 | combat record | semantic fields in section 3.2 | i32 quantities unless stated | Shared record consumed by the damage pipeline and status application; no rule here computes with it |
-| monster inputs | MonStats record count; per-class `creationCondition` | i32; boolean | Bound and gate monster classes at creation seeding (NRF-R17a). `creationCondition` is a neutral name: a per-class MonStats byte intersects an engine-held mask; a nonzero intersection allows creation. Its wider meaning is NRF-Q09 |
+| monster inputs | MonStats record count; per-class MonStats `enabled` flag | i32; boolean | Bound and gate monster classes at creation seeding (NRF-R17a). The `enabled` flag is the named MonStats boolean of GDF-R05a; creation tests only that flag. This is distinct from the post-creation `creationCondition` of MSD-R19. Its gameplay role beyond this test belongs to the monster owner |
 | dependency operations | state-bit set/clear, update mark, list free, animation reset, resource initialization | supplied operation contract | Ordered requests (NRF-R03d, NRF-R12a, NRF-R14a, NRF-R14b) are distinct from dependency-produced stored effects |
 | monster elemental slot | slot chance, element type, slot eligibility; stored-target type 3 branch reached | u8 chance; u8 element type; supplied booleans | Supplied entry to NRF-R04b's direct draw sites; eligibility and preparation are NRF-Q11 |
 | corpse-explosion draw inputs | corpse unit and seed, sentry unit and seed, `min`, range | units; seeds `{lo,hi}`; i32 | Supplied by DSC-R09 to the NRF-R04a corpse row |
@@ -239,10 +239,10 @@ draws.
 | Melee hit roll | attacker | modulo 100 | SBA-R08 |
 | Damage-build physical, critical/deadly, elemental, drain, poison, unconditional modulus 1 and conversion modulus 5 | attacker | the corresponding damage-build forms | DPO-R02, DPO-R03, DPO-R21; order DPO-R29 |
 | Monster damage doubling | attacking monster | modulo 100 | DPO-R22 |
-| Leech overlay choice | attacker | Rand(2) | DPO-R15 |
+| Leech overlay choice | attacker | Rand(2) | LSE-R13 (reached through DPO-R15) |
 | Flagged-monster stun cancellation | attacker | modulo 100 | CSA-R03 |
 | Attacking player's weapon durability | attacker | one modulo 100 (a chance of 10 is one draw, not ten) | DPO-R24 |
-| Skill/hit knockback | attacker | knockback roll | KNB-R01 |
+| Item knockback roll | attacker | one step, new low word & 127 | KNB-R01 |
 | Block, dodge, avoid, weapon avoidance, evade | defender | Rand(100) or inline modulo 100 | SBA-R11, SBA-R12, SBA-R16 |
 | Hit-recovery veto | defender | RandMask(2) / RandMask(4) | HRC-R06 |
 | Concentration gate | defender | Rand(100) | HRC-R10b |
@@ -459,7 +459,7 @@ All comparisons are signed. Target-speed test precedes negative-speed test. No d
 - **NRF-R17a** [verified in 1.13c code (static)]. At creation's seeding boundary the class tests run before any
   allocation or seeder request; a rejected creation returns null with no allocation, seed write or draw. Reject
   player class>=7 by unsigned comparison (negative also rejects). Reject a monster when class<0,
-  class>=MonStatsCount, its MonStats record is unavailable, or the record's `creationCondition` is false. Other
+  class>=MonStatsCount, its MonStats record is unavailable, or the record's `enabled` flag is false. Other
   type 2..5 classes are not tested there. Player skips the seeder: 0 game-seed steps. Other successfully allocated types
   call the unit seeder with game seed: 1 step and unit seed/copy from its new lo. Item then allocates zeroed
   ItemData with `itemData.sentinel`=-1 and invokes NRF-R17b: 2 total game-seed steps, with a distinct secondary seed.
@@ -565,7 +565,7 @@ successful-allocation boundary; they do not assert the complete creator's later 
 | **NRF-Q02** | outside-boundary / observation pending | Identify an actual gameplay creator that passes no parent and observe its sampled inputs; supplied-clock arithmetic NRF-R03c is verified |
 | **NRF-Q03** | behavior / unresolved | Establish the startup/runtime callers of the rate helper or valid captures of rate writes; helper arithmetic is verified |
 | **NRF-Q04** | integration / partially established | Complete coordinate/direction producer contracts for static routes and all direction-table entries; supplied path getters, scale and cited entries are verified |
-| **NRF-Q09** | outside-boundary / open | Establish wider roles of neutral runtime conditions and record fields (such as `unit.modeChanged`, `itemData.sentinel`, MonStats `creationCondition` and the section 3.3 structures) in their owning specs; no binary field name is required to use the known branch. Status-path conditions are CSA-Q03 |
+| **NRF-Q09** | outside-boundary / open | Establish wider roles of neutral runtime conditions and record fields (such as `unit.modeChanged`, `itemData.sentinel` and the section 3.3 structures) in their owning specs; no binary field name is required to use the known branch. Status-path conditions are CSA-Q03 |
 | **NRF-Q10** | outside-boundary / unresolved | Complete per-handler callback/callee draw contracts and data-to-handler bindings under the item-event owner; IEP-R07, IEP-R13b and IEP-R14 to IEP-R18 establish only their stated direct-draw slices, not a blanket seed total |
 | **NRF-Q11** | integration / open | Complete upstream monster-slot/stored-target eligibility and extra callee draw contracts; reached direct sites NRF-R04b verified |
 | **NRF-Q13** | outside-boundary / integration open | Incoming game-seed producer and resource initializer contract; one direct step/request NRF-R03d verified |
@@ -845,7 +845,7 @@ Defaults for every vector unless its Inputs state otherwise:
   - runtime_observed: no
 
 - **NRF-V17** Creation seeding counts and class refusals (NRF-R17a, NRF-R03a; boundary: supplied-input stage)
-  - Inputs: per case; MonStatsCount 1; class 0 MonStats record available with `creationCondition` true unless a
+  - Inputs: per case; MonStatsCount 1; class 0 MonStats record available with `enabled` true unless a
     case states otherwise; successful allocation
   - Seeds: per case
   - Draws: per case
@@ -866,7 +866,7 @@ Defaults for every vector unless its Inputs state otherwise:
   - (e) Inputs: `game.seed = {1, 0x29A}`; separately, a type 2 object of class -1 and one of class 99999. Draws:
     (game, step, lo 0x6AC6935F). Outputs: each is seeded: `game.seed = {0x6AC6935F, 0}`; unit seed
     `{0x6AC6935F, 0x29A}`; `initialLo` 0x6AC6935F.
-  - (f) Inputs: `game.seed = {1, 0x29A}`; create a type 1 monster of class 0 whose `creationCondition` is false.
+  - (f) Inputs: `game.seed = {1, 0x29A}`; create a type 1 monster of class 0 whose `enabled` flag is false.
     Draws: none. Outputs: null before any allocation or seeder request; `game.seed = {1, 0x29A}`.
   - (g) Inputs: `game.seed = {1, 0x29A}`; create a type 0 player of class 6. Draws: none. Outputs: the player
     unit is created (non-null); `game.seed = {1, 0x29A}`; the player seed is not written.
@@ -1194,7 +1194,7 @@ remain runtime_observed:no.
 
 **Depends on:** [core-game-data-fields](core-game-data-fields.md), GDF-R01a and the cited per-table/name rules for fields and original-profile identities; [state-timed-state-lifecycle](state-timed-state-lifecycle.md), STL-R05 list free in mode-bound traversal and STL-R07/STL-R07a state bookkeeping. STL-R07 verifies active/changed membership; STL-R07a disguise and NRF-Q17 update-queue effects remain gated. Missing complete animation producer contracts are NRF-Q17; they are not hidden prerequisites to pure numeric fixtures.
 
-**Depended on by:** gameplay specs consuming shared arithmetic, units, seeds, getters or the damage record, including the consumer rules named in NRF-R04a's table (SBA, DPO, CSA, KNB, HRC, MHD, DSC, MSD and SFR rules), which hold the sequences and vectors for their draw sites, [combat-status-application](combat-status-application.md) (seed step, state routing, stat reads, damage record), [monster scaling](monster-scaling-by-players-and-difficulty.md) (draw forms, mulDiv, 8.8 format, creation seeding), [damage mitigation](combat-damage-mitigation.md), [damage pipeline](combat-damage-pipeline-order.md), movement, timed states, creation and the related combat/skill specs below. A reverse consumer relationship is not an automatic delivery prerequisite.
+**Depended on by:** gameplay specs consuming shared arithmetic, units, seeds, getters or the damage record, including the consumer rules named in NRF-R04a's table (SBA, DPO, LSE, CSA, KNB, HRC, MHD, DSC, MSD and SFR rules), which hold the sequences and vectors for their draw sites, [combat-status-application](combat-status-application.md) (seed step, state routing, stat reads, damage record), [monster scaling](monster-scaling-by-players-and-difficulty.md) (draw forms, mulDiv, 8.8 format, creation seeding), [damage mitigation](combat-damage-mitigation.md), [damage pipeline](combat-damage-pipeline-order.md), movement, timed states, creation and the related combat/skill specs below. A reverse consumer relationship is not an automatic delivery prerequisite.
 
 ## 10. Related specs
 

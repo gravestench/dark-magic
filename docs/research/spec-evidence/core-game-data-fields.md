@@ -335,14 +335,14 @@ All cells below were selected by decoded header name after joining contiguous re
 | pettype.bin | 0+4 | 4484 | count header only |
 
 These reads are archive-file reads, not live runtime memory reads. No binary payload, table, or complete row is copied into this repository. The interpreting layouts below are evidence details only:
-- Four-byte compiled row count, followed by original fixed-size records; verified against0x5EF40 selected compiled path.
-- ItemStatCost stride0x144, States0x3C, Skills0x23C: every compiled identity word matches all 359/185/357 corresponding explicit textID/id/Id cells (zero mismatch).
-- CharStats stride0xC4: allseven class strings at+0x20 match text order with Expansion excluded; Sorceress BlockFactor+0x49=20, ManaRegen+0x3A=120, ToHitFactor+0x3C raw0xFFFFFFF1=-15.
-- MonStats stride0x1A8: the 13 cited class rows have compiled Id words equal to their hcIdx; classes 78/560 MonStatsEx word+0x18=78/560, Velocity+0x32=10/8, Run+0x34=10/14; flagwords+0x0C=0x02018003/0x0205840B. MonStats2 stride0x134 Id words at 78/560 agree.
-- ItemTypes stride0xE4: original rows 4/51 Code bytes gold/shld.
-- Skills selectors at+0x2E: Charge Id107 srvdofunc 67, Whirlwind151→76, SerpentCharge352→67 match text cells.
-- Difficulty stride0x58: named vector fields and cold/freeze divisors match text; no new gameplay preparation is observed.
-- PetType compiled header count 20 (total4484bytes) agrees with its 20 textrows (1288bytes). Countheader-only coverage makes no per-record correspondence claim.
+- Four-byte compiled row count, followed by original fixed-size records; verified against 0x5EF40 selected compiled path.
+- ItemStatCost stride 0x144, States 0x3C, Skills 0x23C: every compiled identity word matches all 359/185/357 corresponding explicit text ID/id/Id cells (zero mismatch).
+- CharStats stride 0xC4: all seven class strings at +0x20 match text order with Expansion excluded; Sorceress BlockFactor +0x49=20, ManaRegen +0x3A=120, ToHitFactor +0x3C raw 0xFFFFFFF1=-15.
+- MonStats stride 0x1A8: the 13 cited class rows have compiled Id words equal to their hcIdx; classes 78/560 MonStatsEx word +0x18=78/560, Velocity +0x32=10/8, Run +0x34=10/14; flag words +0x0C=0x02018003/0x0205840B. MonStats2 stride 0x134 Id words at 78/560 agree.
+- ItemTypes stride 0xE4: original rows 4/51 Code bytes gold/shld.
+- Skills selectors at +0x2E: Charge Id 107 srvdofunc 67, Whirlwind 151→76, SerpentCharge 352→67 match text cells.
+- Difficulty stride 0x58: named vector fields and cold/freeze divisors match text; no new gameplay preparation is observed.
+- PetType compiled header count 20 (total 4484 bytes) agrees with its 20 text rows (1288 bytes). Count-header-only coverage makes no per-record correspondence claim.
 - MonMode and PlrMode .txt each have only name/token/code headers. Their schema-declared direction fields have no text columns; missing-column conversion remains gated rather than inferred from spacing.
 
 ### Named cell records
@@ -627,29 +627,29 @@ Each row is one named cell, interpreted only for its supported claim. Name-table
 | TD-MONSTER-SKILL | MonStats `trappedsoul1`, file data row 403 | hcIdx | 403 | decimal class index; prepared Id agrees for this cited row | GDF-R17a |
 | TD-MONSTER-SKILL | MonStats act5hire1, file data row 561 | hcIdx | 560 | decimal class index; prepared Id agrees for this cited row | GDF-R17a |
 | TD-MONSTER-SKILL | MonStats act5hire2, file data row 562 | hcIdx | 561 | decimal class index; prepared Id agrees for this cited row | GDF-R17a |
-| TD-MONSTER-SKILL | MonStats `sandleaper1`, hcIdx78 | Velocity | 10 | prepared values for cited rows corroborate original named fields | GDF-V02 / GDF-V17 |
-| TD-MONSTER-SKILL | MonStats `sandleaper1`, hcIdx78 | Run | 10 | prepared values for cited rows corroborate original named fields | GDF-V02 / GDF-V17 |
-| TD-MONSTER-SKILL | MonStats `sandleaper1`, hcIdx78 | MonStatsEx | `sandleaper1` | prepared values for cited rows corroborate original named fields | GDF-V02 / GDF-V17 |
-| TD-MONSTER-SKILL | MonStats `sandleaper1`, hcIdx78 | inTown | (empty) | prepared values for cited rows corroborate original named fields | GDF-V02 / GDF-V17 |
-| TD-MONSTER-SKILL | MonStats `sandleaper1`, hcIdx78 | NoShldBlock | (empty) | prepared values for cited rows corroborate original named fields | GDF-V02 / GDF-V17 |
-| TD-MONSTER-SKILL | MonStats act5hire1, hcIdx560 | Velocity | 8 | prepared values for cited rows corroborate original named fields | GDF-V02 / GDF-V17 |
-| TD-MONSTER-SKILL | MonStats act5hire1, hcIdx560 | Run | 14 | prepared values for cited rows corroborate original named fields | GDF-V02 / GDF-V17 |
-| TD-MONSTER-SKILL | MonStats act5hire1, hcIdx560 | MonStatsEx | act5hire1 | prepared values for cited rows corroborate original named fields | GDF-V02 / GDF-V17 |
-| TD-MONSTER-SKILL | MonStats act5hire1, hcIdx560 | inTown | 1 | prepared values for cited rows corroborate original named fields | GDF-V02 / GDF-V17 |
-| TD-MONSTER-SKILL | MonStats act5hire1, hcIdx560 | NoShldBlock | (empty) | prepared values for cited rows corroborate original named fields | GDF-V02 / GDF-V17 |
-| TD-MONSTER-SKILL | Skills Charge, Id107 | srvdofunc | 67 | decimal handler selector, not skill id | GDF-R17b context |
-| TD-MONSTER-SKILL | Skills Whirlwind, Id151 | srvdofunc | 76 | decimal handler selector, not skill id | GDF-R17b context |
-| TD-MONSTER-SKILL | Skills SerpentCharge, Id352 | srvdofunc | 67 | decimal handler selector, not skill id | GDF-R17b context |
+| TD-MONSTER-SKILL | MonStats `sandleaper1`, hcIdx 78 | Velocity | 10 | prepared values for cited rows corroborate original named fields | GDF-V02 / GDF-V17 |
+| TD-MONSTER-SKILL | MonStats `sandleaper1`, hcIdx 78 | Run | 10 | prepared values for cited rows corroborate original named fields | GDF-V02 / GDF-V17 |
+| TD-MONSTER-SKILL | MonStats `sandleaper1`, hcIdx 78 | MonStatsEx | `sandleaper1` | prepared values for cited rows corroborate original named fields | GDF-V02 / GDF-V17 |
+| TD-MONSTER-SKILL | MonStats `sandleaper1`, hcIdx 78 | inTown | (empty) | prepared values for cited rows corroborate original named fields | GDF-V02 / GDF-V17 |
+| TD-MONSTER-SKILL | MonStats `sandleaper1`, hcIdx 78 | NoShldBlock | (empty) | prepared values for cited rows corroborate original named fields | GDF-V02 / GDF-V17 |
+| TD-MONSTER-SKILL | MonStats act5hire1, hcIdx 560 | Velocity | 8 | prepared values for cited rows corroborate original named fields | GDF-V02 / GDF-V17 |
+| TD-MONSTER-SKILL | MonStats act5hire1, hcIdx 560 | Run | 14 | prepared values for cited rows corroborate original named fields | GDF-V02 / GDF-V17 |
+| TD-MONSTER-SKILL | MonStats act5hire1, hcIdx 560 | MonStatsEx | act5hire1 | prepared values for cited rows corroborate original named fields | GDF-V02 / GDF-V17 |
+| TD-MONSTER-SKILL | MonStats act5hire1, hcIdx 560 | inTown | 1 | prepared values for cited rows corroborate original named fields | GDF-V02 / GDF-V17 |
+| TD-MONSTER-SKILL | MonStats act5hire1, hcIdx 560 | NoShldBlock | (empty) | prepared values for cited rows corroborate original named fields | GDF-V02 / GDF-V17 |
+| TD-MONSTER-SKILL | Skills Charge, Id 107 | srvdofunc | 67 | decimal handler selector, not skill id | GDF-R17b context |
+| TD-MONSTER-SKILL | Skills Whirlwind, Id 151 | srvdofunc | 76 | decimal handler selector, not skill id | GDF-R17b context |
+| TD-MONSTER-SKILL | Skills SerpentCharge, Id 352 | srvdofunc | 67 | decimal handler selector, not skill id | GDF-R17b context |
 
-Additional count records: ItemStatCost359, States185, Skills357 ordinary textrows; MonStats735 textrows including one separator→734ordinary; MonStats2 610includingseparator→609; CharStats8includingseparator→7; ItemTypes104includingseparator→103; PlrMode20; MonMode16; PetType20. These are archive-derived counts, not gameplay observations.
+Additional count records: ItemStatCost 359, States 185, Skills 357 ordinary text rows; MonStats 735 text rows including one separator → 734 ordinary; MonStats2 610 including separator → 609; CharStats 8 including separator → 7; ItemTypes 104 including separator → 103; PlrMode 20; MonMode 16; PetType 20. These are archive-derived counts, not gameplay observations.
 
 ### Global MonStats correspondence discrepancy
 
-The text file's hcIdx sequence matches ordinary-row indices for all 734 rows. The cached .bin record Id field does not:11 tail records differ. Examples (only named cells / interpreted fields):
-- text data row 724 Id cr_lancer8, hcIdx723; .bin physical record index 723 has Id617.
-- text data row 725 Id `overseer6`, hcIdx724; .bin record index 724 has Id723.
-- text data row 734 Id `willowisp8`, hcIdx733; .bin record index 733 has Id732.
-The Id name cr_lancer8 occurs twice in text, at data rows 618 and 724, hcIdx617 and 723. This is a lead for the first-pass unique-name behavior, not proof that it caused the cached-file mismatch. Archive compilation history and live post-load mutation have not been observed. Array index, explicit hcIdx cell, linked-name identity and record Id field remain distinct. Do not change the cited gameplay class indices to fit these record words. GDF-Q10 retains global correspondence as an integration gap; all 13 cited class indices corroborated normally.
+The text file's hcIdx sequence matches ordinary-row indices for all 734 rows. The cached .bin record Id field does not: 11 tail records differ. Examples (only named cells / interpreted fields):
+- text data row 724 Id cr_lancer8, hcIdx 723; .bin physical record index 723 has Id 617.
+- text data row 725 Id `overseer6`, hcIdx 724; .bin record index 724 has Id 723.
+- text data row 734 Id `willowisp8`, hcIdx 733; .bin record index 733 has Id 732.
+The Id name cr_lancer8 occurs twice in text, at data rows 618 and 724, hcIdx 617 and 723. This is a lead for the first-pass unique-name behavior, not proof that it caused the cached-file mismatch. Archive compilation history and live post-load mutation have not been observed. Array index, explicit hcIdx cell, linked-name identity and record Id field remain distinct. Do not change the cited gameplay class indices to fit these record words. GDF-Q10 retains global correspondence as an integration gap; all 13 cited class indices corroborated normally.
 
 
 ## Historical live-memory correspondence (2026-10-12/13)
@@ -793,6 +793,27 @@ All GDF-R/Q/V/O identities, the 22 existing vectors, existing dates, numerical e
 The mechanical spec/companion/gap check reported 0 errors and 0 warnings. The separate preservation comparison checked all 36 rule definitions and their labels, all 22 executable-vector identities, and all 277 earlier named-cell records. Only the dependency description of GDF-R19a changes among normalized rule bodies; other rule bodies are unchanged apart from spacing/identifier formatting. Vector correspondence prose changes in GDF-V01/V02/V08/V12 retain the dated records above. GDF-V11 adds explicit dependency inputs and mask-to-predicate assertions while retaining its selected identities and true/false outputs.
 
 The self-review mapped every verified behavioral rule to its existing supplied-input vector and each data-only rule to named-cell records, checked the dependency return formats and seven precise gap boundaries, and found no additional result-distinct discriminator needed for the unchanged local operations. The new text-cell records carry their own date, full-file coverage, header-based selection, narrow values, hashes and profile limits. This is a documentation check and self-review, not a fixture execution, gameplay observation, fresh independent-reader result or approval.
+
+## Independent review spot check (2026-10-15)
+
+An independent review read original 1.13c instructions before comparing them with the
+rules: Fog `0x12A60` numeric handler `0x1316F..0x13193`, its kind dispatch bytes at
+`0x13450` and jump table `0x13438` (GDF-R01b); D2Game `0x1560` (GDF-R06b), `0x1A40`
+(GDF-R08b), `0x77FA0` selector compare (GDF-R17b/GDF-R18); D2Common `0x32890` (GDF-R11b),
+`0x5A030` conversion block `0x5A556..0x5A5B0` (GDF-R10b), `0x5F310` (GDF-R19b), `0x5EF40`
+(GDF-R20a), `0x603F0` (GDF-R02) and the class-record bounds in `0x31D20` (GDF-R03a). All
+stated guards, widths, masks and orders were confirmed: decimal accumulation with a final
+negation; kinds 2/3/4/6 store unconditionally while kind 5 skips an empty cell (kind 5 is
+not one of the direct kinds this contract claims); availability mask `1 << (mode & 7)`;
+`Param3 + (level-1)*Param4`; selectors 67/76 before mask[7]; count `> 171` before stat
+171; nonzero group plus counter stored as low16 and Picks 0 replaced by 1; PetType signed
+`>= 256` fatal and nonpositive published as 0; independent generation and final-form flags
+with no fallback. GDF-R20a's text request substitutes `levels` for the table name
+`leveldefs` (strings at D2Common RVAs `0x8F8E8`/`0x8FA90`); that table is outside this
+dictionary's named collections and is reported for the owner rather than added here.
+Recomputed GDF-V05, GDF-V06, GDF-V09 and GDF-V19 matched. The review also separated words
+run into numbers in the compiled-correspondence bullets, count records and the MonStats
+discrepancy examples above; no value changed.
 
 ## Focused blind-reader pass FULL1 (2026-10-15)
 

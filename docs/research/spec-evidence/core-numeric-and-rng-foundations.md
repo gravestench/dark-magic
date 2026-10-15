@@ -255,6 +255,51 @@ explicit outcomes above. The document remains draft because the recorded in-scop
 gates and pending gameplay observations remain open. Review completion does not imply
 user approval, source re-verification beyond the recorded slices or complete parity.
 
+### Independent review spot check and corrections (2026-10-15)
+
+An independent review read the following original 1.13c instructions before comparing them
+with the rules: D2Game `0x1180`, `0x1450`, `0x1480` (NRF-R01/NRF-R02); `0x14D0` (NRF-R05);
+`0xE0110` (NRF-R03a/NRF-R03c); `0xE1D90` entry through `0xE0EDC` (NRF-R17a); `0xE00C0` with
+its D2Common imports #10679, #10414, #10193, #10411 and #10874 (NRF-R17b); `0x77240` slot
+loop `0x77510..0x77630` (NRF-R04b); D2Common `0x36760`, `0x265D` (NRF-R03c); `0x323E0` and
+the image table at `0x94608` (NRF-R07); `0x38B70`, `0x38A80`, `0x382B0` (NRF-R12b/NRF-R12c);
+`0x33CD0`, `0x37DB0`, `0x34510`, `0x38730`, `0x38520`, `0x37F80` (NRF-R12a); `0x33920`
+(NRF-R14a); `0x3AE60` (NRF-R14b); `0x335F0` object slice `0x3378D..0x3381E` and helper
+`0x1100` (NRF-R18); `0xCEB0` (NRF-R11a); `0x4D910`, `0x4D950` (NRF-R10a); `0x34D40`
+(NRF-R08b); D2Game `0x29800` (NRF-R09a) and D2Common `0x34B80` (NRF-R10b). Undecoded byte
+runs at `0x38A80`, `0x3AE60`, `0x38730` and `0x3379C` were decoded by hand from their opcode
+bytes. Every arithmetic, guard, order and seed-owner statement of those rules was confirmed,
+including the direction-table entries 0 `(0,4096,0)` and 127 `(2896,2896,7)` at D2Common
+`0x8D470`. Recomputed vectors NRF-V01, NRF-V20, NRF-V22 (c), NRF-V27, NRF-V30 (a) and
+NRF-V32 (e) matched.
+
+Corrections, each preserving behavior, arithmetic, owners and vector values:
+
+- **NRF-R17a monster test.** The earlier record (`0xE1DA0..0xE1DDC`) described the tested
+  byte as intersecting "an engine-held mask byte" and named the result neutrally. New
+  evidence: the mask pointer at D2Game IAT `0xF8BE0` resolves to Fog #10259 / RVA `0x26798`,
+  the constant bit table `1,2,4,8,...`; the test reads mask[1] = 2 against MonStats record
+  byte `+0x0F`, which is bit 25 of the flag dword `+0x0C`. The MonStats descriptor array in
+  D2Common `0x5AA40` (descriptor stored at stack `+0x240..+0x250`) names that field
+  `enabled` (string at D2Common RVA `0x8E9B0`), conversion kind 0x1A, bit 25, offset `0x0C`,
+  matching GDF-R05a's `enabled` flag. The section 3 input, NRF-R17a and NRF-V17 now name the
+  MonStats `enabled` flag instead of the neutral `creationCondition`, which also removed a
+  name collision with the different post-creation `creationCondition` of MSD-R19. NRF-Q09
+  no longer lists this condition. Vector inputs and results are unchanged.
+- **NRF-R04a rows.** The knockback row read "Skill/hit knockback ... knockback roll"; its
+  consumer KNB-R01 is the item knockback roll, one attacker step with new low word `& 127`.
+  The leech row cited DPO-R15, whose contract delegates the overlay Rand(2) to LSE-R13; the
+  row now cites LSE-R13 reached through DPO-R15, and Depended on by lists LSE. Seed owners
+  are unchanged.
+- **Call-site anchors added.** D2Game `0xCACC0` (NRF-R03d) is called from `0x2C2D0` and
+  `0x2C570`; the generic creator `0xE1D90` (NRF-R17a) has 22 recorded direct callers,
+  including item creation `0x11490`; the mode setter `0x33920` (NRF-R14a) tail-requests
+  D2Common `0x335F0`, whose prepared type-2 slice is NRF-R18. These are call-site anchors, not
+  complete frame-loop chains.
+
+A fresh delta reader check of the renamed NRF-R17a input is required under checklist
+section 2 before the reader review again applies to this revision.
+
 ## Original function references
 
 ### Random primitives, seeding and arithmetic
