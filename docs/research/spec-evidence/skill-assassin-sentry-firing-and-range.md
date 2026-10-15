@@ -502,3 +502,123 @@ for the newly supplied successful occupied-slot replacement T10 and false-mask c
 A fresh fourth reader checked all changed material listed above, confirmed the assigned three file hashes and found no rule, ownership, label or gate changes. Counts: MISMATCH 0, GUESS 0, GAP 0, DISCRIM 0. It independently recomputed V28(c), both strengthened V34 initializer assertions and V36(h), checked the section 5 output entry, and verified the V34/V06 discriminators cited by the V07/V19/V20 coverage clarifications. The reader reported this material by assertion groups rather than a numeric case count.
 
 The V34 seeds 44/42 reject current-X-derived 704/702; V06 rejects 49 and accepts 48; V28(c) replaces A20 by T10 only with the ordered zero collision result; V34 requests seed overwrite, path kind 10, duration 77, then preparation; V36(h) skips the slow scale and yields 1920. FULL3's one GAP and three DISCRIM findings are resolved. The final applicable reader condition is met, with existing producer and observation limits unchanged and status still draft. No implementation test, gameplay observation, implementation plan or maintainer approval is implied. The complete report is retained privately.
+
+## Blind-implementer DELTA5 triage (2026-10-15)
+
+Run type: delta check (FULL1..FULL3 and DELTA4 precede it). Changed material checked: the
+review's R02 early-reject sentence, the Q02 text, the Scope sentence, the section 9/10
+dependency lists and the merged V34 Outputs bullet. Reported counts: MISMATCH 0, GUESS 5,
+GAP 4 (one stating no consistency gap), DISCRIM 3, GATED 6, COVERAGE 5, HARDEST 3. The reader
+recomputed V05, V17, V24, V25, V26 and V34 with no difference and accepted changes 2..5.
+
+Asm check before editing (original D2Game disassembly, 2026-10-15): budget 0xA4A10 tests,
+in order, unit null, unit kind 1, MonsterData (+0x14) null, owner reference (+0x28) null,
+owner link first field zero, then calls owner lookup 0xE03A0, room #10331 and town predicate
+#10057; any failure reaches 0xA4A5C, which calls #11103(unit, 0) and mode request 0x95E10 with
+the unit in the request block, including a null unit. The lazy-init and counter<=0 rejects
+call 0xF21E0 with mode 0; its builder 0x95070 calls the same #11103 import (thunk 0xA496) with
+the caller's unit before filling the mode-0 request. Both reject families therefore issue
+current-skill clear then mode 0. They differ in one internal request-block byte (0x64 versus
+0x64/0x65 by 0x94F20); that field's effect stays with Q12 and is not in the contract. The
+counter test is signed `>=0` (any negative initializes); Skill1 is sign-extended and rejected
+when <0 or >=count; the level request #10306 passes include-bonus 1; evaluation #10786 takes
+(unit, `calc4`, Skill1, level).
+
+| Finding | Outcome | Reason / exact assertion |
+|---|---|---|
+| GUESS: R02 death request target for absent unit | Spec edit: R02 | Requests are issued with the supplied unit, absent included; their absent-unit handling is Q12. V26(h) |
+| GUESS: R02 early-reject order / owner lookup when reference missing | Spec edit: R02 ordered gate list | Order read in asm; absent reference makes no owner lookup request. V26(h/i/j) |
+| GUESS: R02 death request versus skill clear | Spec edit: R02 defines one death request (clear then mode 0) for every reject; V24/V26 traces state it | Asm: 0xF21E0's builder calls the same clear-skill import |
+| GUESS: V26(c) owner absent meaning | Spec edit: V26(c) | Owner reference present, lookup returns absent; one lookup request asserted |
+| GUESS: R02 bonus-inclusive level | Spec edit: R02 wording, V26(f) | Base 2 versus bonus-inclusive 3; evaluation (S, 20, 3) |
+| GAP: section 3 lacks owner reference / town input | Spec edit: new section 3 row | Effects already in section 5 (current-skill clear/death-mode requests, lost) |
+| GAP: no vector for new early-reject branches | Spec edit: V26(h/i/j) | Absent unit, player unit, missing reference |
+| GAP: Q02 versus R01g wording | Spec edit: R01g text | States entry 101 holds the think; selection and event root unresolved. Label unchanged |
+| GAP: consistency of changes 2..4 | No change | Reader found none |
+| DISCRIM: V05/V17/V26 level or argument order stubbed | Spec edit: V26(f) | Rejects base level 2 and reordered evaluation arguments |
+| DISCRIM: V24/V26 reject without skill clear | Spec edit: V24/V26 traces | Each mode 0 output is the ordered clear-then-mode-0 request pair |
+| DISCRIM: V26(c..e) counter read before owner check | Spec edit: V26(g) | A pure early read is equivalent; lazy initialization before the owner gate is rejected by counter -1 kept and no evaluation |
+| COVERAGE: R02 absent unit / non-monster / missing reference | Spec edit: V26(h/i/j) | Same as GAP above |
+| COVERAGE: R02 negative counter other than -1 | Spec edit: V26(k) | -5 initializes to 2, decrements to 1 |
+| COVERAGE: R02 negative Skill1 | Spec edit: V24(d) | Skill1 -1 rejects before instance request |
+| HARDEST: missing reference versus lookup absent | Resolved by R02 order and V26(c/j) | |
+| HARDEST: absent-unit request target | Resolved by R02 text and V26(h) | |
+| HARDEST: death request includes skill clear | Resolved by R02 definition | |
+
+GATED (R01g, Q01, Q02, Q04, Q08, Q12) is unchanged. These edits make R02's existing
+binary behavior explicit and add cases; they change no label, ownership or gate. A fresh
+DELTA6 checks them.
+
+## Blind-implementer DELTA6 triage (2026-10-15)
+
+Run type: delta check of the DELTA5 edits. Counts: MISMATCH 0, GUESS 2, GAP 3, DISCRIM 4,
+GATED 3, COVERAGE 5, HARDEST 3. It recomputed V05, V17, V24(a..d), V25 and V26(a..k) with
+no difference and confirmed every DELTA5 finding resolved except three partial ones listed
+below. The asm reading above (Skills record check precedes the instance request; budget
+counter lives in the AI parameter block, not the unit) supports the edits.
+
+| Finding | Outcome | Reason / exact assertion |
+|---|---|---|
+| GUESS: V26(h) counter of an absent unit | Spec edit: V26(h) | Counter belongs to supplied AI parameters; 3 unchanged |
+| GUESS: V24(c) instance request with absent record | Spec edit: V24(c) | No instance, level or evaluation request (record test precedes instance request) |
+| GAP: V26(h)/V25 absent-unit request log | No change beyond V26(h) wording | Only issue/order of the two requests is asserted; their handling is Q12 |
+| GAP: V25 lacks death-request note | Spec edit: V25 trace | Clear then mode 0 for S |
+| GAP: V26(i) owner reference unspecified | Spec edit: V26(i) | Present reference with succeeding lookup supplied |
+| DISCRIM: V26(i) reference before kind | Spec edit: V26(i) | Lookup would succeed, so a reference-first order logs a lookup; asserted none |
+| DISCRIM: V26(d/e) lazy init before room/town gates | Spec edit: V26(l/m) | Counter -1 kept, no instance/level/evaluation request |
+| DISCRIM: V25 reject without clear | Spec edit: V25 trace | Ordered pair asserted |
+| DISCRIM: V05/V17 level/argument order | No change | V26(f) is R02's discriminating case; V05/V17 claim think sequencing, not level selection |
+| COVERAGE: Skill1 0 / count-1 | No change (advisory) | V24(a) rejects count, V05 accepts 20; not added |
+| COVERAGE: missile or other non-monster kind | No change | Same kind!=monster branch as V26(i) |
+| COVERAGE: decrement=true on reject paths | No change | Rejects precede the decrement; V25 already rejects with decrement=true |
+| COVERAGE: lazy result 1 with decrement | No change | V26(k) covers persist-then-decrement arithmetic |
+| COVERAGE: INT32_MIN counter | No change | Signed <0 test is covered by -1 and -5; no different branch |
+| HARDEST: gate order | Resolved by V26(c/g/h/i/j/l/m) | |
+| HARDEST: lazy init position | Resolved by V26(g/l/m) | |
+| HARDEST: V26(h) log | Resolved by V26(h) wording | |
+
+A fresh DELTA7 checks these edits.
+
+## Blind-implementer DELTA7 triage (2026-10-15)
+
+Run type: delta check. Counts: MISMATCH 0, GUESS 0, GAP 2, DISCRIM 3, GATED 3, COVERAGE 4,
+HARDEST 3. All DELTA6 findings were confirmed resolved except the V26(i) claim wording.
+Asm check: think 0xA7ECA calls the decrementing budget; nonzero at 0xA7ED1 jumps to the
+epilogue 0xA7F47 and returns, with no schedule request. Budget 0xA4A10 branches on a null
+owner-lookup result before the room request #10331.
+
+| Finding | Outcome | Reason / exact assertion |
+|---|---|---|
+| GAP: V25 call-sequence owner stub | Spec edit: V25 inputs | Lookup returns P on first call, absent on second |
+| GAP: V26(c) room request after absent owner | Spec edit: V26(c) | No room request asserted |
+| DISCRIM: V26(i) reference-before-kind claim unobservable | Spec edit: V26 Discriminates | Claim now names the lookup-before-kind alternative; pure reject order stated as unasserted and equivalent |
+| DISCRIM: V25 delay request after reject | Spec edit: V25 outputs | No next-think delay request |
+| DISCRIM: V24(a) instance request before bounds | Spec edit: V24(a) | No instance/level/evaluation request; record read is a pure getter |
+| COVERAGE: Skill1 0/count-1; instance-absent with decrement; room-versus-town order | No change (advisory) | Same branches as existing cases or unobservable equivalents |
+| COVERAGE: positive counter decrement | No change | V05/V17 cover it |
+| HARDEST: pure-reject order | Resolved by Discriminates wording | |
+| HARDEST: V25 stateful stub | Resolved by V25 inputs | |
+| HARDEST: V26(h) no counter read | No change | R02 reads the counter only after all owner gates pass; (h) states it unchanged |
+
+A fresh DELTA8 (the fourth reader run of this cycle) checks these edits.
+
+## Blind-implementer DELTA8 result (2026-10-15)
+
+Run type: delta check. Counts: MISMATCH 0, GUESS 0, GAP 0, DISCRIM 0, GATED 3 (R01g/Q02,
+Q12, Q04), COVERAGE 5, HARDEST 3. It recomputed V24(a..d), V25 and V26(a..m) with no
+difference and confirmed all five DELTA7 findings resolved. Outcomes of the remaining entries:
+
+| Finding | Outcome | Reason |
+|---|---|---|
+| COVERAGE: accepted Skill1 0 / count-1 | No change (advisory) | V24(a) rejects count; default 20 accepts; same comparison branch |
+| COVERAGE: missile/item kind with owner reference | No change | Same kind-not-monster branch as V26(i) |
+| COVERAGE: positive counter decrement; counter 1 to 0 | No change | V05/V17 cover both |
+| COVERAGE: decrement wrap at INT32_MIN+1 | No change | Decrement runs only when counter>0, so no wrap is reachable |
+| HARDEST: V25 call-sequence stub | No change | Inputs state the per-call results; R02 makes one lookup per call |
+| HARDEST: V26(f) ordered subsequence | No change | Stated as subsequence with owner/room requests omitted |
+| HARDEST: V24(b)/(c) versus R01b | No change | R02 and R01b order already explicit (R01a runs R02 first) |
+
+The cosmetic V24 case order (a, d, b, c) is left as is to keep case ids stable. The final
+applicable reader run meets the stop condition. Reader runs this cycle: four, all delta
+(DELTA5..DELTA8). Status stays draft; no implementation test, gameplay observation or
+approval is implied.

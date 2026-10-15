@@ -200,3 +200,85 @@ order's 501 and separately distinguishes cold's selected array from its own arra
 The applicable reader review is complete at the declared supplied-input/static boundary.
 Existing producer, integration and observation gaps remain; header status stays draft.
 No human approval, complete gameplay parity or runtime confirmation is inferred.
+
+### Third full fresh-reader pass, 2026-10-15
+
+This full review covered the contract after the R18/V13/Q10 correction. Counts: MISMATCH 0, GUESS 7, GAP 12, DISCRIM 13, GATED 13, COVERAGE 14, HARDEST 3. Every vector case was recomputed without a difference.
+
+Triage was checked against the original D2Game/D2Common instructions on 2026-10-15. The supporting readings were as follows:
+
+- D2Game `0x92CF0` rejects a failed lookup (negative identity, identity at least count, null record) with result 0 before any call. It clears 0x1C dwords (the whole 0x70-byte record), stores flags 2, then calls `0x9F1A0` and `0x9F210`. It then loads the dword at selected record +0x134 and, on a nonzero test, stores that dword to record +0x60. It hands off through `0xA0C70` with callback `0x92CC0` and returns 1.
+- D2Game `0x93340` has the same lookup rejection with result 0. After the fills it ORs flags with 1 and resultFlags (word) with 1 on the cleared record, has no +0x134 access, and returns 1 after the hand-off.
+- The fills `0x9F1A0` and `0x9F210` contain no level test. `0x9F210` pushes condition 1 for all three requests.
+- Duration `0x4E900` reads only unit, skill and level; its fourth argument is unused.
+- Physical minimum `0x52100` compares the classification with equality to 2.
+- The selected-array leaf `0x38A80` selects its array from the list's resolved-stats flag. The ordinary unit read `0x38B70` and the item wrapper `0x38ED0` (count > 23 guard, stat 23 on a nonzero condition) both use that leaf.
+
+| Entry | Outcome |
+|---|---|
+| GUESS 1 RandAlt undefined | Spec edit: R14/R15 name NRF-R02 `Rand` exactly |
+| GUESS 2 fills at L <= 0 | Spec edit: R15 states there is no fill level check; V11 L0 case (fire 0, hitClass 32, no draw) |
+| GUESS 3 replacement width | Spec edit: R18 whole-field replacement with a signed nonzero test (dword load/test/store); V13 cases `0x1234` and -5 |
+| GUESS 4 read timing/source | Spec edit: R18 says the read happens after the elemental fill, from the same selected record, and is not a logged request |
+| GUESS 5 duration condition | Spec edit: R11/R15 and the section 3 row say all three requests pass 1 and duration ignores it; V11/V15 request logs |
+| GUESS 6, GUESS 7, GAP 2 array selection | Spec edit: R04b/R10 define the selection as NRF-R12b's unit-read array choice on the given list (never the own-array list read) plus NRF-R12c, and replace the "item wrappers" wording |
+| GAP 1 inventory association | Spec edit: section 3 row "caster inventory reference" |
+| GAP 3 mastery condition | Spec edit: section 3 row; unit presence is already in the stat-input row |
+| GAP 4 section 5 omissions | Spec edit: request row adds source-stat, mastery-stat and stat-325 reads; the R18 row adds the stage result. `skillHitClassValue` is a record-field read under R18 |
+| GAP 5 hand-off/return | Spec edit: R18 says the stage returns 1 after hand-off, assertions apply to the record as handed off, and the other dispatch arguments are outside the contract |
+| GAP 6 L/skill/caster source | No change: section 3 already has level `L`, skill identity and caster seed as caller-supplied inputs |
+| GAP 7 absent record in 53 | Spec edit: R18 early lookup rejection with result 0; V13 failed-lookup case |
+| GAP 8, GAP 9 V19 resolver internals | Spec edit: V19 names the resolver guards (eligibility, reach) and the automatic-hit condition as supplied stubs owned by Q06, and separates the request's missile condition from the hit-roll's final argument. SBA was not added as a prerequisite, because these stubs are supplied inputs |
+| GAP 10 resolver result use | Spec edit: R13 makes no assertion about how the result is used |
+| GAP 11 V13 initial record | Spec edit: V13 starts the record with stale `0x55` in every field |
+| GAP 12 Q10 evidence anchor | Evidence-link edit: the Q10 row links to the spec-review correction record |
+| DISCRIM 1, 2, 4, 5, 6 (V13) | Spec edit: V13 adds a do-function 38 case with value 7 (hitClass 32), assertions on the record at hand-off, the stale-record clear, `0x1234`/-5, and EType 3 with value 7 |
+| DISCRIM 3 flag-before-fill | No change: equivalent. The fills write only R14/R16 fields and never read flags, so setting flag 2 before or after them is unobservable at hand-off |
+| DISCRIM 7, 8 V11/V15 order | Spec edit: exact request logs with condition arguments |
+| DISCRIM 9 mulDiv argument order | Spec edit: large-value cases in V03 (`0x19B0000` vs `0x19AEA00`), V05 and V07 (105216 vs 105194), and V14 (21043 vs 21030) |
+| DISCRIM 10 V06 gate | Spec edit: case with EMinLev2 1 and EMinLev1 0 gives `0x100` with no evaluation |
+| DISCRIM 11 V17 classification | Spec edit: classifications 0 and 3 use the caster |
+| DISCRIM 12 V14 mapping | Spec edit: the other mastery stats are 0 in the mapping cases. The order is already discriminated by the 500/501 case |
+| DISCRIM 13 V19 addend scope | Spec edit: V08 stat 325 = -7 case still gives 60; V19 asserts the stat 325/layer 0 read |
+| COVERAGE R17 k=1/2 | Spec edit: V12 cases d/e (seeds `{3,0x29A}`, `{4,0x29A}` give types 2 and 4) |
+| COVERAGE R18 items | Covered by the V13 additions above |
+| Other COVERAGE (R04a, R09, R10, R11, R12, R14, R15, R16, R13, R07, R05/R19) | No change: these are advisory. The rules state each branch's recipe, and existing vectors already discriminate those results or the branch does not change the recipe (R04a's SrcDam 128 case already distinguishes zero-extension) |
+| HARDEST R18/V13 | Addressed by the R18/V13 edits above |
+| HARDEST R04b/V17 | Addressed by the array-selection and inventory-reference edits |
+| HARDEST R10/V14 | Addressed by the array-selection wording; the order is discriminated by 500/501 and the argument order by 21043/21030 |
+
+These edits change rule statements (R15 level handling, R18 rejection/return), inputs and vectors, so another reader run is required.
+
+### Fourth full fresh-reader pass, 2026-10-15
+
+This was a full review, not a delta check, because the R15 level handling and the R18 rejection/return statements changed after the third run. Counts: MISMATCH 0, GUESS 4, GAP 8, DISCRIM 9, GATED 13, COVERAGE 17, HARDEST 3. Every vector case was recomputed without a difference.
+
+A triage reading of D2Common `0x50460` on 2026-10-15 shows that the mastery block (unit and condition tests, then `0x4F870`) follows the synergy block whether or not the minimum gate rejected evaluation.
+
+| Entry | Outcome |
+|---|---|
+| GUESS V02 shift-only injection | Spec edit: these cases apply R06 directly to a supplied v |
+| GUESS V14 damage input 1000 / cold input | Spec edit: the mapping cases apply R10 directly to a supplied post-synergy e of 1000, and the cold case states input 1000 |
+| GUESS V17 SrcDam/request granularity | Spec edit: SrcDam 128 and include-source 1. Each endpoint makes its own weapon/classification/stat requests (`0x52100` calls them itself); the six-request log is given; outputs are named as the selected source values x |
+| GUESS R17 positive length kept | Spec edit: V16 type-10 case with length 30 keeps 30 (R17 already stated this) |
+| GAP V19 resolver arguments/guards | No change: the resolver internals are supplied stubs and explicitly gated by Q06. Only the sum, wrap and forwarding are SLD assertions |
+| GAP V13 hand-off form/eligibility/L | No change: R18 places the dispatch arguments and eligibility outside the contract. The DPO remark is limited to physical/critical draws, and the assertions stop at hand-off |
+| GAP V03 source x origin | Spec edit: x is named as the supplied R04b selected endpoint, as in V04 |
+| GAP V17 log granularity | Spec edit: as for the V17 GUESS above |
+| GAP V09 other record fields | Spec edit: every other field, including hitClass, is preserved |
+| GAP R16 optional outputs have no consumer | No change: section 5 lists them; their consumers are callers outside this boundary |
+| GAP V20 "reference 1" log form | Spec edit: stated as an evaluation at offset 1 with remaining length 3 |
+| GAP Q10 column identity | No change: already gated by Q10 |
+| DISCRIM fill range always power of two | Spec edit: V10 range `0x401` case, r 101, physical `0x465` |
+| DISCRIM type 10 always length 50 | Spec edit: V16 length 30 case |
+| DISCRIM only positive percentages | Spec edit: V05 calculation -20 (6964), V07 calculation -20 (71), V14 stat 329 = -30 (adds -300) |
+| DISCRIM other selectors mapped | Spec edit: V14 EType 6 adds 0 with no read |
+| DISCRIM mastery skipped after gate rejection | Spec edit after the asm check: V14 gate-rejected minimum gives 332 |
+| DISCRIM V04 SrcDam 128 only as w | Spec edit: endpoint output `0x1400` (sign-extended would give `0x1A00`) |
+| DISCRIM physical fill at L0 | Spec edit: V10 L0 case gives physical `0x400` with no draw |
+| DISCRIM V19 guard order | No change: the guard semantics belong to the hit-resolution contract (Q06); R13 asserts only the forwarded bonus when the roll is reached |
+| DISCRIM Kick before lookup | Spec edit: V18 failed-lookup case gives 1/2 with no Kick request |
+| COVERAGE (17 advisory) | No change beyond the vectors added above. Each remaining branch follows a stated recipe already distinguished by existing cases |
+| HARDEST V14, V13, V19/V17 | Addressed by the V14/V17 clarifications above. V13 and V19 boundaries are stated |
+
+**Outcome: the review is not complete.** The parent's cap of four reader runs is reached. All post-run-4 edits are vector clarifications or additions, plus the V09/V20 wording; no rule text changed after run 4. Their values were hand-computed by the spec writer, but no fresh reader has checked them. A delta check of V03, V04, V05, V07, V09, V10, V14, V16, V17, V18 and V20 against the findings above is still required before the blind-implementer pass can be called complete.

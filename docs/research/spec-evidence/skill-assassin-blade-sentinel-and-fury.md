@@ -164,6 +164,7 @@ zero-based data-row index excluding header for 257/266. Supports R01/R02/R06b an
 | Blade Fury /Id 266 |srvstfunc; srvdofunc; srvmissilea|26; 48;`bladefragment1` |
 | Blade Fury /Id 266 |`prgcalc1`;`Param3`;`Param4`|`par4`; 3; 5. With faithful prepared selection/evaluation, P5 would give duration 4; not a `Param4`-as-duration rule |
 | Blade Fury /Id 266 |startmana; mana; lvlmana; manashift; usemanaondo|6; 8; 1; 5; 1. No completed mana deduction formula inferred |
+| Blade Sentinel /Id 257; Blade Fury /Id 266 | srvmissile | blank; blank. Read 2026-10-15 from a local copy whose SHA-256 equals the loader record above (465c28e8...), same header-based column selection and row convention. The compiled selector these blanks produce is not read (Q04) |
 
 ### TD-BLADE-MISSILES
 
@@ -174,6 +175,7 @@ association, not by itself the actual creator selection.
 | Row | Columns | Raw cells / interpretation |
 |---|---|---|
 | blade creeper /Id 392 |pSrvDoFunc; pSrvHitFunc; NextHit; NextDelay; Skill|20; 37; 1; 25; Blade Sentinel |
+| blade creeper /Id 392 |LastCollide; CollideType; ToHit; AlwaysExplode; CollideKill|blank; 3; 1; blank; blank. Read 2026-10-15 from a local copy whose SHA-256 equals the loader record above (89bee1fd...). Supports V01's LastCollide-disabled fixture only as a text cell; compiled values Q04 |
 | `bladefragment1` /Id 506 |pSrvDoFunc; Skill|1; Blade Fury |
 | `bladefury1` /Id 505 |pSrvDoFunc; pSrvHitFunc; Skill|1; 52; Blade Fury. Distinct named row; not silently substituted for selected fragment |
 
@@ -371,3 +373,111 @@ script) and match.
 
 These edits change R05a's gate and R03's cited ownership, so a fresh delta reader over
 R03/R05a/V05 is required before the blind-implementer condition applies to this revision.
+
+### Independent reader FULL3 (2026-10-15)
+
+Run type: full (only two full runs were recorded before; the review changes to R03's
+ownership and R05a's gate also require a full run). A fresh reader received the spec,
+foundations, GDF and the section 9 dependency specs (SCD, SCX, MCI, MDP, MMC, STL, MSD, HRC,
+MHD) and recomputed 38 lettered/base cases. Counts: MISMATCH 0, GUESS 6, GAP 13, DISCRIM 9,
+GATED 5 grouped entries (R05a owner identity; R05b/R05c/R06b/R07/R09b/R10b; Q01..Q10; O01..O03
+and stage-only vectors; partial gates on verified rules), COVERAGE 9, HARDEST 3. It found the
+Description consistent with R05a's owner-reference hedge.
+
+Triage readings, 2026-10-15, original disassembly of D2Game 0x96310, 0x95560, 0x40860,
+0xDFA90 and the 0x3EDE0 entry, and the head of 0x95D50:
+
+| Affected claims | Earlier discrepancy / evidence | Current resolution and limits |
+|---|---|---|
+| R01 creation request | R01 said summon creation used the resolved target. In 0x96310 the target resolver's outputs go to the command write only; the creation call at 0x95D50 receives (game, caster, 0, 0, skill row, skill id, level). 0x95D50 tests the two position arguments and takes another path when either is zero. The 0x9EE50 selection return is only tested (signed >=0); its out-value is not read again | R01 corrected: caster/skill/level with explicit position (0, 0); target and selection not passed. What the zero position selects inside creation stays Q08/Q09. V09(a) asserts it |
+| R03 absent missile and order | 0x40860: null missile and false condition both jump to the end path (end with missile register as supplied, target 0, force 1) and return 2; the owner lookup is reached only when the condition is true. Sync, counter 10, then step are sequential | R03 states the absent-missile path, lookup only on true condition, and the explicit order. No change to existing outputs |
+| R02 final dispatcher result | SCD-R07 adds a request and sets result 1 when srvmissile is valid. The srvmissile text is blank for both rows; the compiled selector is not read | Gate: §2 and Q04 name the compiled srvmissile selector; vectors assert callback returns only. No behavior assumed |
+| R04 NextHit gate | 0x3EDE0 tests state 86 only when the prepared NextHit byte is nonzero | Already in R04; new V02(g) discriminates it |
+
+| Finding | Disposition |
+|---|---|
+| GUESS R01 selection not passed to creation | Spec edit: R01 (verified above) |
+| GUESS R02 creation start point | No change: R02 already makes every remaining creation option zero/absent; how the creator uses its source is MCI's |
+| GUESS R02 no refresh on early returns | No change: R02 orders the duration and target returns before the gate; asm confirms. New V03(g) also asserts no refresh |
+| GUESS V05(d) condition in absent-owner case | Spec edit: V05(d) states condition true in both cases |
+| GUESS R03 sync/counter/step order | Spec edit: R03 says "in this order"; V05(c) asserts the ordered requests |
+| GUESS V01 hit-callback/damage-fill not asserted | Spec edit: V01 states they follow MMC-R14 with supplied results and are not asserted |
+| GAP R02/V03 srvmissile/final dispatcher result | Gate: Q04 and §2 edit; TD-BLADE-SKILLS records blank text cells |
+| GAP V05(c) caster linkage | Spec edit: the caster is a separate live unit not named by the owner reference |
+| GAP V05(d) condition value | Spec edit (with the GUESS above) |
+| GAP V05(a) summon initial level/marker | Spec edit: initially level 1, summon marker true |
+| GAP V03 creation fields | Spec edit: skill 266, level 10, supplied missile 506, target (130, 230) |
+| GAP §5 MMC-owned requests | Spec edit: §5 row names them as MMC-R11/MMC-R14 outputs; R04 asserts only arming's position |
+| GAP V04 external weapon not an input | No change: §3 declares it fixture-only context; the vector asserts R12 has no such input, Q05 gates propagation |
+| GAP R03 missile room/previous counter, i16 width | No change: synchronization uses the owner's room; the write sets 10 regardless of the earlier value; integer width is a contract element, not a layout |
+| GAP R01 marker semantics | No change: already Q09 |
+| GAP §3 `Param3`/`calc4` cells | No change: not inputs to verified rules; R06b names `Param3` as a cell only; Q01/Q02 gate their use |
+| GAP R04/V01 LastCollide second rejection | Spec edit: V01 supplies LastCollide 0; text cell blank recorded in TD-BLADE-MISSILES |
+| GAP R02 absent node/negative missile, GAP R01 invalid row/absent caster | No change: same retained recipes as V03(e)/V09(d), per FULL1/FULL2 |
+| DISCRIM V05(d) end result | Spec edit: end returns 0, return still 2 |
+| DISCRIM V05(c) collision result | Spec edit: collision returns 0, return still 1 |
+| DISCRIM V05 condition skipped | Spec edit: new V05(e) condition false with live owner gives end/return 2 |
+| DISCRIM V03(e) duration==0 | Spec edit: new V03(g) P=0 |
+| DISCRIM V03 refresh only on blocked branch | Spec edit: new V03(h) open gate with state 12 |
+| DISCRIM V02(b) state 86 regardless of NextHit | Spec edit: new V02(g) NextHit 0 with state 86 on |
+| DISCRIM V08/V11 mastery mapping | Spec edit: new V11(g), distinct masteries per slot, equal endpoints; mastery constants reconfirmed in 0x3A4E0 (357/330/331/332, burn 316/317 with 329) |
+| DISCRIM V08(b) physical/fire order | No change: V11(e) discriminates, as V08 states |
+| DISCRIM V01 LastCollide | Spec edit (with the GAP above) |
+| COVERAGE R12a/b swap with nonzero percentage | Spec edit: new V10(f); percentage-before-swap gives -9/-5 and a draw |
+| COVERAGE R09a condition false with live owner | Spec edit: V05(e) |
+| COVERAGE R02 open gate with state 12 | Spec edit: V03(h) |
+| COVERAGE R01 invalid row/absent caster; R02 absent node/negative missile/P wrap; R03 other unavailable kinds/modes; R04 absent target/LastCollide/AlwaysExplode; R12 negative maximum; R12b mulDiv 64-bit branches; R10a null seed/rejected class | No change: same output recipes as existing cases, or owned by MMC/NRF/MCI contracts (reasons as FULL1/FULL2) |
+| HARDEST R03/V05/R05a | Resolved by the R03/V05 edits above |
+| HARDEST R04 with V01/V02 | No change beyond V01/V02(g) edits; MMC/STL own the clamp |
+| HARDEST R02/V03 dispatcher result | Gated under Q04 as above |
+
+R01, R03, Q04 and vectors changed, so a fresh full run is required.
+
+### Independent reader FULL4 (2026-10-15)
+
+Run type: full (rule behavior of R01/R03 and the Q04 gate changed after FULL3, so no delta
+check applies). A fresh reader recomputed 44 cases (41 lettered, 3 base), including V11(e)
+and the new V02(g), V03(g, h), V05(e), V10(f), V11(g). Counts: MISMATCH 0, GUESS 7, GAP 7,
+DISCRIM 11, GATED grouped (R05b/R05c/R06b/R07/R09b/R10b; Q01..Q10; STL-Q10, STL attach/free,
+NRF-Q20, MMC-Q09; stage-only vectors and O01..O03), COVERAGE 22 items, HARDEST 3. Reader
+coverage limit: it reported reading only SCD-R12 from SCD and not opening SCX, MCI, MDP, MSD,
+HRC, MHD, GDF or the companion; it states none was needed to execute a vector.
+
+This was the fourth reader run, the cap for this pass. No spec edit was made after it, so
+the contract reviewed is the one FULL4 read. The blind-implementer pass is **not complete**:
+the entries marked "open" below need the stated edit and a further reader run.
+
+| Finding | Disposition |
+|---|---|
+| GUESS R01/R02 absent caster | No change: both rules write only a "present" caster's marker and continue; 0x96310/0x95560 test the caster before the write and fall through. Downstream target resolution with no caster is the resolver's |
+| GUESS R03 whose completion condition | Open: proposed wording "the owner's completion condition" (0xDFA90 tests the owner unit) |
+| GUESS V01/V02 ToHit | Open: proposed fixture ToHit 1 (text cell 1 recorded in TD-BLADE-MISSILES) |
+| GUESS V02(c) which filter rejects | Open: proposed fixture "CollideType gate rejects the target type" with stated CT and owner hostility |
+| GUESS V05/V09 skill, level, selection values | Open: proposed fixture skill 257, level 10, selection 7 |
+| GUESS V05(a) summon room | Open: proposed summon in room B, placement asserted with caster room A |
+| GUESS R02 selected missile source | No change: R02 consumes the supplied selection result; its compiled source is Q04 |
+| GAP V01/V02 MMC fields (ToHit, CT, owner, Explosion, AlwaysExplode, CollideFriend) | Open: proposed explicit fixture defaults with the GUESS edits above |
+| GAP V05/V09 skill/level; selection and summon room | Open (same as GUESS entries) |
+| GAP absent caster/absent node vectors | No change: same recipes as V09(d)/V03(e), per FULL1..FULL3 |
+| GAP opaque marker/condition meanings | No change: Q09 |
+| GAP final dispatcher result | No change: gated by Q04 and §2 |
+| GAP MMC-R14 miss return | No change: owned by MMC (MMC-V10); V02 asserts arming position only |
+| DISCRIM V05(c) collision propagated when nonzero | Open: proposed second collision result 2, expected return 1 |
+| DISCRIM V05(d) end result propagated when nonzero | Open: proposed second end result 1, expected return 2 |
+| DISCRIM V05(a)/V09(a) type-2 removal scope | Open: proposed pending type-2 and type-12 events; only type 2 removed |
+| DISCRIM V05(a) placement room | Open (summon room B) |
+| DISCRIM V09(a) selection passed to creation | Open (selection 7; creation carries none) |
+| DISCRIM V09/V03 selection 0 and selected missile 0 | Open: 0x96310 and 0x95560 accept zero (signed >=0 tests); proposed zero-value success cases |
+| DISCRIM V03 unsigned timer comparison | Open: 0x95560 uses a signed compare; proposed release -1, frame 100, gate opens |
+| DISCRIM V05(d) unavailable-mode table | Open: proposed owner player mode 12 and monster mode 17 (available), player mode 0/17 and monster mode 0 (unavailable), per 0xDFA90 |
+| DISCRIM V11 swapped min/max stat ids | Open: proposed asymmetric-pair case with logged read order |
+| DISCRIM V04 capture-at-creation | No change: stage limit stated; Q05 gates capture |
+| DISCRIM V01 NextHit-independent rejection | No change: V02(g) rejects it, as V01's citation of R04 does not claim that branch |
+| COVERAGE (22 items) | No change in this pass; branches with distinct results overlap the open DISCRIM edits above |
+| HARDEST R04/V01/V02 | Open with the MMC fixture edits |
+| HARDEST V10/R12b | No change: V10(a..f) state operands, branches and wraps |
+| HARDEST V05(a)/R01 ignored values | Open with the V05/V09 edits |
+
+Remaining for completion: apply the open fixture/vector edits (no rule behavior change is
+proposed; each was checked against the cited instructions), then one fresh full reader run
+including SCD-R06..R08 and the MMC fixture defaults.

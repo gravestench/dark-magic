@@ -300,6 +300,30 @@ Corrections, each preserving behavior, arithmetic, owners and vector values:
 A fresh delta reader check of the renamed NRF-R17a input is required under checklist
 section 2 before the reader review again applies to this revision.
 
+<a id="split-delta-check-4-2026-10-15"></a>
+### Delta check 4 (2026-10-15)
+
+Run type: delta check (full runs 1 to 3 already recorded). A fresh smaller-model reader received the
+spec, core-game-data-fields and state-timed-state-lifecycle only, plus the change list: the
+section 3 monster input, NRF-R17a and NRF-V17 rename to the MonStats `enabled` flag, the NRF-Q09
+removal, and the NRF-R04a knockback and leech rows with the section 9 LSE entry. Counts: MISMATCH 0,
+GUESS 0, GAP 0, GATED 0, DISCRIM 3, COVERAGE 2 (advisory), HARDEST 2. All NRF-V17 cases (a) to (g)
+recomputed and matched; both listed findings (rename; consumer rows) were confirmed resolved.
+
+| Entry | Outcome |
+|---|---|
+| DISCRIM NRF-V17 (e): record/`enabled` test applied to non-monster types | No change: the reader itself found it rejected; (e) seeds type 2 objects of class -1 and 99999 |
+| DISCRIM NRF-V17: `enabled` tested after allocation with side effects suppressed | No change: (f) already asserts null "before any allocation or seeder request", which rejects the alternative |
+| DISCRIM NRF-V17: range test ordered after the `enabled` test | No change: equivalent. An out-of-range class has no MonStats record under GDF-R05a, so no `enabled` value exists to read; both orders give the same refusal, unchanged seed and no draw |
+| COVERAGE NRF-R17a: record unavailable at an in-range class | No change: unconstructible under GDF-R05a's supplied-count lookup; the branch adds no distinct result |
+| COVERAGE NRF-R17a: non-monster with `enabled` false | No change: `enabled` is a MonStats field; NRF-R17a states other type 2..5 classes are not tested, and (e) shows objects bypass the tests |
+| HARDEST: distinguishing `enabled` from record unavailable | No change: both reach the same refusal; (f) isolates `enabled` with an available in-range record |
+| HARDEST: knockback row form versus KNB-R01 | No change: checked by the writer; KNB-R01 steps the attacker seed once through NRF-R01 and uses `roll = newLow & 127`, matching the row |
+
+No spec edit was needed. The final applicable run has MISMATCH 0 and no unresolved GUESS, GAP or
+DISCRIM, so the blind-implementer pass again applies to this revision. Status remains draft for the
+recorded in-scope gates and pending observations; this is not user approval.
+
 ## Original function references
 
 ### Random primitives, seeding and arithmetic

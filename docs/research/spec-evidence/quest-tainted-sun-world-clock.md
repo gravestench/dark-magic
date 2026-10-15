@@ -134,16 +134,16 @@ An independent static re-derivation of the quest stages against D2Game 1.13c rep
 
 Several callee addresses in the incoming report were offset by `0x1000` and are corrected here from the original image: participant iteration `0xC3630` (reported `0xC4630`), post-flag iterations `0xC36B0`/`0xC5ED0`/`0xC5090` (reported `0xC46B0`/`0xC6ED0`/`0xC6090`), completion iteration `0xC5260` (reported `0xC6260`), altar timer callback `0xC5E30` (reported `0xC6E30`) and player lookup `0xE03A0` (reported `0xE13A0`). The report's animation finding named the `0xC7130` path; its instructions are in `0xC71A0`, while `0xC7130` is join apply. `0xC5090` starts after the `int3` at `0xC508F`, although the reconstruction groups it with `0xC5030`. D2Game `0x33920`, called by the altar, is not D2Common #11090, which also sits at RVA `0x33920` in D2Common.
 
-Layout mapping for the new semantic names: private markers M4/M5/M6 are bytes at private `+4/+5/+6`; M8, MC, M10 and M98 are dwords at `+8/+0xC/+0x10/+0x98`; the amulet count is private `+0x9C`. The roster word is the u16 at quest `+0x9C`. Event key is event `+0x18`, auxiliary identity `+0x14` and event unit `+0x0C`; the animation argument's unit is at `+4`. Unit identity is unit `+0x0C`. The object item-code field is object `+0xB8`. Quest 9's counter is its private `+0x24`. Client direct-player flag is bit 0 of client `+0x3D4`, cached player reference `+0x174`, lookup keys `+0x16C/+0x170/+0x1A8`. The diagnostic switch is D2Game data RVA `0x111C20`.
+Layout mapping for the new semantic names: private markers A/B/C are bytes at private `+4/+5/+6`; mode argument, unit marker, source result and derived result are dwords at `+8/+0xC/+0x10/+0x98`; the amulet count is private `+0x9C`. The roster word is the u16 at quest `+0x9C`. Event key is event `+0x18`, auxiliary identity `+0x14` and event unit `+0x0C`; the animation argument's unit is at `+4`. Unit identity is unit `+0x0C`. The object item-code field is object `+0xB8`. Quest 9's counter is its private `+0x24`. Client direct-player flag is bit 0 of client `+0x3D4`, cached player reference `+0x174`, lookup keys `+0x16C/+0x170/+0x1A8`. The diagnostic switch is D2Game data RVA `0x111C20`.
 
 | Rule | Evidence (D2Game RVAs) |
 |---|---|
-| TSW-R01e | `0xC71AE` writes M5=1; `0xC71B1..0xC71C0` writes MC from argument unit `+0x0C` or -1. `0xC71C3` active==1, else jump to `0xC7211`. `0xC71C8` unsigned state>1 skips the start at `0xC71CD`; results write pending/applied, then state 3/transition 0 at `0xC71DE/0xC71E2`. `0xC71E6` stage==0 writes transition 0/stage 2 and iterates `0xDFCC0` with `0xC52B0` at `0xC720B`. `0xC721D` calls thunk `0xA4A2` (D2Common #11090) with the argument unit and M8 on every path. The constant null test on the callback at `0xC71F2` makes the fatal branch `0xC7228` unreachable |
+| TSW-R01e | `0xC71AE` writes marker B=1; `0xC71B1..0xC71C0` writes unit marker from argument unit `+0x0C` or -1. `0xC71C3` active==1, else jump to `0xC7211`. `0xC71C8` unsigned state>1 skips the start at `0xC71CD`; results write pending/applied, then state 3/transition 0 at `0xC71DE/0xC71E2`. `0xC71E6` stage==0 writes transition 0/stage 2 and iterates `0xDFCC0` with `0xC52B0` at `0xC720B`. `0xC721D` calls thunk `0xA4A2` (D2Common #11090) with the argument unit and mode argument on every path. The constant null test on the callback at `0xC71F2` makes the fatal branch `0xC7228` unreachable |
 | TSW-R01f, TSW-R01i | `0xC73B2..0xC73D6`: key 0x2C/0x2D, state 0, active 1 call schedule `0xC7250`. `0xC73DB..0xC7404`: key 0x28, pending 1, shared start, progress iteration `0xC3750`, pending clear; both fall through. `0xC7408` tests auxiliary identity 0x28; `0xC740F` u16 roster word >0 calls D2Game `0x33830` at `0xC742B` with quest `+0x1C` and the event unit's identity or -1. `0xC7430` state 2 writes 3 at `0xC7442`, formats with USER32 `wsprintfA` (slot `0x6FD18D58`) and calls `0xCBE70` at `0xC7462` only when the switch is nonzero |
 | TSW-R01a, TSW-R07e | In shared start, the state-0 branch writes 1 at `0xC6A6D`, formats at `0xC6A71`, and calls `0xCBE70` at `0xC6A8D` when the switch is nonzero, before the Act II test. Format string at .rdata RVA `0xFCC2C` is `changing state to %d` plus newline; the altar passes `Finished quest` at RVA `0xFB2E0` directly. `0xCBE70` builds a message with opcode `0x26` and the copied text and calls `0x29820` with callback `0xCB580`; that broadcast and its recipients are supplied |
 | TSW-R07a | Both `0xC5190` and `0xC5100` test the unit for null, type 0, and player-data `+0x9C` client; any failure reaches the assertion call (line `0x7CB`) and `-1` exit before the act test |
 | TSW-R07b | `0xC7145..0xC7173`: the client is read from player data only for a present type-0 unit, else 0. `0x8A3E0` tests the client at `0x8A3EB` and returns at `0x8A48C` without writes when it is absent |
-| TSW-R02a..c | `0xC76C3..0xC76FB` missing quest returns 0. Active (`0xC78E5`): `#10331` (thunk `0xA478`) to M10, `#10826` (thunk `0xA556`) to M98, `#11090`(O,1), M8=2, M5=1, MC, M4=1 (`0xC78E5..0xC7920`); active retest `0xC7923`, reset `0xC792E`, broadcast `0xC7947`, `0x35EB0`(4) `0xC7953`, `0x35E90`(6) `0xC795D`; amulet count 0 and `0xC3630` iteration `0xC7966..0xC797E`; active retest `0xC798A`, flag test/set/set/clear `0xC7997..0xC79B9`, iterations `0xC36B0/0xC5ED0/0xC5090` `0xC79CC..0xC79F2`, D2Game `0x33920`(quest `+0xE0`,13) `0xC7A07`; `#10826`(M10), `+0xB8`=`vip `, drop loop `0x11A70`(O,7,...) with `#10977`(item,16,1) per success `0xC7A0C..0xC7A6F`; `0xC2380`(successes) `0xC7A76`; `0x6B570`(4) `0xC7A7E`; missing game quest structure fatal `0xC7A90`; draw `0xC7AB5`; gold `0x6AFA0` loop; `0xC5260` iteration `0xC7B06`; `0x33AF0`(quest, `0xC5E30`, 10) `0xC7B1A`; return 0. Inactive (`0xC779D`): `#11090`(O,1), M4=1, M8=2, amulet count 0, `0xC3630` iteration, `#10331`/`#10826` unstored, `+0xB8`=`vip `, counted drop loop, `0x6B570`(4), draw `0xC7855` (missing structure jumps to fatal `0xC7A90`), gold loop, quest-9 search and `+0x24` addition at `0xC78CC..0xC78DB`; both exits return 0 |
+| TSW-R02a..c | `0xC76C3..0xC76FB` missing quest returns 0. Active (`0xC78E5`): `#10331` (thunk `0xA478`) to source result, `#10826` (thunk `0xA556`) to derived result, `#11090`(O,1), mode argument=2, marker B=1, unit marker, marker A=1 (`0xC78E5..0xC7920`); active retest `0xC7923`, reset `0xC792E`, broadcast `0xC7947`, `0x35EB0`(4) `0xC7953`, `0x35E90`(6) `0xC795D`; amulet count 0 and `0xC3630` iteration `0xC7966..0xC797E`; active retest `0xC798A`, flag test/set/set/clear `0xC7997..0xC79B9`, iterations `0xC36B0/0xC5ED0/0xC5090` `0xC79CC..0xC79F2`, D2Game `0x33920`(quest `+0xE0`,13) `0xC7A07`; `#10826`(source result), `+0xB8`=`vip `, drop loop `0x11A70`(O,7,...) with `#10977`(item,16,1) per success `0xC7A0C..0xC7A6F`; `0xC2380`(successes) `0xC7A76`; `0x6B570`(4) `0xC7A7E`; missing game quest structure fatal `0xC7A90`; draw `0xC7AB5`; gold `0x6AFA0` loop; `0xC5260` iteration `0xC7B06`; `0x33AF0`(quest, `0xC5E30`, 10) `0xC7B1A`; return 0. Inactive (`0xC779D`): `#11090`(O,1), marker A=1, mode argument=2, amulet count 0, `0xC3630` iteration, `#10331`/`#10826` unstored, `+0xB8`=`vip `, counted drop loop, `0x6B570`(4), draw `0xC7855` (missing structure jumps to fatal `0xC7A90`), gold loop, quest-9 search and `+0x24` addition at `0xC78CC..0xC78DB`; both exits return 0 |
 | TSW-R02d | `0xC5E30`: state 4 writes transition 0/stage 3 and iterates `0xC52B0`; `0xC5E60` clears private `+6`; returns 1 |
 | TSW-R10d | `0x2CA9B` tests client `+0x3D4` bit 0 and takes `+0x174` directly; else `0x2CAAC` skips a zero `+0x174`, calls `0xE03A0` at `0x2CAC6` and clears `+0x174` at `0x2CACF` on a zero result; `0x2CAD7` skips an absent player |
 
@@ -276,4 +276,175 @@ Root review read the complete contract, companion and gap record, all additions 
 
 ## Review status after the quest-stage follow-up
 
-The 2026-10-15 quest-stage follow-up changed rule behavior (TSW-R01e, TSW-R01f, TSW-R01i, TSW-R02a..d, TSW-R07a, TSW-R07b, TSW-R07e, TSW-R10d), corrected TSW-V21(i), and added vector cases and TSW-V26. The review completion above applies to the earlier contract only. A fresh blind-implementer pass over the changed rules and vectors is pending; no reader has checked this revision.
+The 2026-10-15 quest-stage follow-up changed rule behavior (TSW-R01e, TSW-R01f, TSW-R01i, TSW-R02a..d, TSW-R07a, TSW-R07b, TSW-R07e, TSW-R10d), corrected TSW-V21(i), and added vector cases and TSW-V26. The review completion above applies to the earlier contract only. Because rule ownership changed (TSW-R02 split, new TSW-R01i/TSW-R07e), the next reader runs are full reviews, numbered FULL5 onward in the overall sequence.
+
+## Fresh reader review: FULL5
+
+On 2026-10-15 a fresh full reader (smaller model, spec plus foundations and game-data-fields only; companion used only for the observation-procedure anchor) recomputed every case of TSW-V01 through TSW-V26. Counts: MISMATCH 1, GUESS 8, GAP 12, DISCRIM 16, GATED 4 groups, COVERAGE 20 groups, HARDEST 3.
+
+Triage re-read original code where a behavioral statement changed: D2Common `0x37570` (comparison table selection, night test indexed by cycle), `0x37CA0` and `0x376F0` (intensity takes source/act only and reads the stored flag), `0x37920` (fatal assertion on cycle outside 0..5 or negative ticks before any write), D2Game `0x33AF0` (due value = game quest structure counter + parameter), `0xC73A0` (pending exactly 1; state exactly 2), `0xC5E30` (state exactly 4), the original-image altar decode `0xC76B0..0xC7B3D` (primary/secondary test order, signed amulet loop re-reading the count, both active re-tests, success counting) and `0x2CA20` (per-client resolution then requests, before the next client).
+
+| Finding | Disposition |
+|---|---|
+| MISMATCH V03 trace threshold 20480 vs 23040 | No change to outputs: `0x37570` compares flag 0 against the normal table, so 20480 is correct. Added V03(b) to pin it |
+| GUESS shared vs player bit 13 (R01d, V07(b), V16(b)) | Spec edit: R01d and a new Inputs row name the game-level shared quest-flag record; V07(b)/V16(b) assert P's flags unchanged |
+| GUESS second intensity flag argument; GUESS "incoming flag" with flag already 1 | Spec edit: section 3 states intensity carries source/act only and observes the stored flag; R04a/R04b/R07c/R10c reworded |
+| GUESS resolution state of V17/V19/V22 clients | Spec edit: section 8.1 defaults define resolved/unresolved clients |
+| GUESS V26 log omits R02a tests | Spec edit: V26(a)/(b) logs start with the two primary tests; defaults state flag/item tests are log entries |
+| GUESS amulet count type/zero | Spec edit: R02b step 5 states the signed loop with re-read count; count <=0 requests none |
+| GUESS R10c eligibility | Spec edit: new supplied handler-eligibility input; R10c evaluates it first |
+| GUESS join/snapshot order (V06/V16) | No change: already supplied by the vectors and TSW-R09a/TSW-Q10 |
+| GAP offset-like marker names | Spec edit: renamed to markers A/B/C, mode argument, unit marker, source result, derived result; companion layout mapping keeps the binary offsets |
+| GAP unnamed outputs in section 5 | Spec edit: Outputs rows added for each named request, schedule due value, current-clock read and change tracking |
+| GAP supplied-operation arguments | No change: arguments the contract asserts are in rules/vectors; others are TSW-Q10 integration |
+| GAP scheduled due value not computable | Spec edit: default game quest counter 1000; V18(b)/(c)/(h) assert due 1015/1016 |
+| GAP V09(b) act of P2 | Spec edit: P2 in act 0 |
+| GAP V07(g) absent/non-player joining unit | No change: R07b gives those inputs the same no-client request, which queues nothing; the observable outcome equals V07(g) |
+| GAP V08(g) absent object downstream | No change: already gated under TSW-Q10 in the case text |
+| GAP R10c eligibility/invalid message | Spec edit: eligibility input; invalid cycle/ticks fatal path added to R10c, Outputs and V25 |
+| GAP R04c allocation request contents | No change: supplied presentation, TSW-Q03/TSW-Q10 |
+| GAP R12b wording | Spec edit: `5+(new lo mod 5)` |
+| GAP R07c other branches | No change: gated by TSW-Q03 |
+| GAP R10d lookup arguments/placement | Spec edit: lookup(client), per-client completion; V19 resolution case uses one ordered log |
+| DISCRIM V03/V15/V23 Act IV table with flag 0 | Spec edit: V03(b) |
+| DISCRIM period field vs normal[cycle].period | Spec edit: V04(b) |
+| DISCRIM V22(e) storing q on cycle-only notify | Spec edit: last resync 170, retained |
+| DISCRIM schedule parity from pre-step lo | Spec edit: V18(h) seed {0,667} |
+| DISCRIM primary set, all secondary false | Spec edit: V08(k) |
+| DISCRIM flag block regardless of bit 0 | Spec edit: V08(l) |
+| DISCRIM altar active re-tests | Spec edit: V26(e)/(f) |
+| DISCRIM R01i state>=2 | Spec edit: V21(m5) |
+| DISCRIM R01f pending nonzero | Spec edit: V21(n) |
+| DISCRIM R01e success path | Spec edit: V21(o) |
+| DISCRIM R01a diagnostic for state 1 | Spec edit: V01 state-1 case |
+| DISCRIM R02d state>=4 | Spec edit: V26(d) state 5 |
+| DISCRIM V25 rate/index/last reset | Spec edit: V25 rate-4 case |
+| DISCRIM V19 lookups batched | Spec edit: single ordered log |
+| DISCRIM V09(b) act before client | Spec edit: P2 act 0 |
+| DISCRIM V07(g) absent/non-player | No change: equivalent outcome under R07b (see GAP above) |
+| GATED Q11 uncited | Spec edit: TSW-Q11 added to TSW-R07a's Gates column for the observed effect only |
+| COVERAGE (20 groups) | Advisory. Branches with new result-changing cases were covered above (R01e success, R08-adjacent pending guards, R02a proceed, R02b re-tests, R10c invalid, R02d other states). Remaining groups need no vector: they reuse already-discriminated arithmetic/guards or sit behind declared gates (TSW-Q03/Q05/Q07/Q10, observation O04) |
+| HARDEST V26 / R02b | Resolved by the full logs, R02a tests in log, and re-test cases |
+| HARDEST V19 / R10d | Resolved by client-resolution defaults and the single ordered log |
+| HARDEST V21 slices | No further change; snapshots and new (m5)/(n)/(o) cases fix the guards |
+
+Rules, inputs, vectors and gates changed, so a further fresh full reader is required.
+
+## Fresh reader review: FULL6
+
+On 2026-10-15 the next fresh full reader recomputed every case of TSW-V01 through TSW-V26, including all FULL5 additions. Counts: MISMATCH 0, GUESS 8, GAP 9, DISCRIM 11, GATED 28, COVERAGE 31, HARDEST 3. Triage re-checked D2Common `0x37920` (source-120 override after both flag paths), `0x37570` (nonzero flag skips every advance bonus), `0x37CA0` (no last-resync write), `0x376F0` (flag-nonzero branch precedes the source-120 assignment), D2Game `0x33AF0` with the altar call at `0xC7B1A` (parameter 10), the altar decode (eligibility before mode marker; success counter added to quest 9), and the join bodies `0xC72C0`/`0xC7130` (no progress-writer iteration).
+
+| Finding | Disposition |
+|---|---|
+| GUESS R10c source-120 override with flag 0 | Spec edit: R10c states the override applies without a colour request; V25 source-120 case |
+| GUESS V19/V22 act-0 existence | Spec edit: defaults say a case naming an act supplies it |
+| GUESS V09 P2 client | Spec edit: both players have clients |
+| GUESS P's client state | Spec edit: defaults give P a client in act 1, state 4 |
+| GUESS V16(c) Act I clock | Spec edit: Act I exists with the supplied clock, not reallocated |
+| GUESS join runs no progress writer | Spec edit: R01d states it (join bodies make no progress-writer iteration) |
+| GUESS V08(g) absent object | No change: gated under TSW-Q10 in the case |
+| GUESS schedule order without snapshot | No change: order only is the intended assertion |
+| GAP current-clock read placement | Spec edit: V19 and V22(b) logs list current-clock read(act) |
+| GAP altar timer due value | Spec edit: R02b step 7 and Outputs; V26(a) due 1010 |
+| GAP quest initialization has no vector | No change: only its no-draw property (TSW-R12a, V18(a)) and zeroed defaults are claimed |
+| GAP colour request arguments | No change: section 3 and R04a give colour(act); colour bytes are presentation (TSW-Q03) |
+| GAP V22(b) recipient | Spec edit: World-clock(client,1,0,0) |
+| GAP symbolic helper effects | No change: TSW-Q10 |
+| GAP V08 partial logs | No change: V08 is a bounded slice; V26 carries the complete altar logs |
+| GAP allocation requests | No change: supplied presentation, TSW-Q03/TSW-Q10 |
+| GAP outline note | No change: reader found no layout dependency |
+| DISCRIM V14 table/bonus under flag 1 | Spec edit: V14(b) |
+| DISCRIM flag-nonzero bonuses | Spec edit: V15(d) |
+| DISCRIM V01 last resync reset | Spec edit: V01 last-resync-17 case |
+| DISCRIM V08 mode before eligibility | Spec edit: V08(m) |
+| DISCRIM V26 attempts vs successes | Spec edit: V26(b) second drop fails, counter 5 |
+| DISCRIM unconditional Finished-quest text | Spec edit: V26(a) switch-0 variant |
+| DISCRIM V21(h) pending cleared on timer success | Spec edit: V21(h) pending-1 variant |
+| DISCRIM V02 unfiltered reset | Spec edit: V02(b) |
+| DISCRIM V23 signed vs unsigned negative source | No change: equivalent for every input (both map negatives to act 0); the V23 claim was reworded to say so |
+| DISCRIM V06 skipping overwrite | No change: V07(e)/(f) are the owning discriminating cases |
+| DISCRIM V24 act 3 / flag 1 with source 120 | Spec edit: flag-1/source-120 case gives 192; act 3 stays gated by TSW-Q03 |
+| GATED (28) | No change: declared gates |
+| COVERAGE (31) | Advisory. Cases added above cover the result-changing ones raised (flag-1 advance, Act IV not exceeded, source 120 handler); the rest reuse discriminated arithmetic or sit behind declared gates |
+| HARDEST V19, V26, R05/R06a | No further change beyond the logs and V03(b)/V14(b)/V15(d) cases above |
+
+Vectors and a rule's stated outputs changed, so another fresh reader is required.
+
+## Fresh reader review: FULL7
+
+On 2026-10-15 the next fresh full reader recomputed every case. Counts: MISMATCH 1, GUESS 9, GAP 9, DISCRIM 14, GATED 36, COVERAGE 20, HARDEST 3. Triage re-checked D2Game `0xC6A30` (transition/stage written before the pre-start request; state change and diagnostic after it, before the Act II test), `0xC7250` (schedule request precedes the scheduled write), the altar decode (inline draw after the amulet loop; mode marker tested as nonzero), `0x2CA20` (current-clock read once per notifying act before the client loop; act filter compares client act with the loop index), and D2Common `0x37660` (signed IDIV truncation).
+
+| Finding | Disposition |
+|---|---|
+| MISMATCH V22(e) log missing current-clock read | Spec edit: log begins with current-clock read(act 0) |
+| GUESS V03/V04 rate | Spec edit: rate 128 stated |
+| GUESS R07a act source | Spec edit: act is the client's act; client state not tested; V09(b) discriminator reworded |
+| GUESS V09(b) order before abort | Spec edit: P precedes P2; P's requests precede the fatal path |
+| GUESS V02(b) client state | Spec edit: R07a says client state is not tested |
+| GUESS R10d matching act | Spec edit: client act equal to server act index |
+| GUESS current-clock read result | Spec edit: read(act index) yields post-update cycle/ticks/flag |
+| GUESS mode argument read time | Spec edit: R01e uses the current value at the final request |
+| GUESS R01a order | Spec edit: V01 pre-start snapshot state 0/stage 1/transition 0 |
+| GUESS absent-object altar | No change: TSW-Q10 |
+| GAP V18(a)/quest initialization | No change: only the no-draw property is claimed; the transition default is a quest-record field, not a private marker |
+| GAP V18(g) quest 9 | Spec edit: quest 9 absent |
+| GAP V16 allocation requests; GAP R06b colour/intensity values; GAP V26 symbolic results; GAP V08(g) | No change: supplied presentation/integration under TSW-Q03/TSW-Q10 |
+| GAP R10c flag range | No change: section 3 already says any nonzero flag is eclipse |
+| GAP R09a absent act clock | No change: section 3 requires the act/environment unless a rule handles absence; the snapshot has no absence branch in its contract |
+| GAP constants evidence | No change: records exist in this companion |
+| DISCRIM V01 diagnostic after Act II test | Spec edit: V01 Act II absent/switch 1 case |
+| DISCRIM V01 pre-start write order | Spec edit: pre-start snapshot |
+| DISCRIM V07 flags {1}/{0} alone | Spec edit: V07(h) |
+| DISCRIM V06 overwrite order | No change: V07(e)/(f) discriminate |
+| DISCRIM V08(c) mode marker values | Spec edit: markers 1 and -1 |
+| DISCRIM V09 two Act II recipients | Spec edit: V09(c) |
+| DISCRIM V18 parity in (b)/(c) | No change: V18(h) rejects it |
+| DISCRIM V18 scheduled write order | Spec edit: schedule snapshot scheduled 0 |
+| DISCRIM altar draw before amulets | Spec edit: V26(a) seed snapshots at the first amulet drop and first gold drop |
+| DISCRIM animation state<=1 | Spec edit: V21(p) |
+| DISCRIM key 0x2C with pending 1 | Spec edit: V21(q) |
+| DISCRIM V25 table by old flag | Spec edit: V25 message (1,0,1) case |
+| DISCRIM V05 normal table under flag | No change: V13/V14 discriminate |
+| DISCRIM floor vs truncating q | Spec edit: V22(g) |
+| GATED (36) | No change: declared gates |
+| COVERAGE (20) | Advisory; result-changing items raised as DISCRIM were covered above, the rest reuse discriminated guards or sit behind declared gates |
+| HARDEST V26, V19/V22, V21 | No further change |
+
+Vectors and rule wording changed; a further fresh full reader is required.
+
+## Fresh reader review: FULL8
+
+On 2026-10-15 the next fresh full reader recomputed every case. Counts: MISMATCH 0, GUESS 7, GAP 9, DISCRIM 9, GATED 8 groups, COVERAGE 14, HARDEST 3. Triage re-checked D2Game `0xC72C0` (join receives its own quest record; no quest-10 search exists), D2Common `0x376F0` (reads and writes the stored intensity field; flag tested as nonzero), `0x37570` (next cycle 6 wraps to 0 before the comparison) and the altar decode (amulet count re-read before every attempt; the active branch never touches quest 9).
+
+| Finding | Disposition |
+|---|---|
+| GUESS R06b intensity request's act | **Unresolved after the cap.** Not yet checked against `0x37AF0`; its available instruction view is undecoded byte runs and the original image was not reachable in this pass. No value was assumed in the spec; V23 still asserts only intensity(source) and colour(derived act) |
+| GUESS intensity persistence | Spec edit: TSW-R07c says each call updates the stored intensity field, so start's two calls compound |
+| GUESS pre-start for a clientless player | No change: pre-start iteration interior is TSW-Q10 |
+| GUESS R01e active re-read | Spec edit: active tested once (`0xC71C3`) |
+| GUESS R10c target environment | Spec edit: the client's current-act environment |
+| GUESS R01d quest 10 absent | No change: join is installed on quest 10 and receives that record; absence is not an input |
+| GUESS negative rate | No change: rates are the fixed 128/4/8 |
+| GAP V18(a) inputs | No change: only the no-draw property is claimed |
+| GAP rate index 2 unused | No change: fixed code constant with its data record; no rule selects it in this boundary |
+| GAP intensity/colour initial values | No change: presentation under TSW-Q03 |
+| GAP altar object identity/item-code field | Spec edit: added to the altar Inputs row |
+| GAP V08(d) contradictory fixture | Spec edit: case states Act II absent means the preamble clock is not present |
+| GAP absent-object altar arguments | No change: TSW-Q10 |
+| GAP recipient act/state not tied to R06b | No change: server recipients use client act/state supplied inputs, independent of the client-side mapping (section 2) |
+| GAP auxiliary selector unused by verified rules | No change: consumed only by unresolved TSW-R01c |
+| GAP Quest-event flag/bit 13 meanings | No change: TSW-Q02/TSW-Q04 |
+| DISCRIM V07 progress writer in join | No change: equivalent. After the overwrite the writer would add only bits already required for that state selection, so no join input distinguishes it; R01d states join requests no progress writer |
+| DISCRIM V02 client state / other acts | Spec edit: V02(c) |
+| DISCRIM V23 intensity act | Unresolved with the GUESS above |
+| DISCRIM V24 flag == 1 | Spec edit: stored flag 2 case |
+| DISCRIM V26 count captured once | Spec edit: V26(g) |
+| DISCRIM V26(a) quest 9 on active branch | Spec edit: V26(a) supplies quest 9 counter 4, retained |
+| DISCRIM V25 recompute on stored flag | Spec edit: V25 stored-flag-1/message-flag-0 case |
+| DISCRIM R01a pending clear | No change: V21(b)'s progress-writer snapshot rejects it |
+| DISCRIM cycle 5 to 0 | Spec edit: V12(b) |
+| GATED | No change: declared gates |
+| COVERAGE (14) | Advisory; no further vectors beyond the cases above |
+| HARDEST V21, V19/V22, V26 | No further change |
+
+The four-run cap for this revision was reached with FULL8. Its edits changed vectors and rule wording, so a fresh reader (FULL9) is still required. One item remains open: the client wrapper's intensity act (TSW-R06b / TSW-V23). Review completion is not claimed.

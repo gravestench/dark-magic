@@ -268,3 +268,134 @@ A group review re-derived every rule an executable vector depends on from the or
 Correction: STL-R13a stated that the nonplayer death cleanup passes a false boss condition for unit types other than monster, and STL-V19(b) asserted log[partition(false)] for an object. The original code of D2Game+0x75350 loads the monster-definition pointer only for unit type 1 with monster data; every other unit (and a null unit) continues with a null pointer and reads its flags word at offset 8, which faults before #11004 or #10627 are called. Its recorded callers +0x75460 and +0x76270 are monster death paths. STL-R13a now names monster death and the non-monster fault; STL-V19(b) uses a nonboss monster with the same expected log, and new STL-V19(c) asserts the object fault with no list or partition request. The review also noted that player death +0x78230 calls D2Common#10084/+0x365A0 with (unit, 1) between the partition and the type 8/9 event removals; STL-R13a now states that the ordered logs list only lifecycle requests. The `modeBound` list-condition name was aligned with foundations' `removeOnModeChange`.
 
 These are vector and rule-text changes, so the completed reader review no longer covers the current contract: a fresh full blind-implementer pass (run 3) is required. Not run in this review.
+
+### Targeted readings for review-pass triage, 2026-10-15
+
+Before any behavioral edit from the reader passes below, the original 1.13c disassembly was read directly (listing of the hash-matched images). D2Game+0x75350 (monster death): a present auxiliary effect (unit+0xA4) is released, cleared and followed by one further call before the type test; only then is the monster-definition pointer loaded for unit type 1 with unit data, else null, and its flags word read. A non-monster with an auxiliary effect therefore requests auxiliary removal and then faults; a null unit skips the auxiliary step and faults. Its boss argument to #10627 is the result of a call taking the unit's class-bounds-checked MonStats record and the unit. D2Common+0x3AD60 (non-staying traversal): null unit, missing base or base without the state-storage sign bit returns; per list, owner type 4, then flags mask 0x181, then #11061(unit, list state) retain and continue at the saved successor; otherwise free unless the list's sign bit is set, then reload the head in both cases. D2Common+0x34150: a nonzero boss selector is tested first and selects the boss mask (DataTables+0x108) for any unit; otherwise type 0 selects +0x100 and every other unit +0x104; word count is (stateCount+31)/32 signed. D2Game+0x8E9A0 (missile) and +0x8EBC0 (monster): an override is invoked when present instead of the no-override handler (missile single handler +0x3E3F0; monster gate +0x769A0); the fired record is released after the call. D2Common+0x38020 and +0x38380: null list ignored; positive expiry ORs timed; any value is stored. D2Common+0x33AB0: returns mask word floor(s/32) AND the bit-table entry for s mod 32; type 1 selects +0x104, every other unit including null +0x100. D2Common+0x3ADD0: signed `jg` expiry comparison; the countdown decrement is stored before its `jg 0` test. D2Game+0x9F7A0: the expiryDeathCondition byte is tested before the unit type; player dead modes 0/17, monster 0/12, other types dead; pet request only for type 0. D2Game+0x29240: skill identity signed 0..count-1 and record presence, then aurastate signed 0..stateCount-1, then duration evaluation, then lookup; attach result ignored; pet request for a non-null type 0 target regardless of caster. No value was taken from memory or from a reader report.
+
+### Full blind-reader pass 3, 2026-10-15
+
+Counts: MISMATCH 0, GUESS 11, GAP 13, DISCRIM 11, GATED 35, COVERAGE 24, HARDEST 3.
+
+| Entry | Outcome |
+|---|---|
+| GUESS V06 changed-clear setup | Spec edit: V06 states a direct fixture write with no update request |
+| GUESS V07/V18/R10a log omits update marks | Spec edit: 8.1 preamble excludes SetState/ForceChanged internal update marks from ordered logs and names the vectors that count them |
+| GUESS R13a hasStateStorage restart | Spec edit after reading +0x3AD60: free skipped, head restart in both cases, loop gated STL-Q05 |
+| GUESS R13a non-monster with auxiliary | Spec edit after reading +0x75350: auxiliary removal then fault; V19(d) added |
+| GUESS R13a monster without data | Spec edit: monster death completes only for a monster with loaded monster data |
+| GUESS R13a boss source | Spec edit: boss condition of the monster's MonStats record (GDF-R05a), supplied by vectors |
+| GUESS R13b word count | Spec edit: ceil(stateCount/32) words, state s is bit s mod 32 of word floor(s/32) |
+| GUESS R13b player with boss selector | Spec edit after reading +0x34150: boss selector tested first for any unit; V14(h) added |
+| GUESS R02 missile override | Spec edit after reading +0x8E9A0: override wins in every group; V16(d)/(e) added |
+| GUESS R06a null expiry write | Spec edit after reading +0x38020/+0x38380: expiry setter ignores null; V17(d) sets expiry |
+| GUESS R10a SCX inputs | No change: SCX-R11 owns the evaluator front end; vectors supply the result |
+| GAP V03/V04/V11 storage | Spec edit: preamble defaults (base state storage, list hasStateStorage false); R04 names base versus list storage |
+| GAP V05 lookup unit | Spec edit: valid unit u stated |
+| GAP V09 B state/monster mask | Spec edit: V09 rebuilt with explicit states and both masks |
+| GAP V09 argument shapes | Spec edit: write(stat 6,value 0,layer 0) and type 8/9 event removals named |
+| GAP V15 packed return | Spec edit: R12a defines the return as 2^(s mod 32) or 0; callers test only zero/nonzero |
+| GAP V14 packed words | No change: R13b now defines the word grouping in logical terms |
+| GAP section 5 outputs | Spec edit: rows for ExpireLists call, StayDeath return, fatal/fault outcomes |
+| GAP R09 prose | Spec edit: scheduling follows each applier contract; freeze schedules even when unchanged |
+| GAP R13a state 0 | No change: R12a treats state 0 like any valid state |
+| GAP R10a stat-slot granularity | Spec edit: preamble logs the six-slot operation once |
+| GAP V07 storage | Spec edit: target with state storage |
+| GAP R13a path selection | Spec edit: two operations chosen by callers, not a type test |
+| GAP V16 monster bypass | No change: the bypass affects only validity for other types; type 12 routing is covered |
+| DISCRIM V05 nonpositive sets timed | Spec edit: untimed L2 with expiry 0 |
+| DISCRIM V07(a) keep-minimum | Spec edit: V07(d) existing 900 to 1050 |
+| DISCRIM V19 boss versus auxiliary | Spec edit: V19(a) auxiliary present/boss false, (b) absent/true |
+| DISCRIM V19 monster skips traversal | Spec edit: V19 adds freeable B and monster-mask C |
+| DISCRIM V19(c) fault placement | Spec edit: freeable list and V19(d) auxiliary-present object |
+| DISCRIM V09 successor versus head | Spec edit: V09 frees a non-head list and logs visits[A,B,A,C] |
+| DISCRIM V09 value/layer swap | No change: both are 0 in the contract, so the alternative is equivalent |
+| DISCRIM V08 dead-mode sets | Spec edit: V08(h)-(l) |
+| DISCRIM V08 dead monster mask false | Spec edit: V08(k) |
+| DISCRIM V15 object mask | Spec edit: V15(f) |
+| DISCRIM V16 override for monster/missile | Spec edit: V16(d)/(e) |
+| HARDEST R13a/V19 | Resolved by the R13a rewrite and V19 rebuild |
+| HARDEST R10a log granularity | Resolved by the preamble log rules |
+| HARDEST R04 storage meanings | Resolved by R04 wording and preamble defaults |
+
+COVERAGE: no change beyond branches the DISCRIM edits add (V08 modes, V14 player boss, V19 monster traversal); remaining branches are gated or advisory.
+
+### Full blind-reader pass 4, 2026-10-15
+
+Counts: MISMATCH 0, GUESS 7, GAP 7, DISCRIM 15, GATED 33, COVERAGE 22, HARDEST 3.
+
+| Entry | Outcome |
+|---|---|
+| GUESS R10a invalid identity | Spec edit after reading +0x29240: signed 0..skillCount-1 and record presence; V18(e) added |
+| GUESS R10a evaluation order | Spec edit: duration evaluated after all validity checks |
+| GUESS R10a attach return | Spec edit: attach result ignored |
+| GUESS R12a words at or above 32 | Spec edit: V15(g)/(h) state 53 |
+| GUESS R02 fire-then-remove | No change: R02 already says remove afterward; V16(a) now asserts it |
+| GUESS R01 immediate path | No change: only frame -1 is immediate (stated); V01(d) now asserts the ordinary queue |
+| GUESS R04 countdown store | Spec edit after reading +0x3ADD0: decrement stored whether or not due |
+| GAP V03 C expiry | No change in this pass: R04 states untimed lists are never due (made explicit in pass 5) |
+| GAP SCX-R11 versus SCX-R24 | No change: SCX-R11 is the front end supplying (unit, skill, level); SCX-R24 is column referencing inside expressions |
+| GAP expiryDeathCondition naming | Spec edit: section 3 states it is CSA's aliveExclusionCondition |
+| GAP visit logs not in section 5 | Spec edit: visit-order output row |
+| GAP R12a states at or above 32 | Spec edit: V15(g)/(h) |
+| GAP V04 frame | No change in this pass (edited in pass 5) |
+| GAP R09 no-due-list event | No change: V02/V16 already call ExpireLists with no due list |
+| DISCRIM V01(d) | Spec edit: ordinary slot asserted, immediate queue empty |
+| DISCRIM V02/V16 remove before handler | Spec edit: V16(a) H observes its event still queued |
+| DISCRIM V03 unsigned compare | Spec edit: V17(j) expiry -16 is due |
+| DISCRIM V05 state-0 lookup | Spec edit: u has a state-0 list and lookup is still null |
+| DISCRIM V07 first-list lookup | Spec edit: V07(b) has an unrelated state-11 list |
+| DISCRIM V07(c) cold applier | No change: isolated comparison; cold application owned by CSA-V08 |
+| DISCRIM V08 monster mode 17 | Spec edit: V08(m) |
+| DISCRIM V08(f) monster condition | Spec edit: V08(n) |
+| DISCRIM StayDeath stub returning 1 | Spec edit: preamble requires STL-R12a over supplied masks |
+| DISCRIM V14 player boss | Spec edit: V14(h) boss selector 2 |
+| DISCRIM V15 word 0 only | Spec edit: V15(g)/(h) |
+| DISCRIM V18(a) upper identity bound | Spec edit: V18(e) identity 2 and V18(f) aurastate -1 |
+| DISCRIM V18(d) pet with absent caster | Spec edit: V18(g) absent caster, monster target |
+| DISCRIM V09/V19 hasStateStorage | No change: the true branch never terminates, so no finite assertion exists; gated STL-Q05 |
+| DISCRIM V19 item owner | No change: same traversal; V09 discriminates list owner type from dying-unit type |
+| HARDEST R13a, R04, R10a | No change beyond the edits above |
+
+COVERAGE: no change; advisory.
+
+### Full blind-reader pass 5, 2026-10-15
+
+Counts: MISMATCH 0, GUESS 6, GAP 8, DISCRIM 4, COVERAGE 29, HARDEST 3; GATED listed without a count.
+
+| Entry | Outcome |
+|---|---|
+| GUESS V03 C expiry | Spec edit: C untimed with expiry 1000, asserted not freed |
+| GUESS V03 visits at 1080 | Spec edit: visit[A,C] |
+| GUESS V04 routing/frame | Spec edit: the event calls ExpireLists(unit,1001); L freed at a positive frame |
+| GUESS V02/V16 spy versus real | No change: equivalent with empty chains |
+| GUESS V08 refresh arguments | No change: preamble logs refresh operations only; R11 lists monster passive refresh |
+| GUESS V01(d) | No change: stated in R01 and asserted in V01(d) |
+| GAP V03 C expiry | Spec edit (as above) |
+| GAP immediate-queue entry | No change: queue/dispatch details gated STL-R02a/STL-Q07 |
+| GAP section 5 omissions | Spec edit: rows for handler/override invocations and expiry getter |
+| GAP SCX-R11 | No change: as pass 4 |
+| GAP skill count/level | No change: section 3 application inputs; missing-record branch advisory |
+| GAP gated models | No change: gated STL-R05/STL-R06c |
+| GAP V10 | No change: gated |
+| GAP visit definition | Spec edit: preamble defines a visit |
+| DISCRIM V15 whole mask word | Spec edit: V15(i)/(j) |
+| DISCRIM V16 missile type table | Spec edit: V16(f) missile type 12 |
+| DISCRIM V18 pet with caster present | Spec edit: V18(h) |
+| DISCRIM V05 negative expiry | Spec edit: -1 writes |
+| HARDEST R13a, R04, R10a | No change |
+
+Passes 3-5 were full runs on the revised contract; only vectors and fixture wording changed after pass 5, so the next run was a delta check.
+
+### Delta check (reader run 6), 2026-10-15
+
+All eight listed changes confirmed resolved; changed vectors recomputed. Counts: MISMATCH 0, GUESS 1, GAP 1, DISCRIM 2.
+
+| Entry | Outcome |
+|---|---|
+| GUESS V04 L on the same chain | Spec edit: L is on a different unit's chain |
+| GAP visit wording versus V13 timer entries | Spec edit: a visit covers lists and unit-timer entries |
+| DISCRIM V15(g) whole word for states at or above 32 | Spec edit: word 1 holds states 53 and 54 |
+| DISCRIM V04 ignoring the expiry-0 write | Spec edit: L freed at frame 1, below its former expiry 5 |
+
+The review's cap of four reader runs was reached with these four fixture edits unchecked by a reader. They change no rule; they change V04's example frame and chain placement, V15(g)'s mask and the visit wording. A further delta check covering V04, V15(g) and the preamble visit wording is required before the blind-implementer pass is complete.

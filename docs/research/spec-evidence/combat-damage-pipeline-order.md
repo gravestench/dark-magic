@@ -232,7 +232,7 @@ DPO-V25 now expresses freeze with named attacker, defender and length roles, mat
 
 Priorities: the lethal boundary (DPO-O01), the single doubling (DPO-O02), the mana-burn quirk (DPO-O03). Each on an owned 1.13c game, Normal difficulty, single player, tool-neutral.
 
-- **DPO-O01** **lethal boundary (DPO-R12a, DPO-R17).** Measure: the defender's stat 6 (`hitpoints`, raw) immediately before and after one hit, and the `total` of the applied record. Expected: `after = before - total` when that is `>= 0x100`, else 0, with no dependence on the predicted-lethal bit. Procedure: a level-1 character of any class in Act I (Blood Moor); let one Fallen hit the character while it stands still (the character is the defender; the Fallen's attack is a basic melee attack); read the character's stat 6 on the server unit the frame before the hit and the frame after, and the record's `total` at the entry of the apply (resource/status apply, supplied apply record); repeat until a hit lands with `before - total` in each of the ranges `>= 0x100`, `1..0xFF` (death) and `<= 0` (death). The build-side pre-flag is read as bit 0x2 of `result` at the same entry.
+- **DPO-O01** **lethal boundary (DPO-R12a, DPO-R17).** Measure: the defender's stat 6 (`hitpoints`, raw) immediately before and after one hit, and the `total` of the applied record. Expected: `after = before - total` when that is `>= 0x100`, else 0, with no dependence on the predicted-lethal bit. Procedure: a level-1 character of any class in Act I (Blood Moor) attacks a monster with the basic melee attack (the character is the attacker on the player basic-attack path of section 2; the monster is the defender, so monster frame-event roots gated by DPO-Q20 are not needed); read the monster's stat 6 on the server unit the frame before the hit and the frame after, and the record's `total` at the entry of the apply (resource/status apply, supplied apply record); repeat until a hit lands with `before - total` in each of the ranges `>= 0x100`, `1..0xFF` (death) and `<= 0` (death). The build-side pre-flag is read as bit 0x2 of `result` at the same entry.
 - **DPO-O02** **crit draws and single doubling (DPO-R03a).** Measure: the attacker's seed `seed` before and after the build (damage builder entry and return) and `physical` with result bit 0x2000 at return. Expected: the number of seed steps equals 1 (physical) + one per crit source with chance `> 0` up to and including the first success + element draws + 1; `physical` is doubled at most once. Procedure: an Amazon with `passive_critical_strike` (stat 0x151) from Critical Strike at a known chance and a weapon with no other crit source, attacking Fallen with a basic attack in the Blood Moor; repeat for configurations (0x151 only), (0x8D only, from an item with `item_deadlystrike`), (both); count steps per hit.
 - **DPO-O03** **player mana leech burns the defender (DPO-R18).** Measure: the monster defender's stat 8 (`mana`) before and after one hit by a player with mana leech `M` percent and no `manaDrain` roll (player attackers never roll it). Expected in Normal (`ManaStealDivisor = 1`, GDF-R02): a decrease of `(M << 6)` raw units when the leech ran, for example `M = 5` → 320 raw (1.25 mana), set to 0 if that leaves less than 0x100. Procedure: any class wearing one item with `manadrainmindam` (stat 0x3E) = 5 and no other leech, hitting a monster that has mana (a Fallen Shaman); read the Shaman's stat 8 on the server unit before and after.
 
@@ -482,3 +482,216 @@ Seed arithmetic for S1/S5 steps 1-5 and every draw value quoted by DPO-V02, V04 
 **Wording fixes.** DPO-R06b states that the poison-count division applies to the accumulated length (0xDD450 divides the stored sum). DPO-R15 cites LSE-R02/R04/R06/R09/R10/R13/R15 for the leech effects it consumes, and states the draw condition of LSE-R13. Section 3 garbled source cells and the unexplained asterisk were repaired; section 6 no longer cites the removed sub-id R31c.
 
 These corrections change rule behavior (Correction 1) and add a vector case, so a fresh full blind-implementer pass is required for the resulting contract; delta pass 4 above no longer covers it.
+
+## Fresh full blind-implementer pass 5, 2026-10-15
+
+Full run after the spot-check corrections (scaleAlways in DPO-R05/R06a/R06b/R21b, DPO-R02b, DPO-R08b, DPO-R15, DPO-V22 wrap case). The reader recomputed all 31 vectors. Counts: MISMATCH 0, GUESS 8, GAP 7, DISCRIM 24 (25 entries listed), GATED 46, COVERAGE 49, HARDEST 3.
+
+Source checks made by the spec writer for the behavioral edits below (original D2Game 1.13c disassembly, read-only, 2026-10-15): hit result 0xDE5A0 (reach failure jumps to the return-0 exit even with hit pre-set; each avoidance bit is tested and OR-ed independently, then any nonzero value clears hit); build 0xDD450 conversion jump table (type 10 adds 1 to the draw(5) result and dispatches through the same table, so types 1..5 run their handlers; elemental writes multiply then signed-shift with no clamp after scaling); monster double 0x770E0 (overlay request pushes 0, 0x36, defender); durability selection 0xDEBA0 (eligibility is the armor-type test per body location; walk starts at the drawn index, selects when remainder < weight, else subtracts); item durability 0x12EE0 (neither armor type 50 nor weapon type 45, or not qualified, returns before the draw; armor type gives 10 even for a weapon type); apply 0xDE0C0 (failed hostility without override, or absent room, clears result bits 1/2 and returns; flagged events require record flags 32); queued completion 0xDDDE0 (0x8380 test precedes the hit test and the build/scale call; stored total is written only inside the scale/mitigation call); scale/mitigation 0xDC0B0 bypass decision (undead+256, demon+512, flag 1024 only when neither or for a non-monster/null defender).
+
+| Entry | Outcome |
+|---|---|
+| GUESS R01a reach-failure return | Spec edit: reach failure returns 0 even with hit pre-set (0xDE5A0); V03 running-player reach case added |
+| GUESS R01a multi-bit avoidance | Spec edit: each b mask maps independently and is OR-ed; V03 b 0x13 case added |
+| GUESS V08 type 10 S5 | Spec edit: R07 states the selected type's handling runs; V08 asserts S5 poisonMagnitude 0x80, poisonLength 50, and fixes type-10 starting fields at 0 |
+| GUESS R13a flagged/unflagged | Spec edit: gate 7 names the scale-request argument and states no dispatch on flagged apply without record flags 32 |
+| GUESS R02b percent floor/unarmed order | No change: R02b is asm-only and gated by DPO-Q27; its text already orders the floor before the stat 17/18 additions and the unarmed floors before stat 111 |
+| GUESS R24a walk start/eligibility/threshold | Spec edit: walk starts at and includes the start index; eligibility is the armor-type test, qualification is tested on the selected item; items neither armor nor weapon type return before the draw; armor type threshold 10 |
+| GUESS R22 overlay argument | Spec edit: overlay request on defender with zero extra parameter; V16 output states (defender, 54, 0) |
+| GUESS R07 percent above 100 | No change: R07 states converted = mulDiv(percent, physical, 100) with no cap and physical floored at 0; no alternative reading remains |
+| GAP section 6 stale overflow/burn wording | Spec edit: overflow bullet names scale/scaleAlways wrapping; R18 bullet names manaDrain/staminaDrain |
+| GAP R08c/d profiles only in companion | Spec edit: R08c defines queued, callback, direct-then-flagged, direct-then-unflagged and unscaled local profiles semantically |
+| GAP calling-convention leakage in conventions/V02 | Spec edit: replaced with supplied weapon mastery percent and weapon crit chance; V02 says weapon mode 0 |
+| GAP V16 defender seed / overlay argument | Spec edit: defender seed S5 asserted unchanged; overlay argument stated in R22 |
+| GAP V12 absorb return not in section 5 | Spec edit: section 5 row for the ignored absorb-heal return value |
+| GAP R15 omits LSE-R03 return | Spec edit: R15 cites LSE-R03's monster-defender return; Depends on lists the consumed LSE ids |
+| GAP V19/R28a ColdEffect/shatter | No change: shatter comparison and ColdEffect values are CSA-owned (CSA-R05/R06, CSA-V09..V11); V19 asserts only the draw count of this placement |
+| DISCRIM V01 mask | Vector: case (f) T 2561 |
+| DISCRIM V02 source order | Vector: case E (10,50,0) |
+| DISCRIM V02 roll equal to chance | Vector: case F (0,0,31) |
+| DISCRIM V03 0x8380 vs hit | Vector: V30 case (e) result 0x0105 at queued completion |
+| DISCRIM V03 result 4 monster-only | Vector: V03 non-running player case |
+| DISCRIM V03 skip avoidance after pre-set | Vector: V03 running player b 2 case |
+| DISCRIM V04/V24 mulDiv operands | Vector: V24 case 2 with endpoints 0x20000/0x40000 |
+| DISCRIM V05 lightning/cold order | Vector: V05 case 3 |
+| DISCRIM V05 clamp/scale order | Vector: V05 case 4 wrap (clamp-after gives 0) |
+| DISCRIM V06 mana/stamina order and ids | Vector: V06 case 7 |
+| DISCRIM V06 bypass mapping | Vector: V06 cases 9/10 |
+| DISCRIM V06 monster bypass flags | Vector: V06 case 8 |
+| DISCRIM V07 stat 332 | Vector: V07 case 4 |
+| DISCRIM V07/V22 poison length ratio | Vector: V22 ratio case |
+| DISCRIM V09 remaining fields | Vector: V09 case 4 |
+| DISCRIM V10 override and room | Vector: V10 case 7 |
+| DISCRIM V13 exact 256 | Vector: V13 exact-256 case |
+| DISCRIM V15/V20 mandatory draw placement | Vector: V15 case 2 |
+| DISCRIM V16 lightning/magic/cold | Vector: V16 inputs add those fields |
+| DISCRIM V17 thresholds | Vector: V17 (a2) roll 6 and (b2) roll 5 |
+| DISCRIM V17 start index scheme | Vector: V17 (b2) start index lands on an eligible location |
+| DISCRIM V18 threshold | Vector: V18 rolls 89 and 90 |
+| DISCRIM V26 event 11 only when P != 100 | No change: V27 supplies P 100 and asserts defender event 11 on hits |
+| DISCRIM V27/V30 scale timing | Vector: V30 case (d) P 17 |
+| DISCRIM V28 bypass predicates | Vector: V28 cases 7/8/9 |
+| DISCRIM V30 stored-total fields | Vector: V30 case (f) |
+| HARDEST R08c/d with V27/V30 | Resolved by the R08c profile definitions and V30 (d) |
+| HARDEST R13a with V10/V31 | Resolved by the gate 7 wording |
+| HARDEST R24a with V17 | Resolved by the R24a walk/eligibility text and V17 (a2)/(b2) |
+
+COVERAGE entries are advisory; the added cases above cover R01a reach failure and multi-bit b, R04a lightning draw, R05 mana/stamina and other bypass flags, R06a stat 332, R08a remaining fields and R13a absent room. The rest: no change, because each remaining branch repeats a recipe a vector already fixes or belongs to a gated question or a dependency's vectors (as recorded for full pass 3). Rule behavior text changed (R01a, R07, R13a, R22, R24a, R15, R08c definitions), so a fresh full reader run follows.
+
+`check_spec.py combat-damage-pipeline-order`: 0 errors, 0 warnings after these edits. No gameplay observation ran.
+
+## Fresh full blind-implementer pass 6, 2026-10-15
+
+Full run on the contract after pass 5's edits. The reader recomputed every case of all 31 vectors with a script. Counts: MISMATCH 0, GUESS 12, GAP 10, DISCRIM 28 (31 entries listed), GATED 15 rules plus questions and stage-only vectors, COVERAGE 26 groups, HARDEST 3.
+
+Source checks by the spec writer for this pass (original D2Game 1.13c disassembly, read-only, 2026-10-15): build 0xDD450 (physical-supplied flag jumps past the physical roll, its ratio scaling and all crit sources to the elemental stage; the ratio scaling sits inside the physical roll before the crit tests; crit chances test signed nonpositive as skip; monster drains call the element roll with the prior field and add its scaled result to the prior, so a no-maximum prior doubles; player drains add stat 60/62 raw; poison magnitude overwrites with the scaled roll; length terms as stated); queued completion 0xDDDE0 (prediction only ORs result 2, never clears it); apply 0xDE0C0 (both event forms sit under the result-32/hit test; after the final death flag, lethal events 10/9 follow with no death-mode or kill-credit call between); monster double 0x770E0 (marker is an OR of 0x10).
+
+| Entry | Outcome |
+|---|---|
+| GUESS R05 vs section 6 | Spec edit: section 6 states the drain prior doubles when the maximum is nonpositive; V06 case 14 |
+| GUESS R02a/R03a ratio of supplied physical, scaling vs crit | Spec edit: R02a states supplied physical is not ratio-scaled and scaling precedes crit; V04 cases 4-6 |
+| GUESS R02b percent arithmetic | No change: R02b is asm-only, gated by DPO-Q27 |
+| GUESS R12a prediction clearing | Spec edit: prediction never clears result 2; V30 case (g) |
+| GUESS R13a gate 7 both forms | Spec edit: "only with result 32 clear and hit set (for both forms)" |
+| GUESS R22 OR vs assign | Spec edit: OR 0x10; V16 hitClass 0x01 variant. The Crit compare is already stated as unsigned byte |
+| GUESS R16 invalid/dead predicate | No change: R16 already cites DPO-R13a gate 4's predicate |
+| GUESS R01a vs SBA block flag | No change: SBA-R13 maps code 1 to 16 and its block flag to the hit clear that R01a's mask-16 step performs |
+| GUESS V24 stat-read log scope | Spec edit: the log covers only the elemental stage's reads |
+| GUESS V25 mana/stamina order | Spec edit: resource writes are logged in the same call log, mana first as asserted |
+| GUESS V28 undead and demon | No change: R11 states each predicate; no case requires both |
+| GUESS R08c/d profile per caller | No change: caller-to-profile integration is DPO-Q19/Q20 |
+| GAP mitigation writes not in section 5 | Spec edit: section 5 row naming DMI-owned per-entry writes consumed by DPO-R16 |
+| GAP death handling | Spec edit: section 5 states death here is the result flag, with no death-mode or kill-credit write before events 10/9 |
+| GAP result mask 512 | Spec edit: section 3 names mask 512 and its outside-path producer (SBA-R14) |
+| GAP packed encodings | No change: section 3 already defines the numeric masks as logical controls retained for exact vectors without imposing a layout |
+| GAP hit-class/mark/overlay producers | No change: gated by DPO-Q18/Q21 |
+| GAP weapon mode input | Spec edit: section 3 build-argument row (weaponMode 0 on the basic attack; other values skip only the weapon crit source) |
+| GAP R24a PvP order | Spec edit: attacker step before defender step; both run in player-vs-player |
+| GAP reaction/HRC state 92 loop | No change: HRC owns the reaction interior; a later hit reads state 92 through R16's stated gate |
+| GAP O01 monster attacker | Companion edit: O01 procedure now uses a player basic attack against a monster defender |
+| GAP harness needed | No change: not a gap; every vector was executable |
+| DISCRIM V01 prediction OR final | No change: V14 case 2 asserts lethal cleared with prediction set and life 0x100 |
+| DISCRIM V01/V12 whole-life rounding | Vector: V01 case (g) T 300 |
+| DISCRIM V02 negative chance | Vector: V02 case G |
+| DISCRIM V02 third source success | Vector: V02 case H |
+| DISCRIM V03 b 4 / b 8 | Vector: V03 cases |
+| DISCRIM V03 reach only when pre-set | Vector: V03 monster reach-0 case |
+| DISCRIM V03 state 54 on monsters | Vector: V03 monster state-54 case |
+| DISCRIM V04 percent floor | No change: R02b asm-only, gated by DPO-Q27 |
+| DISCRIM V05/V24 element order | Vector: V05 case 5 |
+| DISCRIM V05 elements with scaleAlways | Vector: V05 case 6 |
+| DISCRIM V06 drains with scale | Vector: V06 case 11 |
+| DISCRIM V06 player term scaled/assigned | Vector: V06 case 12 |
+| DISCRIM V06 hireling classes / player flags | Vector: V06 case 13 for flags; hireling class list is GDF-R17's mapping |
+| DISCRIM V07 poison ratio | Vector: V07 case 5 |
+| DISCRIM V08 selected after subtraction | Spec edit: claim removed (selection order is not observable); Discriminates restated |
+| DISCRIM V08 type-10 seed owner | Vector: defender seed S5 unchanged asserted |
+| DISCRIM V08 set vs raise length | Vector: prior-70 cases for types 4/11/12 |
+| DISCRIM V08 conversion operand order | Vector: large-percent case |
+| DISCRIM V10 killable and modes | Vector: cases 9-11 |
+| DISCRIM V10 room only after hostility failure | Vector: case 8 |
+| DISCRIM V10 inTown monster | Vector: case 12 |
+| DISCRIM V13 stamina below 256 | Vector: stamina 0x800 / drain 0x740 |
+| DISCRIM V16 other fields doubled | Vector: manaDrain, staminaDrain, burnMagnitude, freezeLength inputs asserted unchanged |
+| DISCRIM V16 nonzero hitClass overlay | Vector: hitClass 0x01 variant |
+| DISCRIM V17 durability on miss | Vector: case (a3) |
+| DISCRIM V21 freeze-only condition | Vector: (40,0) case |
+| DISCRIM V21 two-stat precedence | Vector: (40,20) with stats 153 and 118 |
+| DISCRIM V22 prior poison length | Vector: prior-length case |
+| DISCRIM V27 build event 3 placement | Vector: V27 case (d) callback logs physical 351 then 176 |
+| DISCRIM V28 end vs skip | No change: equivalent; entries 9-11 are the last entries and all monster-only, so ending and skipping give identical results |
+| DISCRIM V30 head vs tail | Vector: V30 case (h) |
+| HARDEST R05 | Resolved by the section 6 correction and V06 case 14 |
+| HARDEST R13a/R08c/R08d | No further change beyond the gate 7 wording; profiles defined in pass 5 |
+| HARDEST R24a/V17 | No change: reader executed the walk correctly |
+
+COVERAGE entries are advisory; the added cases cover R01a b 4/8, R02a ratio scaling, R03a negative chance, R04a magic, R05 prior/flags, R06 ratio and prior length, R10 cold-only, R13a killable/town/mode rejections and R18 stamina. The remaining branches repeat recipes already fixed by vectors or sit behind named gates or dependency vectors. Rule text changed (R02a, R12a, R13a, R22, R24a, sections 3, 5, 6), so a fresh full reader run follows.
+
+`check_spec.py combat-damage-pipeline-order`: 0 errors, 0 warnings. No gameplay observation ran.
+
+## Fresh full blind-implementer pass 7, 2026-10-15
+
+Full run on the contract after pass 6's edits. Counts: MISMATCH 1, GUESS 6, GAP 7, DISCRIM 13, GATED 15 rules plus questions and stage-only vectors, COVERAGE 24 groups, HARDEST 3.
+
+Source checks by the spec writer (original D2Game 1.13c disassembly, read-only, 2026-10-15): physical roll 0xDC530 (the -90 floor applies to the shared percent before stats 18/17 are added; endpoint sums are not floored); build 0xDD450 (type-10 draw depends only on a nonzero conversion type; build event 3 follows the burn update and precedes conversion); scale/mitigation 0xDC0B0 (stored total written at the end of the stage); item durability 0x12EE0 (armor type selects threshold 10 before any throwable test); durability selection 0xDEBA0 (attacker step precedes defender step); apply 0xDE0C0 (last-attacker write precedes the requested scale run).
+
+| Entry | Outcome |
+|---|---|
+| MISMATCH V05 case 5 cold | Spec correction: the spec writer's pass-6 trace omitted the minimum; cold is 0x100 + 452 = 0x2C4 |
+| GUESS R02b floor placement | Spec edit (label unchanged, asm-only): floor applies to the shared percent before stats 18/17; endpoint sums not floored |
+| GUESS R10/R11 order | Spec edit: R10 states it runs after event 11 and before the mitigation loop |
+| GUESS R12a stored total eligibility | Spec edit: total stored only at the end of a scale/mitigation run |
+| GUESS R24a armor and throwable | Spec edit: armor type takes threshold 10 without a throwable test |
+| GUESS R13a first mode test | No change: R13a's first test concerns the attacker's mode 0 only; defender modes are gate 4 |
+| GUESS R07 type 10 with percent 0 | Spec edit: draw occurs also when conversionPercent is 0 |
+| GAP V18 "bit 3" | Spec edit: special-stun condition false |
+| GAP V20 "stun flag" | Spec edit: special-stun condition false |
+| GAP V17 Expansion flag | Spec edit: conventions state Expansion unless a case says Classic |
+| GAP V17 DUR-R05 arithmetic | No change: loss arithmetic is DUR-owned; V17 asserts the logged request and draws |
+| GAP V19 CSA inputs | No change: CSA-R05/R06/R07 own cold effect and eligibility |
+| GAP harness logs not in section 5 | Spec edit: conventions state call and stat-read logs are harness observations, not game outputs |
+| GAP V12(d) | Spec edit: (d) has explicit absorb 0x400 and total 0 with final life 0xC00 |
+| DISCRIM V04 scaling operand order | Vector: V04 case 7 (65583 vs reversed 65536) |
+| DISCRIM V09 case 1 operands | No change: case 2 rejects reversed operands, as the reader confirmed |
+| DISCRIM V05/V24 mastery ids 330/357 | Vector: V24 case 3 |
+| DISCRIM V20/V15 drains before elements | Vector: V15 case 3 |
+| DISCRIM V22 override assigns | Vector: override-with-prior case (95) |
+| DISCRIM V26 P=100 | Vector: V26 case 2 (P 100 still dispatches) |
+| DISCRIM V27(d) event 3 before burn | Vector: V27(d) callback also logs burnMagnitude 2 |
+| DISCRIM V10 gate 5/6 order | Vector: V10 case 4 scale call observes last attacker |
+| DISCRIM V17 hit re-tested after apply | Vector: V17 (a4) |
+| DISCRIM V17 PvP order | Vector: V17 (c) request log order |
+| DISCRIM V03/V30 0x8380 bits | Vector: V30 (e2) results 0x0081, 0x0201, 0x8001 |
+| DISCRIM V16 whole-word hitClass | Vector: V16 hitClass 0x100 variant |
+| DISCRIM V16 overlay without doubling | Vector: V16 Crit 51 with hitClass 0x20 |
+| HARDEST V03/R01a, R13a/V10, R24a/V17 | No change: each was implemented and recomputed correctly; the remaining difficulty is the number of ordered conditions, all now stated and exercised |
+
+COVERAGE entries are advisory; the remaining branches repeat recipes already fixed by vectors or are behind named gates or dependency vectors. The run-cap reader run follows as a full run because rule text changed.
+
+`check_spec.py combat-damage-pipeline-order`: 0 errors, 0 warnings. No gameplay observation ran.
+
+## Fresh full blind-implementer pass 8, 2026-10-15 (run cap reached)
+
+Full run on the contract after pass 7's edits; this is the fourth and last reader run allowed for this review round. Counts: MISMATCH 0, GUESS 9, GAP 6, DISCRIM 17, GATED 15 rules plus 24 questions, 3 observations and stage-only vectors, COVERAGE 20, HARDEST 3. The pass is **not complete**: GUESS, GAP and DISCRIM entries below remain unresolved because the run cap was reached. No contract edit was made after this run, so pass 8 reviewed the current contract text. Proposed outcomes are recorded for the next review round; each needs a fresh reader run once applied.
+
+Source checks made while triaging (original D2Game 1.13c disassembly, read-only, 2026-10-15): hit result 0xDE5A0 (a zero to-hit return leaves hit clear and skips the avoidance call; result 0 follows); build 0xDD450 (stats 103/104/106 set flags 256/512/1024 by three independent tests; the nonzero poisonMagnitude test reads the value after scaleAlways is stored).
+
+| Entry | Status | Proposed outcome |
+|---|---|---|
+| GUESS R01a to-hit return | open | Spec edit: nonzero to-hit return sets hit; zero leaves hit clear and skips avoidance (asm checked); V03 case to-hit 0 |
+| GUESS R02b factor rounding | no change | R02b asm-only, gated by DPO-Q27 |
+| GUESS R06b poisonMagnitude test | open | Spec edit: test uses the scaled stored magnitude (asm checked); vector at ratio 64 with roll 1 |
+| GUESS R05 bypass flags | open | Spec edit: three independent tests (asm checked); V06 case stats 103 and 104 giving 0x300 |
+| GUESS R11 undead definition | open | Spec edit: cite DMI-R04 (lUndead or hUndead); V28 hUndead-only case |
+| GUESS R08a drain scaling for non-monsters | no change | R08a scales every positive scale-enabled value with no attacker-type gate; V09 shows it |
+| GUESS V27 endpoint supply | no change | V27 is a supplied-endpoint stage per DPO-R02a; endpoint production is DPO-Q27 |
+| GUESS R23 lethal-event condition | no change | R23 states result 2 from DPO-R19b with result 32 clear and no further test |
+| GUESS R12a/R16 life and max-life reads | open | Spec edit: name the consumed max-life operation contract (NRF or GDF owner) for stat 7 |
+| GAP max-life read undefined | open | As above |
+| GAP harness logs | no change | Section 8 conventions declare them harness observations |
+| GAP hitClass logical meaning | no change | Marker meaning is DPO-Q18/Q21; masks are retained logical controls (section 3) |
+| GAP physical endpoint source in V27/V15 | no change | V27 supplies endpoints; V15 is physical-supplied; production is DPO-Q27 |
+| GAP duplicate queue matches | open | Spec edit: section 3/5 queue-entry semantics for several matching entries; vector with two matches |
+| GAP queued record field list | open | Spec edit: section 5 states the queued entry copies the whole record |
+| DISCRIM V03 to-hit return ignored | open | Vector: to-hit 0 case |
+| DISCRIM V06 monster skip flags 8/16 | open | Vector: flags 8 and 16 with mana/stamina ranges |
+| DISCRIM V06 else-if bypass chain | open | Vector: stats 103 and 104 giving 0x300 |
+| DISCRIM V08 type 10 with percent 0 | open | Vector: type 10, percent 0, S1 |
+| DISCRIM V16 signed Crit compare | open | Vector: Crit 200 with roll 51 |
+| DISCRIM V17 Expansion throwable | open | Vector: Expansion throwable with roll 4..9 |
+| DISCRIM V17 empty defender inventory | open | Vector: player defender with W 0 |
+| DISCRIM V12 state 92 | open | Vector: state 92 with positive absorbHeal |
+| DISCRIM V13 negative drains | open | Vector: manaDrain -0x100 |
+| DISCRIM nonzero final dispatcher results | open | Vector: callbacks returning nonzero with later stages unchanged |
+| DISCRIM V28 hUndead | open | Vector: hUndead-only defender with flag 256 |
+| DISCRIM V29/V10 several matching entries | open | Vector: two matches, head copied, both removed |
+| DISCRIM V29 first attacker mode-0 return | open | Vector: hit with attacker mode 0 at queue entry |
+| DISCRIM V10 town vs dead gate order | open | Vector: town room, defender mode 12, R 3 |
+| DISCRIM V15/V23 ratio 0 normalization | open | Vector: ratio 0 cases |
+| DISCRIM V23 wrapped burn product | open | Vector: burnMagnitude 0x1000000 at ratio 128 |
+| DISCRIM V19 monster E != 0 seed owner | open | Vector: monster defender with nonzero E (CSA-owned interior; placement draw only) |
+| HARDEST R24a/V17, R13a/R08c/V10, R12a/V30 | no change | Reader implemented and recomputed each with MISMATCH 0 |
+
+Remaining to finish the blind-implementer pass: apply the open proposed outcomes above (verified against the original instructions first), then a fresh full reader run, repeating until MISMATCH 0 and every GUESS, GAP and DISCRIM is resolved or gated. Review completion is not claimed.
+
+`check_spec.py combat-damage-pipeline-order`: 0 errors, 0 warnings. No gameplay observation ran.

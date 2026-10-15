@@ -26,6 +26,7 @@ Arithmetic is signed i32 with low32 wrapping and signed division truncating towa
 | Input | Semantic source | Width and format | Meaning |
 |---|---|---|---|
 | sentry, candidate, searcher, owner, room, target | runtime units/lookup results | optional objects; kinds player 0, monster 1, missile 3 | Eligibility and ownership |
+| sentry owner reference, owner room town test | the monster's stored owner reference; room-to-level town predicate | optional reference; boolean | R02 owner gate order |
 | difficulty and AI parameters | difficulty 0..2; MonStats.`aip1`..4 and N/H variants; GDF-R05a | difficulty u8; parameters signed i16 | chance, failed-roll delay, absent-target delay, range |
 | firing skill and record count | MonStats.Skill1; Skills collection | signed i16 identity; signed i32 count | lookup/shot action |
 | skill instance and level | skill selection and bonus-level operations | optional node; i32 level | expression context and mode request |
@@ -65,9 +66,9 @@ R01 subrules give think order; R02 and R03 subrules are called at their stated s
 
 **SFR-R01f** Spend and request the shot [verified in 1.13c code (static)]. Run R02 with decrement=true. If it reports lost, stop. Otherwise remove pending unit AI events of type 2, request selecting the firing skill with the returned target and zero point coordinates, then request entering that skill's mode. These are ordered requests; actual animation, event storage and resulting skill execution remain Q12. No next-think delay is set on this local success branch.
 
-**SFR-R01g** AI binding [unresolved]. The relationship between the original AI identity 101 and this think operation is not fully established. Q02 gates entry from that identity, not the reached-think supplied-input stages.
+**SFR-R01g** AI binding [unresolved]. Original AI table entry 101 holds this think operation, but which monster records select that entry (the table-index column, the special-table override) and the event root that runs it are not established. Q02 gates entry from that identity, not the reached-think supplied-input stages.
 
-**SFR-R02** Lazy shot budget [verified in 1.13c code (static)]. For a monster sentry, resolve its owner. A unit that is absent or not a monster, a missing monster owner reference, missing owner, missing owner room or a town room requests clearing the current skill and death mode 0 and returns lost=1. Otherwise read the signed i32 counter. If counter<0, reject an invalid Skill1 identity or absent Skills record with a death request and lost=1; obtain the selected skill instance, rejecting absence the same way. Request bonus-inclusive level and evaluate that skill's `calc4` with (sentry, Skill1, level), persisting its i32 result as the counter. If counter<=0, request death and return lost=1. If positive and decrement is nonzero, subtract 1 with i32 arithmetic and persist it. Return lost=0. No direct RNG draw occurs; owner/room/mode operations and expression evaluation have their declared effects and draws. A counter becoming zero after decrement survives until the next check.
+**SFR-R02** Lazy shot budget [verified in 1.13c code (static)]. A "death request" here is the ordered pair: request clearing the unit's current skill, then request mode 0 for that unit. Every reject below issues it with the supplied unit (absent when the unit is absent) and returns lost=1; how those request operations treat an absent unit is theirs (Q12). The owner checks run in this order and stop at the first failure: unit absent; unit not a monster; monster owner reference absent; owner lookup returns absent; owner room absent; owner room is a town room. An absent owner reference makes no owner lookup request. Then read the signed i32 counter. If counter<0 (any negative value, not only -1): reject a Skill1 identity <0 or >=count, or an absent Skills record, with a death request; obtain the selected skill instance, rejecting absence the same way. Request the level of that instance with bonuses included (not the base level) and evaluate that skill's `calc4` with (sentry, Skill1, that level), persisting its i32 result as the counter. If counter<=0, issue a death request and return lost=1. If positive and decrement is nonzero, subtract 1 with i32 arithmetic and persist it. Return lost=0. No direct RNG draw occurs; owner/room/mode operations and expression evaluation have their declared effects and draws. A counter becoming zero after decrement survives until the next check.
 
 **SFR-R03a** Stored target precedes room walk [verified in 1.13c code (static)]. Request stored-target resolution first. A returned target is used with its returned R13 distance without the room-walk cap; no nearby-room candidate callback runs. Otherwise initialize two empty nearest slots with distance 2147483647 and enter the room search. On success the wrapper also requests the reach predicate(searcher, target, 0) for its auxiliary result; the think does not use that auxiliary result. Missing target returns no unit and distance 2147483647.
 
@@ -427,19 +428,20 @@ Ordinary candidate T is a player at the case's raw offset from S, mode 1, eligib
   - Inputs: independent cases below, with section defaults.
   - Seeds: no draw.
   - Draws: none.
-  - Trace: lazy initialization fails before `calc4`/search.
-  - (a) Inputs: counter=-1, Skill1=400, count 400. Draws: none. Outputs: lost 1, mode 0, counter-1, no evaluation/search/chance/shot.
+  - Trace: lazy initialization fails before `calc4`/search. In every case "mode 0" is R02's death request: current-skill clear request, then mode 0 request, in that order.
+  - (a) Inputs: counter=-1, Skill1=400, count 400. Draws: none. Outputs: lost 1, mode 0, counter-1, no instance/level/evaluation request, search, chance or shot.
+  - (d) Inputs: counter=-1, Skill1=-1, count 400. Draws: none. Outputs: lost 1, mode 0, counter=-1; no instance, level or evaluation request, search, chance draw or shot.
   - (b) Inputs: counter=-1, Skill1=20, instance absent. Draws: none. Outputs: lost 1, mode 0, counter-1, no evaluation/search/chance/shot.
-  - (c) Inputs: counter=-1, Skill1=20, skill count 400, selected Skills record absent. Draws: none. Outputs: lost 1, mode 0, counter=-1; no expression evaluation, search, chance draw or shot.
+  - (c) Inputs: counter=-1, Skill1=20, skill count 400, selected Skills record absent. Draws: none. Outputs: lost 1, mode 0, counter=-1; no instance, level or expression evaluation request, search, chance draw or shot.
   - Discriminates: First-think failure belongs to budget helper.
   - runtime_observed: no
 
 - **SFR-V25** Second budget failure (SFR-R01f, SFR-R02; boundary: supplied-input stage)
-  - Inputs: first budget and range pass; after chance, second owner lookup absent; events[2, 8].
+  - Inputs: first budget and range pass; the supplied owner lookup returns P on its first call and absent on its second (after chance); events[2, 8].
   - Seeds: S={1, 0x29A}.
   - Draws: S mod 100 ->51; S={0x6AC6935F, 0}.
-  - Trace: second budget requests death and returns 1; stop before purge/fire.
-  - Outputs: mode 0; events[2, 8]; counter 3; no selection/shot.
+  - Trace: second budget requests death and returns 1; stop before purge/fire. "mode 0" is R02's death request: current-skill clear request, then mode 0 request for S, in that order.
+  - Outputs: mode 0; events[2, 8]; counter 3; no selection/shot; no next-think delay request.
   - Discriminates: Failure return of decrementing call cannot be ignored.
   - runtime_observed: no
 
@@ -447,13 +449,21 @@ Ordinary candidate T is a player at the case's raw offset from S, mode 1, eligib
   - Inputs: independent cases below, with section defaults.
   - Seeds: no draw.
   - Draws: none.
-  - Trace: (a/b)persist eval then<=0; others fail before evaluation.
+  - Trace: (a/b)persist eval then<=0; (f/k) persist a positive result; others fail before evaluation. Each "mode 0" output is R02's death request: current-skill clear request then mode 0 request for the stated unit, in that order. Each case is one direct R02 call with decrement=false unless stated.
   - (a) Inputs: counter=-1, `calc4` result 0. Draws: none. Outputs: lost 1, mode 0, counter 0, one evaluation.
   - (b) Inputs: counter=-1, `calc4` result-2. Draws: none. Outputs: lost 1, mode 0, counter-2, one evaluation.
-  - (c) Inputs: owner absent, counter 3. Draws: none. Outputs: lost 1, mode 0, counter 3, no evaluation.
+  - (c) Inputs: owner reference present, owner lookup returns absent, counter 3. Draws: none. Outputs: lost 1, one owner lookup request, no room request, mode 0, counter 3, no evaluation.
   - (d) Inputs: owner room absent, counter 3. Draws: none. Outputs: lost 1, mode 0, counter 3, no evaluation.
   - (e) Inputs: owner room town, counter 3. Draws: none. Outputs: lost 1, mode 0, counter 3, no evaluation.
-  - Discriminates: Signed nonpositive budget and owner gates.
+  - (f) Inputs: counter=-1; for the selected instance, level with bonuses included returns 3 and base level would return 2; `calc4` result 2. Draws: none. Outputs: lost 0; counter 2; ordered request subsequence (owner/room requests omitted): selected-instance request for Skill1 20, one level request with bonuses included (result 3), one evaluation of skill 20's `calc4` with (S, 20, 3); no mode request.
+  - (g) Inputs: owner lookup returns absent, counter=-1. Draws: none. Outputs: lost 1, mode 0, counter=-1; no instance, level or evaluation request.
+  - (h) Inputs: sentry unit absent, counter 3 (the counter belongs to the supplied AI parameters, not to the unit). Draws: none. Outputs: lost 1; current-skill clear and mode 0 requests issued with the absent unit (only their issue and order are asserted; their handling is Q12); no owner lookup request; counter 3 unchanged.
+  - (i) Inputs: S is a player unit (kind 0) supplied with a present owner reference whose lookup would return P in its non-town room, counter 3. Draws: none. Outputs: lost 1; mode 0 for S; no owner lookup request; counter 3.
+  - (j) Inputs: S is a monster with no owner reference, counter 3. Draws: none. Outputs: lost 1; mode 0 for S; no owner lookup request; counter 3.
+  - (k) Inputs: counter=-5, `calc4` result 2, decrement=true. Draws: none. Outputs: lost 0; one evaluation; counter 1 (2 persisted, then 2-1).
+  - (l) Inputs: owner room absent, counter=-1. Draws: none. Outputs: lost 1, mode 0, counter=-1; no instance, level or evaluation request.
+  - (m) Inputs: owner room town, counter=-1. Draws: none. Outputs: lost 1, mode 0, counter=-1; no instance, level or evaluation request.
+  - Discriminates: Signed nonpositive budget and owner gates. (f) rejects a base-level evaluation (2) and a changed argument order; (g/l/m) reject lazy initialization before any owner, room or town gate; (h/i/j) reject an owner lookup before the unit, kind and reference checks, and (i) rejects an owner lookup issued before the kind check (the relative order of the pure reject tests is not observable and not asserted); (k) rejects initializing only when counter equals -1.
   - runtime_observed: no
 
 - **SFR-V27** Stored target bypasses room cap (SFR-R03a, SFR-R01d; boundary: supplied-input stage)

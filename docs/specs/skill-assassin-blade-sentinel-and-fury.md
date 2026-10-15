@@ -17,7 +17,7 @@ Defines the existing two-skill boundary: Sentinel cast requests, Fury's reached 
 
 ## 2. Trigger and ownership
 
-D2Game computes the server cast decisions and reached missile/contact stages. Skills.srvdofunc selects action 44 or 48 through SCD-R06/SCD-R12, after that dispatcher's own eligibility checks. The callbacks execute synchronously at that action entry; a callback's return is distinct from the dispatcher's final result. Missile action 20 reaches the owner-follow decision. Contact uses MMC-R11/MMC-R14 and then the damage fill's base-roll stage. The companion records the original dispatch slots and output writers. No ordering against unrelated frame systems is established. The Sentinel cast requests its first type-2 AI event for the next frame; subsequent thinking and animation timing remain Q01/Q02/Q09.
+D2Game computes the server cast decisions and reached missile/contact stages. Skills.srvdofunc selects action 44 or 48 through SCD-R06/SCD-R12, after that dispatcher's own eligibility checks. The callbacks execute synchronously at that action entry; a callback's return is distinct from the dispatcher's final result. Both Skills rows have a blank srvmissile text cell; whether that compiles to an absent selector, and therefore whether SCD-R07 adds its own missile request, overrides the final result and reaches SCD-R08's charge requests for these skills, is Q04. The vectors here assert callback returns only. Missile action 20 reaches the owner-follow decision. Contact uses MMC-R11/MMC-R14 and then the damage fill's base-roll stage. The companion records the original dispatch slots and output writers. No ordering against unrelated frame systems is established. The Sentinel cast requests its first type-2 AI event for the next frame; subsequent thinking and animation timing remain Q01/Q02/Q09.
 
 ## 3. Inputs and data
 
@@ -45,7 +45,7 @@ All arithmetic below uses signed i32 with low32 wrapping unless explicitly unsig
 | Mapping / constant | Origin | Binding |
 |---|---|---|
 | action 44/48 and missile action 20 | engine dispatch slots | fixed engine-defined handlers selected by prepared data |
-| Skills Blade Sentinel Id 257: srvdofunc 44, summon bladecreeper, srvmissilea blade creeper; Blade Fury Id 266: srvstfunc 26, srvdofunc 48, srvmissilea `bladefragment1` | table data, TD-BLADE-SKILLS in companion | text cells; compiled correspondence Q03/Q04 |
+| Skills Blade Sentinel Id 257: srvdofunc 44, summon bladecreeper, srvmissilea blade creeper; Blade Fury Id 266: srvstfunc 26, srvdofunc 48, srvmissilea `bladefragment1`; srvmissile blank in both rows | table data, TD-BLADE-SKILLS in companion | text cells; compiled correspondence Q03/Q04 |
 | Blade Fury `prgcalc1`=`par4`, `Param4`=5; startmana=6, mana=8, lvlmana=1, manashift=5, usemanaondo=1 | table data, TD-BLADE-SKILLS | text-resolved inputs; complete duration/mana/start execution Q02/Q03 |
 | Missiles blade creeper Id 392: pSrvDoFunc 20, pSrvHitFunc 37, NextHit 1, NextDelay 25, Skill Blade Sentinel | table data, TD-BLADE-MISSILES | text cells; actual selected/compiled missile binding Q04 |
 | MonStats bladecreeper hcIdx 413, AI=BladeCreeper, `Skill1`=Blade Sentinel | table data, TD-BLADE-MONSTATS | symbolic name mapping; numeric AI 102 and dispatcher binding Q01 |
@@ -58,11 +58,11 @@ Named text cells are **verified in 1.13c data** only within the companion's reco
 
 R01/R10 are Sentinel cast stages; R02/R06/R11 are Fury stages; R03/R05/R09 cover reached follow/interruption decisions; R04 precedes a reached base roll R12. R05/R06/R09/R10/R12 are grouping prefixes.
 
-**BSF-R01** Sentinel action [verified in 1.13c code (static)]. Reject invalid/absent skill row or a negative supplied summon-selection result with return 0 before the caster marker write. Otherwise set the present caster's caster marker, then resolve the target. Target failure returns 0 with that write retained. Request summon creation using the skill, invocation level and resolved target; an absent result returns 0 with the marker retained. With a returned summon, request replacing its level 12 with the caster's layer-0 level 12; request placement with (game, summon, caster room, caster current X, Y, 0, 0); write its route command with start=caster current X, Y and target=resolved cast X, Y. Remove its pending type-2 events, request type 2 at low32(frame+1) with zero extra parameters, clear the summon marker, and return 1. Placement return is ignored. The level, placement, command storage and event operations have the declared supplied effects; complete creation/propagation/placement integration remains Q01/Q04/Q08/Q09. V05/V09 exercise the ordered requests, marker writes and return.
+**BSF-R01** Sentinel action [verified in 1.13c code (static)]. Reject invalid/absent skill row or a negative supplied summon-selection result with return 0 before the caster marker write. Otherwise set the present caster's caster marker, then resolve the target. Target failure returns 0 with that write retained. Request summon creation with the caster, skill and invocation level and a zero explicit position (0, 0); neither the resolved target nor the summon-selection result is passed, the selection result being only tested. An absent result returns 0 with the marker retained. With a returned summon, request replacing its level 12 with the caster's layer-0 level 12; request placement with (game, summon, caster room, caster current X, Y, 0, 0); write its route command with start=caster current X, Y and target=resolved cast X, Y. Remove its pending type-2 events, request type 2 at low32(frame+1) with zero extra parameters, clear the summon marker, and return 1. Placement return is ignored. The level, placement, command storage and event operations have the declared supplied effects; complete creation/propagation/placement integration remains Q01/Q04/Q08/Q09. V05/V09 exercise the ordered requests, marker writes and return.
 
 **BSF-R02** Fury action [verified in 1.13c code (static)]. Find the caster's supplied skill node; absence returns 0. Resolve the selected missile; a negative result returns 0. Obtain progression result P and set duration=i32(P-1). If duration<=0, return 0 before clearing the caster marker or resolving a target. Otherwise clear the present caster's caster marker, then resolve the target. Failure returns 0 with the clear retained. Read the node's release time. If release time<current frame, request one missile with an absolute target point, owner=caster, source=caster, selected missile, resolved target, skill identity and invocation level; all remaining creation options are zero/absent. Ignore the creator's return, write release time=i32(frame+duration), and set result 1. Otherwise make no creation/timer write and set result 0. After either gate branch, if caster state 12 is active, request animation refresh(game, caster, 1). Return result. The timer write and return 1 mean an attempted release even when the creator returns no missile. Q09 gates complete animation-refresh effects/draws; V03/V07 exercise this action with supplied external operations.
 
-**BSF-R03** Reached Sentinel missile action [verified in 1.13c code (static)]. For a present missile, test its owner-reference condition and resolve that owner. If condition is false, owner absent, or owner unavailable, request end processing(game, missile, no target, end=true) and return 2 regardless of that operation's result. Unavailable means completion condition true, non-player/non-monster kind, player mode 0/17 or monster mode 0/12. Otherwise request synchronizing the missile to the owner's current room and position, set its signed i16 remaining-lifetime counter to 10, request the plain movement/collision step (MMC-R05) and return 1 regardless of its result. The end request is MMC's contact operation with no target and force set (MMC-R11..R16); the missile dispatcher consumes return 2 as a removal request (MMC-R01). Actual relocation/collision/end effects remain Q04/Q09; V05(c, d) exercise this reached decision. This rule does not move the creature.
+**BSF-R03** Reached Sentinel missile action [verified in 1.13c code (static)]. For a present missile, test its owner-reference condition; only when it is true resolve that owner. If the missile is absent, the condition is false, the owner is absent, or the owner is unavailable, request end processing(game, missile or absent, no target, end=true) and return 2 regardless of that operation's result. Unavailable means completion condition true, non-player/non-monster kind, player mode 0/17 or monster mode 0/12. Otherwise, in this order, request synchronizing the missile to the owner's current room and position, set its signed i16 remaining-lifetime counter to 10, request the plain movement/collision step (MMC-R05), and return 1 regardless of that step's result. The end request is MMC's contact operation with no target and force set (MMC-R11..R16); the missile dispatcher consumes return 2 as a removal request (MMC-R01). Actual relocation/collision/end effects remain Q04/Q09; V05(c..e) exercise this reached decision. This rule does not move the creature.
 
 **BSF-R04** Contact cooldown routing [verified in 1.13c code (static)]. Consume MMC-R11's ordered contact filters. An active target state 86 with NextHit!=0 rejects before a to-hit roll or arming. Other filter failures also skip arming. At MMC-R14's reached to-hit miss branch, request cooldown arming before the hitbymissile item event and return/end handling; at its reached successful/end hand-off, arm before that event, hit callback and damage fill. Arming with NextHit=0 or absent target does nothing. Otherwise request a type 2 list owned by the target and expiring at requestedExpiry=i32(frame+u8(NextDelay)). Allocation failure stops arming. On success, request event 12 at requestedExpiry, tag the list state 86 and its expiry callback, attach with full application, then request state 86 on. This is shared target membership across missiles/legs. STL-R01 stores a due/past requested event at frame+1; list expiry retains requestedExpiry. Complete attach/free/expiry persistence remains Q04, so an exact real cooldown duration is not inferred from a request alone. V01/V02.
 
@@ -80,7 +80,7 @@ R01/R10 are Sentinel cast stages; R02/R06/R11 are Fury stages; R03/R05/R09 cover
 
 **BSF-R08** Equipment changes [verified in 1.13c code (static)]. At the isolated base-roll stage, R12 reads the missile's existing stats and seed. With those supplied values unchanged, changing a separate caster weapon input changes no R12 result. This does not establish that every real in-flight missile stat, owner/target bonus, proc or final hit is unchanged after equipment swaps; Q05/Q06 gate that larger assertion. V04.
 
-**BSF-R09a** Owner loss/unavailability [verified in 1.13c code (static)]. R03 requests end and returns 2 on the stated missing/unavailable owner paths. The request does not itself prove all destruction/callback effects. V05(d).
+**BSF-R09a** Owner loss/unavailability [verified in 1.13c code (static)]. R03 requests end and returns 2 on the stated missing/unavailable owner paths. The request does not itself prove all destruction/callback effects. V05(d, e).
 
 **BSF-R09b** Creature/Fury interruption [unresolved]. Q06 gates removal of the creature, Fury states, associated events and complete proc/interruption effects. HRC-R10's interruption decision is a dependency, not proof that these particular effects are canceled.
 
@@ -114,7 +114,7 @@ Stat identities follow GDF-R11 and the companion's TD-BLADE-STATS named record; 
 |---|---|---|---|
 | BSF-R01 | Sentinel local cast requests and flags | verified in 1.13c code (static) | V05/V09; creation/placement effects Q01/Q04/Q08/Q09 |
 | BSF-R02 | Fury attempt, timer and refresh request | verified in 1.13c code (static) | V03/V07; Q02/Q03/Q05/Q09 integration |
-| BSF-R03 | Reached owner-follow/end decision | verified in 1.13c code (static) | V05(c, d); Q04/Q09 effects |
+| BSF-R03 | Reached owner-follow/end decision | verified in 1.13c code (static) | V05(c..e); Q04/Q09 effects |
 | BSF-R04 | Contact filters and cooldown requests | verified in 1.13c code (static) | V01/V02; Q04 attach/free integration |
 | BSF-R05a | Owner-reference rather than caster position | verified in 1.13c code (static) | V05(c); real owner identity (creature) Q01/Q04 |
 | BSF-R05b | Return target | unresolved | Q01 |
@@ -123,7 +123,7 @@ Stat identities follow GDF-R11 and the companion's TD-BLADE-STATS named record; 
 | BSF-R06b | Start/mana/repetition | unresolved | Q02/Q09 |
 | BSF-R07 | Exact creation-time stat capture | unresolved | Q05 |
 | BSF-R08 | Unchanged supplied stats give same base roll | verified in 1.13c code (static) | V04; actual equipment integration Q05/Q06 |
-| BSF-R09a | Missing/unavailable owner requests end | verified in 1.13c code (static) | V05(d) |
+| BSF-R09a | Missing/unavailable owner requests end | verified in 1.13c code (static) | V05(d, e) |
 | BSF-R09b | Complete interruption/removal/procs | unresolved | Q06 |
 | BSF-R10a | Reached summon source-seed operation | verified in 1.13c code (static) | V06; total budget Q08 |
 | BSF-R10b | Exact summon initialization draws | unresolved | Q08 |
@@ -141,6 +141,7 @@ Stat identities follow GDF-R11 and the companion's TD-BLADE-STATS named record; 
 | absolute-target missile creation request; release-time write; conditional animation-refresh request; action return 0/1 | R02/R06a |
 | owner-position synchronization request, remaining-lifetime counter 10 write request, collision/end requests, reached return 1/2 | R03/R05a/R09a |
 | target-owned type 2 list allocation with requested expiry; event 12 request; state 86/callback tags, attachment and membership-on requests | R04 |
+| last-collision update, to-hit, hitbymissile, hit-handler and damage-fill requests around arming | MMC-R11/MMC-R14 outputs; R04 asserts only arming's position among them |
 | source seed step; child initialLo and initialized seed writes at seeder | R10a/R11 |
 | base damage record zeroing and seven base component stores; missile seed steps | R12a/R12b/R12c |
 
@@ -157,7 +158,7 @@ An invalid skill, absent node, negative selection or nonpositive wrapped duratio
 | **BSF-Q01** | behavior / unresolved | Anchor numeric AI 102 and BladeCreeper's dispatcher consumer; read its complete lifetime, route, return and destruction path. R01 supplied cast outputs remain available |
 | **BSF-Q02** | behavior / unresolved | Complete start 26, held-input and mana execution, including timed-state/animation producers and return propagation |
 | **BSF-Q03** | integration / unresolved | Establish compiled progression selection/evaluation correspondence to text `prgcalc1`=`par4`, `Param4`=5; supplied P remains available. Text implies P5 and duration 4 only if that correspondence holds |
-| **BSF-Q04** | integration / unresolved | Establish selected/compiled missile binding, the unit named by the real Sentinel missile's owner reference (R05a), actual collision/end effects and timed-list attach/free/expiry. Named text NextDelay 25 is known; supplied cooldown requests remain available |
+| **BSF-Q04** | integration / unresolved | Establish selected/compiled missile binding, the compiled Skills srvmissile selector for both rows (text blank; decides SCD-R07's extra request and the final dispatcher result), the unit named by the real Sentinel missile's owner reference (R05a), actual collision/end effects and timed-list attach/free/expiry. Named text NextDelay 25 is known; supplied cooldown requests remain available |
 | **BSF-Q05** | integration / unresolved | Exact creation parameter/stat propagation, mutable missile stats, equipment capture and full creator draw budget; supplied stored base-roll inputs remain available |
 | **BSF-Q06** | behavior / unresolved | Complete target/owner bonuses, elemental/proc/interruption and creature/Fury state removal. Base-roll outputs alone are not final-hit assertions |
 | **BSF-Q07** | outside-boundary / unresolved | Other builds have not been assessed; no 1.14d equivalence assertion or local behavior gate |
@@ -174,7 +175,7 @@ The [gap file](../plans/gaps/skill-assassin-blade-sentinel-and-fury.md) records 
 Defaults for each independent case: supplied objects/storage exist, valid skill row, selected missile nonnegative, target selection succeeds, state 12/state 54 false, marker false, completion condition false, no pending events, current frame 100, duration 5 (P=6), caster level 30. Dependency operations log exact ordered requests and return the stated result; omitted external operations neither draw nor change state in these fixtures. A successful supplied level write persists that value; command writes persist the stated points; list allocation creates an empty list, attach records that list, membership writes persist the active bit, and event scheduling uses STL-R01. These supplied effects do not verify actual producers. Creation is an external operation: fixtures explicitly identify whether it reaches the seeder. Every reached local rule executes normally. R12 cases default every listed damage/mastery stat to 0 and use seed {lo=1, hi=0}; values are returned layer-0 stat values. Seven-component tuples are (physical, fire, magic, lightning, cold, poison, burn) at the base-roll boundary; all runtime_observed values are no. A missing optional owner result is stated explicitly; otherwise repeated owner lookups return the same supplied live monster. All reached collision/end/placement operations log calls and have no other fixture effects unless specified.
 
 - **BSF-V01** Shared-target cooldown (R04; boundary: supplied-input stage)
-  - Inputs: NextHit 1, NextDelay 25, first contact frame 100, target state 86 off, earlier filters pass, hit supplied true, allocation succeeds; later contact at 110 is from the return leg to the same target with state 86 still on.
+  - Inputs: NextHit 1, NextDelay 25, LastCollide 0 (disabled), first contact frame 100, target state 86 off, earlier filters pass, hit supplied true, allocation succeeds; later contact at 110 is from the return leg to the same target with state 86 still on. Hit-handler and damage-fill requests after hitbymissile follow MMC-R14 with supplied results and are not asserted here.
   - Seeds: no draw in routing; supplied hit/filter/list operations make no draw.
   - Draws: none.
   - Trace: first arm expiry 100+25=125; schedule 125; second contact rejects state 86 before a hit request.
@@ -193,21 +194,24 @@ Defaults for each independent case: supplied objects/storage exist, valid skill 
   - (d) Inputs: to-hit miss, allocation fails. Outputs: one allocation request expiry 125, no schedule/tag/attach/state-on; hitbymissile still requested; state 86 off, lists/events empty.
   - (e) Inputs: to-hit miss, NextDelay 0, allocation succeeds. Outputs: list expiry 100, state 86 on, event 12 due 101; same ordered calls as(a), requested event frame 100.
   - (f) Inputs: to-hit miss, NextHit 0. Outputs: hitbymissile requested, no allocation/event/attach/state-on; state 86 off, lists/events empty.
-  - Discriminates: miss-only-no-arm fails(a); arm-every-contact fails(b, c); scheduling on failed allocation fails(d); clamping the list as well as the event fails(e).
+  - (g) Inputs: initial state 86 on, NextHit 0, to-hit miss. Outputs: to-hit request made, hitbymissile requested, no allocation/event/attach/state-on; state 86 remains on.
+  - Discriminates: miss-only-no-arm fails(a); arm-every-contact fails(b, c); scheduling on failed allocation fails(d); clamping the list as well as the event fails(e); rejecting on state 86 regardless of NextHit fails(g).
   - runtime_observed: no
 
 - **BSF-V03** Fury gate, failed creation and partial failure (R02/R06a; boundary: supplied-input stage)
-  - Inputs: P=6, duration 5; creator returns absent and draws nothing; each state 12 refresh logs only and draws nothing; marker initially true.
+  - Inputs: P=6, duration 5; skill identity 266, invocation level 10, supplied selected missile 506, resolved target (130, 230); creator returns absent and draws nothing; each state 12 refresh logs only and draws nothing; marker initially true.
   - Seeds: no draw in supplied operations.
   - Draws: none in all cases.
   - Trace: gate 99<100 opens, writes 105 despite failure; equality 105 blocks; 105<106 opens and writes 111.
-  - (a) Inputs: frame 100, timer 99, state 12 false. Outputs: marker false, one creation request (absolute target, owner/source caster, selected missile, skill/level, target; remaining options zero), return 1, timer 105, no missile, no refresh.
+  - (a) Inputs: frame 100, timer 99, state 12 false. Outputs: marker false, one creation request (absolute target, owner/source caster, missile 506, skill 266, level 10, target (130, 230); remaining options zero), return 1, timer 105, no missile, no refresh.
   - (b) Inputs: frame 101, timer 105, state 12 true. Outputs: marker false, return 0, timer 105, no creation; exactly one refresh(game, caster, 1), no missile.
   - (c) Inputs: frame 105, timer 105, state 12 false. Outputs: marker false, return 0, timer 105, no creation/refresh/missile.
   - (d) Inputs: frame 106, timer 105, state 12 false. Outputs: marker false, return 1, timer 111, one creation request, no missile/refresh.
   - (e) Inputs: frame 100, timer 99, P=1. Outputs: return 0, timer 99, marker true, no target/creation/refresh request.
   - (f) Inputs: frame 100, timer 99, target selection fails. Outputs: return 0, timer 99, marker false, no creation/refresh request.
-  - Discriminates: <= gate fails(c); conditioning timer/return on creator success fails(a); skipping refresh on blocked casts fails(b); rolling back marker fails(f).
+  - (g) Inputs: frame 100, timer 99, P=0 (duration -1). Outputs: return 0, timer 99, marker true, no target/creation/refresh request.
+  - (h) Inputs: frame 106, timer 105, state 12 true. Outputs: marker false, return 1, timer 111; ordered creation request, timer write, then exactly one refresh(game, caster, 1); no missile.
+  - Discriminates: <= gate fails(c); conditioning timer/return on creator success fails(a); skipping refresh on blocked casts fails(b); rolling back marker fails(f); testing duration==0 instead of <=0 fails(g); refreshing only on the blocked branch fails(h).
   - runtime_observed: no
 
 - **BSF-V04** Existing ranges and an external equipment change (R08/R12a/R12c; boundary: supplied-input stage)
@@ -220,15 +224,16 @@ Defaults for each independent case: supplied objects/storage exist, valid skill 
   - runtime_observed: no
 
 - **BSF-V05** First think and reached follow/end (R01/R03/R05a/R09a; boundary: supplied-input stage)
-  - Inputs: successful summon result, cast point(120, 220), caster point(100, 200), caster room A; supplied writes/placement/event operations have default fixture effects.
+  - Inputs: successful summon result, initially level 1 with summon marker true; cast point(120, 220), caster point(100, 200), caster room A; supplied writes/placement/event operations have default fixture effects.
   - Seeds: no draw in these supplied operations.
   - Draws: none in all cases.
   - Trace: frame 100+1=101; successful owner branch ignores collision return; end branch ignores end return.
   - (a) Inputs: cast at 100; placement returns failure 0 and has no fixture effect. Outputs: return 1, caster marker true, summon level 30, route start(100, 200)/target(120, 220), summon marker false, event(type 2, due 101, parameters 0/0); ordered creation, level replacement, placement(game, summon, A, 100, 200, 0, 0), command write, remove type 2, schedule type 2, summon-marker clear despite placement failure.
   - (b) Inputs: frame 2147483647; schedule operation has supplied acceptance of wrapped request for this isolated request case. Outputs: return 1, same marker/level/route outputs as(a); requested type 2 frame=-2147483648; actual wrapped-negative scheduling is gated by STL-Q10.
-  - (c) Inputs: missile owner condition true, owner=creature, creature live monster mode 1 at(121, 221), room B; caster at(99, 199); collision returns 2. Outputs: synchronize(missile, B, 121, 221), remaining-lifetime counter 10, collision request, return 1; no end request.
-  - (d) Inputs: absent owner, or independently owner monster mode 12; end operation returns 1. Outputs: one end(game, missile, no target, true), return 2, no synchronize/remaining-lifetime/collision request.
-  - Discriminates: using caster position fails(c); propagating collision/end results fails(c, d); same-frame first event or aborting on placement failure fails(a).
+  - (c) Inputs: missile owner condition true, owner=creature, creature live monster mode 1 at(121, 221), room B; the caster, a separate live unit at(99, 199) in room A, is not the missile's owner reference; collision returns 0. Outputs: ordered synchronize(missile, B, 121, 221), remaining-lifetime counter 10, collision request, return 1; no end request.
+  - (d) Inputs: owner condition true; two independent cases, absent owner, and owner monster mode 12; end operation returns 0. Outputs in each case: one end(game, missile, no target, true), return 2, no synchronize/remaining-lifetime/collision request.
+  - (e) Inputs: owner condition false; the owner identity would name the live monster of (c); end operation returns 0. Outputs: one end(game, missile, no target, true), return 2, no synchronize/remaining-lifetime/collision request.
+  - Discriminates: using caster position fails(c); propagating or testing the collision/end result fails(c, d); skipping the owner-reference condition fails(e); same-frame first event or aborting on placement failure fails(a).
   - runtime_observed: no
 
 - **BSF-V06** Sentinel reached seeder (R10a; boundary: isolated rule)
@@ -265,30 +270,31 @@ Defaults for each independent case: supplied objects/storage exist, valid skill 
   - Seeds: no draw in supplied operations.
   - Draws: none in all cases.
   - Trace: marker is set before target lookup; later failure does not undo it.
-  - (a) Inputs: valid row, nonnegative selection, target success, summon present. Outputs: return 1, caster marker true, summon level 30, summon marker false, route start(100, 200)/target(120, 220), event 2 due 101; placement called with summon, not caster.
+  - (a) Inputs: valid row, nonnegative selection, target success, summon present. Outputs: return 1, caster marker true, summon level 30, summon marker false, route start(100, 200)/target(120, 220), event 2 due 101; placement called with summon, not caster; the creation request carries caster, skill and level with explicit position (0, 0), not the cast point (120, 220).
   - (b) Inputs: target failure. Outputs: return 0, caster marker true, no summon/level/placement/command/event requests.
   - (c) Inputs: spawn absent. Outputs: return 0, caster marker true, one spawn request, no later level/placement/command/event requests.
   - (d) Inputs: negative summon selection. Outputs: return 0, caster marker false, no target/spawn/later requests.
-  - Discriminates: clearing the caster's summon marker instead of the summon fails(a); blanket no-effect failures fail(b, c).
+  - Discriminates: clearing the caster's summon marker instead of the summon fails(a); passing the resolved target to creation fails(a); blanket no-effect failures fail(b, c).
   - runtime_observed: no
 
 - **BSF-V10** Percent arithmetic and final roll (R12a/R12b; boundary: isolated rule)
   - Inputs: helper min 5, max 9, pct identity 329; cases independent, not a whole base fill.
   - Seeds: missile{lo=1, hi=0}.
-  - Draws: (a)(missile, 6, 3); (b)(missile, 3, 0); (c)none; (d)(missile, 70100, 62685); (e)none.
+  - Draws: (a)(missile, 6, 3); (b)(missile, 3, 0); (c)none; (d)(missile, 70100, 62685); (e, f)none.
   - Trace: (a)5+trunc 250/100=7, 9+trunc 450/100=13; (b)5+trunc(-150)/100=4, 9+trunc(-270)/100=7; (c)5-10=-5, 9-18=-9, difference-4 skips draw.
   - (a) Inputs: pct 50. Outputs: adjusted pair 7/13, return 10, seed{lo=0x6AC690C5, hi=0}, one draw.
   - (b) Inputs: pct-30. Outputs: adjusted pair 4/7, return 4, seed{lo=0x6AC690C5, hi=0}, one draw.
   - (c) Inputs: pct-200. Outputs: adjusted pair-5/-9, return-5, seed{lo=1, hi=0}, zero draws.
   - (d) Inputs: minimum 200, maximum 300, pct 70001. Outputs: adjusted pair 140200/210300, return 202885, seed{lo=0x6AC690C5, hi=0}, one draw. Trace: NRF-R05's first operand 70001 selects divide-first (70001/100)*endpoint; additions give 140200/210300, n=70100, roll 62685.
   - (e) Inputs: minimum 1, maximum 2147483647, pct 100. Outputs: adjusted pair 2/-49, return 2, seed{lo=1, hi=0}, zero draws. Trace: maximum's large second operand selects (2147483647/100)*100=2147483600; wrapping endpoint sum=-49, n=-51 skips draw.
-  - Discriminates: flooring negative percentages fails(b); a second swap/clamp after percentage fails(c); reversing mulDiv's operands changes(d)'s pair; unlimited-precision multiplication fails(e).
+  - (f) Inputs: stored minimum 9, maximum 5, pct-200. Outputs: swapped 5/9 then adjusted pair-5/-9, return-5, seed{lo=1, hi=0}, zero draws. Trace: both guards pass, initial swap gives 5/9, then 5-10=-5, 9-18=-9, difference-4 skips draw.
+  - Discriminates: applying the percentage before the initial swap fails(f), giving-9/-5 and a draw; flooring negative percentages fails(b); a second swap/clamp after percentage fails(c); reversing mulDiv's operands changes(d)'s pair; unlimited-precision multiplication fails(e).
   - runtime_observed: no
 
 - **BSF-V11** Lightning and seven-slot order (R12a/R12c; boundary: supplied-input stage)
   - Inputs: zero defaults except listed cases; each case starts independently.
   - Seeds: missile{lo=1, hi=0}.
-  - Draws: (a, b)(missile, 4, 1); (c, d, f)none; (e)ordered draws in the arithmetic table below, all missile-owned.
+  - Draws: (a, b)(missile, 4, 1); (c, d, f, g)none; (e)ordered draws in the arithmetic table below, all missile-owned.
   - Trace: (a, b)5+1=6; (c)equal endpoints fixed 7; (d)maximum 0 skips; (e)each positive pair consumes one draw in R12c order.
   - (a) Inputs: 50=5, 51=9, 330=0. Outputs: tuple(0, 0, 0, 6, 0, 0, 0), seed{lo=0x6AC690C5, hi=0}, one draw.
   - (b) Inputs: 50=9, 51=5, 330=0. Outputs: tuple(0, 0, 0, 6, 0, 0, 0), seed{lo=0x6AC690C5, hi=0}, one draw.
@@ -296,7 +302,8 @@ Defaults for each independent case: supplied objects/storage exist, valid skill 
   - (d) Inputs: 50=7, 51=0, 330=50. Outputs: tuple(0, 0, 0, 0, 0, 0, 0), seed{lo=1, hi=0}, no minimum/mastery read for lightning, zero draws.
   - (e) Inputs: physical 5/9, fire 15/20, magic 25/31, lightning 35/42, cold 45/53, poison 55/64, burn 65/75, masteries 0. Outputs: see exact tuple, seven ordered results and final seed in the immediately following arithmetic table.
   - (f) Inputs: 50=0, 51=9, 330=50. Outputs: tuple(0, 0, 0, 0, 0, 0, 0), seed{lo=1, hi=0}, zero draws and no percentage-stage request for lightning. Trace: positive maximum reaches the nonpositive minimum guard and returns 0 before percentage adjustment.
-  - Discriminates: rolling equal or zero endpoints fails(c, d, f); checking only maximum positivity fails(f); altered element order is checked by(e)'s per-slot results.
+  - (g) Inputs: every one of the seven minimum/maximum pairs 10/10; 329=50, 357=20, 330=30, 331=40, 332=60. Outputs: tuple(10, 15, 12, 13, 14, 16, 15), seed{lo=1, hi=0}, zero draws. Trace: physical has no percentage stage; each other slot adds mulDiv(pct, 10, 100)=pct/10 to both endpoints and equal endpoints give a fixed value.
+  - Discriminates: rolling equal or zero endpoints fails(c, d, f); checking only maximum positivity fails(f); altered element order is checked by(e)'s per-slot results; a percentage on physical or a wrong mastery identity for any slot fails(g).
   - runtime_observed: no
 
 | Slot | Ordered draw (missile, modulus, result) | Component | Seed after draw {lo, hi} |
