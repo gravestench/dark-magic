@@ -40,7 +40,7 @@ SCX-Q09/SCD-Q10. No gameplay actions, new hooks or other-build analysis were per
 | LOD113C-D2GAME | 0xB17B0; table 0xFB588 | selector dispatch, SFR-R03b | Full 2026-10-15 dispatch reading and original-image table cells: selector 6 `{kind0, callback0xB15E0}`, selector 7 `{kind0, callback0xB1580}`. Kind0 dispatches 0xB0720 |
 | LOD113C-D2GAME | 0xB0720 | room walker, SFR-R03b | Complete listing assessed 2026-10-15: room lookup, adjacent-room-list request, per-room chain and early callback return. Encoded portions/room-list producer keep actual traversal unresolved |
 | LOD113C-D2GAME | 0xB15E0 | two-slot candidate callback, SFR-R03c | Original 2026-10-12; complete 2026-10-15 reread: validity before distance/cap, slot split, strict improvement, collision 4 before writes, zero return |
-| LOD113C-D2GAME | 0xB1580 | selector 7 callback | Complete 2026-10-15 reading: excludes supplied slot B unit, validates, caps at 48, requires class>1, strict improvement and collision 4 before slot A writes |
+| LOD113C-D2GAME | 0xB1580 | selector 7 callback | Complete 2026-10-15 reading: excludes the block's supplied unit, validates, caps at 48, requires class>1, strict improvement over the block's running best and collision 4 before writing the block's found unit/distance. The chooser supplies slot A's unit as the excluded unit (see the 2026-10-15 FULL9 triage); the earlier "slot B" wording was wrong |
 | LOD113C-D2GAME | 0xB08A0 | candidate slot class | Full 2026-10-15 reading: player 14; bounded MonStats class index reads byte+0x4E; other/missing 0. Exact column name remains unknown; Align is +0x4C, so it is not substituted |
 | LOD113C-D2GAME | 0xB1AB0 | chooser, SFR-R10 | Full 2026-10-15 reading and complete original-image decode of encoded instructions: player/empty slots, distance 5, temporary path setters/restoration, selector 7 and distance 20. Path helper effects remain Q08 |
 | LOD113C-D2GAME | 0xB1400 | validity, SFR-R03f/g | Original 2026-10-12; full original-image decode 2026-10-15 confirms both opposite branch polarities and ordered state/candidate-seed checks |
@@ -622,3 +622,255 @@ The cosmetic V24 case order (a, d, b, c) is left as is to keep case ids stable. 
 applicable reader run meets the stop condition. Reader runs this cycle: four, all delta
 (DELTA5..DELTA8). Status stays draft; no implementation test, gameplay observation or
 approval is implied.
+
+## Blind-implementer FULL9 triage (2026-10-15)
+
+Run type: FULL (checklist section 2 steps 1-9). It was required because the 2026-10-15
+review rewrote SFR-R02's behavior text and DELTA5..DELTA8 checked it only as deltas. This is
+the first reader run of this follow-up cycle. Counts: MISMATCH 0, GUESS 12, GAP 9, DISCRIM 11,
+GATED 22, COVERAGE 24, HARDEST 3. The reader recomputed every vector, including V24, V25 and
+V26(a..m), and every LCG chain without difference. The complete report is retained privately.
+
+Asm checks before editing (original D2Game disassembly, 2026-10-15):
+- Initializer 0x41F50 (byte-equivalent C reconstruction and asm): reads the frame count; if >=0x4E it sets the
+  held value to 0x4D and calls the total (#10558) then current (#10970) setters; then seed init
+  from stored-point X (#10983) + index; path kind 10 (#10647); path duration (#10168) receives the
+  CLAMPED held value; then path preparation (#10334). Duration is min(u8(g), 77) with g the
+  post-clamp value, so f=300 gives 77, not 44.
+- Action 17 handler 0x43B60 (asm): `calc1` evaluation #10786 takes (unit, `calc1`, skill id, level),
+  where skill id and level are the handler's two stack arguments from dispatch (SCD-R06 invokes
+  action(game, unit, id, level)). The missile identity comes from 0x91340(skill id, unit) and is
+  bounds-checked against the Missiles record count. The resolver's success return is tested
+  before both coordinate words.
+- Wrapper 0xB1BC0: when the returned unit (stored or chooser path) is present it calls reach
+  #11138(searcher, target, 0) into the auxiliary out-pointer; when absent it writes 0 there and
+  distance 0x7FFFFFFF, with no reach call.
+- Chooser 0xB1AB0 (encoded instructions decoded from the db listing): its arguments are
+  (&slotA unit, &slotA distance, slotB unit, slotB distance), where slot A is the class>1 slot
+  that 0xB15E0 writes at block+0. Order: present player searcher returns 0 (A, even if empty);
+  slot B unit null returns 0; slot A unit null returns 1 (B); signed B distance >5 returns 0.
+  Otherwise it saves path fields, sets the path target to slot A's unit (#10336), path kind 2,
+  prepares the path (#10334), restores target, point (#10286) and kind, then reads #10800
+  (D2Common 0x34C60, path field +0x28); nonzero returns 0 (A). For zero it runs selector 7 with
+  block {found 0, distance 0x7FFFFFFF, excluded = slot A's unit}; a found unit with signed
+  distance <20 replaces slot A and returns 0; otherwise it returns 1 (B). The previous spec text
+  "excluding B" and the companion's 0xB1580 "slot B" wording were wrong; selector 7 improves on
+  its own running best, not on slot A's distance. The meaning of path field +0x28 is not
+  established, so R10 stays unresolved under Q08.
+- Validity 0xB1400: searcher null/kind (0..1), then candidate null/kind; unavailable candidate
+  then searcher; candidate room #10331 passed unchecked to the town predicate #10057; then
+  eligibility A; then the state 146 branches as already specified.
+- Creator 0x6F930 speed region: the explicit-velocity condition is creation-flags bit 4, not a
+  value test. The slow branch calls the state test #10494(owner, 87), obtains the owner's
+  state-87 stat list (thunk 0xA5D4, #10871 / 0x38520: unit list then state-list lookup) and reads stat 161 layer 0 from that list (thunk 0xA712, #10680 / 0x39140).
+  The slow scale precedes the nonzero 75% scale.
+
+| Finding | Outcome | Reason / exact assertion |
+|---|---|---|
+| GUESS: V01/V05/V17/R01b think instance request missing from V01 log | Spec edit: V01 outputs | The ordered request subsequence now includes the selected-instance request; owner/room requests omitted |
+| GUESS: R09a duration from original or clamped f | Spec edit: R09a; V34(i) | Asm uses clamped g; f=300 gives frames 77 and duration 77 |
+| GUESS: R09a frame-write position | Spec edit: R09a "in this order"; V34(h) | Total then current frame write precede the seed overwrite |
+| GUESS: R10 fixed 20 versus A distance | Spec edit: R10 | Fixed signed 20 |
+| GUESS: R10 player searcher with empty A | Spec edit: R10; V35(k) | A player selects A even when empty: no unit, distance 2147483647 |
+| GUESS: R10 whether selector 7 may return A, and nearer than what | Spec edit: R10; V35(j) | Excludes A's unit; running best starts at 2147483647. Also adds the path-result branch, V35(i) |
+| GUESS: R03a auxiliary result when absent or on the room path | Spec edit: R03a; V10(d) | Reach on any returned target; absent gives 0 with no request |
+| GUESS: R03f searcher kind | Spec edit: R03f | Both units must be player/monster; searcher checked first (pure order not asserted) |
+| GUESS: R03f absent candidate room | Spec edit: R03f | The absent room is passed to the town predicate; its handling is Q12 |
+| GUESS: R11a which stat list | Spec edit: R11a; V36(j) | Owner's state-87 list, not the base list |
+| GUESS: R11a explicit velocity 0 | Spec edit: R11a | The explicit condition is a flag; value 0 is used when it is set |
+| GUESS: R01f requested mode value | Spec edit: R01f | Mode value supplied by the selected skill instance; execution stays Q12 |
+| GAP: `calc1` level argument | Spec edit: R09a; V34 inputs | The action's supplied level (3); evaluation (S, 20, 3) |
+| GAP: R09a missile selection source and count | Spec edit: R09a | Supplied missile-selection operation; invalid when <0 or >= Missiles count |
+| GAP: V34 index 0 failed-resolution coordinates | Spec edit: V34 inputs and Discriminates | Fails while returning (5, 5); no creation request |
+| GAP: outputs not in section 5 | Spec edit: section 5 | Intermediate values and request presence/absence/count are named as assertions, not stored effects |
+| GAP: V25 call boundary | Spec edit: V25 inputs | The search is supplied; the only owner lookups are one per R02 call |
+| GAP: reach "other arguments" given per vector | No change | Each vector states its ordered operation; the preamble default is reach 1 for any arguments |
+| GAP: V31(f) Q owner and tier | Spec edit: V31(f) | Q is a monster with no owner link; other tiers follow the preamble |
+| GAP: V32 Nightmare and `aip3`/`aip4` difficulty | Spec edit: V32(a/b) | Hell `aip4` 8 / `aip3` 9 gives due 109; Nightmare `aip1` 0 / `aip2` 5 gives due 105 |
+| GAP: V01 post-shot mode and skill state | No change | Actual mode/skill execution is Q12; supplied effects log the shot only |
+| DISCRIM: V01 removing all events | Spec edit: V01 | Events [2, 8] become [8] |
+| DISCRIM: V10/V27 cap applied to stored path | Spec edit: V10(c) | Stored distance 60 returns T at the wrapper stage |
+| DISCRIM: V12/V23 always rejecting roll<80 | Spec edit: V12(a) | Roll 51 with reach(S,T,0)=1 gives validity 1 |
+| DISCRIM: V11 eligibility tested after draw | Spec edit: V11(g) | Invisible player with A=false; seed unchanged |
+| DISCRIM: R09a clamp threshold | Spec edit: V34(h) | f=78 gives 77 |
+| DISCRIM: V36 75% before slow | Spec edit: V36(i) | Explicit 3 gives 1 then 0 (wrong order gives 1) |
+| DISCRIM: V36 stat source | Spec edit: V36(j) | State list 50 versus base list 100 gives 960 |
+| DISCRIM: V32 `aip3`/`aip4` difficulty | Spec edit: V32(a) | Hell 8 rejects distance 10 |
+| DISCRIM: V31(f) return value alone | No change | The vector asserts roots M/Q and no lookup of M's owner; these reject one-hop and repeated alternatives |
+| DISCRIM: R02 Skill1 bounds | Spec edit: V26(n/o) | Skill1 0 and 399 accepted |
+| DISCRIM: V37 Rand versus RandMask | No change: equivalent | Both step once and return lo&1 for argument 2 |
+| HARDEST: R02 | No rule change | Order, death request and the logged-versus-pure boundary are explicit; V25 boundary clarified |
+| HARDEST: R03g/R03i with PVP preamble | No rule change | V12(a) added; PVP-R05a/R07 remains the owning contract |
+| HARDEST: R09a | Resolved by R09a edits | Level, missile source, clamp and duration order now explicit |
+
+COVERAGE (24, advisory): new cases cover R06a Nightmare (V32(b)), R09a f=78 and f>=256
+(V34(h/i)) and R02 Skill1 0/399 (V26(n/o)). The others get no change: they repeat branches
+already shown (state 12 with a shot, slot B replacement, R03i tier combinations owned by PVP
+vectors, octagonal wrap outside the stated domain, roll 79, missile Size>0 on both axes) or
+lie inside gated R11a/Q12 boundaries.
+
+R10's rule text changed (behavior of a gated rule), and the R09a, R03a, R03f and R11a text was
+made explicit. The next run is therefore FULL.
+
+## Blind-implementer FULL10 triage (2026-10-15)
+
+Run type: FULL, the second reader run of this follow-up cycle, on the FULL9-edited contract.
+Counts: MISMATCH 0, GUESS 8, GAP 8, DISCRIM 14, GATED 31, COVERAGE 22, HARDEST 3. The reader
+recomputed every vector, including all new FULL9 cases, without difference. It reported the
+GATED list at finer granularity (one entry per rule/question pair); no gate changed.
+
+Asm checks before editing (original D2Game disassembly, 2026-10-15):
+- Unavailable condition 0xDFA90: null or completion bit returns 1; a player returns 1 for mode 0
+  or 0x11; a monster for mode 0 or 0x0C; other kinds return 1. A player in mode 12 or a monster
+  in mode 17 is therefore available.
+- Action 17 handler 0x43B60: one creation-request block is cleared once and filled with flags,
+  owner (caster), missile identity, caster position (two getters) as source, skill id and the
+  action's level, callback and index. The resolver call receives the caster and two output
+  pointers that are the block's target-coordinate fields; no index, skill or level is passed. The
+  loop test on the `calc1` count is signed (`jle` before the loop, `jl` at its end).
+- Validity, size and parameter readings already recorded support the remaining added cases
+  (signed `aip1`/`aip4` loads, u8 missile Size, candidate-only size subtraction).
+
+| Finding | Outcome | Reason / exact assertion |
+|---|---|---|
+| GUESS: R01f mode value | Spec edit: section 3 row, preamble, V01 | Supplied instance mode value 9; V01 asserts mode request 9 |
+| GUESS: R09a resolution arguments | Spec edit: R09a; V34 | Caster only; five requests in V34 |
+| GUESS: R09a creation arguments | Spec edit: R09a; V34 outputs | Source caster position, target resolved coordinates, skill/level, owner, callback, index |
+| GUESS: V31 alignment to tier | No change: owned by PVP-R05a | PVP-R05a's tier reader (PVP-V26) defines the read; the preamble supplies stat 172 values |
+| GUESS: think raw offset versus supplied distance | Spec edit: preamble | Think consumes the supplied distance; raw offset plus reduced value is a separate isolated R13 assertion |
+| GUESS: V28(a) monster candidate inputs | Spec edit: preamble | Monster candidates share the ordinary inputs, no owner, SizeX 0, class 1 unless stated |
+| GUESS: R03f dead modes per kind | Spec edit: R03f; V29(e/f/g) | Player 0/17, monster 0/12 |
+| GUESS: R03i missile-searcher hop | No change: owned by PVP-R07 | PVP-V16 covers the missile owner link |
+| GAP: completion condition source | No change | Section 3 already lists it as a supplied neutral boolean |
+| GAP: R01f mode value input | Spec edit: section 3 row | Same as the GUESS above |
+| GAP: null initializer unit only in section 6 | Spec edit: R09a | Absent initialized unit does nothing |
+| GAP: stat 172 to tier | No change: owned by PVP-R05a | As above |
+| GAP: V28(a)/V35 monster candidate inputs | Spec edit: preamble | As above |
+| GAP: V35 selector 7 result inputs | Spec edit: V35 trace | Named result C is supplied directly; filtering stays gated |
+| GAP: section 5 request arguments | Spec edit: section 5 rows | Select (Skill1, target, (0, 0)), mode value, resolution and creation requests with arguments |
+| GAP: V36 already-scaled/slow-mask sources | No change | Section 3 speed row lists them; their producers are gated Q05/Q12 |
+| DISCRIM: V29 dead modes per kind | Spec edit: V29(e/f/g); V29 added to the root-default list | Player 12 and monster 17 valid; player 0 invalid |
+| DISCRIM: V11 kind tests | Spec edit: V11(h/i) | Missile candidate and object searcher rejected |
+| DISCRIM: R03c class threshold | Spec edit: V28(d) | Class 2 goes to slot A, class 0 to slot B |
+| DISCRIM: think vectors and R13 variants | Spec edit: preamble | Each stated raw offset is an isolated R13 assertion, so half-size or Euclidean R13 fails V03/V16/V21 |
+| DISCRIM: V35 fixed 20 | Spec edit: V35(l/m) | A30/C25 selects B; A10/C15 selects C |
+| DISCRIM: V36 explicit value 0 | Spec edit: V36(k) | Result 0, not 5760 |
+| DISCRIM: R13 missile Size signedness | Spec edit: V22(i) | Size 200 gives distance 0, not 92 |
+| DISCRIM: R13 searcher size | Spec edit: V22(j) | Searcher SizeX 5 ignored; distance 11, not 6 |
+| DISCRIM: V09 state 12 removal before budget | Spec edit: V09(a) | Counter 0 dies with state 12 still active |
+| DISCRIM: V01 mode and point arguments | Spec edit: V01 | select(20, T, (0, 0)); mode 9 |
+| DISCRIM: V08 request order | Spec edit: V08 | Clear then mode 0 |
+| DISCRIM: V34 creation arguments | Spec edit: V34 outputs | As above |
+| DISCRIM: V34 negative `calc1` | Spec edit: V34(j) | -1 returns 1 with no requests |
+| DISCRIM: signed `aip1`/`aip4` | Spec edit: V32(c/d) | -1 values give due 111 and 107 |
+| HARDEST: R10/V35 | No rule change | The path result stays a neutral supplied value under Q08; V35 asserts supplied branches only |
+| HARDEST: R09a/V34 | Resolved by R09a/V34 edits | Arguments now asserted |
+| HARDEST: R03i/V31 | No change: owned by PVP-R05a/R07 | The preamble supplies existing tier inputs |
+
+COVERAGE (22, advisory): V11(h/i), V29(e..g) and V28(d) also cover the searcher-kind,
+candidate-kind, dead-mode and class-0/2 branches. The remaining entries repeat branches shown by
+existing cases or sit inside owned or gated contracts (PVP-R05a/R07 tier and relation
+combinations, R10 selector-7 filters, R11a combinations, NRF-R10b getter high-bit handling,
+R04 negative differences already covered by absolute values in V15's domain); no change.
+
+R03f's dead-mode wording, R09a's request arguments and the vector preamble changed, so the
+next run is FULL.
+
+## Blind-implementer FULL11 triage (2026-10-15)
+
+Run type: FULL, the third reader run of this follow-up cycle, on the FULL10-edited contract.
+Counts: MISMATCH 0, GUESS 8, GAP 7, DISCRIM 6, GATED 21, COVERAGE 24, HARDEST 3. Every vector
+recomputed without difference.
+
+Asm checks before editing (original disassembly, 2026-10-15):
+- D2Common #10534 (0x6A290, byte-equivalent C reconstruction) reads missile data word +0x0E,
+  the field written by #10558 (0x6A710, "total"); #10970 (0x6A6D0) writes +0x10 ("current"). The
+  initializer's f is therefore the total frame count.
+- Action 17 handler 0x43B60: skill identity <0, >= the Skills count, or a null record pointer
+  returns 0 before the missile selection.
+- Think 0xA7DC0: Skill1 is sign-extended and passed to the instance request #10630 with no bounds
+  check; state 12 active calls #10945(unit, 12, 0); the event walk visits every pending event and
+  removes each one whose type byte is 2. The think's returned value is not part of this contract.
+- Creator 0x6F930: the slow-branch state test and list lookup use the creation request's owner
+  field (request+4), which the action-17 handler fills with the caster.
+
+| Finding | Outcome | Reason / exact assertion |
+|---|---|---|
+| GUESS: R09a f total or current | Spec edit: R09a; V34(k) | Total; total 50/current 100 gives no write and duration 50 |
+| GUESS: R09a invalid skill bounds | Spec edit: R09a | <0, >= count or absent record |
+| GUESS: callback on creator failure | Spec edit: R09a | Only actually initialized missiles; invocation is the creator's (Q12) |
+| GUESS: absent caster with n>0 | Spec edit: R09a | Supplied position/resolution results for the absent caster (Q12) |
+| GUESS: R01b Skill1 bounds when counter>=0 | Spec edit: R01b | Raw identity, no bounds check |
+| GUESS: R11a owner and minimum adjustment | Spec edit: R11a | Request's owner unit; NRF-R12c applicability left open under Q05 (R11a stays asm-only) |
+| GUESS: R11a missing stat 161 | Spec edit: R11a | NRF-R12b reads 0, speed 0, 75% skipped |
+| GUESS: R01c removal request form | Spec edit: R01c | Set state 12 off (NRF-R12a); no request when inactive |
+| GAP: dispatcher result versus handler return | Spec edit: R09a | Handler returns; SCD-R12 owns the final result |
+| GAP: think return value | Spec edit: R01f | No result value is part of the contract |
+| GAP: R11a condition origins | No change | Gated Q05/Q12; section 3 lists them as supplied booleans |
+| GAP: V34 base versus bonus level | Spec edit: V34 Discriminates | Removed the unexercisable "base level" claim; the level is the dispatcher's (SCD-R06) |
+| GAP: R04 consumer | Spec edit: R04 | Specified as an isolated operation; callers not claimed |
+| GAP: V10/V35 supplied stages | No change | Already gated R03b/R10 under Q08 |
+| GAP: TD-SKILLS17 row positions | No change | The table's first column gives "name / zero-based row" (for example Charged Bolt /38) |
+| DISCRIM: V01 unconditional state removal | Spec edit: V01 | No state request asserted |
+| DISCRIM: V01 removing only the first type 2 event | Spec edit: V01 | Events [2, 8, 2] become [8] |
+| DISCRIM: action return from last creator | Spec edit: V34(l) | Single failing creation returns 1 |
+| DISCRIM: f=77 written by a `>=77` clamp | Spec edit: V34 outputs | No frame-count write for M |
+| DISCRIM: V31(f) searcher depth by return value | Spec edit: V31(f) | M 1, Q 2, P 2: correct final 1; resolving to P gives 0 |
+| DISCRIM: V14 monster reach argument order | Spec edit: V14(a) | Asymmetric operation; swapped arguments reject |
+| HARDEST: R09a/V34 | Resolved by R09a/V34 edits | Frame source, callback, dispatcher boundary now explicit |
+| HARDEST: R02/V26 | No rule change | Order and logged-versus-pure boundary stated |
+| HARDEST: R03c/R03g/R03i with R10 | No rule change | Owned contracts and new asymmetric cases discriminate |
+
+COVERAGE (24, advisory): V34(k) also covers a total/current split. The others repeat existing
+branches or fall inside owned (PVP, NRF-R10) or gated (R10, R11a, Q12) boundaries; no change.
+
+R01b, R01c, R09a, R11a and R04 text changed, so the next run is FULL. It is the fourth and
+last reader run allowed in this task.
+
+## Blind-implementer FULL12 result and open triage (2026-10-15)
+
+Run type: FULL, the fourth and last reader run allowed in this follow-up task, on the
+FULL11-edited contract. Counts: MISMATCH 0, GUESS 4, GAP 9, DISCRIM 11, GATED 19, COVERAGE 20,
+HARDEST 3. Every executable vector and every LCG chain was recomputed without difference.
+
+**The pass is NOT complete.** The run cap was reached with unresolved GUESS, GAP and DISCRIM
+entries. No spec edit was made after this run, so the spec text matches the contract this reader
+reviewed. Each entry's proposed outcome is listed below. An entry marked "pending" needs its edit
+(asm-checked first when behavioral) and then a fresh FULL reader run. An entry marked "no change"
+is a proposed outcome only, until a new run confirms the resulting contract.
+
+| Finding | Proposed outcome | Reason / what would resolve it |
+|---|---|---|
+| GUESS: R13/V22(b) missing MonStats row versus missing MonStatsEx row | Pending: state both as size 0 after checking the size helper's bounds path; add a case | V22(b) pins only MonStatsEx=-1 |
+| GUESS: R09a "cap 48" in the constants row | Pending wording: the constants table groups cap 48 with action 17; say it is R03c's room cap and that n is uncapped | Text clarification |
+| GUESS: R01f whose events | Pending wording: the sentry's own pending events | Text clarification |
+| GUESS: negative delay due=frame+delay | No change | V32 pins -3 giving 97; the supplied scheduler appends due=frame+delay for any i16 |
+| GAP: delay request event type and replace/append | No change | Scheduler is Q01/Q12; the preamble's supplied effect appends due=frame+delay |
+| GAP: tier inputs (state 105, stat 172) | No change: owned | PVP section 3 and GDF-R11a/GDF-R12 define the tier read; the reader did not open GDF |
+| GAP: raw 0/8 player result versus PVP "true" | Pending: cite PVP-V13/PVP-V26 or the PVP rule that returns the masked flags | Cross-reference only |
+| GAP: missile owner-resolution condition not in section 3 | Pending: add a section 3 row naming PVP-R07's owner-link-valid condition | Input inventory |
+| GAP: Missiles.Size, object size and MonStatsEx inputs not in section 3 | Pending: add to the positions/size row | Input inventory |
+| GAP: owner-lookup/room request arguments; absent-unit handling | No change | Q12 owns the producers; the requests' issue and order are the local contract |
+| GAP: V35 supplied-only | No change | R10 is gated under Q08 |
+| GAP: R11a slow-mask source | No change | R11a is asm-only under Q05/Q12 |
+| GAP: absent caster with n>0 | No change | R09a states supplied results for the absent caster (Q12) |
+| DISCRIM: V34/V07 action identity/level equal to Skill1/instance level | Pending: add an action with skill 38, level 5 differing from Skill1 20/level 3 | R09a uses the dispatcher's arguments |
+| DISCRIM: seed hi word | Pending: enter seed {6, 0x1234}, expect hi 0x29A (NRF-R03a) | Vector strengthening |
+| DISCRIM: abs dropped in R13/R04 | Pending: candidate raw(-13, 0) expecting 11; V15 points with unit (5, 5) and negative differences | Vector strengthening |
+| DISCRIM: state 12 cleared before the missing-skill check | Pending: V08 case with state 12 active, instance absent; state stays active | Vector strengthening |
+| DISCRIM: Skill1 lookup before budget | Pending: assert no instance request in V09(a)/V05 third think | Vector strengthening |
+| DISCRIM: unsigned `aip3` | Pending: `aip3`=-1, no target, due 99 | Vector strengthening |
+| DISCRIM: V31(b) flag mask | Pending: flags 0x0A give 8, flags 0x04 give 0 (PVP-R05a mask 8) | Vector strengthening |
+| DISCRIM: collision before strict-improvement test | Pending: decide whether the collision request is logged; asm shows strict test first (0xB15E0), so a non-improving candidate makes no collision request | Needs a logged collision operation in V28 |
+| DISCRIM: searcher-side dead modes | Pending: searcher monster modes 12/17 and completion cases | Vector strengthening |
+| DISCRIM: V36 positive VelLev term | Pending: Vel 30, VelLev 8, L 9 gives (30+9)<<8, 75% = 7488 | Supplied arithmetic of asm-only R11a |
+| DISCRIM: V10(a) reach on missing target | Pending: log reach requests in the wrapper vectors; asm shows none when absent | Vector strengthening |
+| HARDEST: R03g/R03i | No change | Owned PVP contracts; the GAP cross-reference above helps |
+| HARDEST: R09a/V34 | No change | Each condition has a sub-case |
+| HARDEST: R02 with R01a/R01f | No change | Order and two call sites are explicit |
+
+COVERAGE (20, advisory): no change recorded; several overlap the pending DISCRIM cases.
+
+Reader runs in this follow-up task: four, all FULL (FULL9..FULL12). Status stays draft. The
+blind-implementer pass for this contract remains open until the pending outcomes are applied
+and a fresh FULL run returns MISMATCH 0 with every GUESS, GAP and DISCRIM resolved or gated.

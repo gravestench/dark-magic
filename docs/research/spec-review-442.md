@@ -106,19 +106,26 @@ original discrepancy and the new evidence.
 
 ## Blind-implementer passes
 
-| Spec | Runs this review | Final run (MISMATCH / GUESS / GAP / DISCRIM) | State |
-|---|---|---|---|
-| core-numeric-and-rng-foundations | 1 delta | 0 / 0 / 0 / 3 (all "no change") | Clean |
-| skill-assassin-death-sentry-corpse-damage | 1 delta | 0 / 0 / 1 / 0 (recorded "no change") | Clean |
-| skill-assassin-sentry-firing-and-range | 4 delta | 0 / 0 / 0 / 0 | Clean, but R02 was rewritten under delta runs; a full run is advisable |
-| state-timed-state-lifecycle | 3 full, 1 delta | 0 / 1 / 1 / 2 | One more delta check |
-| skill-leveled-damage-tohit-and-elements | 2 full | 0 / 4 / 8 / 9 | Post-run edits need a delta check |
-| skill-assassin-blade-sentinel-and-fury | 2 full | 0 / 7 / 7 / 11 | Recorded edits to apply, then a full run |
-| combat-damage-pipeline-order | 4 full | 0 / 9 / 6 / 17 | Proposed outcomes recorded, not applied |
-| skill-cast-start-and-do-dispatch | 4 full | 0 / 7 / 9 / 19 | Each DISCRIM needs a new asm-checked case |
-| quest-tainted-sun-world-clock | 4 full | 0 / 7 / 9 / 9 | Needs another full run |
+Two rounds. Round 1 ran on the nine specs whose rules or vectors changed in review; round 2
+finished or continued the seven that were not clean. Every run ended with MISMATCH 0: no
+reader found a wrong rule. What remains is vector discrimination, wording and coverage.
 
-No remaining entry is a wrong rule; they are vector discrimination, wording and coverage.
+| Spec | Runs (both rounds) | Final GUESS / GAP / DISCRIM | State |
+|---|---|---|---|
+| core-numeric-and-rng-foundations | 1 delta | 0 / 0 / 3 (no change needed) | Clean |
+| skill-assassin-death-sentry-corpse-damage | 1 delta | 0 / 1 / 0 (no change needed) | Clean |
+| state-timed-state-lifecycle | 3 full, 3 delta | 0 / 1 / 2 (resolved) | Clean |
+| skill-leveled-damage-tohit-and-elements | 2 full, 4 delta | 2 / 3 / 0 (resolved by wording edits) | Clean apart from an unchecked final wording edit |
+| skill-assassin-blade-sentinel-and-fury | 6 full | 2 DISCRIM open | NextHit 2 case and the R02 timer wrap need vectors, then a full run |
+| skill-cast-start-and-do-dispatch | 8 full | 2 entries open | R02/R06 wording overstates GDF-R08a; V13 must assert the R07 latch order |
+| quest-tainted-sun-world-clock | 8 full | 4 / 9 / 9 | A further full run; stage return values unspecified |
+| skill-assassin-sentry-firing-and-range | 4 delta, 4 full | 4 / 9 / 11 | Recorded entries to apply, then a full run |
+| combat-damage-pipeline-order | 8 full | 5 / 4 / 11 | Recorded entries to apply, then a full run |
+
+Round 2 also fixed behavior against the asm: sentry R10 (selector 7 excludes slot A's unit,
+a missing path-result branch); cast start R02 (reset force=1 skips the acceptance check);
+Blade Sentinel R01 to R04 arguments; Tainted Sun R01g (fatal path when the quest structure
+is missing) and R06b (the intensity request carries the derived act).
 
 ## Recommendations (not applied)
 
@@ -142,9 +149,10 @@ status-application; LSE-R01 and LSE-R16 restate the pipeline; MMC-R12a and V09 r
 MCI-R26a and V12; missile-hit keeps unlabeled alias stubs (update `coverage.md`, which cites
 `MHD-R01`, before removing them); IEP-R19 should consume LSE-R14 as crushing-blow does.
 
-**3. Finish the blind-implementer passes** in the table above, in this order: the two delta
-checks (timed states, leveled damage), Blade Sentinel, then pipeline, cast start and Tainted
-Sun, and one full run for sentry firing.
+**3. Finish the blind-implementer passes** in the table above: cast start and Blade Sentinel
+are one edit and one run away; Tainted Sun, sentry firing and pipeline order need their
+recorded entries applied and further full runs. Fresh readers keep finding discrimination
+gaps, so budget several runs each.
 
 **4. Settle names and anchors:** give `Unit +0xC6` bit 0 one name in game-data-fields (it
 has four across specs); trace the sentry and Death Sentry AI index to its MonStats column;
@@ -169,8 +177,8 @@ are out of execution order (renumbering is allowed while nothing consumes the sp
 
 ## Where things are
 
-- Fixes: 9 review commits and 1 reader-pass commit on `docs/442-spec-review` after
-  `e191ea7b`. Not pushed.
+- Fixes: 9 review commits, 2 reader-pass commits and the report on `docs/442-spec-review`
+  after `e191ea7b`, pushed to origin.
 - Per-group review notes and every reader-pass record: each spec's companion under
   `docs/research/spec-evidence/` ("Independent review (2026-10-15)" and the reader runs).
 - All specs remain `draft`: none has the runtime confirmation the done bar requires.

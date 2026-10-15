@@ -695,3 +695,149 @@ Source checks made while triaging (original D2Game 1.13c disassembly, read-only,
 Remaining to finish the blind-implementer pass: apply the open proposed outcomes above (verified against the original instructions first), then a fresh full reader run, repeating until MISMATCH 0 and every GUESS, GAP and DISCRIM is resolved or gated. Review completion is not claimed.
 
 `check_spec.py combat-damage-pipeline-order`: 0 errors, 0 warnings. No gameplay observation ran.
+
+## Pass-8 proposed outcomes applied, 2026-10-15
+
+Every pass-8 entry marked open above was applied as proposed, after a fresh read-only check of the original D2Game 1.13c disassembly: hit result 0xDE5A0 (zero to-hit return leaves hit clear and skips avoidance); build 0xDD450 (ratio 0 becomes 128 at entry; build marker 32 ORed at entry; monster skip flags 4/8/16; three independent bypass tests; poison length test reads the stored scaled magnitude; burn product wraps before the `max(0, x)` test); monster double 0x770E0 (unsigned byte compare); apply 0xDE0C0 (gate order hostility/room, town, killable, invalid/dead; no dispatcher return is tested); absorb heal 0xDB570 (state 92 refusal; cap read through the life-cap getter LSE-R11 describes); burns 0xDA970/0xDA930 (nonpositive drains return before any write); durability 0xDEBA0/0x12EE0 (W 0 takes no draw; Expansion throwable threshold 10); cold applier 0xDC780 (the E != 0 draw steps the defender); queue consumer 0xDED30 (first match from the head copied whole as 0x1C dwords; attacker mode-0 return before apply retains the queue) and removal 0xDA6D0 (every matching entry unlinked).
+
+Spec edits: DPO-R01a (to-hit return), R05 (independent bypass tests), R06b (scaled magnitude test), R11 (DMI-R04 class tests), R13a (head-most match, whole-record copy, removal of every match), R16 (LSE-R10/R11/R12 cap read), section 3 queue-entry and stat 7 rows, section 5 queue row, Depends on (DMI-R04, LSE-R11). Vectors: V03 to-hit 0; V06 cases 15-18; V07 case 6; V08 type 10 at percent 0; V10 case 13; V12 (e); V13 negative drains; V16 Crit 200; V17 (a5), (b3); V19 monster E -20; V23 ratio-0 and wrap cases; V27 (e); V28 case 10; V29 (b), (c). Rule text changed, so the next reader run is full.
+
+## Fresh full blind-implementer pass 9, 2026-10-15
+
+Full run (run 1 of at most 4 in this review task) on the contract after the pass-8 outcomes. Counts: MISMATCH 0, GUESS 7, GAP 8, DISCRIM 11, GATED 15 rules plus 24 questions, 3 observations and stage-only vectors, COVERAGE 32, HARDEST 3. Every pass-8 finding was confirmed resolved; the reader recomputed every new case.
+
+Source checks for this triage (original D2Game 1.13c disassembly, read-only, 2026-10-15): 0xDD450 (type-5 /8 is a truncating signed divide; the stat-56 cold-length test reads cold after the element rolls and before conversion; flag 32 ORed at entry; base priors of physical, elements and poison are the roll bases; weapon mode nonzero skips source a); 0x770E0 (class id tested signed against the MonStats count; with no defender the doubling stays and the marker and overlay are both skipped); 0xDE0C0 (lethal 10/9 test result 32 and result 2 only; a monster attacker whose MonStats row is missing fails the town gate; 5/1 and 6/2 require hit); 0xDE5A0 (hostility precedes reach and the hit operations); 0xDA930 (stamina remainder exactly 0x100 survives).
+
+| Entry | Outcome |
+|---|---|
+| GUESS R02b truncation and unarmed order | No change: R02b is asm-only, gated by DPO-Q27 |
+| GUESS R07 type-5 rounding, negative percent | Spec edit: truncated toward zero; negative percent already follows `max(0, physical - converted)` |
+| GUESS R22 marker without defender | Spec edit: doubling stays, neither marker nor overlay; V16 defender-absent variant |
+| GUESS R23 lethal events on the flagged form | Spec edit: both forms; record flags not tested |
+| GUESS R06b positive cold timing | Spec edit: cold after DPO-R04a, before conversion and monster double |
+| GUESS V08 100-percent type | Spec edit: type 7 |
+| GUESS R05/R22 MonStats row | Spec edit: drains read no row; valid row is class in [0, count) |
+| GAP build marker 32 producer | Spec edit: DPO-R02a states the entry OR on hit and miss |
+| GAP DPO-R31 inputs in defaults | Spec edit: conventions state class flags clear, no damage_vs_montype, weapon not Blunt |
+| GAP companion armorclass record | Spec edit: asterisk removed; the name consumes GDF-R11 |
+| GAP gates 1/2 null units, missing attacker row | Spec edit for the missing MonStats row (fails town gate); null-unit hostility/room behavior stays DPO-Q30 |
+| GAP V17 unqualified and monster/monster inputs | Vector: explicit seeds and outputs |
+| GAP DPO-R19c update in V01/V27 | Vector: V01 states the update is a supplied no-effect operation; V27 already does |
+| GAP identity mitigation | No change: vectors supply zero reductions/resistances under DMI's contract |
+| GAP V10 queued reach prose | Vector: case 14 with outputs |
+| DISCRIM V03 progressive-to-hit argument | Vector: stat 0x145 = 5 call (attacker, defender, 5, 0) |
+| DISCRIM V03 hostility last | Vector: hostility-0 case asserts no reach, to-hit or avoidance call |
+| DISCRIM prior bases | Vector: V04 case 8, V05 case 7, V07 case 7 |
+| DISCRIM V02 weapon mode | Vector: V02 case I |
+| DISCRIM hireling classes | Vector: V06 case 19 |
+| DISCRIM V10 hit-clear dispatch | Vector: case 15 |
+| DISCRIM V13 stamina exact 256 | Vector: drain 0x700 |
+| DISCRIM V16 mask 0xF0 | Vector: hitClass 0x10 and 0x80 |
+| DISCRIM V17 weights/eligibility | Vector: (b4) W 10 with a location-4 weapon |
+| DISCRIM V27 lethal placement | Vector: lethal call log includes the life write and appliers |
+| DISCRIM V29 reflection on miss, V30 miss enqueue | Vector: V29 thorns 50 with no reflection request; V30 (i) |
+| HARDEST R13a, R05, R24a | No change: each recomputed without mismatch |
+
+COVERAGE entries are advisory; the added cases cover the branches above where a result changes. Rule text changed (R02a, R06b, R07, R13a, R22, R23), so the next run is full.
+
+`check_spec.py combat-damage-pipeline-order`: 0 errors, 0 warnings. No gameplay observation ran.
+
+## Fresh full blind-implementer pass 10, 2026-10-15
+
+Full run (run 2 of at most 4 in this review task) on the contract after pass 9's edits. Counts: MISMATCH 0, GUESS 4, GAP 6, DISCRIM 13, GATED 15 rules plus 24 questions, 3 observations and stage-only vectors, COVERAGE 24, HARDEST 3. Every pass-9 change was recomputed without mismatch.
+
+Source checks for this triage (original D2Game 1.13c disassembly, read-only, 2026-10-15): 0xDD450 (the physical-supplied flag jumps only past the roll, ratio scaling and crit; the stun term multiplies by the build ratio; conversion floors physical at 0 after subtracting the unfloored converted amount; cold-length stage precedes conversion; build event 3 requires a player attacker or a hireling); 0xDE0C0 (final-life test is `life <= 0`; hostility/room failure clears results 1 and 2; town gate precedes killable; flagged events need result 32 clear and hit); 0xDED30/0xDA6D0 (reach failure removes every match; reflection then reaction on the surviving-hit tail); 0xDEBA0 (weighted walk, as V17 b4/b5 trace).
+
+| Entry | Outcome |
+|---|---|
+| GUESS NRF-R12c adjustment on stats 6/7/8/10 | Spec edit: vector conventions supply definitions for which NRF-R12c returns stored values |
+| GUESS R28a monster with state 54 | Spec edit: R28a defers to CSA-R07's routing, naming the state-54 return |
+| GUESS R02b unarmed order | No change: R02b is asm-only, gated by DPO-Q27 |
+| GUESS physical-supplied scope | Spec edit: DPO-R02a states every other build stage still runs |
+| GAP R02b vectors | No change: asm-only, DPO-Q27 |
+| GAP hostility/reach/avoidance arguments | No change: PVP-R05a and SBA own those operations; reach arguments are DPO-R01b/DPO-Q23 |
+| GAP R08c/R08d direct profiles | No change: caller profiles are gated by DPO-Q19/Q20; enqueue rejection is advisory coverage |
+| GAP reaction on a surviving hit | Vector: V29 (d) reflection then reaction then removal |
+| GAP Id-map traceability | Spec edit: V20 under R03a, V31 under R08c, V30 under R08d, V29 under R13a |
+| GAP harness logs | No change: declared harness observations |
+| DISCRIM V06 monster drain ratio | Vector: cases 20/21 at ratio 64 |
+| DISCRIM V22 stun ratio | Vector: ratio 64 stun 20 |
+| DISCRIM V08 physical floor | Vector: 150-percent case |
+| DISCRIM V14 lethal test | Vector: case 3 life 0x80 |
+| DISCRIM V10 reach-failure removal | Vector: case 14 with two matches and one non-match |
+| DISCRIM V10 gate order | Vector: cases 16 and 17 |
+| DISCRIM V10 result bits on hostility/room failure | Vector: case 18 with R=3 |
+| DISCRIM V31 result 32 and hit | Vector: cases (c) and (d) |
+| DISCRIM nonzero dispatcher results | Vector: V26 case 3; V27 (e)/(e2) with conversion, reaction and removal logged |
+| DISCRIM V27 build event 3 attacker type | Vector: V27 (f) monster, (g) hireling |
+| DISCRIM V22 length stage vs conversion | Vector: V22 build-order case |
+| DISCRIM V17 weights | Vector: (b4) reseeded to r=2, new (b5) location 4 |
+| DISCRIM V07 zero maximum with prior | Vector: case 8 |
+| HARDEST R24a, R13a, R04-R06/R21 | No change: each recomputed without mismatch |
+
+Rule text changed (R02a, R28a), so the next run is full.
+
+`check_spec.py combat-damage-pipeline-order`: 0 errors, 0 warnings. No gameplay observation ran.
+
+## Fresh full blind-implementer pass 11, 2026-10-15
+
+Full run (run 3 of at most 4 in this review task) on the contract after pass 10's edits. Counts: MISMATCH 0, GUESS 4, GAP 6, DISCRIM 5, GATED 15 rules plus 25 question entries, 3 observations and stage-only vectors, COVERAGE 23, HARDEST 3.
+
+Source checks for this triage (original D2Game 1.13c disassembly, read-only, 2026-10-15): 0xDED30 (the flags-32 replacement is inside the hit branch; a miss passes the copied flags to 7/3 and the reaction); 0xDE0C0 (clamp, leech, absorb, subtraction, burns, appliers and the death flag follow gate 7 without a hit test; only the modifier hook tests hit); 0x770E0 (tests attacker type 1, class bounds and Crit only, so hirelings double); 0xDD450 (stun, poison, burn-length and drain terms multiply by the ratio at 128); 0x12EE0 (signed `roll < threshold`).
+
+| Entry | Outcome |
+|---|---|
+| GUESS R13a flags replacement on a miss | Spec edit: replacement only on hit; V29 asserts flags 34 on the miss record |
+| GUESS stages after gate 7 without hit | Spec edit: DPO-R14 states R14..R19 run regardless of hit; V11 case 3 |
+| GUESS R02b unarmed order | No change: asm-only, DPO-Q27 |
+| GUESS R22 hirelings | Spec edit: any monster-type attacker including hirelings; section 6 hireling clause |
+| GAP V29(a)/V12 seams | No change: stated isolated stage boundaries |
+| GAP packed masks | No change: section 3 retains them as logical controls for exact vectors |
+| GAP return contracts to callers | No change: caller use is DPO-Q19/Q20 |
+| GAP block/avoid arguments | No change: SBA-R13 owns them; reach arguments DPO-R01b/Q23 |
+| GAP registration values | No change: IEP-R07/IEP-V08 own pass-through |
+| GAP monster data/Crit producer | No change: MonStats inputs in section 3 consume GDF |
+| DISCRIM V17 threshold equality | Vector: (a6) roll 4, (a7) roll 10 |
+| DISCRIM V17 weights 8/9/10 | Vector: (b6) three seeds selecting locations 8, 9, 10 |
+| DISCRIM V04 ratio 128 skip | Vector: case 9 physical 2097247 |
+| DISCRIM scale vs scaleAlways | Vector: V06 case 22, V07 case 9, V22 stun wrap, V23 length wrap |
+| DISCRIM shared record | Vector: V27 (h) callback write of physical 200 reaches the apply |
+| HARDEST R13a, R24a, attacker partitioning | No change: recomputed without mismatch |
+
+Rule text changed (R13a, R14, R22, section 6), so the next run is full.
+
+`check_spec.py combat-damage-pipeline-order`: 0 errors, 0 warnings. No gameplay observation ran.
+
+## Fresh full blind-implementer pass 12, 2026-10-15 (task run cap reached)
+
+Full run (run 4 of 4 in this review task) on the contract after pass 11's edits. Counts: MISMATCH 0, GUESS 5, GAP 4, DISCRIM 11 (V17 entry has three sub-alternatives), GATED 15 rules plus 24 questions, 3 observations and stage-only vectors, COVERAGE 36, HARDEST 3. Every pass-11 change was recomputed without mismatch. The pass is **not complete**: the entries below remain unresolved because the run cap was reached. No contract edit was made after this run. Proposed outcomes are recorded for the next round; each needs a fresh full reader run once applied.
+
+Source checks made while triaging (original D2Game 1.13c disassembly, read-only, 2026-10-15): 0xDE5A0 (the Run pre-set tests defender type 0 and mode 3); 0xDA970 (mana remainder compared signed, so a negative remainder stores 0); 0xDD450 (poison override requires stat 101 > 0); 0x12EE0 (qualification is tested before the draw; armor type takes threshold 10 before any throwable test).
+
+| Entry | Status | Proposed outcome |
+|---|---|---|
+| GUESS V27/V30 physical endpoints 256/512 | open | Spec edit: state them as post-shift endpoint values supplied to DPO-R02a (DPO-R02b production gated by DPO-Q27) |
+| GUESS V25 burn calls in the call log | open | Spec edit: the call log holds the stat writes and the five applier calls only |
+| GUESS V11 case 3 scale argument | open | Spec edit: scale request false, hostility 1 |
+| GUESS R10 state owner | open | Spec edit: states 133/131 tested on the defender |
+| GUESS V17 (a)/(c) item inputs | open | Spec edit: attacker weapon not armor type, not throwable, qualified; (c) defender item qualified |
+| GAP V27/V30/V02 endpoint inputs | open | As the first GUESS |
+| GAP V20 no-crit outputs | open | Vector: state physical, cold and coldLength of the no-crit variant |
+| GAP V27 (f)/(g) life and total | open | Vector: state life 2209, lethal clear, total 351 |
+| GAP V16 class id | open | Vector: name the attacker class; add hireling case (see DISCRIM) |
+| DISCRIM V04 mulDiv at ratio 64 | open | Vector: 21=0x2000, 22=0x2001 at ratio 64 gives 1048576 |
+| DISCRIM V03 monster in mode 3 | open | Vector: monster defender mode 3, to-hit 0, result 0 with one to-hit call (asm checked) |
+| DISCRIM V10 dead modes per type | open | Vector: monster mode 17 and player mode 12 proceed |
+| DISCRIM V13 mana negative remainder | open | Vector: mana 0x100, drain 0x200 gives 0 (asm checked) |
+| DISCRIM V22 negative stat 101 | open | Vector: stat 101 -10 gives poisonLength 16 (asm checked) |
+| DISCRIM V16 hireling double | open | Vector: class 271, Crit 60 doubles |
+| DISCRIM V23 ratio-0 normalization scope | open | Vector: ratio 0 with an elemental, drain or poison roll |
+| DISCRIM V26/V27 event-11 record copy | open | Vector: event-11 callback writes coldLength or physical, later stages observe it |
+| DISCRIM V27 durability placement | open | Vector: qualifying weapon with an event-7 callback drawing on the attacker seed |
+| DISCRIM V31 nonzero event-6 result | open | Vector: event-6 callback returning 1; event 2 still dispatched |
+| DISCRIM V17 attacker-step order/threshold/Classic armor | open | Vector: unqualified weapon (no draw), armor-type item (threshold 10), Classic armor-type throwable (draw) (asm checked) |
+| HARDEST R24a/V17, R13a/V10, R02a/R02b | no change | Recomputed without mismatch |
+
+Remaining to finish the blind-implementer pass: apply the open proposed outcomes above (behavioral ones verified against the original instructions first), then a fresh full reader run, repeating until MISMATCH 0 and every GUESS, GAP and DISCRIM is resolved or gated. Review completion is not claimed.
+
+`check_spec.py combat-damage-pipeline-order`: 0 errors, 0 warnings. No gameplay observation ran.

@@ -38,7 +38,7 @@ The migration retains the quest-plus-clock boundary and all twelve rule families
 | LOD113C-D2COMMON | `0x37C20` | 10895 | normal reset assignment | TSW-R04b | Original-image check 2026-10-15 resolves byte runs and call/write order |
 | LOD113C-D2COMMON | `0x37BA0` | — | fresh allocation/defaults | TSW-R04c | Original-image decode 2026-10-15 resolves zeroing/rate/row writes; allocator/presentation effects supplied |
 | LOD113C-D2COMMON | `0x37570` | — | advance/wrap/transition | TSW-R05, TSW-R06a | 2026-10-12 reading reused; complete no-callee core read and original decode 2026-10-15 |
-| LOD113C-D2COMMON | `0x37AF0` | 10135 | client source wrapper | TSW-R06b, TSW-R10b | Original-image decode 2026-10-15 resolves byte runs, thresholds, calls, colour override, period-only return |
+| LOD113C-D2COMMON | `0x37AF0` | 10135 | client source wrapper | TSW-R06b, TSW-R10b | Original-image decode 2026-10-15 resolves byte runs, thresholds, calls, colour override, period-only return; follow-up decode 2026-10-15 of the call slice: derived act is zero-extended into the register `0x376F0` reads as its act, the environment and source registers are set, and core `0x37570` saves/restores both, so the intensity call carries source plus derived act (same act as core and colour) |
 | LOD113C-D2COMMON | `0x2D2C0` | — | source-to-act helper | TSW-R04, TSW-R10c | C view checked against original bytes and original-image decode supply the same threshold mapping; start/reset source 0 selects act 0; semantic source production excluded |
 | LOD113C-D2COMMON | `0x37170` | — | recompute current row | TSW-R04a, TSW-R10c | Complete original-image decode 2026-10-15; no callees; writes period/ticks only |
 | LOD113C-D2COMMON | `0x376F0` | — | intensity update | TSW-R07c | Disassembly and original decode 2026-10-15; only eclipse/non-Act-IV and normal-source-120 branches verified; float/Act-IV paths excluded |
@@ -188,7 +188,7 @@ These procedures are pending, not records of completed gameplay. Use an owned va
 
 The main contract has exact local vectors, explicit supplied boundaries and draft status. New source-backed corrections close final-start ticks, client-rate preservation/recomputation, bit 14 clear, supplied threshold arithmetic and bounded intensity arithmetic. Observations, producer identities, complete save/consumer searches and helper integrations remain in the linked gap record. Historical implementation-gap entries are retained as dated records, without a new comparison.
 
-Fresh reader FULL1, FULL2 and FULL3 and their dispositions are recorded below. A fresh applicable DELTA4 check is pending for the amended vectors; the governing rules and gates are unchanged. User approval and publication acceptance are not inferred from this evidence record.
+Fresh reader runs FULL1 through FULL10 (FULL1-3 full, DELTA4 a delta check, FULL5 onward full) and their dispositions are recorded below; the latest status is at the end of this record. User approval and publication acceptance are not inferred from this evidence record.
 
 ## Fresh reader review: FULL1
 
@@ -448,3 +448,149 @@ On 2026-10-15 the next fresh full reader recomputed every case. Counts: MISMATCH
 | HARDEST V21, V19/V22, V26 | No further change |
 
 The four-run cap for this revision was reached with FULL8. Its edits changed vectors and rule wording, so a fresh reader (FULL9) is still required. One item remains open: the client wrapper's intensity act (TSW-R06b / TSW-V23). Review completion is not claimed.
+
+### Later outcome of the two open FULL8 entries (2026-10-15)
+
+| Finding | Disposition |
+|---|---|
+| GUESS R06b intensity request's act | Spec edit after asm check: D2Common `0x37AF0` loads the derived act into the act register read by `0x376F0` (the core `0x37570` preserves it), so TSW-R06b now requests intensity(source, derived act) |
+| DISCRIM V23 intensity act | Spec edit: every V23 case asserts intensity(source, derived act); the discriminator rejects a fixed act 0 at sources 40..1023 |
+
+This changes a rule input, so the run after FULL9 must be full.
+
+## Fresh reader review: FULL9
+
+On 2026-10-15 a fresh full reader (smaller model; spec, foundations, game-data fields; companion for links only) recomputed every case of TSW-V01 through TSW-V26 on the revision before the TSW-R06b intensity-act edit. Counts: MISMATCH 0, GUESS 6, GAP 9, DISCRIM 13, GATED 24, COVERAGE 24, HARDEST 3. Its findings were triaged together with FULL10 below; that table shows each entry's outcome. The TSW-R06b input change made after FULL9 was started requires a further full run in any case.
+
+## Fresh reader review: FULL10
+
+On 2026-10-15 a second fresh full reader recomputed every case on the revision that includes the TSW-R06b intensity(source, derived act) edit. Counts: MISMATCH 0, GUESS 7, GAP 10, DISCRIM 7, GATED 7 groups, COVERAGE 25, HARDEST 3. Triage re-checked D2Common `0x37570` (night bonus tests normal-row period equal to 2), `0x37660` (rate 0 jumps from the division to the cycle/period comparison; absent environment returns 0), `0x37920` (pre-clamp uses the stored rate; the message flag is stored as passed and tested as nonzero for both table choice and recomputation; colour receives the derived act from the source-to-act helper; override after both paths), D2Game `0xC71A0` (state compared with 1 as an unsigned byte; marker B and unit marker written before the active test and the final mode-update) and the altar's original bytes at `0xC7A26..0xC7A71` (count read, `jle` skips for a count <=0, successes counted separately, count re-read with a signed `jl` before each attempt).
+
+| Run | Finding | Disposition |
+|---|---|---|
+| FULL9 | GUESS R10d rate 0 continuation | Spec edit: rate 0 goes directly to the cycle/period test (`0x37660`). With rate 0 the wrap threshold is 0 and transitions need ticks >0, so no cycle change can arise; no vector added |
+| FULL9 | GUESS/GAP pre-start one request vs per player; multi-player logs | Spec edit: vector defaults define one log entry per iterated player and "after presentation" log abbreviation |
+| FULL9 | GUESS quest seed identity | Spec edit: section 3 RNG row names the game-level quest structure's seed |
+| FULL9 | GUESS R10c colour act | Spec edit: recompute intensity and colour use the client source's derived act (`0x37920`) |
+| FULL9, FULL10 | GUESS R10c raw vs normalized flag | Spec edit: flag stored as received; V25 (1,0,2) case |
+| FULL9 | GUESS R01e marker writes before mode-update | Spec edit: V21(i) mode-update snapshot (rule already ordered them) |
+| FULL9 | GAP quest initialization has no rule | No change: only its no-draw property is claimed (TSW-R12a) |
+| FULL9 | GAP V08(g) unexecutable tail | No change: gated TSW-Q10, stated in the case |
+| FULL9 | GAP V08(d) fixture | No change: corrected after FULL8 (preamble clock not present) |
+| FULL9, FULL10 | GAP R09a absent environment / act >=5 | No change: section 3 requires the act/environment; acts are 0..4 |
+| FULL9, FULL10 | GAP intensity outside two branches; initial intensity/colour values | No change: TSW-Q03 |
+| FULL9, FULL10 | GAP R04c allocation failure; lookup success with absent player | No change: rule is stated for successful allocation (TSW-Q10); an absent resolved player is already skipped |
+| FULL9 | GAP direct flag with zero cached reference | No change: the cached reference is used as is and an absent player is skipped |
+| FULL9 | GAP marker C never set to 1 | No change: writer outside this boundary, TSW-Q02 |
+| FULL9 | DISCRIM night test period >=2 | Spec edit: V15(e) |
+| FULL9 | DISCRIM fixed wrap threshold | Spec edit: V13(c) |
+| FULL9 | DISCRIM progress writer clearing stale bits | Spec edit: V20 state-1/{2,3,4} case |
+| FULL9, FULL10 | DISCRIM V07 (2,3) needs bit 3 too | Spec edit: V07(i) |
+| FULL9 | DISCRIM toggling bit 14 | Spec edit: V08(n) |
+| FULL9 | DISCRIM amulet count reset omitted | Spec edit: V26(h) |
+| FULL9 | DISCRIM V25 recompute only on 0-to-nonzero | Spec edit: V25 (5,999,1) case |
+| FULL9 | DISCRIM V25 flag == 1 | Spec edit: V25 (1,0,2) case |
+| FULL9, FULL10 | DISCRIM colour override for every act-4 source | Spec edit: V23 asserts no override at 109/1023 |
+| FULL9 | DISCRIM extra applied/pending schedule guard | Spec edit: V21(r) |
+| FULL9 | DISCRIM R01e active re-read after start | No change: equivalent within the contract. The stage branch is reachable after a run start only if a supplied callback rewrites stage to 0, and vector callbacks make no unlisted state changes; when the start is skipped, no request intervenes before the stage test. Marker order part: spec edit V21(i) snapshot |
+| FULL9 | DISCRIM V17 drift threshold weak | No change: V19 ticks-2047 case rejects it |
+| FULL9 | DISCRIM V03(a) flat +15 | No change: V15(a) rejects it |
+| FULL10 | GUESS R10d absent-environment wording | Spec edit: "an existing act whose environment is absent returns 0" |
+| FULL10 | GUESS R07c other branches | No change: TSW-Q03 |
+| FULL10 | GUESS act 3 never night | No change: already stated; V15 shows it |
+| FULL10 | GUESS V07(e)/(g) P act/client | No change: defaults already yield to case-stated values |
+| FULL10 | GUESS callbacks that set state | No change: modelled as stated in V26(e)/(f)/(g) |
+| FULL10 | GUESS R01d which player | Spec edit: the joining player's bits |
+| FULL10 | GAP V19 includes P's default client? | Spec edit: listed resync clients are the whole list |
+| FULL10 | GAP V17 Act II default | Spec edit: V17 says Act II absent too |
+| FULL10 | GAP R01d quest 10 / shared record absent | No change: join is installed on quest 10 and receives it (FULL8 record); flag records are required inputs |
+| FULL10 | GAP R01g missing game quest structure | Spec edit: section 3 lists it as a required record for TSW-R01g; no absence behavior is claimed |
+| FULL10 | GAP V08(g) absent object | No change: TSW-Q10 |
+| FULL10 | GAP schedule log omits callback identity | Spec edit: schedule(TSW-R01h timer callback, n) in V18/V21 |
+| FULL10 | GAP section 5 lacks flag/item test requests | Spec edit: added to section 5 |
+| FULL10 | DISCRIM default (1,1) overwrite skipped | Spec edit: V07(j) |
+| FULL10 | DISCRIM signed state 255 | Spec edit: V21(s) (`0xC71A0` unsigned compare) |
+| FULL10 | DISCRIM fixed pre-clamp rate | Spec edit: V25 rate-4 cases |
+| FULL10 | DISCRIM unsigned amulet compare | Spec edit: V26(h) count -1 |
+| FULL10 | DISCRIM mode argument/markers before mode-update | Spec edit: V26(a)/(b) snapshots |
+| both | GATED | No change: declared gates |
+| both | COVERAGE | Advisory; result-changing branches raised as DISCRIM are covered above; the rest are gated or reuse discriminated guards |
+| both | HARDEST V26, V19/V22, V21 | No further change; the added snapshots and cases address the ordering points they name |
+
+Vectors, a rule input (TSW-R06b) and rule wording (TSW-R10c, TSW-R10d) changed, so the next run is FULL11.
+
+## Fresh reader review: FULL11
+
+On 2026-10-15 a fresh full reader recomputed every case on the revision with the FULL9/FULL10 edits. Counts: MISMATCH 0, GUESS 8, GAP 9, DISCRIM 15, GATED 5 groups, COVERAGE 25, HARDEST 3. Triage re-checked D2Game `0xC7250` (state and scheduled tested as nonzero bytes; a null game quest structure takes the assertion call before the draw), `0xC6AF0` (scheduled cleared first; applied tested as nonzero), `0xC7130` (failure writes pending 1 and requests the Quest-event; success writes applied 1 only), `0xC5E30` (state compared with 4 only; no stage test), `0x2CA20` (direct-player test is bit 0 of the client flag word), D2Common `0x37BA0` (allocation requests intensity with source/act 0, then colour with act 0), `0x37920` (negative and >=6 cycles and negative ticks each assert) and `0x37AF0` (the ticked environment is the supplied act's).
+
+| Finding | Disposition |
+|---|---|
+| GUESS R06b which environment is ticked | Spec edit: the caller-supplied act's environment; derived act is only the core act argument and presentation act |
+| GUESS R02b step 2 notifications inside the active test | Spec edit: "still inside this active test" (V26(e)/(f) already show it) |
+| GUESS R02b step 4 slot | Spec edit: slot 11 named for each write |
+| GUESS R01d pending on success | Spec edit: success leaves pending unchanged; V07(k) |
+| GUESS R04c request order | Spec edit: intensity, then colour |
+| GUESS absent object on active branch | No change: TSW-Q10, V08(g) stops at eligibility |
+| GUESS R10c derived act mapping | Spec edit: the TSW-R06b threshold mapping |
+| GUESS notification/tracking literal arguments | No change: literal values are the stated arguments; meanings are TSW-Q10 |
+| GAP intensity values unasserted | No change: TSW-Q03; only the two supplied branches are reproduced |
+| GAP V23 colour bytes depend on supplied request | No change: presentation is supplied by design; only the override is fixed |
+| GAP R09a absent environment | No change: required input |
+| GAP R08a act argument | Spec edit: section 3 retry act argument row |
+| GAP V08/V26 "supplied remaining work" | No change: stage boundaries are stated in each case |
+| GAP V17 initial game frame | No change: the assertion is the increase of 1000 |
+| GAP marker C never set | No change: TSW-Q02 |
+| GAP item search region | No change: TSW-Q10 |
+| GAP derived act / current-clock flag type | Spec edit: derived act added to section 5; flag width is the World-clock input row's u8 |
+| DISCRIM V01 flag cleared before first intensity | Spec edit: V01 incoming-flag-1 case |
+| DISCRIM start requires client state 4 | Spec edit: V01 client-state-3 case |
+| DISCRIM nonzero-act filter | Spec edit: V09(d) |
+| DISCRIM core flag == 1 | Spec edit: V14(c) (stored flag 2) |
+| DISCRIM V05 normal compare table | Spec edit: V14(c) also rejects it |
+| DISCRIM V10 period kept on transition | No change: V03(b), V12(b), V13 reject it |
+| DISCRIM R01e active re-read | No change: equivalent within the supplied-callback contract (FULL10 record) |
+| DISCRIM timer applied == 1 | Spec edit: V21(c) applied 2 |
+| DISCRIM schedule state/scheduled == 1 | Spec edit: V18(i)/(j) |
+| DISCRIM altar timer stage test | Spec edit: V26(d) state 4/stage 0 |
+| DISCRIM assertions before eligibility; negative cycle | Spec edit: V25 ineligible (6,0,0) and eligible (-1,0,0) |
+| DISCRIM direct flag value 2 | No change: the contract input is the single direct-player bit; other bits of the original flag word are not inputs |
+| DISCRIM reset with flag already 0 | Spec edit: V02(d) |
+| DISCRIM V24 act 3 | No change: Act-IV intensity is TSW-Q03 |
+| GATED | No change: declared gates |
+| COVERAGE | Advisory; result-changing branches raised as DISCRIM are covered above |
+| HARDEST V26, V21, V19/V22 | No further change |
+
+Vectors and rule wording (TSW-R01d, TSW-R01g, TSW-R02b, TSW-R04c, TSW-R06b, TSW-R10c) changed, and TSW-R01g gained an assertion branch, so the next run is FULL12, the last within this task's cap.
+
+## Fresh reader review: FULL12
+
+On 2026-10-15 a fresh full reader recomputed every case on the revision with the FULL11 edits. Counts: MISMATCH 0, GUESS 4, GAP 9, DISCRIM 9, GATED 22, COVERAGE 14, HARDEST 3. Triage re-checked the D2Game diagnostic format string (`changing state to %d` followed by one line feed; `Finished quest` has none), the altar loop bytes (attempt index zeroed, incremented by 1), D2Common `0x376F0` (the flag-nonzero branch subtracts only above 32, then floors) and the NRF-R01 step for seeds {0,665} and {0,668} (new lo equals the old hi).
+
+| Finding | Disposition |
+|---|---|
+| GUESS V23 supplied environment | Spec edit: each V23 case supplies Act I with the default clock as the ticked environment |
+| GUESS newline form | Spec edit: TSW-R07e names one line feed (0x0A), no carriage return |
+| GUESS amulet attempt index | Spec edit: index starts at 0 and increases by 1 |
+| GUESS recipient act | No change: TSW-R07a already says the act is the recipient client's act |
+| GAP V18(a) | No change: only the no-draw property of the eight bodies is claimed (earlier records) |
+| GAP intensity values; colour bytes | No change: TSW-Q03; presentation is supplied. V23 now fixes the supplied colour result |
+| GAP returns of join, animation, event slices and direct retry | Open: section 5 assigns them no return value and no vector asserts one. Callers' use of these results is outside the stage boundary (TSW-Q10). Whether to state "no specified return" or read the returned values is left for the next pass |
+| GAP V08(g) absent object | No change: TSW-Q10 |
+| GAP state after a fatal assertion | No change: the fatal path is terminal; only the absence of a normal return is asserted |
+| GAP neutral naming | No change: markers and keys are already neutral names or fixed constants without layouts |
+| GAP client-list source/order; join/snapshot order | No change: supplied integration (TSW-Q10), stated in the cases |
+| DISCRIM argument-free intensity/colour log entries | Spec edit: vector defaults define them as intensity(source 0, act 0) and colour(act 0) in server stage logs |
+| DISCRIM V23 override before colour | Spec edit: supplied colour writes (1,2,3); source 120 ends at (245,240,255), others at (1,2,3) |
+| DISCRIM V25 fixed act 0 in recompute | Spec edit: V25 source-75 case (act 2) |
+| DISCRIM V24 unconditional subtract | Spec edit: V24 intensity -2147483648 case |
+| DISCRIM V17 act order / >=16 | No change: V19's two-act frame case and its 2047/2175 pair reject both |
+| DISCRIM unit act vs client act | No change: the contract has only the client act as recipient input |
+| DISCRIM V05 compare table | No change: V13/V14 reject it |
+| DISCRIM V18 single reduction sample | Spec edit: V18(k) results 3 and 0 |
+| GATED | No change: declared gates |
+| COVERAGE (14) | Advisory; no further vectors |
+| HARDEST V26, V21, V19/V22 | No further change |
+
+## Review status after FULL12
+
+Four reader runs were made within this task (FULL9-FULL12, all full). Every run returned MISMATCH 0. FULL12's edits added vector cases and assertions and clarified TSW-R02b and TSW-R07e. Under the "When to stop" rule a further fresh run (FULL13) is required, and the task cap prevents it here. One FULL12 GAP is still open: the unspecified return values of the join, animation, event and direct-retry stages. Review completion is not claimed.

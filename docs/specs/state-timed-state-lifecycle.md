@@ -233,12 +233,12 @@ Each vector uses supplied dependencies that log calls in order. FreeList removes
   - Discriminates: Head restart revisits A and retains future expiry 1080; an untimed list is never due.
   - runtime_observed: no
 
-- **STL-V04** Zero duration (STL-R01/STL-R04/STL-R06a; boundary: supplied-input stage)
-  - Inputs: now 1000; monster freeze list timed/expiry 1000 from supplied duration 0; requested event 1000; supplied FreeList removes it; separate timed L expiry 5 on a different unit's primary chain
+- **STL-V04** Zero duration (STL-R01/STL-R04/STL-R06a; frame-1001 routing per STL-R02/STL-R03 as in STL-V02; boundary: supplied-input stage)
+  - Inputs: now 1000; monster freeze list timed/expiry 1000 from supplied duration 0; requested event 1000; supplied FreeList removes it; separate timed L expiry 5 on a different unit's primary chain, then an STL-R06a expiry write of 0 to L
   - Seeds: `no draw`
   - Draws: none
   - Trace: Clamp event 1000 to 1001;1000<=1001 requests free. Set L expiry 0, retaining timed; positive next event sees 0<=now.
-  - Outputs: Event 1001; at frame 1001 it calls ExpireLists(unit,1001), which requests free. L expiry 0/timed true; ExpireLists on L's unit at frame 1 (below the input expiry 5), requests free of L.
+  - Outputs: Event 1001; immediately after scheduling at frame 1000 the free log is empty (no free request before frame 1001); at frame 1001 it calls ExpireLists(unit,1001), which requests free. L expiry 0/timed true; ExpireLists on L's unit at frame 1 (below the input expiry 5), requests free of L.
   - Discriminates: Zero duration does not remove synchronously or clear timed.
   - runtime_observed: no
 

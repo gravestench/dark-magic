@@ -481,3 +481,138 @@ the entries marked "open" below need the stated edit and a further reader run.
 Remaining for completion: apply the open fixture/vector edits (no rule behavior change is
 proposed; each was checked against the cited instructions), then one fresh full reader run
 including SCD-R06..R08 and the MMC fixture defaults.
+
+### FULL4 open edits applied (2026-10-15)
+
+Each open FULL4 entry was checked against original disassembly of D2Game 0x96310, 0x9FA30 (target resolver: X through its register out pointer, Y through its stack out pointer), 0x95560, the 0x91340 and 0x91240 entries, 0x40860, 0xDFA90, 0x3E590, 0x39B40 and the 0x3A4E0 roller call sequence before editing.
+
+| FULL4 entry | Instruction evidence | Edit |
+|---|---|---|
+| GUESS R03 whose completion condition | 0x40860 passes the looked-up owner to 0xDFA90, which tests that unit's completion bit before its kind | R03: "the owner's completion condition" |
+| GUESS V01/V02 ToHit; GAP MMC fields | Text cells in TD-BLADE-MISSILES (ToHit 1, CollideType 3) | Section 8.1 contact defaults: ToHit 1, CollideType 3, Explosion 0, AlwaysExplode 0, CollideFriend 0, CollideKill 0, LastCollide 0, present hostile owner |
+| GUESS V02(c) filter | MMC-R11 type gate | V02(c) names a CollideType rejection (CollideType 1 with a monster target after FULL6) |
+| GUESS/GAP V05/V09 skill, level, selection | 0x96310: the selection out-value is never reread; creation receives (game, caster, 0, 0, row, skill, level) | V05/V09 inputs skill 257, level 10, selection 7; V09(a) asserts creation carries neither the cast point nor the selection |
+| GUESS V05(a) summon room; DISCRIM placement room | Placement room is the room getter applied to the caster | V05(a) summon in room B (at (7, 7) after FULL6); placement asserts caster room A and caster position |
+| DISCRIM V05(c) collision result | 0x40860 ignores the 0x3F320 result and returns 1 | V05(c) adds collision result 2 |
+| DISCRIM V05(d) end result | End result ignored, return 2 | V05(d) mode-12 case end returns 1 |
+| DISCRIM type-2 removal scope | The summon event loop compares the event type byte with 2 before unlinking | V05(a) pending type 2 (due 150) and type 12 (due 160); only type 2 removed |
+| DISCRIM V09/V03 zero selection or missile | 0x96310 and 0x95560 use signed nonnegative tests | V09(e) selection 0; V03(i) selected missile 0 |
+| DISCRIM V03 unsigned timer | 0x95560 compares release time with frame using a signed jump | V03(j) timer -1 opens at frame 100 |
+| DISCRIM V05(d) mode table | 0xDFA90: player modes 0/17 and monster modes 0/12 unavailable; every other kind unavailable | V05(f) mode/kind/completion matrix |
+| DISCRIM V11 swapped min/max ids | 0x39B40 reads the maximum (register argument) first; 0x3A4E0 passes 22/21, 49/48, 53/52, 51/50, 55/54, 58/57, 317/316 | V11(d, f) read logs; new V11(h) fourteen-read order |
+
+Lint after these edits: 0 errors, 0 warnings. R03 wording and vectors changed, so the next run was full.
+
+### Independent reader FULL5 (2026-10-15)
+
+Run type: full; first of at most four runs in this task. The reader (Sonnet) received the spec, foundations, GDF and the section 9 dependencies, with SCD-R06..R08 named explicitly. It recomputed 49 cases. Counts: MISMATCH 0, GUESS 4, GAP 7, DISCRIM 10, GATED grouped (R05b/R05c/R06b/R07/R09b/R10b, Q01..Q10, O01..O03, STL-Q10, STL attach/free, stage-only vectors), COVERAGE 14, HARDEST 3. New instruction evidence: 0x3E590 zero-extends NextDelay, schedules event 12 with three zero parameters and attaches with condition 1.
+
+| Finding | Disposition |
+|---|---|
+| GUESS R02 absolute-target representation | No change: semantic fields listed; MCI owns the request representation |
+| GUESS R03 counter write in the log | Spec edit: V05(c)/(f) assert the exact ordered log synchronize, counter write 10, collision |
+| GUESS R04 callback/event/attach values | Spec edit: R04 states event 12 without callback and with zero auxiliaries, the opaque MMC-R16 contact-expiry callback and attach condition 1; V01/V02(a) assert them |
+| GUESS R03 absent missile end | Spec edit: new V05(g) |
+| GAP R01 selection/target arguments | No change: supplied operations, results only; no vector credits their arguments |
+| GAP R02 selection/P arguments | Spec edit after FULL6: arguments verified and asserted |
+| GAP expiry callback identity | No change: MMC-R16 opaque token; position asserted |
+| GAP owner-reference condition type | No change: Q09 |
+| GAP V01 hit handler not asserted | Spec edit: V01 asserts the hit-handler request after hitbymissile (handler supplied 0); later flow is MMC-owned |
+| GAP V07 supplied seeding creator | No change: declared supplied-input boundary |
+| GAP R12c other field copies | No change: explicitly not asserted |
+| DISCRIM V05 monster mode 17 | Spec edit: V05(f7) |
+| DISCRIM player completion / other kinds | Spec edit: V05(f8) player completion, V05(f9) missile kind 3 |
+| DISCRIM V05(c) order | Spec edit (with the GUESS above) |
+| DISCRIM arming before to-hit | Spec edit: V01/V02(a) logs start with the to-hit request |
+| DISCRIM arming after the handler | Spec edit: V01 hit-handler request follows arming |
+| DISCRIM attach argument / schedule parameters | Spec edit: asserted |
+| DISCRIM NextDelay signedness | Spec edit: V02(h) NextDelay 200, expiry 300 |
+| DISCRIM progression vs missile order | Spec edit: V03(k) selected missile -1 makes no progression request (0x95560 calls 0x91340 before 0x91240) |
+| DISCRIM V09 row vs selection order | Spec edit: V09(f) invalid row makes no selection request (0x96310 bound check precedes 0x9EE50) |
+| DISCRIM percentage identity -1 | Spec edit: V11(e) percentage read log 329, 357, 330, 331, 332, 329 and none for physical; identity -1 is not used by R12c callers (COVERAGE) |
+| COVERAGE (14) | No change beyond the edits above: remaining branches share existing result recipes or are MMC/NRF/MCI-owned |
+| HARDEST V05(a)/R01, V01/V02, V10(d, e) | No change beyond the edits above |
+
+### Independent reader FULL6 (2026-10-15)
+
+Run type: full (R04 argument wording and vectors changed). It recomputed 53 cases. Counts: MISMATCH 0, GUESS 10, GAP 10, DISCRIM 7, GATED grouped, COVERAGE 8 groups, HARDEST 3. New instruction evidence: 0x95560 calls 0x91340 with (skill identity, caster) and 0x91240 with (caster, skill identity, invocation level).
+
+| Finding | Disposition |
+|---|---|
+| GUESS 8.8 vs raw component | No change: section 3 states raw integer vector values; R12 returns the roll |
+| GUESS V04 weapon ranges | No change: context only |
+| GUESS R01 target/selection arguments | No change: supplied operations |
+| GUESS R01 absent caster | No change: as FULL4 |
+| GUESS R02 progression arguments; DISCRIM V03 argument order | Spec edit: R02 names (caster, skill) and (caster, skill, level); V03(a) logs them |
+| GUESS refresh literal 1 | No change: opaque literal, Q09 |
+| GUESS owner resolution | No change: supplied lookup, Q04 |
+| GUESS V05(b) requested vs stored | No change: same value; STL-Q10 |
+| GUESS hit-handler arguments | No change: MMC-owned, not asserted |
+| GAP summon position; DISCRIM placement position | Spec edit: summon at (7, 7); placement asserts the caster position |
+| GAP caster level read | Spec edit: defaults state the layer-0 stat 12 read returns 30 |
+| GAP creation start, to-hit arguments, contact return, missile 506 identity, weapon interface, i16 width, command shape, dispatcher result | No change: MCI/MMC-owned, fixture-only, gated by Q04/Q05, or width already stated |
+| DISCRIM V02(c) CollideType 0 only | Spec edit: V02(c) uses CollideType 1 with a monster target; remaining type predicates are MMC-R11/MMC-V08 |
+| DISCRIM V10(e) exact mulDiv | No change: V10(d)'s return 202885 rejects exact-precision mulDiv |
+| DISCRIM V08 swapped physical ids | No change: V11(h) read log |
+| DISCRIM V07 action-side seeding | No change: V03(a) asserts no draws with a non-seeding creator |
+| DISCRIM placement success | Spec edit: V05(a) placement returns 0 and 1 |
+| COVERAGE / HARDEST | No change |
+
+### Independent reader FULL7 (2026-10-15)
+
+Run type: full (R02 argument wording changed). It recomputed 53 cases. Counts: MISMATCH 0, GUESS 6, GAP 9, DISCRIM 6, GATED grouped, COVERAGE 16, HARDEST 3.
+
+| Finding | Disposition |
+|---|---|
+| GUESS R01 row check vs selection order | Spec edit: R01 states the row check precedes the selection request (0x96310) |
+| GUESS R02 release-time read position | No change: not observable; rule order stated |
+| GUESS R03 kind vs completion order | No change: both give unavailable; equivalent outcome |
+| GUESS V01 same or different missile; DISCRIM per-missile cooldown | Spec edit: V01's contact at 110 is a different missile with fresh fields |
+| GUESS ToHit 0; R12b read position | No change: MMC-owned coverage; matches the rule |
+| GAP creator shape, stat 19/handler arguments, local fixture inputs, stat names, last collision, step arguments, post-handler return, dispatcher result, V05(b) | No change: MCI/MMC-owned, fixture-declared, TD-BLADE-STATS, or gated by Q04/STL-Q10 |
+| DISCRIM V03 refresh on early returns | Spec edit: V03(e, f, g, k) have state 12 true and no refresh (0x95560 early returns bypass the state 12 test) |
+| DISCRIM owner/source swap | No change: both are the caster by rule; equivalent within this boundary |
+| DISCRIM V04 snapshot | No change: R08 scope; Q05 |
+| DISCRIM NextDelay clamp; V05(d, e) | No change: V02(h) rejects the clamp; the reader found no remaining alternative for V05 |
+| COVERAGE / HARDEST | No change |
+
+### Independent reader FULL8 (2026-10-15)
+
+Run type: full (R01 order wording and vectors changed). This was the fourth and last run allowed in this task. It recomputed 53 cases. Counts: MISMATCH 0, GUESS 11, GAP 9, DISCRIM 11, GATED grouped, COVERAGE 20, HARDEST 3. Reader coverage limit: it opened only parts of NRF, GDF, SCD, MMC, STL and SCX and did not open MCI, MDP, MSD, HRC, MHD or the companion; it states that no vector needed them. No spec edit was made after this run, so the contract it read is the current one.
+
+| Finding | Disposition |
+|---|---|
+| GUESS R01 absent caster | No change: the rule writes only a present caster's marker and continues to target resolution (0x96310 tests and skips), as FULL4 |
+| GUESS placement zeros / absent caster room | No change: literal arguments; meanings Q09 |
+| GUESS R02 node key | No change: SCD-R06 owned-skill lookup; supplied result |
+| GUESS creation request shape | No change: MCI-owned request; semantic fields listed |
+| GUESS state 12 test | No change: NRF-R12a active-state read, GDF-R12 |
+| GUESS owner without a room | No change: supplied synchronization; Q04/Q09 |
+| GUESS kind vs completion order | No change: equivalent outcome |
+| GUESS miss/hit contact returns | No change: MMC-R14/R15 and MMC-V10 own them; not asserted |
+| GUESS V05(b) | No change: STL-Q10 |
+| GUESS stat-read adjustment | No change: fixtures supply returned layer-0 values |
+| GAP P=6 | Gated: supplied P, Q03 |
+| GAP missile 506 | No change: fixture id; TD-BLADE-MISSILES Id 506; Q04 |
+| GAP weapon A ranges | No change: context only, not consumed |
+| GAP fixture-only rooms/events | No change: declared fixtures |
+| GAP absence outputs not in section 5 | No change: they are absences of section 5 outputs (creation, refresh, type 2 removal/request) |
+| GAP creation argument list | No change: as the GUESS above |
+| GAP SCD activation/mana requests | Gated: Q02/Q04; vectors assert callback returns only |
+| GAP event removal key | No change: R01 removes the summon's pending type 2 events |
+| GAP unopened dependencies | No change: the reader states no vector depends on them |
+| DISCRIM V02(b, c) filter order | No change: MMC-R11 owns the order; MMC-V08(a) (state 86 rejects with last collision unchanged) and the MMC-V08 base case (last write before type rejection) discriminate it |
+| DISCRIM NextHit==1 vs nonzero | **Open**: every BSF and MMC vector uses NextHit 0 or 1. Proposed edit: a V02 case with NextHit 2 (state 86 on rejects; a miss arms). 0x3E590 tests the byte as nonzero; the 0x3EDE0 state 86 entry test should be rechecked before editing. Needs a further reader run |
+| DISCRIM state bit vs list | No change: V02(b) has state 86 on with no list, so a list test would not reject |
+| DISCRIM arming after damage fill | No change: V01 places arming before the hit-handler request, which precedes the fill under MMC-R14; MMC-V10(e) orders handler then fill |
+| DISCRIM handler on a miss | No change: MMC-V10(a, b) own the AlwaysExplode miss branch |
+| DISCRIM owner/source swap | No change: equivalent within this boundary |
+| DISCRIM frame+duration overflow | **Open**: R02 states i32(frame+duration) under section 3's low32 wrap, but no vector exercises it. Proposed edit: a V03 case with frame 2147483647, timer 2147483646, duration 5, expecting timer -2147483644 (0x95560 uses a plain add), then a further reader run |
+| DISCRIM V04 snapshot | No change: R08 scope; Q05 |
+| DISCRIM V08 order | No change: V11(e) |
+| DISCRIM dispatcher always 1 | Gated: Q04 |
+| DISCRIM negative percentage with a large endpoint | No change: NRF-R05 owns mulDiv branches and their vectors; R12b consumes it in the stated operand order |
+| COVERAGE (20) | No change: advisory; shared result recipes or MMC/NRF/MCI-owned |
+| HARDEST V01/V02, V05, V10(d, e) | No change: order and owners stated |
+
+**Outcome.** Four reader runs (FULL5..FULL8) were made in this task, and every run returned MISMATCH 0. The blind-implementer pass is **not complete**: FULL8 leaves two DISCRIM entries open (NextHit values other than 0 or 1; the R02 timer wrap). Both need a vector edit and one further full reader run. Every other FULL8 entry is resolved or gated above. The document remains draft.

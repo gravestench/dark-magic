@@ -614,3 +614,175 @@ These rule clarifications and new vector cases require fresh full reader 10, the
 | HARDEST: V09; R06/V12; R09a/V14 | No change in this pass |
 
 Lint after recording: 0 errors.
+
+## Resolution of the reader-10 open entries
+
+2026-10-15, follow-up task. Every reader-10 entry marked open was resolved before a new reader ran. Plain instruction reads (no byte-matching view existed for these routines): D2Game validator 0xA0830, start dispatch 0x9FD00, action dispatch 0xA19A0, frame handler 0x79170, frame action 0xA2060, point-target entry 0x78840, mode-change dispatcher 0x78550 and its acceptance check 0x77FA0; D2Common #10542 (RVA 0x2F0C0) and #10537 (RVA 0x4E240).
+
+| Finding | Outcome |
+|---|---|
+| GUESS: V06(a) log omits clear current skill | Spec edit: the validator town branch calls set current skill(unit,absent) before the player reset (0xA0925..0xA0966 span); V06(a) exact log now includes it |
+| GUESS: low-24-bit narrowing | Spec edit: #10542 keeps the low byte and adds `arg << 8`, so bits 8–31 hold the argument's low 24 bits; the action dispatcher tests `[+0x38] & 0xFFFFFF00` for nonzero. Section 3 and R09a state an unsigned 0..0xFFFFFF value consumed only as zero/nonzero; V14(l) (0x00800000 → 8388608) and V14(m) (0xFF000000 → 0) added |
+| GUESS: action-dispatch tuple order | Spec edit (wording): preamble names (id, level, consume, forced, itemTarget) |
+| GUESS: delay/perdelay request with empty reference | Spec edit (wording): 0xA19A0 and 0x9F3B0 call #10786 unconditionally on the stated paths; #10786 is D2Common 0x51BF0, the SCX-R11 skill-pool front end per the expression companion. Section 3 states the request and that an empty reference yields 0 inside SCX-R11. This also settles the reader-10 SCX pool GAP |
+| GUESS: "differs from unit" | Spec edit (wording): the validator compares the target pointer with the unit pointer (`cmp eax, esi`); R02 says object identity |
+| GAP: columns cited to GDF-R07/GDF-R08a that those rules do not list | New open question SCD-Q13 (outside-boundary, owner core-game-data-fields). The instructions settle this spec's consumer read widths (srvmissile signed 16-bit at Skills +0x46, anim u8 +0x10, lineofsight u8 +0x18F, perdelay/delay 32-bit references +0x128/+0x190, Missiles Param2/sHitPar1 32-bit +0x3C/+0x4C) but not the loader schema, which this spec may not edit. Section 3 now cites GDF-R08a/GDF-R13 only for columns they list. No local rule or vector is gated |
+| GAP: perdelay/delay pool in SCX | Resolved with the front-end wording above |
+| GAP: reset force=1 not in NRF-R14a | Spec edit: the reset is a call to D2Game 0x78550 with (game,unit,skill=none,mode 5,0,0,force 1). In 0x78550 a nonzero last argument skips the call to 0x77FA0, a mode-change acceptance check, before the mode handler runs; the earlier 0x78340 check runs regardless. R02 now names the force control by that effect; actual mode-change execution stays SCD-Q10. No meaning is adopted from the 0x77FA0 label |
+| GAP: V02 start path | Spec edit (wording): direct start dispatch with force=0 |
+| GAP: fatal outcome and creator-observed latch missing from section 5 | Spec edit: two section 5 rows added |
+| DISCRIM: marker -1 with charges 0 | Spec edit: V12(s). #10537 returns 0 without writing outputs when the node marker is -1, so the charges test is skipped (0xA0894..0xA08C7 span) |
+| DISCRIM: charge test before eligibility | Spec edit: V12(r). Eligibility 0x9FC00 is called before the level request and #10537 |
+| DISCRIM: validator identity check after refresh/party | Spec edit: V12(t). The identity/record check precedes the 0xE07A0 refresh |
+| DISCRIM: reset for kind 2 | Spec edit: V03(d). The reset branch tests kind == 0 (`cmp dword ptr [esi], 0`) |
+| DISCRIM: selectors 7–255 | Spec edit: V07(h). `movzx; dec; cmp 4; ja` returns 0 for every selector above 5 |
+| DISCRIM: line test versus start bound | Spec edit: V17(h). The line test (0x9FDBC) precedes the bound (0x9FE28) |
+| DISCRIM: line test versus second room | Spec edit: V17(i). The second room lookup (0x9FD6E) precedes the line test |
+| DISCRIM: second-room town result | Spec edit: V17(j). A present second room reaches the town test; a true result clears and resets |
+| DISCRIM: populated-callback purge with force | Spec edit: V11(f). The purge at 0x9FE8C follows any nonzero callback result regardless of force |
+| DISCRIM: aura-only purge | Spec edit: V11(g). The purge tests only the periodic flag mask (`[mask+0x18]`, flag 6) |
+| DISCRIM: exceptional plus ordinary route | Spec edit: V14(h). Predicate 2 jumps straight to the frame action (0x791C2 → 0x791EB) |
+| DISCRIM: ordinary test when A set and predicate not 2 | Spec edit: V14(i). A predicate other than 2 falls to the latch/code test |
+| DISCRIM: frame return independent of action result | Spec edit: V14(j)/(k). The handler returns 1 + (finished predicate nonzero); the frame action's result is discarded |
+| DISCRIM: scheduling after nonzero action result | Spec edit: V14(k). 0xA2060 calls the scheduler unconditionally after the action dispatch |
+| DISCRIM: itemTarget alone | Spec edit: V13(h). Resolution needs both controls nonzero |
+| DISCRIM: delay !=0 versus >0 | Spec edit: V18(e). `test eax, eax; jle` after the delay evaluation |
+| DISCRIM: srvmissile=0 | Spec edit: V13(i). The missile test is `test ax, ax; jl` (signed, 0 valid) followed by the record lookup |
+| DISCRIM: missile record absent | Spec edit: V13(j). An absent record takes the no-missile branch |
+| DISCRIM: point-route entry with failing validator | Spec edit: V09(e). 0x78840 discards the validator result, as on the unit route |
+
+The R02 force wording, the 24-bit format and the section 3 ownership citations change an input or ownership statement, so the next reader run is full.
+
+## Full blind-implementer reader 11 and triage
+
+2026-10-15. Fresh smaller reader (first run of this follow-up task), same file set and restrictions; full run. Counts: MISMATCH 0, GUESS 11, GAP 10, DISCRIM 10, GATED 6 grouped, COVERAGE 24, HARDEST 3. Triage source checks (plain instruction reads): D2Game 0x787C0/0x78840 (mode-set return discarded), 0x9F3B0 (periodic-or-aura gate at 0x9F3E8, clamp before the repeat-kind test), 0xA0830 party/identity tests, 0x9FD00 second-room/town and purge paths, 0xA19A0 town clause, missile result and request returns, 0x79170 argument store first.
+
+| Finding | Outcome |
+|---|---|
+| GUESS: R01/V09 mode-request return | Spec edit: both entry routes discard the #11090 return; R01 states returns are not consulted and the V09 fixture mode setter returns 0 |
+| GUESS: R03 town test only for a present second room | Spec edit: an absent second room jumps straight to the clear (0x9FD8F); R03 says so |
+| GUESS: default town-test result | Spec edit: defaults state false |
+| GUESS: R06 condition A node | Spec edit: the current skill node (#10397 on the current skill) |
+| GUESS: R07 creator return | Spec edit: V13(k) creator return 5 still gives 1 (result stored as 1 after both creator calls) |
+| GUESS: R05a/R08 resource request returns | Spec edit: not consulted (no test after 0x9F850, 0xA1790, 0x9FF70 calls) |
+| GUESS: R09b two level requests | Spec edit (wording): R09b's request is separate from R06's |
+| GUESS: V13(c) i32 position | No change: section 3 gives i32 position requests and V13 already limits extreme values to the supplied arithmetic boundary; producers SCD-Q10 |
+| GUESS: V12(k)/(m) object identity | Spec edit: default player id 1 and V12(v) |
+| GUESS: R02 absent record for in-range id | Spec edit (wording): GDF-R08a gives every in-range identity a record; TargetAlly/InTown are read only after the identity check |
+| GUESS: R01 pending-event removal scope | No change: supplied log-only request, SCD-Q10 |
+| GAP: unspecified dependency argument lists, activation level | No change: supplied decisions/requests; actual contracts SCD-Q01/SCD-Q06/SCD-Q10 and missile creation |
+| GAP: pending-event removal/mode-state reset scope | No change: SCD-Q10 |
+| GAP: dependency returns | Resolved by the R01/R05a/R08 wording above |
+| GAP: R02 absent record | Resolved with the GUESS above |
+| GAP: unit ids | Resolved by the default player id |
+| GAP: unit-position source | No change: supplied i32 position; producer SCD-Q10 |
+| GAP: SCD-Q13 columns | No change: declared outside-boundary question |
+| GAP: mana cost 256/quantity 1 as fixtures only | No change: declared supplied resource effects in section 8; actual costs SCD-Q10 |
+| GAP: V09(a)/V10 creator arguments | No change: creator arguments are asserted in V01(d)/V09(a)/V13; full creator contract outside |
+| GAP: stored target values in section 5 | Spec edit: first section 5 row names the stored point and selected unit target |
+| DISCRIM: V03 reset on r<=0 | Spec edit: V03(e) return -1, no reset (`test edi, edi; jne`) |
+| DISCRIM: V07(c) resolution with lineofsight=0 | Spec edit: V07(c) asserts no resolution request |
+| DISCRIM: success test on x only | Spec edit: V07(i) (30,0) failing |
+| DISCRIM: purge gate periodic && !aura | Spec edit: V11(h) both set purges; V05(f) both set schedules |
+| DISCRIM: party rejection == 1 | Spec edit: V12(u) result -1 rejects |
+| DISCRIM: id comparison | Spec edit: V12(v) |
+| DISCRIM: creator return propagated | Spec edit: V13(k) |
+| DISCRIM: argument stored after action | Spec edit: V14(n)/(o) with Sequence delay; #10542 is called before any other frame work |
+| DISCRIM: V09 abort on mode return 0 | Spec edit: fixture return 0 and discriminator sentence |
+| DISCRIM: clamp skipped for nonzero repeat kind | Spec edit: V15(f) perdelay 3 → p=5, due 101 |
+| GATED (6 grouped) | No change: existing boundaries, now including SCD-Q13 |
+| COVERAGE: R06 town clause | Spec edit: V12(w)/(x)/(y) because the result changes (absent room, condition A skip, forced still subject). Remaining coverage entries bind already-shown result recipes or gated producers; no change |
+| HARDEST: R06; R09a/R09b; R07 | Addressed by the explicit wording and added cases above |
+
+R03/R06/R11 wording and the added cases change stated behavior and acceptance assertions, so the next run is full.
+
+## Full blind-implementer reader 12 and triage
+
+2026-10-15. Fresh smaller reader, same file set and restrictions; full run. Counts: MISMATCH 0, GUESS 8, GAP 13, DISCRIM 9, GATED 22, COVERAGE 16, HARDEST 3. Source checks reused the reads above plus D2Game 0x9F3B0's removal paths (ordinary kind calls 0x8E900 with the unit and type 8; the sentinel loop walks the unit's own list) and 0xA0830's room/town calls (the lookup result goes to the town test even when absent).
+
+| Finding | Outcome |
+|---|---|
+| GUESS: V06 "town room" | Spec edit: defined as a present room whose town test returns true |
+| GUESS: node holding A/B | Spec edit: section 3 says current skill node (both 0xA19A0 and 0x79170 read the current skill's flags) |
+| GUESS: seeder source | No change: NRF-R17a owns seeding; V09/V10 state the game-seed step |
+| GUESS: completion owner | No change: R09a already says return 2 makes the dispatcher request completion; vectors include it in the frame stage |
+| GUESS: find owned skill inputs | Spec edit: section 3 operations row |
+| GUESS: entry mode request versus reset | Spec edit: R02 says they are different operations (#11090 versus the 0x78550 mode-change dispatcher) |
+| GUESS: action record presence | Spec edit: R06 cites GDF-R08a |
+| GUESS: R09b level argument | Spec edit: V14(k) logs level(current node,bonus=true) by the frame action (push 1 before the 0xA2060 level call) |
+| GAP: activation/creator/collision/town/find/predicate/completion arguments and returns | Spec edit: section 3 operations row names the asserted inputs and results; remaining arguments stay SCD-Q06/SCD-Q10 and the missile-creation contract |
+| GAP: missile record input | Spec edit: in the operations row |
+| GAP: pending-event removal scope | No change: SCD-Q10 |
+| GAP: collision extra arguments | No change beyond the operations row: SCD-Q10 |
+| GAP: NRF-R14a versus reset | Spec edit: as GUESS above |
+| GAP: request returns | Spec edit: defaults give 0 and say no rule consults them; V13(m) |
+| GAP: malformed reads | No change: SCD-Q05 |
+| GAP: other modes/kinds in R09a | No change: R09a has no mode or kind branch; actual roots SCD-Q04 |
+| GAP: callers for monsters | No change: SCD-Q04 |
+| GAP: gated-only columns | No change: R10/R14a/R14b scope; R14a vectors supply the index |
+| GAP: synthetic count 400 | Spec edit: defaults say synthetic |
+| DISCRIM: scheduler touching other units' events | Spec edit: other-unit events added to V05 and V15 inputs |
+| DISCRIM: action town clause ignoring InTown | Spec edit: V12(z) |
+| DISCRIM: validator absent room | Spec edit: V06(d)/(e) |
+| DISCRIM: null slot purge without periodic | Spec edit: V11(i) |
+| DISCRIM: ordinary creator coordinates | Spec edit: V13(l); the ordinary call at 0xA1C1A pushes the same coordinate registers as the lob call |
+| DISCRIM: handler return from action or finished | Spec edit: V14(p) |
+| DISCRIM: special kind requiring aura | Spec edit: V15(g) |
+| DISCRIM: V12(f) extra level request | Spec edit: V12(f) exact log |
+| DISCRIM: branching on resource returns; R09b bonus argument | Spec edit: V13(m); V14(k) level argument |
+| GATED (22) | No change |
+| COVERAGE (16) | No change: the listed branches bind already-shown result recipes or gated producers; the null-slot no-purge branch is now V11(i) |
+| HARDEST: R06/V12; R09a–c/V14; R03–R07 | Addressed by the operations row, the A/B node statement and the added cases |
+
+Added cases and section 3 statements require another full run.
+
+## Full blind-implementer reader 13 and triage
+
+2026-10-15. Fresh smaller reader, same file set and restrictions; full run. Counts: MISMATCH 0, GUESS 3, GAP 9, DISCRIM 8, GATED 23, COVERAGE 19, HARDEST 3. Source checks reused the instruction reads above: 0xA0830 level call on the current node, 0xA2060 passing one level to both the action dispatch and the scheduler, 0xA19A0 player-only reset/delay tests (`cmp dword ptr [edi], 0`) and decquant mask test, #10537 marker test `cmp eax, -1; jne`.
+
+| Finding | Outcome |
+|---|---|
+| GUESS: validator level node | Spec edit (wording): current skill node |
+| GUESS: R11 level source | Spec edit (wording): R09b passes its own level request result as invocation level and scheduler level; V14(q) |
+| GUESS: R08 start-table index | Spec edit (wording): this record's srvstfunc |
+| GAP: activation, creator, room/town/completion, entry-request and frame-predicate arguments | No change: section 3 operations row gives the asserted inputs; the rest are SCD-Q01/SCD-Q06/SCD-Q10 and the missile-creation contract |
+| GAP: V10 target point unused | No change: it shows a stored point gives no creator coordinates without both controls |
+| GAP: V09(d) fatal harness | No change: R01 defines the fatal outcome; harness support is an implementation matter |
+| GAP: R08 malformed start read | No change: SCD-Q05 |
+| GAP: fixture state not in section 5 | No change: mode, mana, quantity, delay log and events are the declared supplied effects of the section 5 requests |
+| DISCRIM: action town clause ignoring a false town test | Spec edit: V12(aa) |
+| DISCRIM: non-player reset in R06/R03 | Spec edit: V12(ab), V17(k) |
+| DISCRIM: marker >= 0 | Spec edit: V12(ac) marker -2 takes the charged path |
+| DISCRIM: quantity without decquant | Spec edit: V02 asserts quantity 5 and no quantity request |
+| DISCRIM: delay for kind 2 | Spec edit: V18(f) |
+| DISCRIM: ordinary kind requiring periodic | Spec edit: V05(g) aura only schedules |
+| DISCRIM: point-route unit-target clear | Spec edit: V09(e) starts with a selected unit target that ends absent |
+| DISCRIM: R11 level source | Spec edit: V14(q) |
+| GATED (23) | No change |
+| COVERAGE (19) | No change: bound to already-shown recipes or gated producers |
+| HARDEST: V12; V14; V09 | No change beyond the added cases |
+
+## Full blind-implementer reader 14 and remaining findings
+
+2026-10-15. Fresh smaller reader, same file set and restrictions; full run, the fourth and last run allowed in this follow-up task. Counts: MISMATCH 0, GUESS 4, GAP 13, DISCRIM 5, GATED 10 grouped, COVERAGE 16, HARDEST 3. The pass is **not complete**: two entries below remain open. After this run only a wording-exempt edit was made (R11 sentinel level), so the reviewed contract is otherwise the one reader 14 read.
+
+| Finding | Outcome |
+|---|---|
+| GUESS: R11 sentinel removal tests identity only | Spec edit (wording only, exempt from rerun): the 0x9F3B0 loop compares only the event identity with -1 (`cmp dword ptr [eax+0x14], -1`); R11 now says the level is not tested. No vector output changes |
+| GUESS: unit position type | No change: section 3 gives i32 position requests; V13 limits extreme values to the supplied arithmetic boundary; producers SCD-Q10 |
+| GUESS: R01 mode filter | No change: R01 is reached through the mode table for the listed modes and makes no local mode test |
+| GUESS: R09a mode filter, once per event | No change: R09a has no mode test and runs once per delivered event |
+| GAP: request argument lists, creator inputs, event-operation signatures | No change: section 3 operations row and rules give the asserted inputs; the rest are SCD-Q01/SCD-Q06/SCD-Q10 and the missile-creation contract |
+| GAP: "an in-range identity has a record, GDF-R08a" in R02/R06 | **Open.** GDF-V06 supplies an in-range absent record, so the citation overstates GDF-R08a. The validator and action dispatcher test the identity range and then a computed record address that is nonzero whenever the table exists (0xA0830 and 0xA19A0 `add; je`). Needs a wording correction in R02/R06 (range test only; record presence for an in-range identity is not separately tested) and a fresh reader |
+| GAP: mana cost/quantity fixture values, target-refresh per-case effects, fatal harness form, malformed start read, absent-room town default, unit-kind grouping, sequence-event storage | No change: declared fixtures, R01 fatal outcome, SCD-Q05, V06(d)/(e) state the absent-room results, section 3 unit-kind row and event row |
+| GAP: SCD-Q13 schema | No change: declared outside-boundary question |
+| DISCRIM: mana positional argument order | No change: arguments are named semantic values; positional order is a calling convention (same outcome as reader 8) |
+| DISCRIM: latch set before the resolution request | **Open.** 0xA19A0 sets the latch before calling the resolver 0x9FA30, and R07 states that order, but no vector observes the latch at the resolution request. Needs a V13 assertion that the supplied resolution observes latch=true, and a fresh reader |
+| DISCRIM: activation before ItemEffect replacement | No change: equivalent; replacement makes no request and activation does not receive the index, so the proposed case returns 0 with no callback under either order (same outcome as reader 8) |
+| DISCRIM: V01 zero-result exit | No change: V13(j) and V05(e) already reject consuming after a zero result |
+| DISCRIM: V09 event order | No change: the handler runs once per delivered event in the supplied order; reordering the supplied sequence changes the input, not a dispatch decision of this spec |
+| GATED | No change |
+| COVERAGE (16) | Not triaged further: advisory |
+| HARDEST: V12/R06; V14/R09a–b; V13/R07 | No change |
+
+Lint after recording: 0 errors.

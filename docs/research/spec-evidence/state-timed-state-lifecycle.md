@@ -399,3 +399,26 @@ All eight listed changes confirmed resolved; changed vectors recomputed. Counts:
 | DISCRIM V04 ignoring the expiry-0 write | Spec edit: L freed at frame 1, below its former expiry 5 |
 
 The review's cap of four reader runs was reached with these four fixture edits unchecked by a reader. They change no rule; they change V04's example frame and chain placement, V15(g)'s mask and the visit wording. A further delta check covering V04, V15(g) and the preamble visit wording is required before the blind-implementer pass is complete.
+
+### Delta check (reader run 7), 2026-10-15
+
+Sonnet reader, same file set and restrictions as earlier passes. Changed material: the 8.1 visit definition, STL-V04 and STL-V15(g). All three prior findings confirmed resolved; STL-V04, STL-V15(a)-(j) and the visit-dependent vectors STL-V03, STL-V09, STL-V11, STL-V13, STL-V17 and STL-V19 recomputed with no difference. Counts: MISMATCH 0, GUESS 0, GAP 0, DISCRIM 1; GATED STL-R05/STL-Q07.
+
+| Entry | Outcome |
+|---|---|
+| DISCRIM V04 synchronous free at frame 1000 accepted (Outputs did not assert it) | Spec edit: V04 asserts the free log is empty immediately after scheduling at frame 1000. Consistent with STL-R01 (scheduling queues an event and makes no synchronous handler call, already asserted in STL-V01(a)); no rule change |
+| Note: expiry-0 write appeared only in the V04 Trace | Spec edit: V04 Inputs name the STL-R06a write of 0 to L |
+
+The V04 assertion is an added acceptance assertion, so a further delta check followed.
+
+### Delta check (reader run 8), 2026-10-15
+
+Sonnet reader, same file set and restrictions, changed material STL-V04 only. Both prior findings confirmed resolved; V04 recomputed with no difference. Counts: MISMATCH 0, GUESS 0, GAP 1, DISCRIM 2; GATED STL-Q07, STL-R05.
+
+| Entry | Outcome |
+|---|---|
+| GAP V04 frame-1001 dispatch not among cited rules | Spec edit (citation only): V04 header cites frame-1001 routing per STL-R02/STL-R03 as in STL-V02. No input, output or assertion changes, so exempt from a rerun |
+| DISCRIM V04 unsigned expiry compare accepted (expiry 0 due either way) | No change: the owning discriminating vector is STL-V17(j), expiry -16 freed at 1050, which rejects an unsigned reading. V04's claim is limited to the expiry-0 write being due at a positive frame |
+| DISCRIM V04 strict `<` due test accepted | No change: STL-V03 frees B with expiry 1050 at now 1050, which rejects a strict comparison |
+
+Outcome: the final applicable run (8) returned MISMATCH 0 and no unresolved GUESS, GAP or DISCRIM. The blind-implementer pass for the current contract is complete; COVERAGE entries and documented gates remain as recorded.

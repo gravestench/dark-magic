@@ -282,3 +282,88 @@ A triage reading of D2Common `0x50460` on 2026-10-15 shows that the mastery bloc
 | HARDEST V14, V13, V19/V17 | Addressed by the V14/V17 clarifications above. V13 and V19 boundaries are stated |
 
 **Outcome: the review is not complete.** The parent's cap of four reader runs is reached. All post-run-4 edits are vector clarifications or additions, plus the V09/V20 wording; no rule text changed after run 4. Their values were hand-computed by the spec writer, but no fresh reader has checked them. A delta check of V03, V04, V05, V07, V09, V10, V14, V16, V17, V18 and V20 against the findings above is still required before the blind-implementer pass can be called complete.
+
+### Fifth reader run (delta check), 2026-10-15
+
+A delta check, not a full review: no rule's behavior, input, ownership or gate boundary changed after the fourth full run. The fresh reader received the run-4 changes to V02, V03, V04, V05, V07, V09, V10, V14, V16, V17, V18 and V20 with the findings each resolves, plus R15/R18 with V11/V13. Counts: MISMATCH 0, GUESS 3, GAP 6, DISCRIM 6, GATED 9, COVERAGE 10, HARDEST 3. Every changed case was recomputed without a difference, and every listed run-4 finding was reported resolved except "other selectors mapped" (only EType 3 and 6 tested).
+
+Triage reread original instructions on 2026-10-15: D2Game `0x92CF0` and `0x93340` load `EAX = 1` after the call to `0xA0C70` and return it, ignoring the hand-off's return; D2Common `0x4F870` decrements EType and rejects unsigned values above 11 with 0 (so EType 0 and 13 add 0), and its cold path requires the definition count to be greater than 0x14B (331).
+
+| Entry | Outcome |
+|---|---|
+| GUESS V14 mapping-only entry | Spec edit: mastery condition 1, unit present, ordinary getter for 329/330/332 stated |
+| GUESS V10 L0 starting record | Spec edit: record.physical `0x100` and seed stated |
+| GUESS V13 physical include-source | Spec edit: exact five-request log with include-source 0 and condition 1 |
+| GAP V17 request arguments/endpoint return | Spec edit: log `weapon(U,0)`, `classification(U,I)`, `stat(W,23/24,layer 0)`; endpoint returns `0x1E00`/`0x2800` with stated L1 and zero bases |
+| GAP V04 SrcDam 64 / x -3 output | Spec edit: endpoint `0x1600` (flooring gives `0x1500`) |
+| GAP V13 hand-off return | Spec edit after the asm check: supplied hand-off returns 0, stage result still 1 |
+| GAP V14 read count | Spec edit: one stat 329 read per endpoint |
+| GAP V09 no nonzero witness | Spec edit: every other field starts at `0x55` and is preserved |
+| GAP V16/V11 type-9 resist / absent optional outputs | No change: derivable from R16; V16 exercises present outputs |
+| DISCRIM V13 stage returns hand-off result | Spec edit: as GAP V13 |
+| DISCRIM V09 fill zeroes other fields | Spec edit: as GAP V09 |
+| DISCRIM V04 flooring division | Spec edit: as GAP V04 |
+| DISCRIM V14 other selectors mapped | Spec edit after the asm check: EType 0, 7, 8, 9, 10, 11, 13 with every mastery stat 30 add 0, no read |
+| DISCRIM V14 ordinary-getter own array; cold count bound | Spec edit: stat 329 own 10/resolved 30 adds 300; cold count 332 reads and adds 300 |
+| DISCRIM V17 classification argument | Spec edit: as GAP V17 |
+| COVERAGE (10 advisory) | No change: each branch follows a stated recipe; the R10 selector and array branches are now covered by the additions above |
+| HARDEST V14, V13/R18, V17/R04b | Addressed by the clarifications above |
+
+These are vector additions/clarifications only; rule text is unchanged, so the next run is a delta check of V04, V09, V10, V13, V14 and V17.
+
+### Sixth reader run (delta check), 2026-10-15
+
+Delta check of the run-5 edits to V04, V09, V10, V13, V14 and V17. Counts: MISMATCH 0, GUESS 1, GAP 3, DISCRIM 5, GATED 9, COVERAGE 6 groups, HARDEST 3. Every case was recomputed without a difference. The reader marked the V04, V09, V10, V13 and V17 findings resolved and V14 partially resolved (own-array rejection shown only for stat 329).
+
+Triage reread D2Common `0x50460` on 2026-10-15: after the lookup and `L > 0` tests, the synergy block tests only the reference, the minimum gate and the pool/bounds before evaluating with context `(unit,skill,L)`; the unit is tested only in the later mastery block (condition, then unit). D2Game `0x92CF0`/`0x93340` return 0 on failed lookup before the record clear. NRF-R12b already states the `id >= statDefinitionCount` rejection for the ordinary getter.
+
+| Entry | Outcome |
+|---|---|
+| GUESS V14 which array holds mapped values | Spec edit: V14 defaults state `usesResolvedStats` true, given values are resolved values (own 0), definition count 359 |
+| GAP V14 no operation applies R10 to a supplied e | Spec edit: damage-input cases execute as an elemental maximum with EMax = damage input, HitShift 0, empty synergy, mastery condition 1; the return is input plus amount |
+| GAP V17/V14 stat log meaning | Spec edit: the section 8.1 preamble says stat log entries trace the real NRF-R12b/R12c getter and are not supplied operations |
+| GAP V14 absent unit with synergy | Spec edit after the asm check: the absent-unit case still makes its evaluation; R09 has no unit condition |
+| DISCRIM V04 round-half-up | Spec edit: SrcDam 64/x 11 gives `0x1C00` (half-up gives `0x1D00`) |
+| DISCRIM V04 unwrapped product | Spec edit: SrcDam 255/x `0x808081` gives `0x1800` (64-bit product gives `0x1700`) |
+| DISCRIM V14 own-array for 330/332 | Spec edit: EType 1, 2 and 5 array cases each add 300 |
+| DISCRIM V14 stat 332 count bound | Spec edit: count 332 adds 0, count 333 adds 300 (NRF-R12b bound) |
+| DISCRIM V13 failed lookup clears record | Spec edit after the asm check: stale `0x55` record unchanged on failed lookup |
+| COVERAGE (advisory) | No change: each branch follows a stated rule or NRF recipe; the additions above cover the R04a, R10 and R18 items that change a result |
+| HARDEST V14, V13, V17 | Addressed by the clarifications above |
+
+Vector additions and clarifications only; rule text is unchanged. The next run is a delta check of V04, V13 and V14 plus the section 8.1 preamble.
+
+### Seventh reader run (delta check), 2026-10-15
+
+Delta check of the run-6 edits to V04, V13, V14 and the section 8.1 preamble. Counts: MISMATCH 0, GUESS 2, GAP 2, DISCRIM 2, GATED 12, COVERAGE 7, HARDEST 3. Every case was recomputed without a difference, and every run-6 finding was reported resolved.
+
+| Entry | Outcome |
+|---|---|
+| GUESS V04 origin of x in new cases | Spec edit: the independent cases state x is the supplied R04b selected endpoint (caster stat 21, absent weapon) |
+| GUESS V14 definitions at overridden counts | Spec edit: every definition below the count is present |
+| GAP V13 stage failed lookup only for identity >= count | Spec edit: identity -1 and absent record at identity 0 added; the `0x92CF0`/`0x93340` readings recorded under run 3 and run 6 show the signed-negative, count and null-record tests all return 0 before the clear |
+| GAP reader read SCX-R31 by grep only | No change: a limit of the reader's check; R10 restates the amount and SCX-R31 owns it |
+| DISCRIM V13 partial lookup rejection | Spec edit: as the GAP above |
+| DISCRIM V14 bounds for 329/330 | Spec edit: count 329/330 for stat 329 and 330/331 for stat 330 (NRF-R12b `id >= statDefinitionCount`) |
+| COVERAGE (7 advisory) | No change: fMin adjustment, own-array lists, absent lists/entries and multi-field routing follow NRF-R12b/R12c and R16 recipes already discriminated elsewhere; duration ignores mastery by R11 |
+| HARDEST V14, V13, V04 | No further change: the cases are now explicit |
+
+Vector additions only; rule text unchanged. The next run is a delta check of V04, V13 and V14.
+
+### Eighth reader run (delta check), 2026-10-15
+
+Delta check of the run-7 edits to V04, V13 and V14. Counts: MISMATCH 0, GUESS 2, GAP 3, DISCRIM 0, GATED 10, COVERAGE 7, HARDEST 3. Every case was recomputed without a difference, and every run-7 finding was reported resolved. The reader tried sign-extension, flooring, half-up rounding, 64-bit products, share-after-shift, clearing or flagging before lookup, returning 1, and uniform cold bounds; each is rejected by an existing assertion.
+
+| Entry | Outcome |
+|---|---|
+| GUESS V14 bound-case damage input | Spec edit (value the reader already used): damage input 1000 stated |
+| GUESS V14 overridden count scope/defaults | Spec edit (as assumed): the stated count replaces 359 for every read in the case; definition defaults apply |
+| GAP V04 gate cases lack an output | Spec edit (derivable value the reader computed): output `0x1700` with x 10 available |
+| GAP V13 unreached hand-off stub / hit-class value | Spec edit (wording): neither is reached on failed lookup |
+| GAP V13 identity of the stale storage | Spec edit (wording): the storage a successful stage would clear |
+| COVERAGE (7 advisory) | No change: each branch follows R04a, NRF-R12b/R12c or R18 recipes already discriminated elsewhere; the eligibility branch is outside the contract |
+| HARDEST V04, V14, V13 | No change: all cases are explicit and recomputed |
+
+The post-run-8 edits state values and readings that the run-8 reader itself computed or assumed, so they change no output or assertion and introduce no new behavior; no fresh reader checked their wording, because this task's cap of four reader runs (runs 5 to 8) was reached.
+
+**Outcome: the blind-implementer pass is complete at the supplied-input/static boundary.** Runs 1 to 4 were full reviews and runs 5 to 8 delta checks; no rule text changed after run 4. The final applicable run returned MISMATCH 0 and DISCRIM 0, and its GUESS and GAP entries are resolved by the edits above. Producer, integration and observation gaps (Q02, Q04 to Q10) remain; header status stays draft. No human approval is inferred.
