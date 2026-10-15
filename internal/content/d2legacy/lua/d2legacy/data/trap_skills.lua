@@ -132,6 +132,7 @@ local function missile_definition(row, label)
         lifetime_ticks = integer(row, "Range", label),
         collision_radius = optional_integer(row, "Size", 1) / 2,
         destroy_on_contact = truth(row, "CollideKill"),
+        next_hit = optional_integer(row, "NextHit", 0) ~= 0,
         next_hit_delay = optional_integer(row, "NextDelay", 0),
         dcc = cel == "null" and "" or "data/global/missiles/" .. cel .. ".dcc",
         palette = "data/global/palette/units/pal.dat",
@@ -316,7 +317,7 @@ local function decode_channel(row, missiles, skills, descriptions, label)
     merge(definition, damage_definition(row, label))
     merge(definition, missile_definition(lookup(missiles, row.srvmissilea, label), label))
     definition.weapon_fraction = integer(row, "SrcDam", label)
-    definition.minimum_start_mana_raw = integer(row, "Param3", label) * RAW
+    definition.minimum_start_mana_raw = integer(row, "startmana", label) * RAW
     definition.channel_period_ticks = integer(row, "Param4", label)
     definition.complete_delay = definition.channel_period_ticks + 1
     return definition

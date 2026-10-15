@@ -120,7 +120,10 @@ local skills = {
         srvmissilea = "blade-fury-missile",
         cltmissilea = "blade-fury-visual",
         SrcDam = "96",
-        Param3 = "6",
+        startmana = "6",
+        mana = "8",
+        manashift = "5",
+        Param3 = "3",
         Param4 = "5",
     }),
     skill(271, "Lightning Sentry", {
@@ -204,7 +207,7 @@ local missiles = {
     missile("fire-impact"),
     missile("web-air", { HitSubMissile1 = "web-ground" }),
     missile("web-ground", { Vel = "0", CollideKill = "" }),
-    missile("blade-sentinel-missile"),
+    missile("blade-sentinel-missile", { NextHit = "1", NextDelay = "25", CollideKill = "" }),
     missile("blade-fury-missile", { Vel = "22", Range = "40" }),
     missile("blade-fury-visual", { Vel = "22", Range = "33" }),
     missile("charged-shot", { Vel = "12", Range = "98" }),
@@ -214,6 +217,146 @@ local missiles = {
     missile("death-shot"),
     missile("blade-shield-attachment", { CltSubMissile1 = "blade-shield-overlay" }),
 }
+
+local function fury_start_case(mana, expected)
+    return test.case("blade_fury_start_at_" .. mana .. "_mana", {
+        test.submit_system(fixtures.command(
+            "system.player.enter",
+            fixtures.player_entry({
+                x = 0,
+                y = 0,
+                mana = mana,
+                max_mana = mana,
+            }),
+            { tick = 1, sequence = 1 }
+        )),
+        test.step(1),
+        test.run(function()
+            local ecs = require("engine.ecs/v1")
+            local player = ecs.query({ all = { "d2legacy.player.identity" } })[1]
+            ecs.get(player, "d2legacy.player.resource_stats"):set("mana_regen_frames", 0)
+            ecs.create({
+                ["d2legacy.player.learned_skill"] = {
+                    owner = player,
+                    skill_id = 266,
+                    level = 1,
+                    list_row = 1,
+                    left_allowed = true,
+                    right_allowed = true,
+                },
+            })
+        end),
+        test.submit(fixtures.command("player.assign_skills", { left = 266 }, {
+            tick = 2,
+            sequence = 1,
+            player = "alice",
+        })),
+        test.submit(fixtures.command("player.use_skill", { side = "left", target_x = 8, target_y = 0 }, {
+            tick = 2,
+            sequence = 2,
+            player = "alice",
+        })),
+        test.step(1),
+        test.run(function()
+            local ecs = require("engine.ecs/v1")
+            local player = ecs.query({ all = { "d2legacy.player.identity" } })[1]
+            local started = ecs.get(player, "d2legacy.skill.cast") ~= nil
+            local remaining = ecs.get(player, "d2legacy.player.vitals"):get("mana_raw")
+            test.assert(
+                started == expected,
+                string.format(
+                    "Blade Fury: initial mana=%d, cast started=%s, remaining mana=%g; expected started=%s",
+                    mana,
+                    tostring(started),
+                    remaining / 256,
+                    tostring(expected)
+                )
+            )
+            test.expect(remaining):equals((mana - (expected and 1 or 0)) * 256)
+        end),
+    })
+end
+
+local function sentinel_contact_case(name, options)
+    options = options or {}
+    local function create_target()
+        local ecs = require("engine.ecs/v1")
+        ecs.create({
+            ["d2legacy.monster.stats"] = { level = 1, health = 100 * 256, max_health = 100 * 256 },
+            ["d2legacy.world.position"] = { x = 1, y = 0 },
+            ["d2legacy.world.location"] = { act = 1, level_id = 1 },
+            ["d2legacy.world.selectable"] = { id = "monster:sentinel-target", kind = "hostile", radius = 0.5 },
+        })
+    end
+    local function spawn_sentinel(cast_id, next_hit)
+        local ecs = require("engine.ecs/v1")
+        local player = ecs.query({ all = { "d2legacy.player.identity" } })[1]
+        local definition = require("d2legacy.data.trap_skills").load({ 257 })[257]
+        if next_hit == false then
+            definition.next_hit = false
+            definition.destroy_on_contact = true
+        end
+        if options.zero_delay then
+            definition.next_hit_delay = 0
+            definition.destroy_on_contact = true
+        end
+        ecs.create(require("d2legacy.gameplay.projectile_spawn").components(player, definition, {
+            cast_id = cast_id,
+            velocity_x = 1,
+            velocity_y = 0,
+            skill_level = 1,
+            minimum_damage_raw = 256,
+            maximum_damage_raw = 256,
+        }))
+    end
+    return test.case("blade_sentinel_contact_" .. name, {
+        test.submit_system(fixtures.command("system.player.enter", fixtures.player_entry({ x = 0, y = 0 }), {
+            tick = 1,
+            sequence = 1,
+        })),
+        test.step(1),
+        test.run(function()
+            create_target()
+            spawn_sentinel("sentinel-cast-1", options.first_next_hit)
+            if options.same_tick then
+                spawn_sentinel("sentinel-cast-2")
+            end
+        end),
+        test.step(1),
+        test.run(function()
+            local ecs = require("engine.ecs/v1")
+            local target = ecs.query({ all = { "d2legacy.monster.stats" } })[1]
+            test.expect(ecs.get(target, "d2legacy.monster.stats"):get("health")):equals(99 * 256)
+            test.expect(#ecs.query({ all = { "d2legacy.missile.contact_lock" } }))
+                :equals(options.first_next_hit == false and 0 or 1)
+        end),
+        test.expect_checkpoint_parity(options.wait_ticks or 1),
+        test.run(function()
+            if options.replace_target then
+                local ecs = require("engine.ecs/v1")
+                ecs.destroy(ecs.query({ all = { "d2legacy.monster.stats" } })[1])
+                create_target()
+            end
+            spawn_sentinel(options.same_cast and "sentinel-cast-1" or "sentinel-cast-2", options.second_next_hit)
+        end),
+        test.step(1),
+        test.run(function()
+            local ecs = require("engine.ecs/v1")
+            local target = ecs.query({ all = { "d2legacy.monster.stats" } })[1]
+            local health = ecs.get(target, "d2legacy.monster.stats"):get("health") / 256
+            local expected = options.expected_health or 99
+            test.assert(
+                health == expected,
+                string.format(
+                    "Blade Sentinel %s: target health=%g; expected=%d (each contact deals 1)",
+                    name,
+                    health,
+                    expected
+                )
+            )
+        end),
+    })
+end
 
 return test.suite({
     name = "complete Assassin trap definitions",
@@ -240,6 +383,25 @@ return test.suite({
         ["data/global/excel/SkillDesc.txt"] = descriptions,
     },
     cases = {
+        fury_start_case(2, false),
+        fury_start_case(4, false),
+        fury_start_case(6, true),
+        sentinel_contact_case("zero_delay_blocks_only_the_contact_tick", {
+            same_tick = true,
+            zero_delay = true,
+            expected_health = 97,
+        }),
+        sentinel_contact_case("same_cast", { same_cast = true }),
+        sentinel_contact_case("independent_casts"),
+        sentinel_contact_case("replacement_target_with_same_public_id", { replace_target = true }),
+        sentinel_contact_case("independent_casts_same_tick", { same_tick = true }),
+        sentinel_contact_case("before_cooldown_expiry", { wait_ticks = 23 }),
+        sentinel_contact_case("at_cooldown_expiry", { wait_ticks = 24, expected_health = 98 }),
+        sentinel_contact_case("ordinary_missile_ignores_cooldown", { second_next_hit = false, expected_health = 98 }),
+        sentinel_contact_case(
+            "ordinary_missile_does_not_arm_cooldown",
+            { first_next_hit = false, expected_health = 98 }
+        ),
         test.case("uses_blade_fury_server_missile_instead_of_client_visual", function(t)
             t:run(function()
                 local definition = require("d2legacy.data.trap_skills").load({ 266 })[266]
@@ -278,6 +440,9 @@ return test.suite({
                 test.expect(definitions[251].field_count_base):equals(nil)
                 test.expect(definitions[256].field_count_synergy_skill_id):equals(261)
                 test.expect(definitions[257].weapon_fraction):equals(96)
+                test.expect(definitions[257].next_hit):equals(true)
+                test.expect(definitions[257].next_hit_delay):equals(25)
+                test.expect(definitions[266].next_hit):equals(false)
                 test.expect(definitions[266].minimum_start_mana_raw):equals(6 * 256)
                 test.expect(definitions[276].operation):equals("corpse_or_projectile")
                 test.expect(definitions[277].requires_point_target):equals(false)

@@ -79,6 +79,7 @@ local function install_returning_weapon()
         lifetime_ticks = 10,
         collision_radius = 0.25,
         destroy_on_contact = false,
+        next_hit = true,
         next_hit_delay = 2,
         impact_radius = 0,
         minimum_damage_raw = 256,
