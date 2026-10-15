@@ -5,61 +5,61 @@ Original artifact identities: [Source manifest](../source-manifest.md), LOD113C-
 
 ## Evidence scope and reuse
 
-Historical static readings and the narrow gameplay observation are dated2026-10-12. Their compatible coverage is reused with original limits, not renewed by relocation. Current analysis specimens were hash-checked against the manifest on2026-10-14; this does not retroactively prove historical loaded DLL identity. New source readings use the current byte-inventory of reconstructions checked against original bytes where a function is present, otherwise disassembly. Function descriptions below are analyst descriptions, not exported names unless an ordinal is specified. No source text or game tables are reproduced.
+Historical static readings and the narrow gameplay observation are dated 2026-10-12. Their compatible coverage is reused with original limits, not renewed by relocation. Current analysis specimens were hash-checked against the manifest on 2026-10-14; this does not retroactively prove historical loaded DLL identity. New source readings use the current byte-inventory of reconstructions checked against original bytes where a function is present, otherwise disassembly. Function descriptions below are analyst descriptions, not exported names unless an ordinal is specified. No source text or game tables are reproduced.
 
 The full 528-line prior draft and its private investigation references, fixture layouts, session/save details and historical reader notes were preserved in a private archive before editing. Public references below identify original artifacts/functions without that archive.
 
 ## Dispatch and source mapping
 
-All entries target LoD Expansion1.13c. Module locations are RVAs; export ordinals refer to D2Common unless stated. Read dates below retain actual scope.
+All entries target LoD Expansion 1.13c. Module locations are RVAs; export ordinals refer to D2Common unless stated. Read dates below retain actual scope.
 
 | Original module / RVA | Export | Semantic operation / support | Reading and limits |
 |---|---|---|---|
-| D2Game 0x2E050; caller0x2E1E0 | none | Per-frame call into event-wheel dispatch |2026-10-12 disassembly; caller identified but not fully read |
-| D2Game 0x8F070 | none | Wheel dispatch; player group calls0x8ECC0 |2026-10-12 partial byte-only decoding; ordering remains gated; current STL-R02a retains that limit |
-| D2Game 0x8ECC0; table0xFBB74, slot 3 | none | Player event selects0x79B10 with two event arguments |2026-10-12 instructions/table read; historical return site0x8ED3B corroborates call |
-| D2Game 0x79B10 | none | PMR-R01a/R02: repost and gates, life/stamina/mana calls |2026-10-12 complete disassembly; reread2026-10-14, no byte-only instruction region in behavioral body |
-| D2Game 0x77950 | none | PMR-R03..R07: mana computation and requests |2026-10-12 complete disassembly; reread2026-10-14, all input reads/branches/requests traced |
-| D2Game 0x77CB0; 0x77A50 | none | Life/stamina calls before mana |2026-10-12 life return-path reading (only exit returns 1), stamina entry only; complete effects outside mana boundary |
-| D2Game 0x14D0 | none | PMR-R04 percent arithmetic |2026-10-12 caller operand mapping; current NRF-R05 supplies complete shared contract |
-| D2Game 0x8EA80 | none | Schedule request; requested frame and arguments |2026-10-12 partly decoded disassembly; 2026-10-14 entry-to-field-store slice revisited, byte-only regions not independently decoded in this mana pass; consume current STL-R01/R02 where verified |
-| D2Game 0x79E10 | none | Immediate dispatch through player table |2026-10-12 lead for natural monster entry; producer remains PMR-Q05 |
-| D2Game 0xDE0C0; 0x336D0 | none | Type 3 scheduling at frame+1 on damage and frame+25 via helper |2026-10-12 call-site readings; 2026-10-14 reconstruction checked against original bytes confirms0x336D0 request; its root caller remains unresolved |
-| D2Game 0x79210; 0x78DD0 | none | Player creation/join leads |2026-10-14 limited direct scheduler/helper label search found no matching call in these functions; not complete dispatch-root exclusion |
-| D2Common 0x38B70; 0x38A80 |10973 / internal | Generic existing stat read | Reused NRF-R12b/c contract, including definition minimum; no new claim about producing resolved arrays |
-| D2Common 0x390A0 |10186 | Guarded maximum mana getter |2026-10-12 disassembly; complete80-byte function reread2026-10-14, null/list/count/selected-definition guards and stat 9 call into 0x38A80 |
-| D2Common 0x33CD0; 0x37DB0 |10494 / internal | State presence | Current NRF-R12a handles absent storage/type/range; earlier unread-guard question no longer applies to this consumed boundary |
-| D2Common 0x38520; 0x37F80 |10871 / internal | State-list lookup |2026-10-12 lookup reading; current NRF-R12a supplies complete selection contract |
-| D2Common 0x3A5F0; 0x3A3B0 |11111 / internal | Detach request | Historical unlink/partial propagation reading; complete effects remain STL-R05/PMR-Q03 |
-| D2Common 0x3AD40; 0x3A9F0 |11108 / internal | Free request | Historical reconstructions checked against original bytes; complete integrated lifecycle remains gated |
-| D2Common 0x3A710; 0x3A330 |10551 / internal | Add stat request and underlying mutation |2026-10-14 reconstruction checked against original bytes of wrapper confirms nonzero guard and unit base-list forwarding; underlying propagation0x39F70/0x38550 remains unread here |
-| D2Common 0x60A80 | none | ManaRegen preparation |2026-10-12 descriptor identifies unsigned byte field; current GDF-R03a owns its logical schema |
+| D2Game 0x2E050; caller 0x2E1E0 | none | Per-frame call into event-wheel dispatch | 2026-10-12 disassembly; caller identified but not fully read |
+| D2Game 0x8F070 | none | Wheel dispatch; player group calls 0x8ECC0 | 2026-10-12 partial byte-only decoding; ordering remains gated; current STL-R02a retains that limit |
+| D2Game 0x8ECC0; table 0xFBB74, slot 3 | none | Player event selects 0x79B10 with two event arguments | 2026-10-12 instructions/table read; historical return site 0x8ED3B corroborates call |
+| D2Game 0x79B10 | none | PMR-R01a/R02: repost and gates, life/stamina/mana calls | 2026-10-12 complete disassembly; reread 2026-10-14, no byte-only instruction region in behavioral body |
+| D2Game 0x77950 | none | PMR-R03..R07: mana computation and requests | 2026-10-12 complete disassembly; reread 2026-10-14, all input reads/branches/requests traced |
+| D2Game 0x77CB0; 0x77A50 | none | Life/stamina calls before mana | 2026-10-12 life return-path reading (only exit returns 1), stamina entry only; complete effects outside mana boundary |
+| D2Game 0x14D0 | none | PMR-R04 percent arithmetic | 2026-10-12 caller operand mapping; current NRF-R05 supplies complete shared contract |
+| D2Game 0x8EA80 | none | Schedule request; requested frame and arguments | 2026-10-12 partly decoded disassembly; 2026-10-14 entry-to-field-store slice revisited, byte-only regions not independently decoded in this mana pass; consume current STL-R01/R02 where verified |
+| D2Game 0x79E10 | none | Immediate dispatch through player table | 2026-10-12 lead for natural monster entry; producer remains PMR-Q05 |
+| D2Game 0xDE0C0; 0x336D0 | none | Type 3 scheduling at frame+1 on damage and frame+25 via helper | 2026-10-12 call-site readings; 2026-10-14 reconstruction checked against original bytes confirms 0x336D0 request; its root caller remains unresolved |
+| D2Game 0x79210; 0x78DD0 | none | Player creation/join leads | 2026-10-14 limited direct scheduler/helper label search found no matching call in these functions; not complete dispatch-root exclusion |
+| D2Common 0x38B70; 0x38A80 | 10973 / internal | Generic existing stat read | Reused NRF-R12b/c contract, including definition minimum; no new claim about producing resolved arrays |
+| D2Common 0x390A0 | 10186 | Guarded maximum mana getter | 2026-10-12 disassembly; complete 80-byte function reread 2026-10-14, null/list/count/selected-definition guards and stat 9 call into 0x38A80 |
+| D2Common 0x33CD0; 0x37DB0 | 10494 / internal | State presence | Current NRF-R12a handles absent storage/type/range; earlier unread-guard question no longer applies to this consumed boundary |
+| D2Common 0x38520; 0x37F80 | 10871 / internal | State-list lookup | 2026-10-12 lookup reading; current NRF-R12a supplies complete selection contract |
+| D2Common 0x3A5F0; 0x3A3B0 | 11111 / internal | Detach request | Historical unlink/partial propagation reading; complete effects remain STL-R05/PMR-Q03 |
+| D2Common 0x3AD40; 0x3A9F0 | 11108 / internal | Free request | Historical reconstructions checked against original bytes; complete integrated lifecycle remains gated |
+| D2Common 0x3A710; 0x3A330 | 10551 / internal | Add stat request and underlying mutation | 2026-10-14 reconstruction checked against original bytes of wrapper confirms nonzero guard and unit base-list forwarding; underlying propagation 0x39F70/0x38550 remains unread here |
+| D2Common 0x60A80 | none | ManaRegen preparation | 2026-10-12 descriptor identifies unsigned byte field; current GDF-R03a owns its logical schema |
 
-D2Game's mana caller resolves the shared operations through thunks0xA42A(10973), 0xA4EA(10186), 0xA68E(10494), 0xA5D4(10871), 0xABB6(11111), 0xABAA(11108), 0xA4D2(10551). D2Common data export 11170 supplies table context; original D2Game data import slot RVA0xF829C. The max getter passes stat identity 9/layer 0 to the same underlying reader as generic unit stats.
+D2Game's mana caller resolves the shared operations through thunks 0xA42A(10973), 0xA4EA(10186), 0xA68E(10494), 0xA5D4(10871), 0xABB6(11111), 0xABAA(11108), 0xA4D2(10551). D2Common data export 11170 supplies table context; original D2Game data import slot RVA0xF829C. The max getter passes stat identity 9/layer 0 to the same underlying reader as generic unit stats.
 
-Original ABI details supporting the semantic mapping: mana unit is carried in EDI; current mana saved locally is restored after cleanup, while maximum remains captured. The percent caller passes first operand 100+percent and second operandclass base to 0x14D0. The handler copies its two stack arguments unchanged into scheduling before its unit test; calling-convention details do not define a required new API. Original layout fixtures remain private.
+Original ABI details supporting the semantic mapping: mana unit is carried in EDI; current mana saved locally is restored after cleanup, while maximum remains captured. The percent caller passes first operand 100+percent and second operand class base to 0x14D0. The handler copies its two stack arguments unchanged into scheduling before its unit test; calling-convention details do not define a required new API. Original layout fixtures remain private.
 
 ## Table evidence
 
-Historical2026-10-12 record: the owned game loader read CharStats, ItemStatCost and States; the draft named Sorceress/Amazon ManaRegen 120 and stat/state identities. Full hashes/ranges and supplying archives were not recorded. Reuse GDF-R03a/b, GDF-R11/GDF-R12 and their named-cell records for schema/identity; GDF's2026-10-14 TD-CLASS record also corroborates Sorceress ManaRegen 120 against selected compiled data. No new compiled-table correspondence is claimed by this mana pass.
+Historical 2026-10-12 record: the owned game loader read CharStats, ItemStatCost and States; the draft named Sorceress/Amazon ManaRegen 120 and stat/state identities. Full hashes/ranges and supplying archives were not recorded. Reuse GDF-R03a/b, GDF-R11/GDF-R12 and their named-cell records for schema/identity; GDF's 2026-10-14 TD-CLASS record also corroborates Sorceress ManaRegen 120 against selected compiled data. No new compiled-table correspondence is claimed by this mana pass.
 
-Effective-file reread2026-10-14: reported launch keylod-113c, same historical vanilla source profile; current member inventory excludes the separate PD2 members. The own-loader read of data/global/excel/charstats.txt requested off 0/whole file and returned 3360/3360 bytes, range 0..3360. The complete returned body was decoded and parsed as tab-separated data; column selection used header namesclass/ManaRegen (positions 0/12), not assumed positions. Target rows were complete.
+Effective-file reread 2026-10-14: reported launch key lod-113c, same historical vanilla source profile; current member inventory excludes the separate PD2 members. The own-loader read of data/global/excel/charstats.txt requested off 0/whole file and returned 3360/3360 bytes, range 0..3360. The complete returned body was decoded and parsed as tab-separated data; column selection used header names class/ManaRegen (positions 0/12), not assumed positions. Target rows were complete.
 
 | Row identity / indexing | Column | Raw cell | Interpretation / support |
 |---|---|---|---|
-| Amazon, zero-based file data row 0 / prepared class 0 | ManaRegen |120 | Unsigned byte 120; PMR-V03/V04 input |
-| Sorceress, file data row 1 / prepared class 1 | ManaRegen |120 | Unsigned byte 120; PMR-V01/V02 input |
+| Amazon, zero-based file data row 0 / prepared class 0 | ManaRegen | 120 | Unsigned byte 120; PMR-V03/V04 input |
+| Sorceress, file data row 1 / prepared class 1 | ManaRegen | 120 | Unsigned byte 120; PMR-V01/V02 input |
 
 File row 5 is the Expansion separator; GDF-R03b supplies the filtered class convention. Current patch inventory reports file override disabled, but no complete override/archive inventory or supplying-MPQ attribution was captured. Version-console refresh failed with connection refused; historical vanilla identity and current reported launch key are reused with that limitation. Effective-file hash was not captured. This current read corroborates effective text cells; it is not a fresh claim of pristine installation identity, compiled runtime equivalence or gameplay execution.
 
 ## Historical runtime records
 
-Owned game reportedlod-113c on2026-10-12. Character was dead, type 0, class 4, mode 17, life 0/55, mana 10/10. Private identity and session details are retained privately.
+Owned game reported lod-113c on 2026-10-12. Character was dead, type 0, class 4, mode 17, life 0/55, mana 10/10. Private identity and session details are retained privately.
 
 | Target / observation | Actual coverage | Result / unobserved assertions |
 |---|---|---|
-| D2Game 0x79B10, dead handler entry/exit |200 records held at cap; 3read, dropped 0; two player units (character/corpse), each type 0, class 4, mode 17; caller0x8ED3B; return register 17 and stack cleanup 8 bytes | Supports handler identity/dead-mode exit (PMR-R02a/PMR-V11). Repeated entries are compatible with reposting, but exact due frames, event arguments, insertion, count/cadence and balances were not measured |
-| D2Game 0x77950, dead-state window |0 records over 40 seconds | Inconclusive absence; does not confirm arithmetic or promote any rule |
+| D2Game 0x79B10, dead handler entry/exit | 200 records held at cap; 3 read, dropped 0; two player units (character/corpse), each type 0, class 4, mode 17; caller 0x8ED3B; return register 17 and stack cleanup 8 bytes | Supports handler identity/dead-mode exit (PMR-R02a/PMR-V11). Repeated entries are compatible with reposting, but exact due frames, event arguments, insertion, count/cadence and balances were not measured |
+| D2Game 0x77950, dead-state window | 0 records over 40 seconds | Inconclusive absence; does not confirm arithmetic or promote any rule |
 
 No mismatches recorded. Both observation hooks were disarmed after that pass. Historic broad runtime labels on repost/full eligibility are narrowed: PMR-R01a is static and PMR-R02a alone retains the matching dead-exit coverage. PMR-V10's full scheduling assertions are not marked observed. Stack cleanup corroborates ABI, not every argument or schedule value.
 
@@ -80,7 +80,7 @@ No rule is claimed not found after a partial search. No source/table age alone c
 
 - PMR-O01: with an owned matching 1.13c game, identify player handler, scheduler and mana tick through the locations above. Record a living player and a dead mode 17 player separately, with game frame, target identity and both event arguments. Observe enough uncapped timestamped records to compare one per server frame; expected cadence 25 per second must be measured rather than inferred from three entries. Verify scheduler arguments/due frame before confirming repost. Do not reuse a quiet mana-tick capture as proof.
 - PMR-O02: living Sorceress level 1, Normal, town, no recovery equipment, spend mana below maximum. Read actual mana/max/flat/percent/state inputs; do not assume starting energy/max. Capture consecutive tick inputs and additive requests through final write. If max 2560 and named ManaRegen 120, expect+1 raw/tick until clamp. Repeat positive/negative or suppression inputs only on a dedicated authorized fixture; compare all inputs and ordered clamps.
-- PMR-O03: with an authorized potion fixture, distinguish starting below maximum from already full. Capture state 106list presence, preclamp regen, detach/free requests, contributions and active membership before/after a full-mana tick. A missing list alone does not establish every callback/stat/state effect; resolve the lifecycle code path too.
+- PMR-O03: with an authorized potion fixture, distinguish starting below maximum from already full. Capture state 106 list presence, preclamp regen, detach/free requests, contributions and active membership before/after a full-mana tick. A missing list alone does not establish every callback/stat/state effect; resolve the lifecycle code path too.
 
 ## Migration and review record
 

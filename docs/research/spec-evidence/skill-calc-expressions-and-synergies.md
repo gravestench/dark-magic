@@ -14,7 +14,7 @@ be checked using the fingerprinted original files without that archive.
 
 The 2026-10-12 record read the Fog evaluator in original-image disassembly, the
 compiler in a decompiler view, and D2Common front ends and consumers in instruction
-listings or a byte-byte-checked source reconstruction. Compatible instruction coverage is
+listings or a byte-checked source reconstruction. Compatible instruction coverage is
 reused with that date and its limits. The current manifest establishes specimen
 correspondence, not a new behavior reading or gameplay observation. No original
 table-data read or runtime confirmation was recorded in that document. Fields and
@@ -24,7 +24,7 @@ profile limits.
 Targeted readings on 2026-10-15 checked the unresolved to-hit/passive selectors,
 stat routing and leaf candidates, the cap pointer writer, missile dependencies,
 additional-family front end, and mastery decoding. New readings chose a listed
-byte-byte-checked source reconstruction when present and otherwise instruction listings.
+byte-checked source reconstruction when present and otherwise instruction listings.
 Mastery's undecoded instruction runs were corroborated against the fingerprinted
 original image. An unread owned dependency or unresolved original-byte decoding
 does not acquire verification through its caller's verified arithmetic.
@@ -75,6 +75,24 @@ before pushing its returned integer. Skill callback 0x51B60 forwards to resolver
 operation, and pushes the returned integer. Each terminating return is in Fog
 0x19E90; pool rejects return zero in the front end. This anchors both entry and
 result without claiming which server skill chooses a given column.
+
+Game-root anchor (spec review, 2026-10-15): one complete reached chain from a server
+dispatch table is D2Game skill do-function table RVA `0x1074A8`, entry 38 -> D2Game
+`0x93340` -> physical fill `0x9F1A0` -> import thunk `0xA766` -> D2Common #10297
+`0x51FF0` -> skill front end `0x51BF0` -> thunk `0x9270` -> Fog #10253 `0x19E90`.
+The same stage's elemental fill `0x9F210` reaches D2Common `0x50460` through thunk
+`0xAE92`; `0x50460` calls `0x9270`
+directly for EDmgSymPerCalc and then mastery `0x4F870`. The table, D2Game links and
+`0x51FF0`/`0x50460` call sites were re-read in that review and are also recorded in the
+[leveled-damage companion](skill-leveled-damage-tohit-and-elements.md#dispatch-and-functions).
+The review also re-read the Fog evaluator from the original image: the 22-entry opcode
+jump table at Fog `0x1A440` maps opcode 1 to the function call, 2 and 3 to the terminator
+path, 4/5/6 to byte (zero-extended)/word (sign-extended)/dword parameters, 7/8/9 to literals,
+10 through 15 to signed `<`,`>`,`<=`,`>=`,`==`,`!=`, 16 through 22 to add, subtract, multiply,
+guarded divide, power, negate and conditional. This agrees with SCX-R01 through SCX-R10.
+D2Common `0x4DC30` (diminishing), the unguarded fourth-pair call inside `0x51070` and that
+routine's selector 0x16 mana arithmetic (`*25`, truncating `/2`, shift, arithmetic `>>8`)
+agree with SCX-R22 and SCX-R23.
 
 ## Semantic mapping of original evidence
 

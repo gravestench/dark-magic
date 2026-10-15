@@ -211,12 +211,12 @@ Dependencies log ordered requests. A synthetic AddStat also adds the requested d
   - runtime_observed: no
 
 - **PMR-V05** Suppression preserves flat recovery (PMR-R03/R04/R05; boundary: supplied-input stage)
-  - Inputs: state 85 on, maximum 25600, percent 999, selected class record unavailable. Independent(a) current 1000/flat 5; (b) current 1000/flat 0; (c) current 2/flat -3.
+  - Inputs: state 85 on, maximum 25600, percent 999, selected class record unavailable. Independent (a) current 1000/flat 5; (b) current 1000/flat 0; (c) current 2/flat -3.
   - Seeds: no draw
   - Draws: none
   - Trace: No class/percent read; base 0; flat supplies regen; clamp.
   - Outputs: (a) AddStat(8, 5, 0)/balance 1005; (b) no request/balance 1000; (c) AddStat(8, -2, 0)/balance 0. No class/percent read in any case.
-  - Discriminates: Suppressing flat fails(a)/(c); unnecessary class access fails all cases.
+  - Discriminates: Suppressing flat fails (a)/(c); unnecessary class access fails all cases.
   - runtime_observed: no
 
 - **PMR-V06** Cleanup before zero clamp (PMR-R06a/R06b/R07a; boundary: supplied-input stage)
@@ -274,42 +274,42 @@ Dependencies log ordered requests. A synthetic AddStat also adds the requested d
   - runtime_observed: yes (1.13c, 2026-10-12, [narrow dead-exit record](../research/spec-evidence/player-mana-regeneration.md))
 
 - **PMR-V12** Handler gates and order (PMR-R01a/R02b; boundary: supplied-input stage)
-  - Inputs: Handler entry, frame 1000, args 11/22; scheduler/ticks log only. Cases(a) absent unit; (b) player suppressed/mode 1; (c) player mode 0; (d) monster mode 12; (e) object mode 1; (f) player mode 1 LifeTick returns 0; (g) player mode 1 LifeTick returns 1; (h) monster mode 0. Other cases not suppressed.
+  - Inputs: Handler entry, frame 1000, args 11/22; scheduler/ticks log only. Cases (a) absent unit; (b) player suppressed/mode 1; (c) player mode 0; (d) monster mode 12; (e) object mode 1; (f) player mode 1 LifeTick returns 0; (g) player mode 1 LifeTick returns 1; (h) monster mode 0. Other cases not suppressed.
   - Seeds: no draw
   - Draws: none
   - Trace: Successor first; then eligibility, then life-result test.
-  - Outputs: Every case first schedules(type 3, frame 1001, no private callback, args 11/22) for supplied target, including absent target(a). (a)..(e) and (h) no ticks; (f) LifeTick only; (g) LifeTick, StaminaTick, ManaTick in exact order. Stored scheduler effects excluded.
+  - Outputs: Every case first schedules(type 3, frame 1001, no private callback, args 11/22) for supplied target, including absent target (a). (a)..(e) and (h) no ticks; (f) LifeTick only; (g) LifeTick, StaminaTick, ManaTick in exact order. Stored scheduler effects excluded.
   - Discriminates: (a)/(b) reject early gate; (f) reject ignored return; (g) reject swapped calls; (h) rejects treating monster mode 0 as eligible.
   - runtime_observed: no
 
 - **PMR-V13** Getter guards (PMR-R03; boundary: supplied-input stage)
-  - Inputs: Cases(a) absent ManaTick unit; (b) unit without a stat list, valid class; (c) unit/list present, definition count 9, no definition 9, current getter 100, state 85 on, flat getter 0.
+  - Inputs: Cases (a) absent ManaTick unit; (b) unit without a stat list, valid class; (c) unit/list present, definition count 9, no definition 9, current getter 100, state 85 on, flat getter 0.
   - Seeds: no draw
   - Draws: none
   - Trace: (a) return; (b) current/max 0, base floor 1, room clamp 0; (c) maxgetter 0, regen 0, room -100, lower -100.
   - Outputs: (a) no reads/requests; (b) no write request; (c) AddStat(8, -100, 0), model balance 0, no cleanup.
-  - Discriminates: Reading missing definition 9 fails(c); early return merely because regen 0 incorrectly omits(c) clamp.
+  - Discriminates: Reading missing definition 9 fails (c); early return merely because regen 0 incorrectly omits (c) clamp.
   - runtime_observed: no
 
 - **PMR-V14** Operand order and wrap (PMR-R04/R05/R07a; boundary: supplied-input stage)
-  - Inputs: Cases(a) ManaRegen 1, maximum 25000000, current 0, percent 65437, flat 0; (b) maximum 25600, current 100, percent 0, flat 2147483647.
+  - Inputs: Cases (a) ManaRegen 1, maximum 25000000, current 0, percent 65437, flat 0; (b) maximum 25600, current 100, percent 0, flat 2147483647.
   - Seeds: no draw
   - Draws: none
-  - Trace: (a) base 1000000; factor 65537; mulDiv(65537, 1000000, 100)=(65537/100)*1000000=655000000; upper clamp 25000000. (b)8+2147483647 wraps-2147483641, lowerclamp-100.
+  - Trace: (a) base 1000000; factor 65537; mulDiv(65537, 1000000, 100)=(65537/100)*1000000=655000000; upper clamp 25000000. (b) 8+2147483647 wraps to -2147483641; lower clamp -100.
   - Outputs: (a) scaled intermediate 655000000, AddStat(8, 25000000, 0), balance 25000000; (b) AddStat(8, -100, 0), balance 0.
   - (c) Inputs: maximum 25600, current 0, percent 2147483647, flat 0, ManaRegen 120. Draws: none. Trace: class base 8; i32(100+2147483647)=-2147483549; NRF-R05 takes its final branch, low32(-2147483549*8)=792, then 792/100=7; room 25600/lower 0 leave 7 unchanged. Outputs: scaled intermediate 7, AddStat(8, 7, 0), model balance 7; no cleanup.
   - (d) Inputs: maximum 1, current -2147483648, percent 0, flat 0, ManaRegen 120. Draws: none. Trace: class quotient 0 floors to 1; regen 1; room=i32(1-(-2147483648))=-2147483647, so upper test sets regen=-2147483647; lower=i32(-(-2147483648))=-2147483648, so lower test leaves regen unchanged. Outputs: AddStat(8, -2147483647, 0), model balance i32(-2147483648-2147483647)=1; no cleanup.
   - (e) Inputs: maximum -100, current 100, state 85 on, flat 0; supplied getter values are not replaced by minimum adjustment. Draws: none. Trace: suppression sets base 0, flat leaves regen 0, so cleanup is skipped. Upper room=-100-100=-200 sets regen=-200; lower=-100 then sets regen=-100. Outputs: AddStat(8,-100,0), synthetic balance 0; no class/percent read or cleanup.
-  - Discriminates: Swapping mulDiv arguments gives 655370000 intermediate in(a), although final clamp hides the difference. Saturating add in(b) gives a positive request. A nonwrapping factor or product fails(c); a mathematical clamp without i32 subtraction/negation wrap fails(d). Reversing the two clamp tests in(e) requests -200 and leaves balance -100, failing the exact request and balance.
+  - Discriminates: Swapping mulDiv arguments gives 655370000 intermediate in (a), although final clamp hides the difference. Saturating add in (b) gives a positive request. A nonwrapping factor or product fails (c); a mathematical clamp without i32 subtraction/negation wrap fails (d). Reversing the two clamp tests in (e) requests -200 and leaves balance -100, failing the exact request and balance.
   - runtime_observed: no
 
 - **PMR-V15** Cleanup guards and captured values (PMR-R06a/R07a; boundary: supplied-input stage)
-  - Inputs: Cases(a) current 25599, maximum 25600, listpresent; (b) current=maximum 25600, state 85 on, flat 0, listpresent; (c) current=maximum 25600, normal recovery, lookup L, cleanup changes subsequent live getter maximum to 0 but not captured values.
+  - Inputs: Cases (a) current 25599, maximum 25600, list present; (b) current=maximum 25600, state 85 on, flat 0, list present; (c) current=maximum 25600, normal recovery, lookup L, cleanup changes subsequent live getter maximum to 0 but not captured values.
   - Seeds: no draw
   - Draws: none
-  - Trace: (a) not full; (b) not positive; (c) cleanup then clamp uses captured25600-25600.
+  - Trace: (a) not full; (b) not positive; (c) cleanup then clamp uses captured 25600-25600.
   - Outputs: (a) AddStat(8, 1, 0), no lookup/cleanup; (b) no lookup/cleanup/write; (c) lookup, Detach, Free only, no AddStat, captured current/maximum 25600. No actual cleanup effects asserted.
-  - Discriminates: Cleanup near full fails(a); cleanup nonpositive regen fails(b); rereading maximum for clamp fails(c).
+  - Discriminates: Cleanup near full fails (a); cleanup nonpositive regen fails (b); rereading maximum for clamp fails (c).
   - runtime_observed: no
 
 - **PMR-V16** Request and read boundaries (PMR-R01a/R02b/R03; boundary: supplied-input stage)

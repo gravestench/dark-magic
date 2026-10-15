@@ -438,3 +438,12 @@ values and no-work assertions. Each incorrect alternative identified in full pas
 fails a stated assertion. Existing gates and earlier advisory outcomes remain unchanged.
 This completes the applicable reader check for the current supplied-stage contract; it
 establishes neither user approval, gameplay confirmation nor full behavior reproduction.
+
+## Spec-review corrections, 2026-10-15
+
+An independent review re-derived V01 through V18 from the rules (due frames, wrapped coordinates, seed steps and resource values all agreed) and re-read D2Game start dispatch `0x9FD00`, scheduler `0x9F3B0`, action dispatch `0xA19A0` and target-coordinate resolver `0x9FA30`. Start preconditions, line masks, start bound 91/null-slot return 1, scheduler clamp/division/payloads, ItemEffect replacement and the consuming-request order agree with R03, R04, R05a, R06, R08 and R11. Two discrepancies were found and corrected:
+
+- **R07 partial coordinates.** The resolver `0x9FA30` always writes both coordinate outputs (target unit position, or the stored target point when the target is absent or the unit itself) and returns 1 only when both are nonzero. The action dispatcher's missile branch (`0xA1B3A`..`0xA1BD0`) ignores that return. It loads x, then y, and only when both are nonzero replaces them with displacement `(tx-ux,ty-uy)` and computes the destination. When either is zero it jumps to the creator call with the raw x/y still in the displacement registers and zero destination. The previous R07 stated four zeros for every non-both-nonzero case, and V13(b) expected `(0,0),(0,0)` for supplied `(0,40)`. The original bytes give displacement `(0,40)`, destination `(0,0)`. R07 now states the raw-pair path, V13(b) is corrected and V13(d) adds the `(30,0)` case. A fully zero resolution still passes four zeros, and the no-control path makes no resolution request.
+- **R06 owned-skill fallback.** At `0xA1A7E`..`0xA1AC5`, a matching current skill whose bonus-inclusive level is <=0 does not return 0 directly; control falls to the owned-skill search and a second level request. R06 now states that fall-through. No vector previously exercised it.
+
+Both edits change rule behavior and a vector expectation, so the reader-6 completion above no longer covers the resulting contract; a fresh full reader pass is required and has not run.
