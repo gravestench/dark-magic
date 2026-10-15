@@ -41,8 +41,9 @@ in this pass except for the hand-off slice.
 
 1. Skill server do-function table (`SkillsRecord.srvdofunc`) at D2Game VA `0x6FD274A8`, index 1 ->
    D2Game `0xA2C40` -> build/enqueue `0xDDDE0` and dequeue/apply `0xDED30` (also through `0xA20C0`).
-2. Missile `SrvHitFunc` table at VA `0x6FD2DA48` -> missile contact `0x3AE10`, and the callback route
-   `0xA10B0`; both call `0xDE0C0`.
+2. Missile contact `0x3AE10` and the callback route `0xA10B0` both call `0xDE0C0`. The link from the
+   missile `SrvHitFunc` table at VA `0x6FD2DA48` down to `0x3AE10` has no recorded intermediate RVA
+   (see the 2026-10-15 review record); identity rests on route 1.
 3. `0xDED30` -> hit-application `0xDE0C0`.
 4. In `0xDE0C0` (2026-10-14 reread of the slice from the life clamp to the lethal decision): life clamp,
    leech `0xDBA40`, absorb heal through `0xDB570`, total-damage life subtraction and write, then mana
@@ -85,7 +86,7 @@ in this pass except for the hand-off slice.
 | LOD113C-D2COMMON | `0x33AB0` | 11061 | Stay-death test | dependency STL-R12a | Disassembly 2026-10-14 (NRF) |
 | LOD113C-D2GAME | `0x8EA80`, `0x8E6F0` | — | Timer scheduling, node removal | dependency STL-R01; CSA-Q02 | Independent listings 2026-10-14 (NRF); scheduler head bytes checked 2026-10-13 (LSE) |
 | LOD113C-D2GAME | `0xDA970`, `0xDA930` | — | Mana and stamina drains | dependency LSE-R17, DPO-R18 | Owned elsewhere |
-| LOD113C-D2GAME | `0x9F7A0`, `0xDBD90` | — | Generic and freeze expiry callbacks | identity only; STL-R11 | Owned by the lifecycle |
+| LOD113C-D2GAME | `0x9F7A0`, `0xDBD90` | — | Generic and freeze expiry callbacks | identity only; STL-R11 (generic), MMF-R13c (freeze) | Generic owned by the lifecycle; freeze callback body defined by the movement/freeze owner |
 
 Imported calls from D2Game go through thunks: state set `0xA3CA` -> #10945, state test `0xA68E` ->
 #10494, find list `0xA5D4` -> #10871, new list `0xA6A0` -> #11013, list state `0xA5B6` -> #10785,
@@ -759,3 +760,46 @@ all zero, and every advisory entry has a disposition. Reader review is complete 
 stopping rule; no further full runs are required merely to reach a count. This is document review
 and hand computation, not fixture execution, gameplay confirmation, complete parity or user approval.
 The six evidence questions remain open and status remains draft.
+
+## Independent review (2026-10-15)
+
+Group review of this new spec. Every rule a vector depends on was re-derived from the original
+instruction listings before comparing with the spec: D2Game `0xDE0C0` (hand-off slice and lethal
+decision), `0xDCC20`, `0xDC780`, `0xDDAC0` (including its encoded tail, whose three call targets were
+recomputed from the raw rel32 bytes: `0x8E6F0`, `0x8EA80` and the fallback `0xDC780`), `0xDCAB0`,
+`0xDC940` (instruction-for-instruction identical to poison except state `0x73` at its three uses),
+`0xDAE20`, `0x22A80`, `0x13B0`, `0x8EA80` / `0x8E680` (frame clamp and head linking); the checked
+reconstructions of `0xDB4C0` and `0x1220`; and D2Common `0x1A550` (#10064), `0x1A2D0` (#11104) and the
+checked reconstruction of `0x603C0` (#10237). All thirteen rules matched: argument roles and order,
+signed and unsigned tests, the attacker/defender seed owners, the thresholds 90 and 20, caps 13 and
+250, cold minimum 1 after division, freeze without minimum, request order on every branch, the
+successor-saved walks and the cold callback's alive test. Every executable vector, including all
+lettered cases, was recomputed from the rules alone; every seed step was recomputed and matched. No
+expected value changed.
+
+Dispatch chain: route 1 was re-walked. The `srvdofunc` table slot at VA `0x6FD274A8` index 1 reads
+`0xA2C40` from the original image; `0xA2C40` calls `0xDDDE0`, `0xA20C0` and `0xDED30`; `0xDED30` calls
+`0xDE0C0`. Route 2: `0x3AE10` and `0xA10B0` do call `0xDE0C0`, but the earlier record's link from the
+missile `SrvHitFunc` table to `0x3AE10` was not RVA-anchored: the first five table slots
+(`0x3B990`, `0x3E330`, `0x3BB60`, `0x3F220`, `0x3C700`) do not call `0x3AE10` directly, and its
+recorded callers are `0x3AFF0` and `0xDE380` (`0x3AFF0` is called from `0x3DA60` and `0x3EDE0`). The
+dispatch-chain entry now states that limit; identity of every applier rests on route 1, so no label
+changes.
+
+Corrections and edits (no rule behavior, input, vector value, assertion, gate or boundary changed;
+the fresh-reader rule's wording/evidence-link exemption applies):
+
+- Section 1, section 3 callback identities, section 9 and the function table: the freeze expiry
+  callback (`0xDBD90`) was cited as STL-R11; STL-R11 defines only the generic callback, and the freeze
+  callback body is MMF-R13c. Citations now name MMF-R13c.
+- Section 2: after the lethal decision `0xDE0C0` continues with the surviving-monster regeneration
+  restart (DPO-R19c, OWD-R12) before its post-apply events; section 2, section 9 (depended on by) and
+  section 10 now name it.
+- CSA-V11 (g) and CSA-V14 (g) were written inside the Discriminates field; moved into Outputs.
+- Open-question rows reordered to CSA-Q05, CSA-Q06.
+
+Cross-spec observations left to their owners: STL-R11 cites MMF-R13c for the cold callback, which
+CSA-R13 owns; STL-R09's sentence "A changed expiry requests another type 12 event" omits that freeze
+also requests type 12 at a retained expiry (CSA-R08); MMF-R07, MMF-R08a to MMF-R08d, MMF-R11,
+MMF-R12, MMF-R13a, MMF-R13c (cold paragraph), MMF-R13d and MMF-R14a restate CSA rules in full rather
+than only consuming them (no value conflict found); LSE cites CSA-Q06 for its own difficulty range.

@@ -35,7 +35,7 @@ Semantic operation names are illustrative and impose no API or storage layout.
 | Additional death condition | `unit.expiryDeathCondition` | boolean | Treated as dead by removal callbacks; wider meaning STL-Q06 |
 | Base list and chains | NRF-R12a | Optional base, ordered primary/secondary lists | State storage eligibility and effect-list traversal |
 | Timed list | Owner, state, expiry, stats, callback | i32 state/expiry/stat values; callable | Effect metadata independent of active membership |
-| List conditions | `timed`, `hasStateStorage`, `secondary`, `modeBound`, `filteredApply`, `deathRemovalExempt` | booleans | Code-tested conditions; unidentified category meanings STL-Q06 |
+| List conditions | `timed`, `hasStateStorage`, `secondary`, `removeOnModeChange` (NRF name), `filteredApply`, `deathRemovalExempt` | booleans | Code-tested conditions; unidentified category meanings STL-Q06 |
 | State membership | Active and changed state sets | Bounded state identities | State count determines valid identities |
 | Frame event | Type, target, frame, override, two parameters | Signed type; i32 frame/parameters | Timed-state callers use type 12/no override/parameters 0,0 |
 | State definitions | GDF-R12/GDF-R13 | Named fields | `nosend`, `disguise`, `notondead`, player/monster/boss stay-death flags |
@@ -105,7 +105,7 @@ Vectors supply masks and selectors explicitly; they do not claim archive values 
 
 **STL-R12b** Stay-death mask producer [unresolved]. Candidate producer groups states by definition flags, including player/monster/boss stay-death fields. Loader bit-setting and byte decoding remain STL-Q07. The consumer can use supplied masks without asserting particular table cells.
 
-**STL-R13a** Death requests/traversal [verified in 1.13c code (static)]. Walk primary chain. Retain item-owned lists, deathRemovalExempt lists and nonzero StayDeath lists. Otherwise request FreeList unless hasStateStorage, then restart at current head. Player death requests stat 6/value 0/layer 0, non-staying-list removal, state partition(false), then frame-event removals types 8/9. Other-unit death first removes an auxiliary effect when present, then non-staying-list removal, then partition with supplied monster boss condition (false for other types). Actual free/auxiliary effects and mask production remain STL-Q07; supplied-mask partition is STL-R13b.
+**STL-R13a** Death requests/traversal [verified in 1.13c code (static)]. Walk primary chain. Retain item-owned lists, deathRemovalExempt lists and nonzero StayDeath lists. Otherwise request FreeList unless hasStateStorage, then restart at current head. Player death requests stat 6/value 0/layer 0, non-staying-list removal, state partition(false), then frame-event removals types 8/9. Monster death first removes an auxiliary effect when present, then non-staying-list removal, then partition with the supplied boss condition. This nonplayer cleanup completes only for a monster: after the auxiliary step, a non-monster or null unit reads its monster definition through a null reference and faults before any list request. Both death operations make further requests between these steps (for example player death's position/collision request after the partition) that are outside this contract; the ordered logs below list only lifecycle requests. Actual free/auxiliary effects and mask production remain STL-Q07; supplied-mask partition is STL-R13b.
 
 **STL-R13b** Death partition [verified in 1.13c code (static)]. Return without requests for null unit, absent state storage or missing active/changed arrays. Select the supplied player mask for player/nonboss, monster mask for nonplayer/nonboss, and boss mask for nonzero boss selector. For each state word, first write `changed = changed OR (active AND NOT mask)`, then `active = active AND mask`. Request update marking afterward, including when state count is zero but the arrays exist. Actual mask production remains STL-R12b and update-queue integration NRF-Q17; supplied-mask state writes are independently verified.
 
@@ -170,7 +170,7 @@ No local rule creates units or writes saves. Requests establish actual stored/de
 
 Zero/negative duration still schedules an ordinary expiry clamped to next frame. Nonpositive expiry writes never clear timed. Any type 12 event visits every due primary list; an extended list can survive an event at its scheduled expiry. Secondary lists are not traversed. An expiring stay-death state can retain membership after list contributions disappear; resurrection cleanup is STL-Q04. A retained due list with state storage can make head restart nonterminating (STL-Q05).
 
-State lookup and membership use different guards (NRF-R12a). Missing caster uses owner 6/-1. Outside explicit unit/dead-mode/boss branches, no local rule branches on difficulty, PvP, melee/missile origin or classic/expansion; evidence remains expansion 1.13c. Skill allocation failure returns 0. Malformed event/frame behavior is STL-Q10.
+State lookup and membership use different guards (NRF-R12a). Missing caster uses owner 6/-1. Outside explicit unit/dead-mode/boss branches, no local rule branches on difficulty, PvP, melee/missile origin or classic/expansion; evidence remains expansion 1.13c. Skill allocation failure returns 0. The nonplayer death cleanup faults for a non-monster unit before list removal (STL-R13a). Malformed event/frame behavior is STL-Q10.
 
 ## 7. Open questions
 
@@ -407,8 +407,9 @@ Each vector uses supplied dependencies that log calls in order. FreeList removes
   - Trace: optional auxiliary removal precedes primary traversal; exemption keeps A; partition receives the supplied boss selection.
   - Outputs: per independent case; A retained; no FreeList(A), player stat-6 write, or type-8/type-9 event removal request.
   - (a) Inputs: monster, boss condition true, auxiliary effect present. Draws: none. Outputs: log[remove auxiliary effect,partition(true)].
-  - (b) Inputs: object, auxiliary effect absent; boss condition false. Draws: none. Outputs: log[partition(false)].
-  - Discriminates: death exemption preserves a non-item list without stay-death membership; the nonplayer branch requests auxiliary removal before partition, and boss selection reaches partition.
+  - (b) Inputs: monster, auxiliary effect absent; boss condition false. Draws: none. Outputs: log[partition(false)].
+  - (c) Inputs: object, auxiliary effect absent; boss condition false. Draws: none. Outputs: fault on the null monster-definition read; log empty; no partition request; A retained.
+  - Discriminates: death exemption preserves a non-item list without stay-death membership; the nonplayer branch requests auxiliary removal before partition, and boss selection reaches partition; a non-monster does not reach list removal or partition.
   - runtime_observed: no
 
 ### 8.2 Observation vectors
@@ -436,4 +437,4 @@ Partial static acceptance is the verified assertions of STL-V01 through STL-V09 
 
 ## Appendix A. Provenance
 
-Original Lord of Destruction Expansion 1.13c, Windows x86. D2Game/D2Common/D2Client identities are in the [source manifest](../research/source-manifest.md). Static records dated 2026-10-12 are reused within their actual boundaries; targeted readings dated 2026-10-14 and their limitations are in the [companion](../research/spec-evidence/state-timed-state-lifecycle.md). No gameplay observation or new archive-cell claim is recorded. The completed reader review applies to the supplied-input contract; static integration and gameplay observations remain open.
+Original Lord of Destruction Expansion 1.13c, Windows x86. D2Game/D2Common/D2Client identities are in the [source manifest](../research/source-manifest.md). Static records dated 2026-10-12 are reused within their actual boundaries; targeted readings dated 2026-10-14 and their limitations are in the [companion](../research/spec-evidence/state-timed-state-lifecycle.md). No gameplay observation or new archive-cell claim is recorded. A 2026-10-15 review correction to STL-R13a/STL-V19 requires a fresh full reader pass; static integration and gameplay observations remain open.

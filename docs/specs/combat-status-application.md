@@ -31,9 +31,9 @@ and the poison term of the immediate damage total stay in
 stepping, draw forms, stat reads, state lookup/test/set routing and the seed-ownership table stay in
 [core-numeric-and-rng-foundations](core-numeric-and-rng-foundations.md), whose NRF-R04a rows for the
 stun-cancel, cold-shatter and freeze-fallback sites refer to the rules here; the timer queue, list
-construction, attachment, list-stat propagation, expiry, removal, the generic and freeze expiry
-callbacks and stay-death stay in [state-timed-state-lifecycle](state-timed-state-lifecycle.md); what
-the cold and freeze states do once applied is
+construction, attachment, list-stat propagation, expiry, removal, the generic expiry callback and
+stay-death stay in [state-timed-state-lifecycle](state-timed-state-lifecycle.md); what the cold and
+freeze states do once applied, including the freeze expiry callback (MMF-R13c), is
 [state-movement-modifiers-and-freeze](state-movement-modifiers-and-freeze.md); lengths reaching the
 record (resistance, cannot-be-frozen) are produced upstream.
 
@@ -46,7 +46,8 @@ record (resistance, cannot-be-frozen) are produced upstream.
   queued-hit dequeue of melee and skill attacks and from missile contact and callback routes, as
   [combat-damage-pipeline-order](combat-damage-pipeline-order.md) defines. Within that operation the
   status stage runs after the life clamp, leech, absorb heal and the current-life write (DPO-R14,
-  DPO-R16, DPO-R17), and before the durability step, post-apply events, reflection and hit reaction.
+  DPO-R16, DPO-R17), and before the surviving-monster regeneration restart (DPO-R19c, OWD-R12), the
+  durability step, post-apply events, reflection and hit reaction.
 - The cold expiry callback is requested later through the lifecycle's expired-list removal path
   (STL-R03, STL-R05). Actual contribution removal and callback invocation remain CSA-Q02; CSA-R13
   defines the callback at supplied entry after the list's stats have been removed.
@@ -90,8 +91,8 @@ expiry frames are absolute game frames.
 | Cold and freeze divisors: Normal 1 and 1, Nightmare 2 and 2, Hell 4 and 4 | `data/global/excel/difficultylevels.txt`, rows `Normal`, `Nightmare`, `Hell`, columns `MonsterColdDivisor`, `MonsterFreezeDivisor` ([table records](../research/spec-evidence/core-game-data-fields.md#named-cell-records)) | Loaded data; code fixes which consumer divides and the zero-divisor policy |
 | `ColdEffect`, `Velocity`, `boss`, `deadCol` per class | MonStats / MonStats2 per-class cells | Loaded data; vectors supply them as named inputs |
 
-Callback identities: `coldExpiryCallback` (CSA-R13), `freezeExpiryCallback` and
-`genericStatusCallback` (both STL-R11). Dependency operations, each with its owning contract:
+Callback identities: `coldExpiryCallback` (CSA-R13), `freezeExpiryCallback` (MMF-R13c) and
+`genericStatusCallback` (STL-R11). Dependency operations, each with its owning contract:
 `FindStateList`, `HasState`, `SetState` request (NRF-R12a; bookkeeping STL-R07, STL-R07a);
 `NewList`, `SetListState`, `SetListCallback`, `SetListExpiry`, `GetListExpiry` (STL-R06a);
 `Attach` (STL-R06b); replacing list `SetStat` (STL-R06c); `GetStat` / `Stat` (NRF-R12b, NRF-R12c);
@@ -439,8 +440,8 @@ fixture operations. Disguise and update-queue integration remain gated.
 | **CSA-Q02** | integration / open | Animation refresh effects; active/deferred frame-event node removal; kind-2, kind-3 and kind-12 handler execution; actual list contribution removal and callback invocation through unresolved STL-R05; and the scheduler's own handling of a kind-2 request for a monster holding state 54, which the freeze path can reach only if a dependency sets that state after CSA-R07's test. Accept the lifecycle and animation owners' contracts. Direct supplied-entry callback requests remain available. |
 | **CSA-Q03** | outside-boundary / open | Producer and wider meaning of the monster condition word's bit 8 (`monsterFlag8`) and of `aliveExclusionCondition`: trace their writers in monster spawning and unit lifecycle owners. The tested branches here are verified. |
 | **CSA-Q04** | outside-boundary / open | Which server-to-client messages carry these state and stat changes: trace the update sender in a `net-` spec. |
-| **CSA-Q06** | outside-boundary / open | Whether any caller can supply a game difficulty outside 0..2. The divisor lookup's handling of such a value and the unguarded per-difficulty cold-effect read are not part of this contract; establish the difficulty producer's range in its owner. |
 | **CSA-Q05** | observation / pending | Matching gameplay captures of CSA-O01, CSA-O02 and the verified rules' vectors; no gameplay observation has been made. |
+| **CSA-Q06** | outside-boundary / open | Whether any caller can supply a game difficulty outside 0..2. The divisor lookup's handling of such a value and the unguarded per-difficulty cold-effect read are not part of this contract; establish the difficulty producer's range in its owner. |
 
 The [gap file](../plans/gaps/combat-status-application.md) records the attempts and exact blocked
 assertions.
@@ -844,15 +845,15 @@ every case states its own outputs.
     `MonsterFreezeDivisor` 5, length 30, empty chain: 30 / 5 = 6; new-list requests at expiry 1006,
     kind-12 at 1006, kind-2 at 1007.
     (f) `ColdEffect(N)` +10, length 1: return after the effect test; no request; chain Q, R, S.
+    (g) `D` associated with a different game (frame 5000, difficulty 0, pool `P2`; fixture
+    input), length 20, empty chain: 20 / 2 = 10 (attacker's Nightmare divisor); requests state 1 on,
+    `NewList(P, 2, 1010, owner 0/7)`, tag 1, freeze callback, attach 1, kind-12 at 1010 and kind-2 at
+    1011, both on `A.game`; no draw.
   - Discriminates: (a) rejects a minimum length of 1 and removing kind-3 nodes, and, because removal
     clears the removed node's successor, rejects reading the successor after removing Q (the walk
     would stop and S would remain); (c) rejects skipping the kind-12 request when the expiry is
     retained and rejects an equality write; (e) rejects using the cold divisor; (f) rejects testing
     only `E == 0`; (g) rejects using the defender's game.
-    Case (g): `D` associated with a different game (frame 5000, difficulty 0, pool `P2`; fixture
-    input), length 20, empty chain: 20 / 2 = 10 (attacker's Nightmare divisor); requests state 1 on,
-    `NewList(P, 2, 1010, owner 0/7)`, tag 1, freeze callback, attach 1, kind-12 at 1010 and kind-2 at
-    1011, both on `A.game`; no draw.
   - runtime_observed: no
 
 - **CSA-V12** Poison monster pre-step and new list (CSA-R10, CSA-R11, CSA-R12; boundary: supplied-input stage)
@@ -922,11 +923,11 @@ every case states its own outputs.
     With an existing state 115 list, expiry 1080, own stat 74 = -100:
     (e) magnitude 50, length 200: no request. (f) magnitude 100, length 50: `SetListExpiry(1050)`,
     kind-12 at 1050, stat 74 = -100.
+    (g) Monster `D`, no list, chain K (kind 3): `burnMagnitude` 0x500 with `burnLength` 0, or
+    magnitude 0 with length 25: no logged lookup, no removal, no kind-3 request; chain K.
   - Discriminates: (d) rejects swapping burn magnitude and length (that would give expiry 1010 and
     stat -50); (f) rejects extend-only burn; (a) and (b) reject a lookup before the gates; (g)
     rejects a pre-step before the gates.
-    Case (g): monster `D`, no list, chain K (kind 3): `burnMagnitude` 0x500 with `burnLength` 0, or
-    magnitude 0 with length 25: no logged lookup, no removal, no kind-3 request; chain K.
   - runtime_observed: no
 
 - **CSA-V15** Cold expiry callback (CSA-R13; boundary: supplied-input stage)
@@ -985,7 +986,7 @@ section 3.2 (damage record); [state-timed-state-lifecycle](state-timed-state-lif
 (scheduling and frame clamp), STL-R03 (expiry routing) and STL-R05 (actual free/callback integration,
 unresolved), STL-R06a
 (list primitives), STL-R06b and STL-R06c (attach and list-stat writes, gated), STL-R07 and STL-R07a
-(verified state membership and unresolved disguise), STL-R11 (generic and freeze callbacks),
+(verified state membership and unresolved disguise), STL-R11 (generic callback identity),
 STL-R12a (stay-death consumer with supplied masks); NRF-Q17 retains update-queue integration;
 [core-game-data-fields](core-game-data-fields.md) GDF-R02, GDF-R05, GDF-R06, GDF-R11, GDF-R12,
 GDF-R14, GDF-R15, GDF-R17, GDF-R18 (names and fields);
@@ -997,7 +998,8 @@ GDF-R14, GDF-R15, GDF-R17, GDF-R18 (names and fields);
 of the hit path and its draw order); [core-numeric-and-rng-foundations](core-numeric-and-rng-foundations.md)
 NRF-R04a (seed-ownership rows for the stun-cancel, shatter and fallback sites);
 [state-movement-modifiers-and-freeze](state-movement-modifiers-and-freeze.md) (the cold and freeze
-lists it describes); [combat-hit-recovery](combat-hit-recovery.md) (reads states 21 and 1).
+lists it describes); [combat-hit-recovery](combat-hit-recovery.md) (reads states 21 and 1);
+[combat-open-wounds](combat-open-wounds.md) OWD-R12 (consumes the CSA-R01 lethal decision).
 
 ## 10. Related specs
 
@@ -1007,8 +1009,10 @@ lists it describes); [combat-hit-recovery](combat-hit-recovery.md) (reads states
 - [combat-leech-and-status-effects](combat-leech-and-status-effects.md): leech, drain and the poison
   term of the immediate total, which run before or beside this stage.
 - [state-movement-modifiers-and-freeze](state-movement-modifiers-and-freeze.md): what cold and freeze
-  do once applied; MMF-R07, MMF-R08, MMF-R11 and MMF-R12 describe the same cold-effect, routing and
-  length decisions this spec owns.
+  do once applied; MMF-R07, MMF-R08a to MMF-R08d, MMF-R11 and MMF-R12 describe the same cold-effect, routing and
+  length decisions this spec owns; MMF-R13c defines the freeze expiry callback that CSA-R08 installs.
+- [combat-open-wounds](combat-open-wounds.md): OWD-R12 consumes CSA-R01's final lethal decision for
+  the surviving-monster regeneration restart that follows this stage.
 - [state-timed-state-lifecycle](state-timed-state-lifecycle.md): list, timer, expiry and callback
   machinery consumed here.
 - [core-numeric-and-rng-foundations](core-numeric-and-rng-foundations.md): random steps, stat and state

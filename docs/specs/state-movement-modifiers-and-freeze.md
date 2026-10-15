@@ -471,7 +471,7 @@ log, so their relative order is observable without counting internal data querie
 
 - **MMF-V08** Diminishing values (MMF-R01; boundary: isolated rule)
   - (a) Ordinary diminishing values:
-    - Inputs: independent (index 4,v=50), (index 0,v=100), (index 0,v-20), (index 0,v=0)
+    - Inputs: independent (index 4,v=50), (index 0,v=100), (index 0,v=-20), (index 0,v=0)
     - Seeds: no draw
     - Draws: none
     - Trace: 7500/200=37; 12000/220=54; -2400/100=-24; zero shortcut
@@ -698,10 +698,10 @@ log, so their relative order is observable without counting internal data querie
   - runtime_observed: no
 
 - **MMF-V14** Zero cold effect (MMF-R07; boundary: supplied-input stage)
-  - Inputs: monster E0, cold length 50
+  - Inputs: monster E=0, cold length 50
   - Seeds: defender{1,0}
   - Draws: none
-  - Trace: E0 returns before requests/draw
+  - Trace: E=0 returns before requests/draw
   - Outputs: no requests; seed{1,0}; state 11 off
   - Discriminates: rejects drawing before E gate
   - runtime_observed: no
@@ -717,14 +717,14 @@ log, so their relative order is observable without counting internal data querie
 
 - **MMF-V16** Positive cold effect (MMF-R07/MMF-R08d/MMF-R11; boundary: supplied-input stage)
   - (a) Cold:
-    - Inputs: monster E+10, cold length 50, cold divisor 2
+    - Inputs: monster E=10, cold length 50, cold divisor 2
     - Seeds: defender{1,0}
     - Draws: defender modulo 100 = 85
     - Trace: E>=0 skips division;end 1050
     - Outputs: log coldNew(10,1050), state 107 off; own 67/68/69=10; seed{1791398085,0}
     - Discriminates: rejects dividing positive E duration
   - (b) Freeze:
-    - Inputs: monster E+10, freeze length 50, all eligibility gates false
+    - Inputs: monster E=10, freeze length 50, all eligibility gates false
     - Seeds: defender{1,0}
     - Draws: none
     - Trace: freeze E>=0 returns
@@ -734,11 +734,11 @@ log, so their relative order is observable without counting internal data querie
 
 - **MMF-V17** Length resistance, rounding and no absorb (MMF-R10a/MMF-R10c; boundary: supplied-input stage)
   - (a) Small length/resistance cases:
-    - Inputs: independent supplied effective (length,r)=(100,40),(100,-50),(100,100),(100,150),(7,33); bypass false; both length entries have zero reduction/no absorb bindings; absorbHeal9; defender cold-damage absorb stats 148/149=999
+    - Inputs: independent supplied effective (length,r)=(100,40),(100,-50),(100,100),(100,150),(7,33); bypass false; both length entries have zero reduction/no absorb bindings; absorbHeal=9; defender cold-damage absorb stats 148/149=999
     - Seeds: no draw
     - Draws: none
     - Trace: factors 60,150,0,0,67; NRF mulDiv gives 60,150,0,0,4
-    - Outputs: stored length 60,150,0,0,4 respectively; absorbHeal9 unchanged, no absorb-stat reads
+    - Outputs: stored length 60,150,0,0,4 respectively; absorbHeal=9 unchanged, no absorb-stat reads
     - Discriminates: 7 case rejects rounding 4.69 upward; nonzero absorb stats reject cold-damage bindings for length
   - (b) Caller operand order:
     - Inputs: supplied effective length=65537, r=33, bypass false; zero reduction slot and no length absorb bindings; absorbHeal=9.
@@ -784,7 +784,7 @@ log, so their relative order is observable without counting internal data querie
   - Inputs: monster freeze length 20/divisor 1 at 1000; event chain nodes A(kind 2)->B(kind 3)->C(kind 2); then explicitly invoke callback state 1 at frame 1020 after supplied list removal, unit mode 1; aidel Normal=0, conditionsA/B false
   - Seeds: no draw
   - Draws: none
-  - Trace: start duration 20,end 1020,AI1021; callback alive clears 1, cleanup, mode 1, delay 0->15
+  - Trace: start duration 20,end 1020,AI request 1021; callback alive clears 1, cleanup, mode 1, delay 0->15
   - Outputs: start log[freezeNew(1020),removeNodeA,removeNodeC,schedule 2(1021)]; callback log[state 1 off,cleanup,mode 1,removeNodeA,removeNodeC,schedule 2(1035)]; active 1 false, mode 1; stats 67/68/69 remain 100; node removal/storage restoration unasserted
   - Discriminates: delay 15 and 1035 reject rescheduling at expiry+1; no stat writes reject freeze applying -50. This vector logs supplied traversal requests; saved-successor behavior with mutating removal is the consumed CSA-R09 contract, discriminated by CSA-V11(a), and is not independently established by this log-only fixture
   - runtime_observed: no
@@ -795,22 +795,22 @@ log, so their relative order is observable without counting internal data querie
     - Seeds: defender{1,0}
     - Draws: defender modulo 100 = 85
     - Trace: candidate 1040<1050, no expiry write; still draw
-    - Outputs: end 1050 and own stats-50; log[state 107 off]; seed{1791398085,0}
+    - Outputs: end 1050 and own stats=-50; log[state 107 off]; seed{1791398085,0}
     - Discriminates: rejects replacing E or suppressing draw on unchanged list
   - (b) Cold longer:
     - Inputs: monster existing cold list end 1050, own 67/68/69=-50, state 11 on, new E=-25, length 60 at 1000
     - Seeds: defender{1,0}
     - Draws: defender modulo 100 = 85
     - Trace: candidate 1060>1050 extends without rewriting stats
-    - Outputs: end 1060, own stats-50; log[setExpiry(1060),schedule 12(1060),state 107 off]; seed{1791398085,0}
+    - Outputs: end 1060, own stats=-50; log[setExpiry(1060),schedule 12(1060),state 107 off]; seed{1791398085,0}
     - Discriminates: rejects retaining old end or rewriting E
   - (c) Freeze shorter:
     - Inputs: monster existing freeze list end 1050, state 1 on, new length 20 at 1000, no event nodes
     - Seeds: no draw
     - Draws: none
-    - Trace: candidate 1020<=1050 keeps end; schedules expiry 1050 but AI1000+20+1
+    - Trace: candidate 1020<=1050 keeps end; schedules expiry 1050 but AI request 1000+20+1=1021
     - Outputs: end 1050; log[schedule 12(1050),schedule 2(1021)]; no stat writes
-    - Discriminates: AI1021 rejects deriving AI from selected list expiry 1050
+    - Discriminates: AI request 1021 rejects deriving AI from selected list expiry 1050
   - runtime_observed: no
 
 - **MMF-V21** Cold seeded side draw and ordered double call (MMF-R08a/MMF-R14a; boundary: supplied-input stage)

@@ -119,12 +119,12 @@ These locations identify evidence, not required layouts or calling conventions.
 | Velocity and derived ordinary/run animation bases | MonStats signed words +0x32/+0x36/+0x38 |
 | cold effect/delay | MonStats signed byte+0x168+difficulty / unsigned byte+0x4F+selected difficulty |
 | boss / linked MonStats2 / deadCol | MonStats flag bit 6 of+0x0C / signed word+0x18; MonStats2 flag bit 19 of+0x04 |
-| freeze/cold divisor | DifficultyLevels +0x14/+0x18, record stride0x58 |
+| freeze/cold divisor | DifficultyLevels +0x14/+0x18, record stride 0x58 |
 | list expiry/state/callback | StatList +0x18/+0x14/+0x24 |
-| monsterFlag8 | MonsterData word+0x16 AND8 |
+| monsterFlag8 | MonsterData word+0x16 AND 8 |
 | timer node kind/successor | byte+0x00 / +0x24 |
 | attack pair | grid 0 from inventory helper 0x1E1B0, entry storage+0x0C, item fields+0x10/+0x14; no body-slot names inferred |
-| override predicate / player condition / numerator | active-state words intersect DataTables mask+0x164; Unit +0xC8 bit 3; numerator Unit +0x48 AND0xFFFFFF00 |
+| override predicate / player condition / numerator | active-state words intersect DataTables mask+0x164; Unit +0xC8 bit 3; numerator Unit +0x48 AND 0xFFFFFF00 |
 
 Cold's native attacker/defender roles are eax/esi with length on stack; freeze uses ecx/eax with
 length on stack. The callbacks use ecx unit/edx state, with removed-list argument on stack.
@@ -213,7 +213,7 @@ from scheduled execution.
 
 The old resistance-helper fragment was asm-only, used player-only classic penalties and did not
 identify length absorb entries. Current DMI-R01/R05/R07 establishes regular-monster/hireling
-classification, immunity/pierce exception, Expansion penalties from data, Classic20/50 penalties,
+classification, immunity/pierce exception, Expansion penalties from data, Classic 20/50 penalties,
 floor/caps and positive bypass. DMI's code-defined entries 5/6 have reduction slot 0 and no absorb
 bindings, so length absorption does not run. DMI-R06/R09 consumes NRF-R05 `mulDiv(100-r,len,100)`;
 it is not universally equivalent to multiplying in an unbounded integer or always low32 before
@@ -241,7 +241,7 @@ This table records dispositions rather than a new acceptance contract.
 | Derived monster animation bases | Current GDF-R05b already records exact producer dependency and limits | GDF-Q01 integration remains; supplied signed words usable |
 | Unread dispatcher/predicate callees | Complete relevant movement/attack predicates read; selected skill, remap and preparation not all verified | MMF-R06g/MMF-Q11 explicit production gate |
 | Callback lifecycle/cleanup | Reused CSA cold callback and full freeze callback listing; cleanup dependency assessed | MMF-R13e/MMF-Q12; local callback log available independently |
-| Verified rules without executable vectors | Retain22 families, concretize symbolic ones, add paired/step/fallback/resistance/callback families | MMF-V01 through MMF-V28; all unobserved |
+| Verified rules without executable vectors | Retain 22 families, concretize symbolic ones, add paired/step/fallback/resistance/callback families | MMF-V01 through MMF-V28; all unobserved |
 | Pending original observations | Four procedures retained and expanded to cover current verified branches | MMF-Q09; no runtime promotion |
 
 Historical absence claims had no retained six-rung search record. They are not renewed as
@@ -413,7 +413,7 @@ were preserved privately before edits. Findings do not approve the spec.
 | DISCRIM 4: log-only MMF-V19 removal cannot reject an unsaved successor | No new removal fixture: main MMF-V19 now explicitly limits itself to supplied traversal logs and cites consumed CSA-R09/CSA-V11(a) for the saved-successor discriminator with mutating removal. Actual original removal/lifecycle stays gated; this fixture does not claim to establish it |
 | GATED 16 | Retained the five unresolved rule leaves, the ten current questions and GDF-Q01; actual integration remains unverified |
 | HARDEST 1: MMF-R06f/MMF-V22 overlapping predicates/different writes/HRC dependencies | No change: MMF-V22(g)/(l)-(q) now has distinct final rates, path writes, actionRate or preparation logs for each adjacency; HRC-R12a/R14 owns the three delegated formulas. Supplied predicates remain independent of actual producer integration |
-| HARDEST 2: MMF-R13d/MMF-V20 expiry/new-duration AI | No change: explicit existing expiry, new candidate, unchanged list stats and final seed distinguish cold; freeze keeps end 1050 while requesting AI1021. Equal/later dependency cases are named below |
+| HARDEST 2: MMF-R13d/MMF-V20 expiry/new-duration AI | No change: explicit existing expiry, new candidate, unchanged list stats and final seed distinguish cold; freeze keeps end 1050 while requesting AI 1021. Equal/later dependency cases are named below |
 | HARDEST 3: MMF-R13c/MMF-V19/MMF-V27 callback gates and requests | Existing supplied callback inputs/logs remain explicit; added MMF-V27(e) fixes a null freeze callback's state-off-before-fatal sequence. Actual cleanup/mode-bound processing/timer/lifecycle effects retain their gates |
 
 | Grouped coverage finding | Disposition by subbranch |
@@ -454,10 +454,10 @@ and the complete report transcription were preserved privately before fixes.
 | 1. MMF-R05b wrapping pair sum/adjustment | Added MMF-V23(f)/(g): INT_MAX pair wraps its sum before averaging, while INT_MIN/INT_MAX wraps the adjustment; both finish at rate 38 rather than the respective unbounded alternatives 256/448 |
 | 2. MMF-R06a negative/wrapped unsigned product | Added MMF-V11(b)/(c): negative B=-1 gives u32 product 4294967196 and capped 32767; large positive B=1073741824 wraps the product to 0 and stores 0. These exercise the default caller independently of the attack caller or bare division helper |
 | 3. MMF-R06d ramp, target and negative-speed clamps | No change: NRF-V22(a) discriminates five-tick ramp/target clamp and cleared acceleration; (b) retains acceleration at the negative-speed clamp; (e) distinguishes target equality; (f) establishes target-before-negative order. MMF-R06d consumes NRF-R11a directly |
-| 4. MMF-R09 negative partner halving | No change: DPO-V21 supplies coldLength=-3/freezeLength20/stat 118=1, requiring -1/10 and rejecting floor division or skipping the negative partner; DPO-R10 owns the consumed strip |
+| 4. MMF-R09 negative partner halving | No change: DPO-V21 supplies coldLength=-3/freezeLength=20/stat 118=1, requiring -1/10 and rejecting floor division or skipping the negative partner; DPO-R10 owns the consumed strip |
 | 5. MMF-R10a positive-resistance bypass | No change: DMI-V07(a)/(c) and DMI-V24 already discriminate positive bypass versus negative-resistance preservation and player selection; same owner/vector citations as prior dispositions |
-| 6. MMF-R11 wrapped cold end | Added MMF-V13(g): frame 2147483640 plus duration 20 requests expiry-2147483636, not an unbounded/saturated positive value; list fields and requested frames are supplied-stage assertions only |
-| 7. MMF-R12 wrapped freeze end | Added MMF-V18(d): same wrapped list expiry with independently wrapped kind-2 request-2147483635; no actual queue execution claim |
+| 6. MMF-R11 wrapped cold end | Added MMF-V13(g): frame 2147483640 plus duration 20 requests expiry -2147483636, not an unbounded/saturated positive value; list fields and requested frames are supplied-stage assertions only |
+| 7. MMF-R12 wrapped freeze end | Added MMF-V18(d): same wrapped list expiry with independently wrapped kind-2 request -2147483635; no actual queue execution claim |
 | 8. MMF-R13d freeze extension/equality | No change: CSA-V11(c) explicitly covers old expiry 1020 retained, equal 1010 with no write, and earlier 1005 replaced by 1010, including required kind-12 requests; CSA-R08 owns the consumed refresh |
 | 9. MMF-R13d first matching state list | No change: NRF-V33(a) supplies two state 11 lists across primary/secondary chains and requires the primary P11; (g) selects secondary S11 when primary has none. NRF-R12a owns lookup and MMF-R13d consumes its returned list; no replacement selection policy added locally |
 | 10. MMF-R14a exact roll 20 | No change: CSA-V09(h)/(i) supplies exact 20/off and 19/on under the same cold-shatter operation; no duplicate seed binding |
@@ -482,3 +482,33 @@ No rule behavior, input source, ownership or gate boundary changed after FULL3. 
 reader stopping condition is met. Actual input preparation, stored propagation, lifecycle and
 gameplay observations retain their stated gaps; the document remains draft and maintainer
 approval remains outstanding.
+
+## Independent review spot-check - 2026-10-15
+
+A separate reviewer re-derived sampled rules from the original 1.13c instructions before comparing
+them with the spec; no source was edited and no gameplay was performed. Sampled for surprising
+constants/exceptions: MMF-R01, MMF-R02, MMF-R04a, MMF-R05a, MMF-R05b, MMF-R06a, MMF-R06c, MMF-R06f,
+MMF-R07, MMF-R08b, MMF-R08d, MMF-R11, MMF-R12, MMF-R13c, MMF-R13d, MMF-R14a; random others:
+MMF-R03, MMF-R06b, MMF-R09. All agree with the current contract.
+
+- Common 0x33110: encoded head decoded by hand; its first three calls land on 0x501E0, 0x32670 and
+  0x30B80, then 0x323E0 with index 2, matching the companion chain. Predicate order 0x30B80, 0x2EF90,
+  0x2EFC0, 0x2F010, 0x30C70, 0x30BD0, 0x2FAC0, default; movement path test precedes stat 67 reads
+  and both writes; floor 25; signed products/divides for movement, unsigned for action; Sequence
+  test reads actual type/mode (18, minus 30); clamp 15..175; block admits types 0/1/3.
+- Common 0x323E0 table (.rdata, stride 12): kind 1 with (A, stat) = (120,93), (120,99), (120,105),
+  (120,102), (150,96) for indices 0..4.
+- Common 0x2FB10 / 0x30D50 / 0x30530: player base 101 only for mode 3 else 213; monster words +0x36
+  ordinary/+0x38 for mode 15; Walk byte and monster signed word shifted 8; invalid record reads
+  through null; eligibility 4/6 and 417/418, null false.
+- Game 0xAFDB0 / 0xEB2C0: layer-0 writes 68=100, 67=75, 69=100 and 68/67/69=100 respectively.
+- Game 0xDC780 / 0xDDAC0 / 0xDAE20 / 0xDBD90 / 0xDA7B0 and checked C of 0xDB4C0: request orders,
+  -50 fallback, cold zero-divisor skip, freeze zero-divisor fatal, extend-only signed comparisons,
+  freeze kind-12 at max end, kind-2 at frame+adjusted+1, unconditional cold draw with threshold 20,
+  freeze callback zero delay to 15 and Normal-column condition, strip stats 153/118 with signed halving.
+
+Recomputed vectors: MMF-V01-V04, V06, V08(a), V09(a)-(f), V10(a)-(f), V11, V12(a)/(b), V13(a)/(b)/(g),
+V17(a)/(b), V18(a)/(b)/(d), V19, V20, V21 (including second seed {3459745073,1647453129}, roll 73),
+V22(a)-(j)/(q), V23(a)/(b)/(f)/(g), V24(a), V27(b)-(e), V28(b): no mismatch. Edits in this pass were
+notation only (run-together tokens and one missing `=` in MMF-V08(a)); no rule, input, output or
+gate changed, so no fresh reader rerun is required.
