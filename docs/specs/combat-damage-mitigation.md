@@ -461,8 +461,7 @@ then DMI-R05/DMI-R06. A whole-entry execution under the setup additionally consu
 DPO-R08a, DMI-R03 with an empty list, DPO-R10, and the stat reads of NRF-R12b/NRF-R12c.
 Vectors V01-V26 supply the values those reads return; V27 supplies the arrays and definitions.
 Each vector uses **no draw** (DMI-R10);
-DMI-V14 explicitly supplies unchanged seeds. The pipeline spec's unprefixed V6-V8 are
-different vectors from DMI-V06-V08.
+DMI-V14 explicitly supplies unchanged seeds.
 A vector that does not list `record.total` or `record.absorbHeal` among its outputs does not
 assert them. Vectors may also assert named intermediate results (`mulDiv` returns, the hireling
 category, `b`, `r`, `cap`) as rule-level checks; section 5 lists only writes.

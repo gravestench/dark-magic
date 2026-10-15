@@ -690,3 +690,7 @@ This final applicable full pass has MISMATCH 0 and no unresolved GUESS, GAP or D
 The documented boundaries and advisory coverage remain visible. It establishes completion of
 the reader pass for this contract, not user approval, gameplay parity or closure of the pending
 evidence gaps. The document remains draft.
+
+## Independent review spot-check, 2026-10-15
+
+A separate reviewer re-read original D2Game disassembly (original 1.13c instruction listings, read-only), deriving each reading before comparing it with the rule text: 0xDC0B0 (DMI-R01 regular flags, DMI-R02 reduction setup and argument order, event 11 placement, DMI-R05 bypass, loop stop, total), 0xDBD00 (DMI-R06), 0xDB3C0 (DMI-R07 pierce condition, penalty selection, floor, caps 50/75/95, sanctuary only for stat 36 with the undead test) and 0xDAD00 (DMI-R08 percent cap 40, flat clamp to the remaining value). All matched; none of these functions calls a draw helper or steps a seed (DMI-R10 for the read functions). Every executable vector's arithmetic was recomputed without a mismatch. One stale sentence about unprefixed pipeline vectors was removed from section 8; no rule, vector or label changed, so the final full reader pass above still applies.

@@ -54,8 +54,8 @@ Notation consumes NRF-R01/R02 for seeds and draws, NRF-R05 for `mulDiv`, NRF-R06
 | attacker stats 0x39* / 0x3A* (`poisonmindam` / `poisonmaxdam`), 0x14C* (`passive_pois_mastery`), 0x65* (`skill_poison_override_length`), 0x3B* (`poisonlength`), 0x146* (`poison_count`) | stat id | i32 raw | poison roll and length (DPO-R06) |
 | attacker stats 0x38* (`coldlength`), 0x42* (`stunlength`), 0x13B* (`firelength`) | stat id | i32 | length terms (DPO-R06b, DPO-R21b) |
 | attacker stats 0x78* (`item_damagetargetac`), 0x79 (`item_demondamage_percent`), 0x7A* (`item_undeaddamage_percent`), 0xB4* (`damage_vs_montype`, layered list) | stat id | i32 | pre-roll adjustments (DPO-R31) |
-| attacker stat 0xAC (`alignment`) on the state 0x69 (`alignment`) list | alignment-state stat read = alignment-state stat read | i32 | `== 2` extends DPO-R31 to non-player attackers |
-| defender stats 6 (`hitpoints`), 7 (`maxhp`, through max-life read = max-life read), 8 (`mana`), 10 (`stamina`) | stat id | i32 8.8 | resources (DPO-R14, R16, R17, R18) |
+| attacker stat 0xAC (`alignment`) on the state 0x69 (`alignment`) list | alignment-state stat read | i32 | `== 2` extends DPO-R31 to non-player attackers |
+| defender stats 6 (`hitpoints`), 7 (`maxhp`, through the max-life read), 8 (`mana`), 10 (`stamina`) | stat id | i32 8.8 | resources (DPO-R14, R16, R17, R18) |
 | defender stat 0x1F* (`armorclass`) | stat id | i32 | written by DPO-R31 |
 | defender stats 34 (`normal_damage_reduction`), 35 (`magic_damage_reduction`) | stat id | i32 `<< 8` | flat-reduction setup inside scale/mitigation operation ([combat-damage-mitigation](combat-damage-mitigation.md)) |
 | defender stats 0x99 (`item_cannotbefrozen`), 0x76 (`item_halffreezeduration`) | stat id | i32, non-zero test | status-length strip (DPO-R10) |
@@ -65,10 +65,12 @@ Notation consumes NRF-R01/R02 for seeds and draws, NRF-R05 for `mulDiv`, NRF-R06
 | stat 0x15E* (`modifierlist_skill`) on state lists | stat id | i32 skill id | state-driven handlers (DPO-R33) |
 | stat 0xB2* (`unit_dooverlay`) | stat id | i32 overlay id | written by overlay request (DPO-R22, DPO-R32) |
 
+An asterisk marks a stat whose name/id cell has a narrow table record in the companion; the other names consume GDF-R11.
+
 
 States consume GDF-R12: state 54 uninterruptable, 131 shrine_resist_fire, 133 shrine_resist_poison, 105 alignment; state 92 is the absorb-heal gate consumed from LSE-R12. Player Run=3, Death=0, Dead=17; monster Death=0, Dead=12 (GDF-R14/R15). The special-stun condition's producer is DPO-Q28.
 
-MonStats inputs are inTown, lUndead, hUndead, demon, killable, Crit (u8), ColdEffect and the reach/monster-type selectors whose column identities remain DPO-Q23/Q26. DifficultyLevels.HireableBossDamagePercent is consumed by scale selection; its eligible class predicate remains DPO-Q01. The configured state list and Skills handler selector are DPO-Q25. Weapon strength/dexterity factors are u16 and return 100 for a missing item record or stored value 1; their column names remain DPO-Q27.
+MonStats inputs are inTown, lUndead, hUndead, demon, killable, Crit (u8), ColdEffect and the reach/monster-type selectors whose column identities remain DPO-Q23/Q26. DifficultyLevels.HireableBossDamagePercent is consumed by scale selection; its eligible class predicate remains DPO-Q01. The configured state list and Skills handler selector are DPO-Q25. Weapon strength/dexterity factors are 16-bit values that the physical roll sign-extends (DPO-R02b); they return 100 for a missing item record or stored value 1, and their column names remain DPO-Q27.
 
 Original numeric flags are retained as logical masks for exact vectors: 1 physical supplied, 2 already built, 4/8/16 skip monster life/mana/stamina roll, 32 build marker, 128 suppress attacker event 6, 256/512/1024 bypass undead/demon/beast, 4096 hostility override. Result masks: 1 hit, 2 lethal/dead, 4 interruptible, 16/128/256/32768 avoidance results, 32 suppress specified item events, 8192 crit. Result mask 32's producer/wider meaning remains DPO-Q15. These controls impose no object layout.
 
@@ -101,9 +103,11 @@ elementRoll(unit,maxId,minId,masteryId,prior):
     return rangeRoll(unit,prior,mn,mx,mastery,mastery)
 scale(value,ratio):
     return value if ratio == 128 else truncatingDivide(wrapped32(value*ratio),128)
+scaleAlways(value,ratio):
+    return truncatingDivide(wrapped32(value*ratio),128)
 ```
 
-Build ratio is u8. Zero normalizes to 128 at entry, before every use including burn.
+Build ratio is u8. Zero normalizes to 128 at entry, before every use including burn. Only the elemental fields (DPO-R04a) skip the multiplication at ratio 128; the drain, poison, length and burn terms use `scaleAlways`, so at ratio 128 a term with magnitude at least 2^24 wraps.
 
 **DPO-R01** **Hit result and avoidance hand-off.**
 
@@ -113,7 +117,7 @@ Build ratio is u8. Zero normalizes to 128 at entry, before every use including b
 **DPO-R02** **Physical range.**
 
 - **DPO-R02a** [verified in 1.13c code (static)]. Physical-supplied skips roll and crit, preserving physical. Otherwise with supplied endpoints/percentages, the first build draw is rangeRoll on attacker, one draw iff adjusted high>low. Store physical. Ratio 128 keeps it; otherwise use mulDiv(ratio, value,128), in that argument order, consuming NRF-R05. With value>0x100000 its applicable branch is (value/128)*ratio; ratio<=255 excludes the large-first-argument branch.
-- **DPO-R02b** [asm-only]. With weapon present, selector 2 uses stats 23/24, otherwise 21/22; without weapon use the unarmed 21/22 pair. Add stat 111 to endpoints and shift left 8. Minimum<1 becomes 256; maximum<=minimum becomes minimum+256. Percent starts at physicalPercent+stat 25. With weapon add signed strength*weaponStrengthFactor/100, dexterity*weaponDexterityFactor/100 for nonzero factors and supplied mastery percent; without weapon add strength. Floor percent at -90. Call rangeRoll with prior physical as base, percent+stat 18 for minimum and percent+stat 17 for maximum, then DPO-R02a scaling. Weapon/factor/selector/mastery integration is DPO-Q27.
+- **DPO-R02b** [asm-only]. With weapon present, selector 2 uses stats 23/24, otherwise 21/22; without weapon use the unarmed 21/22 pair, first raising a minimum below 1 to 1 and a maximum below 2 to 2. Add stat 111 to endpoints and shift left 8. Minimum<1 becomes 256; maximum<=minimum becomes minimum+256. Percent starts at physicalPercent+stat 25. With weapon add signed strength*weaponStrengthFactor/100, dexterity*weaponDexterityFactor/100 for nonzero factors (each factor sign-extended from 16 bits) and supplied mastery percent; without weapon add strength. Floor percent at -90. Call rangeRoll with prior physical as base, percent+stat 18 for minimum and percent+stat 17 for maximum, then DPO-R02a scaling. Weapon/factor/selector/mastery integration is DPO-Q27.
 
 **DPO-R03** **Exclusive crit/deadly doubling.**
 
@@ -125,19 +129,19 @@ Build ratio is u8. Zero normalizes to 128 at entry, before every use including b
 - **DPO-R04a** [verified in 1.13c code (static)]. In order fire, lightning, cold, magic: write scale(elementRoll(attacker, maxId, minId, mastery, prior), ratio). Each positive shifted maximum with adjusted high>low takes one attacker draw; otherwise keep max(0, prior), no draw, still ratio-scale the returned value. Prior field is the roll base.
 - **DPO-R04b** [verified in 1.13c code (static)]. Maximum/minimum/mastery ids are fire 49/48/329, lightning 51/50/330, cold 55/54/331, magic 53/52/357. Read mastery only with positive maximum and use it for both endpoint percentages.
 
-**DPO-R05** **Drain inputs** [verified in 1.13c code (static)]. Hireling classifier returns 0 for null/non-monster; monster class 271 gives 1,338 gives 2,359 gives 3,560/561 give 4, otherwise 0 (GDF-R17). Regular monster rolls life 61/60, mana 63/62, stamina 65/64 in order, skipping flags 4/8/16: field+=scale(elementRoll(attacker, maxId, minId, absent, field), ratio). Prior field counts twice. Player/hireling draws nothing: lifeDrain+=stat 60 unless flag 4; manaDrain+=stat 62 unless flag 8; no stamina addition. Only on this player/hireling path nonzero stats 103/104/106 set flags 256/512/1024. Other attacker types add nothing.
+**DPO-R05** **Drain inputs** [verified in 1.13c code (static)]. Hireling classifier returns 0 for null/non-monster; monster class 271 gives 1,338 gives 2,359 gives 3,560/561 give 4, otherwise 0 (GDF-R17). Regular monster rolls life 61/60, mana 63/62, stamina 65/64 in order, skipping flags 4/8/16: field+=scaleAlways(elementRoll(attacker, maxId, minId, absent, field), ratio). Prior field counts twice. Player/hireling draws nothing: lifeDrain+=stat 60 unless flag 4; manaDrain+=stat 62 unless flag 8; no stamina addition. Only on this player/hireling path nonzero stats 103/104/106 set flags 256/512/1024. Other attacker types add nothing.
 
 **DPO-R06** **Poison and status lengths.**
 
-- **DPO-R06a** [verified in 1.13c code (static)]. After drains, poisonMagnitude=scale(rangeRoll(attacker, prior, stat 57, stat 58, m, m), ratio), with raw endpoints. m=stat 332 only when stat 58>0, otherwise 0. One attacker draw iff maximum>0 and adjusted high>low.
-- **DPO-R06b** [verified in 1.13c code (static)]. Nonzero poisonMagnitude: positive stat 101 adds to poisonLength; otherwise add stat 59 and, only in that else branch, divide by stat 326 when >1. Poison length is not ratio-scaled. Positive cold adds scale(stat 56, ratio) to coldLength. Zero incoming stunLength adds scale(stat 66, ratio); nonzero stunLength stays. Burn follows DPO-R21.
+- **DPO-R06a** [verified in 1.13c code (static)]. After drains, poisonMagnitude=scaleAlways(rangeRoll(attacker, prior, stat 57, stat 58, m, m), ratio), with raw endpoints. m=stat 332 only when stat 58>0, otherwise 0. One attacker draw iff maximum>0 and adjusted high>low.
+- **DPO-R06b** [verified in 1.13c code (static)]. Nonzero poisonMagnitude: positive stat 101 adds to poisonLength; otherwise poisonLength=poisonLength+stat 59 and, only in that else branch, when stat 326>1 the whole sum is divided by stat 326 with signed truncation. Poison length is not ratio-scaled. Positive cold adds scaleAlways(stat 56, ratio) to coldLength. Zero incoming stunLength adds scaleAlways(stat 66, ratio); nonzero stunLength stays. Burn follows DPO-R21.
 
 **DPO-R07** **Conversion** [verified in 1.13c code (static)]. After build event 3, before monster double, nonzero conversionType computes converted=mulDiv(conversionPercent, physical,100), with that argument order, then physical=max(0, physical-converted). Type 10 takes attacker draw(5), selecting result+1. Types 1/2/3 add converted to fire/lightning/magic. Type 4 adds to cold and raises coldLength to at least 50. Type 5 adds signed converted/8 to poisonMagnitude and raises poisonLength to at least 50. Types 6..10 add nothing further. Type 11 adds to fire and raises burnLength to at least 50; type 12 adds to cold and raises freezeLength to at least 50. Other nonzero types only subtract physical. Type 0 does nothing.
 
 **DPO-R08** **Scaling and entry profiles.**
 
 - **DPO-R08a** [verified in 1.13c code (static)]. With supplied P!=100, visit section 3's twelve entries in order. Positive scale-enabled values become mulDiv(P, value,100), preserving NRF-R05 argument and branch order. Nonpositive fields and the three lengths stay unchanged. P=100 skips scaling. Numeric P selection remains DPO-R08b.
-- **DPO-R08b** [asm-only]. Identified selector cases include 17 for a player target hit by player/hireling,25 hireling versus hireling, the difficulty hireling/boss percent for a hireling hitting the selected monster class, and 200/400 for a flagged-attacker case; unlisted cases select 100. Exact class/flag eligibility remains DPO-Q01. Before selection, physical/magic flat reductions are stats 34/35 shifted 8; each positive reduction with positive flatReductionScale becomes mulDiv(flatReductionScale, reduction,1024). DMI owns use of these inputs.
+- **DPO-R08b** [asm-only]. P is the factor PVP-R02a selects (17, 25, the difficulty hireling/boss percent, 200/400 or 100 in that contract's order); this spec consumes that contract and does not restate its predicates. The production of PVP's scale condition remains PVP-R02b (DPO-Q01). Before selection, physical/magic flat reductions are stats 34/35 shifted 8; each positive reduction with positive flatReductionScale becomes mulDiv(flatReductionScale, reduction,1024) (DMI-R02, which owns use of these inputs).
 - **DPO-R08c** [verified in 1.13c code (static)]. Eligible queued completion runs the scale/mitigation stage after build, before prediction/enqueue; later queued apply requests no second run. Apply with scale request true runs it after gates, before apply events. The identified direct-then-flagged profile runs twice; direct-then-unflagged once. Two unflagged local-record profiles run zero times. Original caller identities are in the companion; callers supply one of these entry profiles.
 - **DPO-R08d** [verified in 1.13c code (static)]. Queued eligible hit runs once, miss zero; either still enqueues. Enqueue accepts only player/monster defenders, records game, attacker/defender identities and damage, and pushes at attacker queue head. Missile/flagged callbacks request one apply-time run and do not also enqueue. Direct-then-flagged runs twice, direct-then-unflagged once, unscaled local profiles A/B zero. Allocation dependency integration remains DPO-Q30.
 
@@ -161,7 +165,7 @@ Build ratio is u8. Zero normalizes to 128 at entry, before every use including b
 
 **DPO-R14** **Clamp** [verified in 1.13c code (static)]. Set physical=min(physical, defender raw life), signed. Keep total unchanged. No draw.
 
-**DPO-R15** **Leech hand-off** [verified in 1.13c code (static)]. Invoke LSE with clamped, mitigated physical. LSE-R10/R17 own resource writes, drain rewrites and its draw(2). Zero lifeDrain/manaDrain return before rewrite/draw; the both-amounts-applied inner path owns that draw. Placement adds none.
+**DPO-R15** **Leech hand-off** [verified in 1.13c code (static)]. Invoke LSE with clamped, mitigated physical. LSE owns the resource writes (LSE-R09/R10/R15), the drain rewrites (LSE-R04/R06/R15) and its draw(2) (LSE-R13). Zero lifeDrain and manaDrain return before rewrite/draw (LSE-R02); the draw occurs only on LSE's base path (not LSE-R15's monster branch), when both rewritten leech values are nonzero and the base is positive, even if both added amounts are 0. Placement adds none.
 
 **DPO-R16** **Absorb heal** [verified in 1.13c code (static)]. Nonpositive absorbHeal, invalid/dead defender(DPO-R13a gate 4), or state 92 returns 0 with no write. Otherwise n=raw life+absorbHeal, cap n at maxhp, store raw life; return absorbHeal unless capped, then maxhp-oldLife. Apply ignores return. No draw.
 
@@ -180,7 +184,7 @@ Build ratio is u8. Zero normalizes to 128 at entry, before every use including b
 **DPO-R21** **Burn update and mandatory draw.**
 
 - **DPO-R21a** [verified in 1.13c code (static)]. Every build after poison/length terms takes attacker drawAlt(1), returning 0 and advancing seed, including hit-in and miss.
-- **DPO-R21b** [verified in 1.13c code (static)]. With that draw, wrapped x=burnMagnitude*ratio+316+drawAlt(1); add signed max(0, x)/128 to burnMagnitude. Default ratio 128 and prior 0 produce 2. Only nonzero incoming burnLength adds scale(stat 315, ratio). CSA-R10 requires positive magnitude and length.
+- **DPO-R21b** [verified in 1.13c code (static)]. With that draw, wrapped x=burnMagnitude*ratio+316+drawAlt(1); add signed max(0, x)/128 to burnMagnitude. Default ratio 128 and prior 0 produce 2. Only nonzero incoming burnLength adds scaleAlways(stat 315, ratio). CSA-R10 requires positive magnitude and length.
 
 **DPO-R22** **Monster double** [verified in 1.13c code (static)]. Last in build after conversion: monster with valid class row and nonzero u8 Crit takes attacker stepMod(100). Unsigned byte roll<Crit doubles physical, fire, lightning, magic, cold, poisonMagnitude. With defender present after doubling, if hitClass low byte has none of mask 0xF0, set 0x10;otherwise request overlay 54. No doubling means neither marker nor overlay. Crit 0, missing row or other attacker type draws nothing. Missile paths also run this on owner. Overlay effect remains DPO-Q18; request is fixed.
 
@@ -300,14 +304,14 @@ No client message identity or persistence format is established within this boun
 - Overflow: the scale and conversion use `mulDiv` (NRF-R05); the sums of DPO-R12a wrap in 32 bits; the crit doubling is a plain shift.
 - Missile versus melee: weapon actions and the hit callback use the same build; missile-unit contact does not (it rolls on the missile's seed, missile roll operation; [skill-assassin-blade-sentinel-and-fury](skill-assassin-blade-sentinel-and-fury.md) BSF-R07), then runs DPO-R22 on the owner before the apply with flag 1; durability, events 7/3, reflection and the reaction of the queued path are not run by the missile apply.
 - Difficulty: enters only through `P` (DPO-R08b: the hireling-vs-monster case reads `DifficultyLevelsRecord.HireableBossDamagePercent` of the game's difficulty; every other listed `P` is a constant) and the appliers' divisors (CSA-R05, CSA-R08); classic versus expansion only through the throwable durability rule (DPO-R24a).
-- Missing data: a monster class at or beyond the MonStats count makes DPO-R22 draw nothing, DPO-R31/c test false and DPO-R13a step 3 fail; a null stat list makes every `Stat` read 0 (NRF-R12a) and max-life read return 0 (so the absorb cap is 0).
+- Missing data: a monster class at or beyond the MonStats count makes DPO-R22 draw nothing, DPO-R31's class tests false and DPO-R13a step 3 fail; a null stat list makes every `Stat` read 0 (NRF-R12a) and max-life read return 0 (so the absorb cap is 0).
 - Neighbors: [combat-knockback](combat-knockback.md) and [combat-hit-recovery](combat-hit-recovery.md) consume `result` and `hitClass` after DPO-R26.
 
 ## 7. Open questions
 
 | Id | Status | Question and evidence that would settle it |
 |---|---|---|
-| **DPO-Q01** | open (integration) | Scale-selector class/flag predicates and exact eligible cases; finish its callees. Supplied P arithmetic remains available. |
+| **DPO-Q01** | open (integration) | Selection of P from actual units: PVP-R02a owns the selector order and predicates; the remaining unknown is the hit-time scale-condition producer (PVP-R02b, PVP-Q01/PVP-Q02). Supplied P arithmetic remains available. |
 | **DPO-Q02** | open (behavior) | Combined immediate poison damage and poison status interpretation; compare the consuming paths and observe one controlled hit without fitting expected values to a capture. |
 | **DPO-Q04** | open (behavior) | Reflection classification, rounding and attribution: complete its source chain. |
 | **DPO-Q06** | open (integration) | Physical endpoint producer integration remains DPO-Q27; supplied endpoint roll is independently available. |
@@ -579,7 +583,8 @@ Each case restarts from shared defaults and its own overrides. Unnamed states ar
   - Trace and exact outputs:
     No draw of this rule. Poison: after DPO-V07 case 1 (`poisonMagnitude = 11`), stats 0x65 = 0, 0x3B = 50, 0x146 = 3: `poisonLength = (0 + 50) / 3 = 16`; with 0x65 = 75: `poisonLength = 75` and 0x3B, 0x146 unused; with `poisonMagnitude = 0`: `poisonLength` untouched. Cold: `cold = 0x300`, stat 0x38 = 25 → `coldLength += 25`; with ratio 0x40 → `+= 12`; with `cold = 0` → unchanged. Stun: `stunLength = 0`, stat 0x42 = 40 → `stunLength = 40`; `stunLength = 5` → stays 5.
   - Outputs: Poison length 16 with ordinary length/count,75 with override, unchanged 0 when poison 0. Cold length additions 25 or 12, none when cold 0. Stun 0 becomes 40;incoming 5 stays 5.
-  - Discriminates: Poison override bypasses division and nonzero incoming stun stays.
+  - Wrap case (independent): cold 0x300, prior coldLength 0, stat 56=0x1000000, ratio 128. scaleAlways multiplies even at ratio 128: `wrapped32(0x1000000*128)` = -2147483648, truncated /128 = -16777216. Output coldLength -16777216; no draw.
+  - Discriminates: Poison override bypasses division and nonzero incoming stun stays. Skipping the multiplication at ratio 128 would give coldLength 16777216 in the wrap case.
   - runtime_observed: no
 
 - **DPO-V23** burn update (DPO-R21b). (boundary: isolated burn-update stage)

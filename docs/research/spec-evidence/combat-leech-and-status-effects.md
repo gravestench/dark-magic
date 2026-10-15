@@ -587,3 +587,7 @@ finding has a recorded resolution; no behavior, input, fixture, expected output 
 boundary changed after this clean run. Reader review is complete for this revision. Draft
 status, evidence gaps and pending observations remain; neither approval nor gameplay parity
 is inferred.
+
+## Independent review spot-check, 2026-10-15
+
+A separate reviewer re-read original D2Game disassembly (original 1.13c instruction listings, read-only), deriving each reading before comparing it with the rule text: 0xDBA40 (LSE-R02 to LSE-R06, LSE-R08, LSE-R09, LSE-R13, LSE-R15), 0xDB570 and 0xDAE70 (LSE-R10), 0xDFA90 (LSE-R12), 0xDA970 (LSE-R17), 0xDE0C0 (LSE-R16 order) and D2Common 0x390F0 (LSE-R11 life cap: stat 7, layer 0, through the selected-array getter). All matched, including the hit-game drain column versus the attacker-game divisor row, the zero-divisor skips, the signed division by 64, the draw only after both rewritten values are tested, and the monster-branch room cap without life-add gates. Seed steps for `{1,0}`, `{0,2}` and `{1,1}` were recomputed. Section 3 now names the pipeline's aliases for the drain and poison fields; no rule, vector or label changed, so the final full reader run above still applies.

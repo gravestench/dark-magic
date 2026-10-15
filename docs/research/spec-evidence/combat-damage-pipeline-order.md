@@ -455,3 +455,30 @@ that changed material, not a fourth full-file review or an independent source ch
 Full pass 3 covers the unchanged contract. The final delta findings are resolved within
 this stated access scope; gameplay, dependency integration and the existing questions
 remain unconfirmed. No rule label, ownership or gate is promoted by reader review.
+
+## Independent review spot-check and corrections, 2026-10-15
+
+A separate reviewer re-read original D2Game disassembly (original 1.13c instruction listings, read-only) for sampled rules, deriving each reading before comparing it with the rule text. No gameplay, runtime or table read was performed; no label was promoted.
+
+| Original function | Rules compared | Result |
+|---|---|---|
+| D2Game 0xDD450 (build) | DPO-R03a, R04a, R05, R06a, R06b, R07, R21a, R21b, R22 placement, R23 build event 3, R31 demon term | Confirmed, except the ratio-128 scaling noted below |
+| D2Game 0xDC530 (physical roll) | DPO-R02a, R02b | R02a confirmed (ratio 128 skip; (value/128)*ratio for value above 0x100000); R02b corrected below |
+| D2Game 0xDCD80 (element roll) | DPO-R04a, R04b, DPO-V24 read order | Confirmed: maximum, minimum, then mastery read only for shifted maximum at least 8 |
+| D2Game 0x770E0 (monster double) | DPO-R22 | Confirmed; byte run `3A D0` decodes as `cmp dl, al`, followed by unsigned `jae` |
+| D2Game 0xDDDE0 (queued completion) | DPO-R01a eligibility, R08c, R12a | Confirmed: build only when eligible and not already built; strict signed masked comparison; monster-type lifeDrain term |
+| D2Game 0xDC0B0, 0xDA7B0 | DPO-R08a, R09, R10, R11, R12a stored total | Confirmed: inline mulDiv with value-first threshold; strip and bypass order |
+| D2Game 0xDE0C0 (apply) | DPO-R13a gates and events, R14, R16 placement, R17, R18, R19a, R19b, R19c, R30 placement | Confirmed |
+| D2Game 0xDDBA0, 0xDCC20 | DPO-R24a, R27 | Confirmed: modulus 7 start, weight remainder walk, attacker-seed stun roll below 90 cancels |
+
+Seed arithmetic for S1/S5 steps 1-5 and every draw value quoted by DPO-V02, V04 to V08, V16 to V20, V24 and V27 was recomputed and matches.
+
+**Correction 1 (DPO-R05, R06a, R06b, R21b).** Original discrepancy: these rules used `scale`, which returns the value unchanged at ratio 128. In 0xDD450 only the four elemental writes branch on ratio 128; the monster drain additions, poison magnitude, cold-length, stun-length and burn-length terms always execute `imul` by the ratio byte followed by signed division by 128. At ratio 128 these differ from `scale` when the term's magnitude is at least 2^24. New helper `scaleAlways` and DPO-V22's wrap case record the fixed-code behavior. Existing vector results are unchanged.
+
+**Correction 2 (DPO-R02b, asm-only).** 0xDC530's unarmed branch raises a minimum at or below 0 to 1 and a maximum at or below 1 to 2 before the stat 111 addition and shift; the weapon strength/dexterity factors are sign-extended from 16 bits (`movsx`) before multiplication. The earlier text omitted both. Label unchanged.
+
+**Correction 3 (DPO-R08b, DPO-Q01).** Original discrepancy: DPO-R08b restated the scale selector as asm-only with eligibility open, while sibling PVP-R02a holds the same selector as verified static with its predicates read. DPO-R08b now consumes PVP-R02a, and DPO-Q01 is narrowed to PVP-R02b's scale-condition producer. No P value changed.
+
+**Wording fixes.** DPO-R06b states that the poison-count division applies to the accumulated length (0xDD450 divides the stored sum). DPO-R15 cites LSE-R02/R04/R06/R09/R10/R13/R15 for the leech effects it consumes, and states the draw condition of LSE-R13. Section 3 garbled source cells and the unexplained asterisk were repaired; section 6 no longer cites the removed sub-id R31c.
+
+These corrections change rule behavior (Correction 1) and add a vector case, so a fresh full blind-implementer pass is required for the resulting contract; delta pass 4 above no longer covers it.
