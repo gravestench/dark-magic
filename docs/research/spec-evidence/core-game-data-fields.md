@@ -4,7 +4,7 @@ Behavioral contract: [Game Data Fields](../../specs/core-game-data-fields.md).
 Open gaps: [evidence gaps](../../plans/gaps/core-game-data-fields.md).
 Artifact identities: [original game source manifest](../source-manifest.md).
 
-The linked spec is the current contract and governs rule labels, vectors and gates. This provenance-only publication preserves historical findings without adding behavior verification or runtime confirmation. Complete investigation history and original binary-layout fixtures were preserved privately before replacement; they are not needed to follow these public references.
+The linked spec is the current contract and governs rule labels, vectors and gates. The 2026-10-14 provenance publication preserved historical findings without adding behavior verification or runtime confirmation. The focused 2026-10-15 refresh reuses compatible readings, clarifies consumed contracts and records narrow text-cell corroboration; it adds no gameplay confirmation. Complete investigation history and original binary-layout fixtures were preserved privately before replacement; they are not needed to follow these public references.
 
 ## Source identity and method
 
@@ -21,8 +21,8 @@ All function descriptions below are analyst labels, not original exported-name c
 | `LOD113C-D2COMMON` | `0x66160` | 10943 | All-table initialization root | GDF-R01a, GDF-R19b | Dispatch read; reaches loaders and intermediate initializers |
 | `LOD113C-D2COMMON` | `0x5D570` | — | Monster-table initializer | GDF-R05a, GDF-Q01 | Reaches monster loader and animation writer |
 | `LOD113C-D2COMMON` | `0x5A730` | — | Treasure initialization | GDF-R10a, GDF-Q10 | Generated classes precede named treasure loading |
-| `LOD113C-D2COMMON` | `0x603F0` | — | Difficulty table loader | GDF-R01a, GDF-R02 | Machine-code-matched reconstruction and original descriptor decode; publishes pointer/count, requires count 3 |
-| `LOD113C-D2COMMON` | `0x60920` | — | Experience table loader | GDF-R01a, GDF-R04 | Machine-code-matched reconstruction and descriptor decode; no count publication requested |
+| `LOD113C-D2COMMON` | `0x603F0` | — | Difficulty table loader | GDF-R01a, GDF-R02 | Reconstruction checked against original machine code and original descriptor decode; publishes pointer/count, requires count 3 |
+| `LOD113C-D2COMMON` | `0x60920` | — | Experience table loader | GDF-R01a, GDF-R04 | Reconstruction checked against original machine code and descriptor decode; no count publication requested |
 | `LOD113C-D2COMMON` | `0x60A80` | — | Class table loader | GDF-R03a, GDF-Q13 | Original descriptor decode and disassembly; localized-name output separate |
 | `LOD113C-D2COMMON` | `0x5AA40` | — | Monster table loader | GDF-R05a, GDF-R18 | Original descriptor decode and disassembly |
 | `LOD113C-D2COMMON` | `0x56C10` | — | Extended monster table loader | GDF-R06a, GDF-Q06 | Descriptor decode; indirect callbacks incomplete |
@@ -35,19 +35,19 @@ All function descriptions below are analyst labels, not original exported-name c
 | `LOD113C-D2COMMON` | `0x72510` | — | Item-type loader | GDF-R16b | Named output, stride and stores; root caller not established historically |
 | `LOD113C-D2COMMON` | `0x5F310` | — | Pet-type loader | GDF-R19b | Signed count clamp and >=256 abort; root caller read |
 | `LOD113C-D2COMMON` | `0x5EF40` | 10849 | Table load and preparation coordinator | GDF-R01a, GDF-R20a, GDF-Q06, GDF-Q12 | Independent generation/final-read flags; indirect integration gated |
-| `LOD113C-D2COMMON` | `0x5D770` | 10903 | Compiled table writer | GDF-R20a | Machine-code-matched reconstruction; writes rows, does not parse text |
+| `LOD113C-D2COMMON` | `0x5D770` | 10903 | Compiled table writer | GDF-R20a | Reconstruction checked against original machine code; writes rows, does not parse text |
 | `LOD113C-D2COMMON` | `0x9900` | — | Resource allocation/read helper | GDF-R20a | Resource path read; complete lifecycle not promoted |
 | `LOD113C-D2COMMON` | `0x215D` | — | Compiled-output stream wrapper | GDF-R20a | Disassembly; output direction corroborated by callee |
 | `LOD113C-D2COMMON` | `0x2056` | — | Stream-write helper | GDF-R20a | Disassembly of output direction; complete writer integration gated |
 | `LOD113C-FOG` | `0x12770` | 10208 | Tab-delimited text parser | GDF-R01a, GDF-R01d, GDF-Q12 | Disassembly; separator/count path |
-| `LOD113C-FOG` | `0x11F80` | 10210 | Parsed-row count getter | GDF-R01a | Machine-code-matched reconstruction |
+| `LOD113C-FOG` | `0x11F80` | 10210 | Parsed-row count getter | GDF-R01a | Reconstruction checked against original machine code |
 | `LOD113C-FOG` | `0x12A60` | 10207 | Descriptor conversion engine | GDF-R01b, GDF-Q06, GDF-Q12 | Disassembly and original-image listing; direct present-cell cases only |
 | `LOD113C-FOG` | `0x12290` | — | Header index construction | GDF-R01d, GDF-Q12 | Hash/full comparison; missing/duplicate behavior gated |
 | `LOD113C-FOG` | `0x12510` | — | Transformed-name insertion | GDF-Q06, GDF-Q12 | Search attempt; complete name-link contract unresolved |
 | `LOD113C-FOG` | `0x121A0` | 10217 | Transformed-name lookup | GDF-Q06, GDF-Q12 | Search attempt; full defaults/conversions unresolved |
 | `LOD113C-STORM` | `0x3AC10` | 502 | Header hash | GDF-R01d | Flag 0 selects ASCII case normalization |
 | `LOD113C-STORM` | `0x3B1E0` | 509 | Case-insensitive comparison wrapper | GDF-R01d | Follows comparison implementation |
-| `LOD113C-STORM` | `0x54BC` | — | Comparison branch selector | GDF-R01d | Machine-code-matched reconstruction; ASCII branch only |
+| `LOD113C-STORM` | `0x54BC` | — | Comparison branch selector | GDF-R01d | Reconstruction checked against original machine code; ASCII branch only |
 | `LOD113C-STORM` | `0x7660` | — | ASCII case-insensitive comparator | GDF-R01d | Disassembly; locale alternatives not promoted |
 | `LOD113C-STORM` | `0x3B230` | 508 | Case-sensitive comparison wrapper | GDF-R01a | Separator spelling comparison |
 | `LOD113C-STORM` | `0x55A0` | — | Bounded case-sensitive comparator | GDF-R01a | Ten bytes including Expansion terminator |
@@ -65,7 +65,7 @@ All function descriptions below are analyst labels, not original exported-name c
 | `LOD113C-D2COMMON` | `0x547D0` | — | Generated item-type treasure classes | GDF-Q10 | Increments group counter; lifecycle incomplete |
 | `LOD113C-D2COMMON` | `0x53780` | — | Treasure runtime allocation | GDF-Q10 | Allocation/zeroing identified; probability producers incomplete |
 | `LOD113C-D2COMMON` | `0x53C80` | — | Extended-monster descriptor callback | GDF-Q06, GDF-Q12 | Short-code parsing and per-slot counts/values; lookup integration incomplete |
-| `LOD113C-D2GAME` | `0x1220` | — | Monster record getter | GDF-R05a, GDF-R19a | Machine-code-matched reconstruction; bounds and stride |
+| `LOD113C-D2GAME` | `0x1220` | — | Monster record getter | GDF-R05a, GDF-R19a | Reconstruction checked against original machine code; bounds and stride |
 | `LOD113C-D2GAME` | `0x1560` | — | Extended-monster mode availability | GDF-R06b, GDF-R19a | Disassembly/image corroboration; signed link, range/null guards, byte/mask return |
 | `LOD113C-D2GAME` | `0x1420` | — | Skill record getter | GDF-R08a, GDF-R17b, GDF-R19a | Signed bounds and stride |
 | `LOD113C-D2GAME` | `0x1A40` | — | Level-scaled skill parameter getter | GDF-R08b, GDF-R19a | Index/record/level guards then wrapping Param3+(level-1)*Param4 |
@@ -205,7 +205,7 @@ Direct kinds established here are 1 bounded byte string, 2 i32, 3 low16, 4/6 low
 | +0x187 | `CollideFriend` | 4 | combat-pvp-damage-and-kill-credit (contact with a non-hostile unit) |
 | +0x188 | `NextHit` | 4 | skill-assassin-blade-sentinel-and-fury |
 | +0x189 | `NextDelay` | 4 | skill-assassin-blade-sentinel-and-fury |
-| +0x18B | `ToHit` | 4 | combat-shield-block-and-avoidance (flag enabling the missile hit roll; resolves SBA-Q08's name) |
+| +0x18B | `ToHit` | 4 | combat-shield-block-and-avoidance SBA-R15a (flag enabling the missile hit roll) |
 
 ### Skill fields
 
@@ -253,7 +253,7 @@ Loader fields (`itemtypes`, D2Common rva 0x72510; record size 0xE4; count slot `
 
 ### Treasure conversion
 
-D2Common `0x5A030` text descriptors: treasure class +0x00 (string limit 32), picks +0x20 (i32), group/level +0x24/+0x26 (words), magic/rare/set/unique +0x28/+0x2A/+0x2C/+0x2E (words), nodrop +0x34 (i32), item1..10 +0x38 step 0x40 (string limit 64), prob1..10 +0x2B8 step 4 (i32). Source words +0x30/+0x32 have no descriptor names.
+D2Common `0x5A030` text descriptors: treasure class +0x00 (string limit 32), picks +0x20 (i32), group/level +0x24/+0x26 (words), magic/rare/set/unique +0x28/+0x2A/+0x2C/+0x2E (words), nodrop +0x34 (i32), `item1`..10 +0x38 step 0x40 (string limit 64), `prob1`..10 +0x2B8 step 4 (i32). Source words +0x30/+0x32 have no descriptor names.
 
 Selected conversion block RVA `0x5A556` adds nonzero group to generated counter RVA `0xA1460`, stores low16 at runtime +0x00; zero group leaves destination unchanged. Level copies to +0x02; Picks to +0x10, replacing zero with one; NoDrop to +0x14. Quality words copy to +0x1A/+0x1C/+0x1E/+0x20; reserved source words +0x30/+0x32 copy to +0x22/+0x24 in order. Runtime probability sums +0x08/+0x0C are computed, not columns. Complete probability/group lifecycle and runtime entry production remain GDF-Q10.
 
@@ -296,7 +296,7 @@ Fog masks are imported at D2Game IAT RVA `0xF8BE0` and D2Common IAT RVA `0x890B0
 
 Historical reads used the running original-profile game's own archive loader. Reported vanilla 1.13c profile and recorded Game.exe identity are in the manifest. No game action, trace or memory write occurred. Physical supplying archives, effective-file hashes and complete overrides were not captured; no known overrides were reported.
 
-All cells below were selected by decoded header name after joining contiguous returned byte ranges. Read chunks were at most 60000 bytes, or four bytes for count headers. Returned offsets/lengths and reported totals established coverage. Data-row indexing excludes the header and begins at0. Exact Expansion separators are excluded for prepared-row correspondence; no missing row is inferred from a preview.
+All cells below were selected by decoded header name after joining contiguous returned byte ranges. Read chunks were at most 60000 bytes, or four bytes for count headers. Returned offsets/lengths and reported totals established coverage. Data-row indexing excludes the header and begins at 0. Exact Expansion separators are excluded for prepared-row correspondence; no missing row is inferred from a preview.
 
 | Effective virtual path (data/global/excel/) | Requested offset+returned ranges | Total bytes | Coverage |
 |--------------------------------------------|----------------------------------|-------------|----------|
@@ -308,7 +308,7 @@ All cells below were selected by decoded header name after joining contiguous re
 | itemtypes.txt | 0+8775 | 8775 | full header/file |
 | skills.txt | 0+60000; 60000+60000; 120000+53535 | 173535 | full header/file |
 | monstats.txt | 0+60000; 60000+60000; 120000+60000; 180000+60000; 240000+60000; 300000+60000; 360000+60000; 420000+12634 | 432634 | full header/file |
-| monstats2.txt | 0+60000; 60000+60000; 120000+18542 | 138542 | full header/file |
+| `monstats2`.txt | 0+60000; 60000+60000; 120000+18542 | 138542 | full header/file |
 | charstats.txt | 0+3360 | 3360 | full header/file |
 | experience.txt | 0+7116 | 7116 | full header/file |
 | missiles.txt | 0+60000; 60000+60000; 120000+60000; 180000+12979 | 192979 | full header/file |
@@ -327,7 +327,7 @@ All cells below were selected by decoded header name after joining contiguous re
 | itemtypes.bin | 0+23488 | 23488 | full file; interpreted named cases only |
 | skills.bin | 0+60000; 60000+60000; 120000+60000; 180000+24208 | 204208 | full file; interpreted named cases only |
 | monstats.bin | 0+60000; 60000+60000; 120000+60000; 180000+60000; 240000+60000; 300000+11220 | 311220 | full file; interpreted named cases only |
-| monstats2.bin | 0+60000; 60000+60000; 120000+60000; 180000+7576 | 187576 | full file; interpreted named cases only |
+| `monstats2`.bin | 0+60000; 60000+60000; 120000+60000; 180000+7576 | 187576 | full file; interpreted named cases only |
 | charstats.bin | 0+1376 | 1376 | full file; interpreted named cases only |
 | experience.bin | 0+3236 | 3236 | full file; interpreted named cases only |
 | missiles.bin | 0+60000; 60000+60000; 120000+60000; 180000+60000; 240000+47284 | 287284 | full file; interpreted named cases only |
@@ -336,13 +336,13 @@ All cells below were selected by decoded header name after joining contiguous re
 
 These reads are archive-file reads, not live runtime memory reads. No binary payload, table, or complete row is copied into this repository. The interpreting layouts below are evidence details only:
 - Four-byte compiled row count, followed by original fixed-size records; verified against0x5EF40 selected compiled path.
-- ItemStatCost stride0x144, States0x3C, Skills0x23C: every compiled identity word matches all359/185/357 corresponding explicit textID/id/Id cells (zero mismatch).
+- ItemStatCost stride0x144, States0x3C, Skills0x23C: every compiled identity word matches all 359/185/357 corresponding explicit textID/id/Id cells (zero mismatch).
 - CharStats stride0xC4: allseven class strings at+0x20 match text order with Expansion excluded; Sorceress BlockFactor+0x49=20, ManaRegen+0x3A=120, ToHitFactor+0x3C raw0xFFFFFFF1=-15.
-- MonStats stride0x1A8: the13 cited class rows have compiled Id words equal to their hcIdx; classes78/560 MonStatsEx word+0x18=78/560, Velocity+0x32=10/8, Run+0x34=10/14; flagwords+0x0C=0x02018003/0x0205840B. MonStats2 stride0x134 Id words at78/560 agree.
-- ItemTypes stride0xE4: original rows4/51 Code bytes gold/shld.
-- Skills selectors at+0x2E: Charge Id107 srvdofunc67, Whirlwind151→76, SerpentCharge352→67 match text cells.
+- MonStats stride0x1A8: the 13 cited class rows have compiled Id words equal to their hcIdx; classes 78/560 MonStatsEx word+0x18=78/560, Velocity+0x32=10/8, Run+0x34=10/14; flagwords+0x0C=0x02018003/0x0205840B. MonStats2 stride0x134 Id words at 78/560 agree.
+- ItemTypes stride0xE4: original rows 4/51 Code bytes gold/shld.
+- Skills selectors at+0x2E: Charge Id107 srvdofunc 67, Whirlwind151→76, SerpentCharge352→67 match text cells.
 - Difficulty stride0x58: named vector fields and cold/freeze divisors match text; no new gameplay preparation is observed.
-- PetType compiled header count20 (total4484bytes) agrees with its20 textrows (1288bytes). Countheader-only coverage makes no per-record correspondence claim.
+- PetType compiled header count 20 (total4484bytes) agrees with its 20 textrows (1288bytes). Countheader-only coverage makes no per-record correspondence claim.
 - MonMode and PlrMode .txt each have only name/token/code headers. Their schema-declared direction fields have no text columns; missing-column conversion remains gated rather than inferred from spacing.
 
 ### Named cell records
@@ -499,139 +499,139 @@ Each row is one named cell, interpreted only for its supported claim. Name-table
 | TD-CLASS | CharStats Barbarian, file data row 4; filtered class index 4 | class | Barbarian | original class order, compiled string agrees | GDF-R03b |
 | TD-CLASS | CharStats Druid, file data row 6; filtered class index 5 | class | Druid | original class order, compiled string agrees | GDF-R03b |
 | TD-CLASS | CharStats Assassin, file data row 7; filtered class index 6 | class | Assassin | original class order, compiled string agrees | GDF-R03b |
-| TD-CLASS | CharStats Sorceress, file row1/class1 | BlockFactor | 20 | decimal, compiled value agrees | GDF-V12 |
-| TD-CLASS | CharStats Sorceress, file row1/class1 | ManaRegen | 120 | decimal, compiled value agrees | GDF-V12 |
-| TD-CLASS | CharStats Sorceress, file row1/class1 | ToHitFactor | -15 | decimal, compiled value agrees | GDF-V12 |
-| TD-PLAYER-MODE | plrmode zero-based data row0 | Name | Death | text identity/code; Name+Token prepared correspondence separately | GDF-R14a |
-| TD-PLAYER-MODE | plrmode zero-based data row0 | Token | DT | text identity/code; Name+Token prepared correspondence separately | GDF-R14a |
-| TD-PLAYER-MODE | plrmode zero-based data row0 | Code | DT | text identity/code; Name+Token prepared correspondence separately | GDF-R14a |
-| TD-PLAYER-MODE | plrmode zero-based data row1 | Name | Neutral | text identity/code; Name+Token prepared correspondence separately | GDF-R14a |
-| TD-PLAYER-MODE | plrmode zero-based data row1 | Token | NU | text identity/code; Name+Token prepared correspondence separately | GDF-R14a |
-| TD-PLAYER-MODE | plrmode zero-based data row1 | Code | NU | text identity/code; Name+Token prepared correspondence separately | GDF-R14a |
-| TD-PLAYER-MODE | plrmode zero-based data row2 | Name | Walk | text identity/code; Name+Token prepared correspondence separately | GDF-R14a |
-| TD-PLAYER-MODE | plrmode zero-based data row2 | Token | WL | text identity/code; Name+Token prepared correspondence separately | GDF-R14a |
-| TD-PLAYER-MODE | plrmode zero-based data row2 | Code | WL | text identity/code; Name+Token prepared correspondence separately | GDF-R14a |
-| TD-PLAYER-MODE | plrmode zero-based data row3 | Name | Run | text identity/code; Name+Token prepared correspondence separately | GDF-R14a |
-| TD-PLAYER-MODE | plrmode zero-based data row3 | Token | RN | text identity/code; Name+Token prepared correspondence separately | GDF-R14a |
-| TD-PLAYER-MODE | plrmode zero-based data row3 | Code | RN | text identity/code; Name+Token prepared correspondence separately | GDF-R14a |
-| TD-PLAYER-MODE | plrmode zero-based data row4 | Name | Get Hit | text identity/code; Name+Token prepared correspondence separately | GDF-R14a |
-| TD-PLAYER-MODE | plrmode zero-based data row4 | Token | GH | text identity/code; Name+Token prepared correspondence separately | GDF-R14a |
-| TD-PLAYER-MODE | plrmode zero-based data row4 | Code | GH | text identity/code; Name+Token prepared correspondence separately | GDF-R14a |
-| TD-PLAYER-MODE | plrmode zero-based data row5 | Name | Town Neutral | text identity/code; Name+Token prepared correspondence separately | GDF-R14a |
-| TD-PLAYER-MODE | plrmode zero-based data row5 | Token | TN | text identity/code; Name+Token prepared correspondence separately | GDF-R14a |
-| TD-PLAYER-MODE | plrmode zero-based data row5 | Code | TN | text identity/code; Name+Token prepared correspondence separately | GDF-R14a |
-| TD-PLAYER-MODE | plrmode zero-based data row6 | Name | Town Walk | text identity/code; Name+Token prepared correspondence separately | GDF-R14a |
-| TD-PLAYER-MODE | plrmode zero-based data row6 | Token | TW | text identity/code; Name+Token prepared correspondence separately | GDF-R14a |
-| TD-PLAYER-MODE | plrmode zero-based data row6 | Code | TW | text identity/code; Name+Token prepared correspondence separately | GDF-R14a |
-| TD-PLAYER-MODE | plrmode zero-based data row7 | Name | Attack1 | text identity/code; Name+Token prepared correspondence separately | GDF-R14a |
-| TD-PLAYER-MODE | plrmode zero-based data row7 | Token | A1 | text identity/code; Name+Token prepared correspondence separately | GDF-R14a |
-| TD-PLAYER-MODE | plrmode zero-based data row7 | Code | A1 | text identity/code; Name+Token prepared correspondence separately | GDF-R14a |
-| TD-PLAYER-MODE | plrmode zero-based data row8 | Name | Attack2 | text identity/code; Name+Token prepared correspondence separately | GDF-R14a |
-| TD-PLAYER-MODE | plrmode zero-based data row8 | Token | A2 | text identity/code; Name+Token prepared correspondence separately | GDF-R14a |
-| TD-PLAYER-MODE | plrmode zero-based data row8 | Code | A2 | text identity/code; Name+Token prepared correspondence separately | GDF-R14a |
-| TD-PLAYER-MODE | plrmode zero-based data row9 | Name | Block | text identity/code; Name+Token prepared correspondence separately | GDF-R14a |
-| TD-PLAYER-MODE | plrmode zero-based data row9 | Token | BL | text identity/code; Name+Token prepared correspondence separately | GDF-R14a |
-| TD-PLAYER-MODE | plrmode zero-based data row9 | Code | BL | text identity/code; Name+Token prepared correspondence separately | GDF-R14a |
-| TD-PLAYER-MODE | plrmode zero-based data row10 | Name | Cast | text identity/code; Name+Token prepared correspondence separately | GDF-R14a |
-| TD-PLAYER-MODE | plrmode zero-based data row10 | Token | SC | text identity/code; Name+Token prepared correspondence separately | GDF-R14a |
-| TD-PLAYER-MODE | plrmode zero-based data row10 | Code | SC | text identity/code; Name+Token prepared correspondence separately | GDF-R14a |
-| TD-PLAYER-MODE | plrmode zero-based data row11 | Name | Throw | text identity/code; Name+Token prepared correspondence separately | GDF-R14a |
-| TD-PLAYER-MODE | plrmode zero-based data row11 | Token | TH | text identity/code; Name+Token prepared correspondence separately | GDF-R14a |
-| TD-PLAYER-MODE | plrmode zero-based data row11 | Code | TH | text identity/code; Name+Token prepared correspondence separately | GDF-R14a |
-| TD-PLAYER-MODE | plrmode zero-based data row12 | Name | Kick | text identity/code; Name+Token prepared correspondence separately | GDF-R14a |
-| TD-PLAYER-MODE | plrmode zero-based data row12 | Token | KK | text identity/code; Name+Token prepared correspondence separately | GDF-R14a |
-| TD-PLAYER-MODE | plrmode zero-based data row12 | Code | KK | text identity/code; Name+Token prepared correspondence separately | GDF-R14a |
-| TD-PLAYER-MODE | plrmode zero-based data row13 | Name | Skill1 | text identity/code; Name+Token prepared correspondence separately | GDF-R14a |
-| TD-PLAYER-MODE | plrmode zero-based data row13 | Token | S1 | text identity/code; Name+Token prepared correspondence separately | GDF-R14a |
-| TD-PLAYER-MODE | plrmode zero-based data row13 | Code | S1 | text identity/code; Name+Token prepared correspondence separately | GDF-R14a |
-| TD-PLAYER-MODE | plrmode zero-based data row14 | Name | Skill2 | text identity/code; Name+Token prepared correspondence separately | GDF-R14a |
-| TD-PLAYER-MODE | plrmode zero-based data row14 | Token | S2 | text identity/code; Name+Token prepared correspondence separately | GDF-R14a |
-| TD-PLAYER-MODE | plrmode zero-based data row14 | Code | S2 | text identity/code; Name+Token prepared correspondence separately | GDF-R14a |
-| TD-PLAYER-MODE | plrmode zero-based data row15 | Name | Skill3 | text identity/code; Name+Token prepared correspondence separately | GDF-R14a |
-| TD-PLAYER-MODE | plrmode zero-based data row15 | Token | S3 | text identity/code; Name+Token prepared correspondence separately | GDF-R14a |
-| TD-PLAYER-MODE | plrmode zero-based data row15 | Code | S3 | text identity/code; Name+Token prepared correspondence separately | GDF-R14a |
-| TD-PLAYER-MODE | plrmode zero-based data row16 | Name | Skill4 | text identity/code; Name+Token prepared correspondence separately | GDF-R14a |
-| TD-PLAYER-MODE | plrmode zero-based data row16 | Token | S4 | text identity/code; Name+Token prepared correspondence separately | GDF-R14a |
-| TD-PLAYER-MODE | plrmode zero-based data row16 | Code | S4 | text identity/code; Name+Token prepared correspondence separately | GDF-R14a |
-| TD-PLAYER-MODE | plrmode zero-based data row17 | Name | Dead | text identity/code; Name+Token prepared correspondence separately | GDF-R14a |
-| TD-PLAYER-MODE | plrmode zero-based data row17 | Token | DD | text identity/code; Name+Token prepared correspondence separately | GDF-R14a |
-| TD-PLAYER-MODE | plrmode zero-based data row17 | Code | DD | text identity/code; Name+Token prepared correspondence separately | GDF-R14a |
-| TD-PLAYER-MODE | plrmode zero-based data row18 | Name | Sequence | text identity/code; Name+Token prepared correspondence separately | GDF-R14a |
-| TD-PLAYER-MODE | plrmode zero-based data row18 | Token | GH | text identity/code; Name+Token prepared correspondence separately | GDF-R14a |
-| TD-PLAYER-MODE | plrmode zero-based data row18 | Code | SQ | text identity/code; Name+Token prepared correspondence separately | GDF-R14a |
-| TD-PLAYER-MODE | plrmode zero-based data row19 | Name | Knock back | text identity/code; Name+Token prepared correspondence separately | GDF-R14a |
-| TD-PLAYER-MODE | plrmode zero-based data row19 | Token | GH | text identity/code; Name+Token prepared correspondence separately | GDF-R14a |
-| TD-PLAYER-MODE | plrmode zero-based data row19 | Code | KB | text identity/code; Name+Token prepared correspondence separately | GDF-R14a |
-| TD-MONSTER-MODE | monmode zero-based data row0 | name | death | text identity/code; Name+Token prepared correspondence separately | GDF-R15a |
-| TD-MONSTER-MODE | monmode zero-based data row0 | token | DT | text identity/code; Name+Token prepared correspondence separately | GDF-R15a |
-| TD-MONSTER-MODE | monmode zero-based data row0 | code | DT | text identity/code; Name+Token prepared correspondence separately | GDF-R15a |
-| TD-MONSTER-MODE | monmode zero-based data row1 | name | neutral | text identity/code; Name+Token prepared correspondence separately | GDF-R15a |
-| TD-MONSTER-MODE | monmode zero-based data row1 | token | NU | text identity/code; Name+Token prepared correspondence separately | GDF-R15a |
-| TD-MONSTER-MODE | monmode zero-based data row1 | code | NU | text identity/code; Name+Token prepared correspondence separately | GDF-R15a |
-| TD-MONSTER-MODE | monmode zero-based data row2 | name | walk | text identity/code; Name+Token prepared correspondence separately | GDF-R15a |
-| TD-MONSTER-MODE | monmode zero-based data row2 | token | WL | text identity/code; Name+Token prepared correspondence separately | GDF-R15a |
-| TD-MONSTER-MODE | monmode zero-based data row2 | code | WL | text identity/code; Name+Token prepared correspondence separately | GDF-R15a |
-| TD-MONSTER-MODE | monmode zero-based data row3 | name | gethit | text identity/code; Name+Token prepared correspondence separately | GDF-R15a |
-| TD-MONSTER-MODE | monmode zero-based data row3 | token | GH | text identity/code; Name+Token prepared correspondence separately | GDF-R15a |
-| TD-MONSTER-MODE | monmode zero-based data row3 | code | GH | text identity/code; Name+Token prepared correspondence separately | GDF-R15a |
-| TD-MONSTER-MODE | monmode zero-based data row4 | name | attack1 | text identity/code; Name+Token prepared correspondence separately | GDF-R15a |
-| TD-MONSTER-MODE | monmode zero-based data row4 | token | A1 | text identity/code; Name+Token prepared correspondence separately | GDF-R15a |
-| TD-MONSTER-MODE | monmode zero-based data row4 | code | A1 | text identity/code; Name+Token prepared correspondence separately | GDF-R15a |
-| TD-MONSTER-MODE | monmode zero-based data row5 | name | attack2 | text identity/code; Name+Token prepared correspondence separately | GDF-R15a |
-| TD-MONSTER-MODE | monmode zero-based data row5 | token | A2 | text identity/code; Name+Token prepared correspondence separately | GDF-R15a |
-| TD-MONSTER-MODE | monmode zero-based data row5 | code | A2 | text identity/code; Name+Token prepared correspondence separately | GDF-R15a |
-| TD-MONSTER-MODE | monmode zero-based data row6 | name | block | text identity/code; Name+Token prepared correspondence separately | GDF-R15a |
-| TD-MONSTER-MODE | monmode zero-based data row6 | token | BL | text identity/code; Name+Token prepared correspondence separately | GDF-R15a |
-| TD-MONSTER-MODE | monmode zero-based data row6 | code | BL | text identity/code; Name+Token prepared correspondence separately | GDF-R15a |
-| TD-MONSTER-MODE | monmode zero-based data row7 | name | cast | text identity/code; Name+Token prepared correspondence separately | GDF-R15a |
-| TD-MONSTER-MODE | monmode zero-based data row7 | token | SC | text identity/code; Name+Token prepared correspondence separately | GDF-R15a |
-| TD-MONSTER-MODE | monmode zero-based data row7 | code | SC | text identity/code; Name+Token prepared correspondence separately | GDF-R15a |
-| TD-MONSTER-MODE | monmode zero-based data row8 | name | skill1 | text identity/code; Name+Token prepared correspondence separately | GDF-R15a |
-| TD-MONSTER-MODE | monmode zero-based data row8 | token | S1 | text identity/code; Name+Token prepared correspondence separately | GDF-R15a |
-| TD-MONSTER-MODE | monmode zero-based data row8 | code | S1 | text identity/code; Name+Token prepared correspondence separately | GDF-R15a |
-| TD-MONSTER-MODE | monmode zero-based data row9 | name | skill2 | text identity/code; Name+Token prepared correspondence separately | GDF-R15a |
-| TD-MONSTER-MODE | monmode zero-based data row9 | token | S2 | text identity/code; Name+Token prepared correspondence separately | GDF-R15a |
-| TD-MONSTER-MODE | monmode zero-based data row9 | code | S2 | text identity/code; Name+Token prepared correspondence separately | GDF-R15a |
-| TD-MONSTER-MODE | monmode zero-based data row10 | name | skill3 | text identity/code; Name+Token prepared correspondence separately | GDF-R15a |
-| TD-MONSTER-MODE | monmode zero-based data row10 | token | S3 | text identity/code; Name+Token prepared correspondence separately | GDF-R15a |
-| TD-MONSTER-MODE | monmode zero-based data row10 | code | S3 | text identity/code; Name+Token prepared correspondence separately | GDF-R15a |
-| TD-MONSTER-MODE | monmode zero-based data row11 | name | skill4 | text identity/code; Name+Token prepared correspondence separately | GDF-R15a |
-| TD-MONSTER-MODE | monmode zero-based data row11 | token | S4 | text identity/code; Name+Token prepared correspondence separately | GDF-R15a |
-| TD-MONSTER-MODE | monmode zero-based data row11 | code | S4 | text identity/code; Name+Token prepared correspondence separately | GDF-R15a |
-| TD-MONSTER-MODE | monmode zero-based data row12 | name | dead | text identity/code; Name+Token prepared correspondence separately | GDF-R15a |
-| TD-MONSTER-MODE | monmode zero-based data row12 | token | DD | text identity/code; Name+Token prepared correspondence separately | GDF-R15a |
-| TD-MONSTER-MODE | monmode zero-based data row12 | code | DD | text identity/code; Name+Token prepared correspondence separately | GDF-R15a |
-| TD-MONSTER-MODE | monmode zero-based data row13 | name | knockback | text identity/code; Name+Token prepared correspondence separately | GDF-R15a |
-| TD-MONSTER-MODE | monmode zero-based data row13 | token | GH | text identity/code; Name+Token prepared correspondence separately | GDF-R15a |
-| TD-MONSTER-MODE | monmode zero-based data row13 | code | KB | text identity/code; Name+Token prepared correspondence separately | GDF-R15a |
-| TD-MONSTER-MODE | monmode zero-based data row14 | name | sequence | text identity/code; Name+Token prepared correspondence separately | GDF-R15a |
-| TD-MONSTER-MODE | monmode zero-based data row14 | token | xx | text identity/code; Name+Token prepared correspondence separately | GDF-R15a |
-| TD-MONSTER-MODE | monmode zero-based data row14 | code | xx | text identity/code; Name+Token prepared correspondence separately | GDF-R15a |
-| TD-MONSTER-MODE | monmode zero-based data row15 | name | run | text identity/code; Name+Token prepared correspondence separately | GDF-R15a |
-| TD-MONSTER-MODE | monmode zero-based data row15 | token | RN | text identity/code; Name+Token prepared correspondence separately | GDF-R15a |
-| TD-MONSTER-MODE | monmode zero-based data row15 | code | RN | text identity/code; Name+Token prepared correspondence separately | GDF-R15a |
-| TD-ITEMTYPE | ItemTypes Gold, zero-based row4 | ItemType | Gold | original index/name; Code prepared correspondence agrees | GDF-R16a |
-| TD-ITEMTYPE | ItemTypes Gold, zero-based row4 | Code | gold | original index/name; Code prepared correspondence agrees | GDF-R16a |
-| TD-ITEMTYPE | ItemTypes Any Shield, zero-based row51 | ItemType | Any Shield | original index/name; Code prepared correspondence agrees | GDF-R16a |
-| TD-ITEMTYPE | ItemTypes Any Shield, zero-based row51 | Code | shld | original index/name; Code prepared correspondence agrees | GDF-R16a |
-| TD-MONSTER-SKILL | MonStats sandleaper1, file data row78 | hcIdx | 78 | decimal class index; prepared Id agrees for this cited row | GDF-R17a |
-| TD-MONSTER-SKILL | MonStats vulture1, file data row110 | hcIdx | 110 | decimal class index; prepared Id agrees for this cited row | GDF-R17a |
-| TD-MONSTER-SKILL | MonStats willowisp1, file data row118 | hcIdx | 118 | decimal class index; prepared Id agrees for this cited row | GDF-R17a |
-| TD-MONSTER-SKILL | MonStats batdemon1, file data row136 | hcIdx | 136 | decimal class index; prepared Id agrees for this cited row | GDF-R17a |
-| TD-MONSTER-SKILL | MonStats firebeast, file data row230 | hcIdx | 230 | decimal class index; prepared Id agrees for this cited row | GDF-R17a |
-| TD-MONSTER-SKILL | MonStats iceglobe, file data row231 | hcIdx | 231 | decimal class index; prepared Id agrees for this cited row | GDF-R17a |
-| TD-MONSTER-SKILL | MonStats frogdemon1, file data row247 | hcIdx | 247 | decimal class index; prepared Id agrees for this cited row | GDF-R17a |
-| TD-MONSTER-SKILL | MonStats roguehire, file data row271 | hcIdx | 271 | decimal class index; prepared Id agrees for this cited row | GDF-R17a |
-| TD-MONSTER-SKILL | MonStats act2hire, file data row338 | hcIdx | 338 | decimal class index; prepared Id agrees for this cited row | GDF-R17a |
-| TD-MONSTER-SKILL | MonStats act3hire, file data row359 | hcIdx | 359 | decimal class index; prepared Id agrees for this cited row | GDF-R17a |
-| TD-MONSTER-SKILL | MonStats trappedsoul1, file data row403 | hcIdx | 403 | decimal class index; prepared Id agrees for this cited row | GDF-R17a |
-| TD-MONSTER-SKILL | MonStats act5hire1, file data row561 | hcIdx | 560 | decimal class index; prepared Id agrees for this cited row | GDF-R17a |
-| TD-MONSTER-SKILL | MonStats act5hire2, file data row562 | hcIdx | 561 | decimal class index; prepared Id agrees for this cited row | GDF-R17a |
-| TD-MONSTER-SKILL | MonStats sandleaper1, hcIdx78 | Velocity | 10 | prepared values for cited rows corroborate original named fields | GDF-V02 / GDF-V17 |
-| TD-MONSTER-SKILL | MonStats sandleaper1, hcIdx78 | Run | 10 | prepared values for cited rows corroborate original named fields | GDF-V02 / GDF-V17 |
-| TD-MONSTER-SKILL | MonStats sandleaper1, hcIdx78 | MonStatsEx | sandleaper1 | prepared values for cited rows corroborate original named fields | GDF-V02 / GDF-V17 |
-| TD-MONSTER-SKILL | MonStats sandleaper1, hcIdx78 | inTown | (empty) | prepared values for cited rows corroborate original named fields | GDF-V02 / GDF-V17 |
-| TD-MONSTER-SKILL | MonStats sandleaper1, hcIdx78 | NoShldBlock | (empty) | prepared values for cited rows corroborate original named fields | GDF-V02 / GDF-V17 |
+| TD-CLASS | CharStats Sorceress, file row 1/class 1 | BlockFactor | 20 | decimal, compiled value agrees | GDF-V12 |
+| TD-CLASS | CharStats Sorceress, file row 1/class 1 | ManaRegen | 120 | decimal, compiled value agrees | GDF-V12 |
+| TD-CLASS | CharStats Sorceress, file row 1/class 1 | ToHitFactor | -15 | decimal, compiled value agrees | GDF-V12 |
+| TD-PLAYER-MODE | plrmode zero-based data row 0 | Name | Death | text identity/code; Name+Token prepared correspondence separately | GDF-R14a |
+| TD-PLAYER-MODE | plrmode zero-based data row 0 | Token | DT | text identity/code; Name+Token prepared correspondence separately | GDF-R14a |
+| TD-PLAYER-MODE | plrmode zero-based data row 0 | Code | DT | text identity/code; Name+Token prepared correspondence separately | GDF-R14a |
+| TD-PLAYER-MODE | plrmode zero-based data row 1 | Name | Neutral | text identity/code; Name+Token prepared correspondence separately | GDF-R14a |
+| TD-PLAYER-MODE | plrmode zero-based data row 1 | Token | NU | text identity/code; Name+Token prepared correspondence separately | GDF-R14a |
+| TD-PLAYER-MODE | plrmode zero-based data row 1 | Code | NU | text identity/code; Name+Token prepared correspondence separately | GDF-R14a |
+| TD-PLAYER-MODE | plrmode zero-based data row 2 | Name | Walk | text identity/code; Name+Token prepared correspondence separately | GDF-R14a |
+| TD-PLAYER-MODE | plrmode zero-based data row 2 | Token | WL | text identity/code; Name+Token prepared correspondence separately | GDF-R14a |
+| TD-PLAYER-MODE | plrmode zero-based data row 2 | Code | WL | text identity/code; Name+Token prepared correspondence separately | GDF-R14a |
+| TD-PLAYER-MODE | plrmode zero-based data row 3 | Name | Run | text identity/code; Name+Token prepared correspondence separately | GDF-R14a |
+| TD-PLAYER-MODE | plrmode zero-based data row 3 | Token | RN | text identity/code; Name+Token prepared correspondence separately | GDF-R14a |
+| TD-PLAYER-MODE | plrmode zero-based data row 3 | Code | RN | text identity/code; Name+Token prepared correspondence separately | GDF-R14a |
+| TD-PLAYER-MODE | plrmode zero-based data row 4 | Name | Get Hit | text identity/code; Name+Token prepared correspondence separately | GDF-R14a |
+| TD-PLAYER-MODE | plrmode zero-based data row 4 | Token | GH | text identity/code; Name+Token prepared correspondence separately | GDF-R14a |
+| TD-PLAYER-MODE | plrmode zero-based data row 4 | Code | GH | text identity/code; Name+Token prepared correspondence separately | GDF-R14a |
+| TD-PLAYER-MODE | plrmode zero-based data row 5 | Name | Town Neutral | text identity/code; Name+Token prepared correspondence separately | GDF-R14a |
+| TD-PLAYER-MODE | plrmode zero-based data row 5 | Token | TN | text identity/code; Name+Token prepared correspondence separately | GDF-R14a |
+| TD-PLAYER-MODE | plrmode zero-based data row 5 | Code | TN | text identity/code; Name+Token prepared correspondence separately | GDF-R14a |
+| TD-PLAYER-MODE | plrmode zero-based data row 6 | Name | Town Walk | text identity/code; Name+Token prepared correspondence separately | GDF-R14a |
+| TD-PLAYER-MODE | plrmode zero-based data row 6 | Token | TW | text identity/code; Name+Token prepared correspondence separately | GDF-R14a |
+| TD-PLAYER-MODE | plrmode zero-based data row 6 | Code | TW | text identity/code; Name+Token prepared correspondence separately | GDF-R14a |
+| TD-PLAYER-MODE | plrmode zero-based data row 7 | Name | Attack1 | text identity/code; Name+Token prepared correspondence separately | GDF-R14a |
+| TD-PLAYER-MODE | plrmode zero-based data row 7 | Token | A1 | text identity/code; Name+Token prepared correspondence separately | GDF-R14a |
+| TD-PLAYER-MODE | plrmode zero-based data row 7 | Code | A1 | text identity/code; Name+Token prepared correspondence separately | GDF-R14a |
+| TD-PLAYER-MODE | plrmode zero-based data row 8 | Name | Attack2 | text identity/code; Name+Token prepared correspondence separately | GDF-R14a |
+| TD-PLAYER-MODE | plrmode zero-based data row 8 | Token | A2 | text identity/code; Name+Token prepared correspondence separately | GDF-R14a |
+| TD-PLAYER-MODE | plrmode zero-based data row 8 | Code | A2 | text identity/code; Name+Token prepared correspondence separately | GDF-R14a |
+| TD-PLAYER-MODE | plrmode zero-based data row 9 | Name | Block | text identity/code; Name+Token prepared correspondence separately | GDF-R14a |
+| TD-PLAYER-MODE | plrmode zero-based data row 9 | Token | BL | text identity/code; Name+Token prepared correspondence separately | GDF-R14a |
+| TD-PLAYER-MODE | plrmode zero-based data row 9 | Code | BL | text identity/code; Name+Token prepared correspondence separately | GDF-R14a |
+| TD-PLAYER-MODE | plrmode zero-based data row 10 | Name | Cast | text identity/code; Name+Token prepared correspondence separately | GDF-R14a |
+| TD-PLAYER-MODE | plrmode zero-based data row 10 | Token | SC | text identity/code; Name+Token prepared correspondence separately | GDF-R14a |
+| TD-PLAYER-MODE | plrmode zero-based data row 10 | Code | SC | text identity/code; Name+Token prepared correspondence separately | GDF-R14a |
+| TD-PLAYER-MODE | plrmode zero-based data row 11 | Name | Throw | text identity/code; Name+Token prepared correspondence separately | GDF-R14a |
+| TD-PLAYER-MODE | plrmode zero-based data row 11 | Token | TH | text identity/code; Name+Token prepared correspondence separately | GDF-R14a |
+| TD-PLAYER-MODE | plrmode zero-based data row 11 | Code | TH | text identity/code; Name+Token prepared correspondence separately | GDF-R14a |
+| TD-PLAYER-MODE | plrmode zero-based data row 12 | Name | Kick | text identity/code; Name+Token prepared correspondence separately | GDF-R14a |
+| TD-PLAYER-MODE | plrmode zero-based data row 12 | Token | KK | text identity/code; Name+Token prepared correspondence separately | GDF-R14a |
+| TD-PLAYER-MODE | plrmode zero-based data row 12 | Code | KK | text identity/code; Name+Token prepared correspondence separately | GDF-R14a |
+| TD-PLAYER-MODE | plrmode zero-based data row 13 | Name | Skill1 | text identity/code; Name+Token prepared correspondence separately | GDF-R14a |
+| TD-PLAYER-MODE | plrmode zero-based data row 13 | Token | S1 | text identity/code; Name+Token prepared correspondence separately | GDF-R14a |
+| TD-PLAYER-MODE | plrmode zero-based data row 13 | Code | S1 | text identity/code; Name+Token prepared correspondence separately | GDF-R14a |
+| TD-PLAYER-MODE | plrmode zero-based data row 14 | Name | Skill2 | text identity/code; Name+Token prepared correspondence separately | GDF-R14a |
+| TD-PLAYER-MODE | plrmode zero-based data row 14 | Token | S2 | text identity/code; Name+Token prepared correspondence separately | GDF-R14a |
+| TD-PLAYER-MODE | plrmode zero-based data row 14 | Code | S2 | text identity/code; Name+Token prepared correspondence separately | GDF-R14a |
+| TD-PLAYER-MODE | plrmode zero-based data row 15 | Name | Skill3 | text identity/code; Name+Token prepared correspondence separately | GDF-R14a |
+| TD-PLAYER-MODE | plrmode zero-based data row 15 | Token | S3 | text identity/code; Name+Token prepared correspondence separately | GDF-R14a |
+| TD-PLAYER-MODE | plrmode zero-based data row 15 | Code | S3 | text identity/code; Name+Token prepared correspondence separately | GDF-R14a |
+| TD-PLAYER-MODE | plrmode zero-based data row 16 | Name | Skill4 | text identity/code; Name+Token prepared correspondence separately | GDF-R14a |
+| TD-PLAYER-MODE | plrmode zero-based data row 16 | Token | S4 | text identity/code; Name+Token prepared correspondence separately | GDF-R14a |
+| TD-PLAYER-MODE | plrmode zero-based data row 16 | Code | S4 | text identity/code; Name+Token prepared correspondence separately | GDF-R14a |
+| TD-PLAYER-MODE | plrmode zero-based data row 17 | Name | Dead | text identity/code; Name+Token prepared correspondence separately | GDF-R14a |
+| TD-PLAYER-MODE | plrmode zero-based data row 17 | Token | DD | text identity/code; Name+Token prepared correspondence separately | GDF-R14a |
+| TD-PLAYER-MODE | plrmode zero-based data row 17 | Code | DD | text identity/code; Name+Token prepared correspondence separately | GDF-R14a |
+| TD-PLAYER-MODE | plrmode zero-based data row 18 | Name | Sequence | text identity/code; Name+Token prepared correspondence separately | GDF-R14a |
+| TD-PLAYER-MODE | plrmode zero-based data row 18 | Token | GH | text identity/code; Name+Token prepared correspondence separately | GDF-R14a |
+| TD-PLAYER-MODE | plrmode zero-based data row 18 | Code | SQ | text identity/code; Name+Token prepared correspondence separately | GDF-R14a |
+| TD-PLAYER-MODE | plrmode zero-based data row 19 | Name | Knock back | text identity/code; Name+Token prepared correspondence separately | GDF-R14a |
+| TD-PLAYER-MODE | plrmode zero-based data row 19 | Token | GH | text identity/code; Name+Token prepared correspondence separately | GDF-R14a |
+| TD-PLAYER-MODE | plrmode zero-based data row 19 | Code | KB | text identity/code; Name+Token prepared correspondence separately | GDF-R14a |
+| TD-MONSTER-MODE | monmode zero-based data row 0 | name | death | text identity/code; Name+Token prepared correspondence separately | GDF-R15a |
+| TD-MONSTER-MODE | monmode zero-based data row 0 | token | DT | text identity/code; Name+Token prepared correspondence separately | GDF-R15a |
+| TD-MONSTER-MODE | monmode zero-based data row 0 | code | DT | text identity/code; Name+Token prepared correspondence separately | GDF-R15a |
+| TD-MONSTER-MODE | monmode zero-based data row 1 | name | neutral | text identity/code; Name+Token prepared correspondence separately | GDF-R15a |
+| TD-MONSTER-MODE | monmode zero-based data row 1 | token | NU | text identity/code; Name+Token prepared correspondence separately | GDF-R15a |
+| TD-MONSTER-MODE | monmode zero-based data row 1 | code | NU | text identity/code; Name+Token prepared correspondence separately | GDF-R15a |
+| TD-MONSTER-MODE | monmode zero-based data row 2 | name | walk | text identity/code; Name+Token prepared correspondence separately | GDF-R15a |
+| TD-MONSTER-MODE | monmode zero-based data row 2 | token | WL | text identity/code; Name+Token prepared correspondence separately | GDF-R15a |
+| TD-MONSTER-MODE | monmode zero-based data row 2 | code | WL | text identity/code; Name+Token prepared correspondence separately | GDF-R15a |
+| TD-MONSTER-MODE | monmode zero-based data row 3 | name | gethit | text identity/code; Name+Token prepared correspondence separately | GDF-R15a |
+| TD-MONSTER-MODE | monmode zero-based data row 3 | token | GH | text identity/code; Name+Token prepared correspondence separately | GDF-R15a |
+| TD-MONSTER-MODE | monmode zero-based data row 3 | code | GH | text identity/code; Name+Token prepared correspondence separately | GDF-R15a |
+| TD-MONSTER-MODE | monmode zero-based data row 4 | name | `attack1` | text identity/code; Name+Token prepared correspondence separately | GDF-R15a |
+| TD-MONSTER-MODE | monmode zero-based data row 4 | token | A1 | text identity/code; Name+Token prepared correspondence separately | GDF-R15a |
+| TD-MONSTER-MODE | monmode zero-based data row 4 | code | A1 | text identity/code; Name+Token prepared correspondence separately | GDF-R15a |
+| TD-MONSTER-MODE | monmode zero-based data row 5 | name | `attack2` | text identity/code; Name+Token prepared correspondence separately | GDF-R15a |
+| TD-MONSTER-MODE | monmode zero-based data row 5 | token | A2 | text identity/code; Name+Token prepared correspondence separately | GDF-R15a |
+| TD-MONSTER-MODE | monmode zero-based data row 5 | code | A2 | text identity/code; Name+Token prepared correspondence separately | GDF-R15a |
+| TD-MONSTER-MODE | monmode zero-based data row 6 | name | block | text identity/code; Name+Token prepared correspondence separately | GDF-R15a |
+| TD-MONSTER-MODE | monmode zero-based data row 6 | token | BL | text identity/code; Name+Token prepared correspondence separately | GDF-R15a |
+| TD-MONSTER-MODE | monmode zero-based data row 6 | code | BL | text identity/code; Name+Token prepared correspondence separately | GDF-R15a |
+| TD-MONSTER-MODE | monmode zero-based data row 7 | name | cast | text identity/code; Name+Token prepared correspondence separately | GDF-R15a |
+| TD-MONSTER-MODE | monmode zero-based data row 7 | token | SC | text identity/code; Name+Token prepared correspondence separately | GDF-R15a |
+| TD-MONSTER-MODE | monmode zero-based data row 7 | code | SC | text identity/code; Name+Token prepared correspondence separately | GDF-R15a |
+| TD-MONSTER-MODE | monmode zero-based data row 8 | name | `skill1` | text identity/code; Name+Token prepared correspondence separately | GDF-R15a |
+| TD-MONSTER-MODE | monmode zero-based data row 8 | token | S1 | text identity/code; Name+Token prepared correspondence separately | GDF-R15a |
+| TD-MONSTER-MODE | monmode zero-based data row 8 | code | S1 | text identity/code; Name+Token prepared correspondence separately | GDF-R15a |
+| TD-MONSTER-MODE | monmode zero-based data row 9 | name | `skill2` | text identity/code; Name+Token prepared correspondence separately | GDF-R15a |
+| TD-MONSTER-MODE | monmode zero-based data row 9 | token | S2 | text identity/code; Name+Token prepared correspondence separately | GDF-R15a |
+| TD-MONSTER-MODE | monmode zero-based data row 9 | code | S2 | text identity/code; Name+Token prepared correspondence separately | GDF-R15a |
+| TD-MONSTER-MODE | monmode zero-based data row 10 | name | `skill3` | text identity/code; Name+Token prepared correspondence separately | GDF-R15a |
+| TD-MONSTER-MODE | monmode zero-based data row 10 | token | S3 | text identity/code; Name+Token prepared correspondence separately | GDF-R15a |
+| TD-MONSTER-MODE | monmode zero-based data row 10 | code | S3 | text identity/code; Name+Token prepared correspondence separately | GDF-R15a |
+| TD-MONSTER-MODE | monmode zero-based data row 11 | name | `skill4` | text identity/code; Name+Token prepared correspondence separately | GDF-R15a |
+| TD-MONSTER-MODE | monmode zero-based data row 11 | token | S4 | text identity/code; Name+Token prepared correspondence separately | GDF-R15a |
+| TD-MONSTER-MODE | monmode zero-based data row 11 | code | S4 | text identity/code; Name+Token prepared correspondence separately | GDF-R15a |
+| TD-MONSTER-MODE | monmode zero-based data row 12 | name | dead | text identity/code; Name+Token prepared correspondence separately | GDF-R15a |
+| TD-MONSTER-MODE | monmode zero-based data row 12 | token | DD | text identity/code; Name+Token prepared correspondence separately | GDF-R15a |
+| TD-MONSTER-MODE | monmode zero-based data row 12 | code | DD | text identity/code; Name+Token prepared correspondence separately | GDF-R15a |
+| TD-MONSTER-MODE | monmode zero-based data row 13 | name | knockback | text identity/code; Name+Token prepared correspondence separately | GDF-R15a |
+| TD-MONSTER-MODE | monmode zero-based data row 13 | token | GH | text identity/code; Name+Token prepared correspondence separately | GDF-R15a |
+| TD-MONSTER-MODE | monmode zero-based data row 13 | code | KB | text identity/code; Name+Token prepared correspondence separately | GDF-R15a |
+| TD-MONSTER-MODE | monmode zero-based data row 14 | name | sequence | text identity/code; Name+Token prepared correspondence separately | GDF-R15a |
+| TD-MONSTER-MODE | monmode zero-based data row 14 | token | xx | text identity/code; Name+Token prepared correspondence separately | GDF-R15a |
+| TD-MONSTER-MODE | monmode zero-based data row 14 | code | xx | text identity/code; Name+Token prepared correspondence separately | GDF-R15a |
+| TD-MONSTER-MODE | monmode zero-based data row 15 | name | run | text identity/code; Name+Token prepared correspondence separately | GDF-R15a |
+| TD-MONSTER-MODE | monmode zero-based data row 15 | token | RN | text identity/code; Name+Token prepared correspondence separately | GDF-R15a |
+| TD-MONSTER-MODE | monmode zero-based data row 15 | code | RN | text identity/code; Name+Token prepared correspondence separately | GDF-R15a |
+| TD-ITEMTYPE | ItemTypes Gold, zero-based row 4 | ItemType | Gold | original index/name; Code prepared correspondence agrees | GDF-R16a |
+| TD-ITEMTYPE | ItemTypes Gold, zero-based row 4 | Code | gold | original index/name; Code prepared correspondence agrees | GDF-R16a |
+| TD-ITEMTYPE | ItemTypes Any Shield, zero-based row 51 | ItemType | Any Shield | original index/name; Code prepared correspondence agrees | GDF-R16a |
+| TD-ITEMTYPE | ItemTypes Any Shield, zero-based row 51 | Code | shld | original index/name; Code prepared correspondence agrees | GDF-R16a |
+| TD-MONSTER-SKILL | MonStats `sandleaper1`, file data row 78 | hcIdx | 78 | decimal class index; prepared Id agrees for this cited row | GDF-R17a |
+| TD-MONSTER-SKILL | MonStats `vulture1`, file data row 110 | hcIdx | 110 | decimal class index; prepared Id agrees for this cited row | GDF-R17a |
+| TD-MONSTER-SKILL | MonStats `willowisp1`, file data row 118 | hcIdx | 118 | decimal class index; prepared Id agrees for this cited row | GDF-R17a |
+| TD-MONSTER-SKILL | MonStats `batdemon1`, file data row 136 | hcIdx | 136 | decimal class index; prepared Id agrees for this cited row | GDF-R17a |
+| TD-MONSTER-SKILL | MonStats firebeast, file data row 230 | hcIdx | 230 | decimal class index; prepared Id agrees for this cited row | GDF-R17a |
+| TD-MONSTER-SKILL | MonStats iceglobe, file data row 231 | hcIdx | 231 | decimal class index; prepared Id agrees for this cited row | GDF-R17a |
+| TD-MONSTER-SKILL | MonStats `frogdemon1`, file data row 247 | hcIdx | 247 | decimal class index; prepared Id agrees for this cited row | GDF-R17a |
+| TD-MONSTER-SKILL | MonStats roguehire, file data row 271 | hcIdx | 271 | decimal class index; prepared Id agrees for this cited row | GDF-R17a |
+| TD-MONSTER-SKILL | MonStats act2hire, file data row 338 | hcIdx | 338 | decimal class index; prepared Id agrees for this cited row | GDF-R17a |
+| TD-MONSTER-SKILL | MonStats act3hire, file data row 359 | hcIdx | 359 | decimal class index; prepared Id agrees for this cited row | GDF-R17a |
+| TD-MONSTER-SKILL | MonStats `trappedsoul1`, file data row 403 | hcIdx | 403 | decimal class index; prepared Id agrees for this cited row | GDF-R17a |
+| TD-MONSTER-SKILL | MonStats act5hire1, file data row 561 | hcIdx | 560 | decimal class index; prepared Id agrees for this cited row | GDF-R17a |
+| TD-MONSTER-SKILL | MonStats act5hire2, file data row 562 | hcIdx | 561 | decimal class index; prepared Id agrees for this cited row | GDF-R17a |
+| TD-MONSTER-SKILL | MonStats `sandleaper1`, hcIdx78 | Velocity | 10 | prepared values for cited rows corroborate original named fields | GDF-V02 / GDF-V17 |
+| TD-MONSTER-SKILL | MonStats `sandleaper1`, hcIdx78 | Run | 10 | prepared values for cited rows corroborate original named fields | GDF-V02 / GDF-V17 |
+| TD-MONSTER-SKILL | MonStats `sandleaper1`, hcIdx78 | MonStatsEx | `sandleaper1` | prepared values for cited rows corroborate original named fields | GDF-V02 / GDF-V17 |
+| TD-MONSTER-SKILL | MonStats `sandleaper1`, hcIdx78 | inTown | (empty) | prepared values for cited rows corroborate original named fields | GDF-V02 / GDF-V17 |
+| TD-MONSTER-SKILL | MonStats `sandleaper1`, hcIdx78 | NoShldBlock | (empty) | prepared values for cited rows corroborate original named fields | GDF-V02 / GDF-V17 |
 | TD-MONSTER-SKILL | MonStats act5hire1, hcIdx560 | Velocity | 8 | prepared values for cited rows corroborate original named fields | GDF-V02 / GDF-V17 |
 | TD-MONSTER-SKILL | MonStats act5hire1, hcIdx560 | Run | 14 | prepared values for cited rows corroborate original named fields | GDF-V02 / GDF-V17 |
 | TD-MONSTER-SKILL | MonStats act5hire1, hcIdx560 | MonStatsEx | act5hire1 | prepared values for cited rows corroborate original named fields | GDF-V02 / GDF-V17 |
@@ -645,11 +645,11 @@ Additional count records: ItemStatCost359, States185, Skills357 ordinary textrow
 
 ### Global MonStats correspondence discrepancy
 
-The text file's hcIdx sequence matches ordinary-row indices for all734 rows. The cached .bin record Id field does not:11 tail records differ. Examples (only named cells / interpreted fields):
-- text data row724 Id cr_lancer8, hcIdx723; .bin physical record index723 has Id617.
-- text data row725 Id overseer6, hcIdx724; .bin record index724 has Id723.
-- text data row734 Id willowisp8, hcIdx733; .bin record index733 has Id732.
-The Id name cr_lancer8 occurs twice in text, at data rows618 and724, hcIdx617 and723. This is a lead for the first-pass unique-name behavior, not proof that it caused the cached-file mismatch. Archive compilation history and live post-load mutation have not been observed. Array index, explicit hcIdx cell, linked-name identity and record Id field remain distinct. Do not change the cited gameplay class indices to fit these record words. GDF-Q10 retains global correspondence as an integration gap; all13 cited class indices corroborated normally.
+The text file's hcIdx sequence matches ordinary-row indices for all 734 rows. The cached .bin record Id field does not:11 tail records differ. Examples (only named cells / interpreted fields):
+- text data row 724 Id cr_lancer8, hcIdx723; .bin physical record index 723 has Id617.
+- text data row 725 Id `overseer6`, hcIdx724; .bin record index 724 has Id723.
+- text data row 734 Id `willowisp8`, hcIdx733; .bin record index 733 has Id732.
+The Id name cr_lancer8 occurs twice in text, at data rows 618 and 724, hcIdx617 and 723. This is a lead for the first-pass unique-name behavior, not proof that it caused the cached-file mismatch. Archive compilation history and live post-load mutation have not been observed. Array index, explicit hcIdx cell, linked-name identity and record Id field remain distinct. Do not change the cited gameplay class indices to fit these record words. GDF-Q10 retains global correspondence as an integration gap; all 13 cited class indices corroborated normally.
 
 
 ## Historical live-memory correspondence (2026-10-12/13)
@@ -716,3 +716,133 @@ A focused cross-review found no remaining required provenance/contract issue. Th
 no implementation tests, vector recomputation, new table reads or gameplay actions. Existing
 labels, gaps, pending observations and draft status remain unchanged; review does not imply
 user approval or runtime parity.
+
+<a id="named-cell-corroboration-2026-10-15"></a>
+## Named-cell corroboration (2026-10-15)
+
+The answering source reported the LoD 1.13c launch profile, selected separately from four reported modified profiles. Its vanilla-profile identification reuses the established historical record; refreshing the version catalog failed. A fresh complete override inventory, loaded DLL fingerprints and physical supplying MPQs were not captured. The records report a prior file override disabled; this does not establish a complete current inventory. The source manifest identifies analysis artifacts, not the current loaded DLL set. Existing hooks were untouched; no gameplay action or memory write occurred.
+
+These coordinated read-only collections used the running game’s Storm loader. Offset 0 with requested length 0 requested each complete effective file. Decoded payload lengths equaled returned and total bytes. Columns were parsed by their actual header names; row indices exclude the header and start at zero. Each cited explicit ID/id uniquely selects the stated row and equals its row index. The hashes identify these effective text files; they do not establish physical archive origin, original-profile overrides or equality with the 2026-10-14 text/compiled files. No new compiled or live prepared-record correspondence was read.
+
+| Effective virtual file | Offset / requested length | Returned / total bytes | SHA-256 | Coverage |
+|---|---|---|---|---|
+| `data/global/excel/states.txt` | 0 / 0 (whole file) | 20920 / 20920 | `898806c2b69e55e316ecfed48dde95aa2933829b94fdad234bdabc27bdbc23e1` | complete header and file; named cells below only |
+| `data/global/excel/itemstatcost.txt` | 0 / 0 (whole file) | 40109 / 40109 | `ee7fa82b48e0c4f27a566334b2da13cf1c83f5c4c0439552084a231cb5938375` | complete header and file; named cells below only |
+| `data/global/excel/itemtypes.txt` | 0 / 0 (whole file) | 8775 / 8775 | `d399dc5d0f3a3e1a4f1eb611dabef8311b7025392c416f58dc26baff93af3550` | complete header and file; named cells below only |
+
+All cells below are raw text. Decimal ID/id cells convert to the stated integer identity; Stat/state/ItemType/Code strings are retained as written. Each record is verified in 1.13c data within the reported-profile limits above. It corroborates the named mapping only; selector meaning, code-fixed uses, custom remapping, compiled preparation and gameplay execution are separate claims.
+
+| File | Row identity / zero-based index | Column | Raw cell | Interpretation / supports |
+|---|---|---|---|---|
+| `states.txt` | id 1; row 1 | `id` | `1` | state identity/name; GDF-R12 |
+| `states.txt` | id 1; row 1 | `state` | `freeze` | state identity/name; GDF-R12 |
+| `states.txt` | id 15; row 15 | `id` | `15` | state identity/name; GDF-R12 |
+| `states.txt` | id 15; row 15 | `state` | `concentrate` | state identity/name; GDF-R12 |
+| `states.txt` | id 21; row 21 | `id` | `21` | state identity/name; GDF-R12 |
+| `states.txt` | id 21; row 21 | `state` | `stunned` | state identity/name; GDF-R12 |
+| `states.txt` | id 42; row 42 | `id` | `42` | state identity/name; GDF-R12 |
+| `states.txt` | id 42; row 42 | `state` | `concentration` | state identity/name; GDF-R12 |
+| `states.txt` | id 54; row 54 | `id` | `54` | state identity/name; GDF-R12 |
+| `states.txt` | id 54; row 54 | `state` | `uninterruptable` | state identity/name; GDF-R12 |
+| `states.txt` | id 65; row 65 | `id` | `65` | state identity/name; GDF-R12 |
+| `states.txt` | id 65; row 65 | `state` | `dodge` | state identity/name; GDF-R12 |
+| `states.txt` | id 66; row 66 | `id` | `66` | state identity/name; GDF-R12 |
+| `states.txt` | id 66; row 66 | `state` | `avoid` | state identity/name; GDF-R12 |
+| `states.txt` | id 68; row 68 | `id` | `68` | state identity/name; GDF-R12 |
+| `states.txt` | id 68; row 68 | `state` | `evade` | state identity/name; GDF-R12 |
+| `states.txt` | id 92; row 92 | `id` | `92` | state identity/name; GDF-R12 |
+| `states.txt` | id 92; row 92 | `state` | `death_delay` | state identity/name; GDF-R12 |
+| `states.txt` | id 101; row 101 | `id` | `101` | state identity/name; GDF-R12 |
+| `states.txt` | id 101; row 101 | `state` | `holyshield` | state identity/name; GDF-R12 |
+| `itemstatcost.txt` | ID 7; row 7 | `ID` | `7` | stat identity/name; GDF-R11a |
+| `itemstatcost.txt` | ID 7; row 7 | `Stat` | `maxhp` | stat identity/name; GDF-R11a |
+| `itemstatcost.txt` | ID 93; row 93 | `ID` | `93` | stat identity/name; GDF-R11a |
+| `itemstatcost.txt` | ID 93; row 93 | `Stat` | `item_fasterattackrate` | stat identity/name; GDF-R11a |
+| `itemstatcost.txt` | ID 95; row 95 | `ID` | `95` | stat identity/name; GDF-R11a |
+| `itemstatcost.txt` | ID 95; row 95 | `Stat` | `lastblockframe` | stat identity/name; GDF-R11a |
+| `itemstatcost.txt` | ID 96; row 96 | `ID` | `96` | stat identity/name; GDF-R11a |
+| `itemstatcost.txt` | ID 96; row 96 | `Stat` | `item_fastermovevelocity` | stat identity/name; GDF-R11a |
+| `itemstatcost.txt` | ID 99; row 99 | `ID` | `99` | stat identity/name; GDF-R11a |
+| `itemstatcost.txt` | ID 99; row 99 | `Stat` | `item_fastergethitrate` | stat identity/name; GDF-R11a |
+| `itemstatcost.txt` | ID 102; row 102 | `ID` | `102` | stat identity/name; GDF-R11a |
+| `itemstatcost.txt` | ID 102; row 102 | `Stat` | `item_fasterblockrate` | stat identity/name; GDF-R11a |
+| `itemstatcost.txt` | ID 105; row 105 | `ID` | `105` | stat identity/name; GDF-R11a |
+| `itemstatcost.txt` | ID 105; row 105 | `Stat` | `item_fastercastrate` | stat identity/name; GDF-R11a |
+| `itemstatcost.txt` | ID 164; row 164 | `ID` | `164` | stat identity/name; GDF-R11a |
+| `itemstatcost.txt` | ID 164; row 164 | `Stat` | `skill_concentration` | stat identity/name; GDF-R11a |
+| `itemstatcost.txt` | ID 352; row 352 | `ID` | `352` | stat identity/name; GDF-R11a |
+| `itemstatcost.txt` | ID 352; row 352 | `Stat` | `last_sent_hp_pct` | stat identity/name; GDF-R11a |
+| `itemtypes.txt` | Gold; row 4 | `ItemType` | `Gold` | cited original-profile item-type name/code; GDF-R16a |
+| `itemtypes.txt` | Gold; row 4 | `Code` | `gold` | cited original-profile item-type name/code; GDF-R16a |
+| `itemtypes.txt` | Any Shield; row 51 | `ItemType` | `Any Shield` | cited original-profile item-type name/code; GDF-R16a |
+| `itemtypes.txt` | Any Shield; row 51 | `Code` | `shld` | cited original-profile item-type name/code; GDF-R16a |
+
+The supplied GDF-V03 identities 99 and 54 are corroborated here; the 171 and 146 cell records remain the compatible 2026-10-14 evidence. State 101 corroborates GDF-R11b’s named state, while the code-fixed test still rests on its static consumer chain. ItemTypes name/code evidence does not verify link-building. The separate 32-byte animation-file header read establishes file presence only and supplies no GDF-Q01 animation-selection contract. Element-table reads likewise do not explain a selector handler or close a compiler conversion gap.
+
+## Focused refresh and affected dependencies (2026-10-15)
+
+All seven open gap rows were assessed against the matching source-manifest artifacts, the existing 2026-10-12/13/14 records and current foundations/expression contracts before considering new reading. Earlier source records retain their actual methods, dates and read boundaries. No old failed lookup/default or localization attempt was rerun, and no newly available reconstruction was treated as new proof. The animation selectors remain incomplete, indirect/compiler and missing-column behavior remain incomplete, global cached/text MonStats correspondence remains disputed, treasure probability/counter production remains with its gameplay owner, localized class names remain gated, and attributable execution remains pending. The new cells/hash coverage does not settle any of these questions.
+
+The dependency review found two stale references: GDF-R19a and Acceptance had attributed code-built records to NRF-R16, whose current subrules consume this dictionary’s field/name correspondence; they now point to the foundations semantic-record sections and actual gameplay owners. Acceptance had called NRF-R01 wrapping notation although that rule owns the LCG; the supporting notation reference now targets foundations section 1. Neither change alters a field, conversion, call order, label or gate. GDF-V11 explicitly normalizes the NRF-R12a mask into its retained true/false predicates. Its supplied player/list/state-count inputs give raw state-54 mask 4194304 and absent state-101 result 0 under the existing static dependency; this is not a newly observed return.
+
+All GDF-R/Q/V/O identities, the 22 existing vectors, existing dates, numerical expectations and seven gap boundaries remain. The main contract’s retrospective correspondence sentences were shortened and their original records remain above: GDF-V01 has 2026-10-13 compiled correspondence and 2026-10-14 corroboration; GDF-V02/V08/V12 and PetType retain their dated records. Synthetic fixture encodings and the complete pre-refresh three-file snapshot are preserved with SHA-256 privately. No implementation comparison, implementation or plan change, table-handler completion or gameplay campaign was performed.
+
+
+## Focused self-review (2026-10-15)
+
+The mechanical spec/companion/gap check reported 0 errors and 0 warnings. The separate preservation comparison checked all 36 rule definitions and their labels, all 22 executable-vector identities, and all 277 earlier named-cell records. Only the dependency description of GDF-R19a changes among normalized rule bodies; other rule bodies are unchanged apart from spacing/identifier formatting. Vector correspondence prose changes in GDF-V01/V02/V08/V12 retain the dated records above. GDF-V11 adds explicit dependency inputs and mask-to-predicate assertions while retaining its selected identities and true/false outputs.
+
+The self-review mapped every verified behavioral rule to its existing supplied-input vector and each data-only rule to named-cell records, checked the dependency return formats and seven precise gap boundaries, and found no additional result-distinct discriminator needed for the unchanged local operations. The new text-cell records carry their own date, full-file coverage, header-based selection, narrow values, hashes and profile limits. This is a documentation check and self-review, not a fixture execution, gameplay observation, fresh independent-reader result or approval.
+
+## Focused blind-reader pass FULL1 (2026-10-15)
+
+The reader examined the main contract and only the allowed table-evidence ranges. Reported counts: MISMATCH 0, GUESS 0, GAP 3, DISCRIM 3, GATED 6 (GDF-Q01/Q06/Q10/Q11/Q12/Q13), COVERAGE 4, HARD 3. This was a fresh reader result, not a gameplay observation or approval. Its findings supersede the initial self-review's conclusion that no further discriminator was needed.
+
+All three inventory gaps were addressed: section 3 now lists the mode argument to GDF-R06b; section 5 lists the wrong-count Difficulty abort from GDF-R02 and the Experience publication/no-separate-count result from GDF-R04. No behavior, field width or gate changes.
+
+The three discrimination findings were addressed with two distinct supplied fixtures. GDF-V08 now separates collection index 1 from stored identities 2/1 and field values 11/22, rejecting identity-based lookup in place of indexed retrieval. GDF-V09 separates monster index 1 from its linked MonStatsEx index 2, with opposite mGH flags; mode 3 must yield 8 instead of 0. GDF-V17 retains its original identity case and cites GDF-V08's index discriminator, avoiding a duplicate fixture.
+
+Coverage suggestions were triaged individually:
+
+- Byte-count versus Unicode-character limits: GDF-V19 now retains [0xC3] from supplied bytes [0xC3, 0xA9] at byte limit 1. This is supported by GDF-R01b's byte contract and makes no locale/encoding claim.
+- Difficulty variants: GDF-V17 now supplies distinct Drain/Drain(N)/Drain(H) values 7/13/29 and asserts selection for difficulties 0/1/2 under GDF-R05a. This adds no leech or table-cell claim.
+- True NoShldBlock: GDF-V02 now supplies inTown false/NoShldBlock true and asserts raw outputs 0/4 and predicates false/true under GDF-R18.
+- Intermediate/final text-record zeroing: deferred at the original decoder/compiler execution boundary. GDF-V21 starts with distinct supplied decoded collections and proves load-selection/publication control flow. Their supplied fields cannot discriminate whether the original compiler zeroed allocation before conversions. Adding a fake local producer operation or silently treating supplied decoding as original compilation would cross GDF-R20b's GDF-Q06/Q12 preparation gate. The static zeroing evidence remains above; no new local zeroing-execution assertion is claimed. GDF-V21 now states this limit explicitly.
+
+The three HARD cases required no changes: GDF-V21's independent generation/final selection and second text decode; GDF-V19's signed wrapping and low-width stores; GDF-V11's stat/state identity, raw mask and nonzero predicate. All 22 vector families, earlier cases/results, rule labels, question identities, dates and acceptance gates remain. The added inventories and executable assertions require a full second reader pass.
+
+## Focused blind-reader pass FULL2 (2026-10-15)
+
+The reader examined the actual main contract and only the allowed table-evidence ranges. Reported counts: MISMATCH 0, GUESS 0, GAP 0, DISCRIM 1, GATED 9, COVERAGE 1, HARD 3. This is documentation review, not gameplay observation or approval.
+
+The required discrimination finding concerned GDF-V05's equal Rare/Set/Unique values of 983, which could hide swapped quality copies. The original case and all existing variants remain. One supplied quality-copy fixture now gives Magic/Rare/Set/Unique distinct values 101/202/303/404 and requires those same-named destination values, with all other original inputs and outputs unchanged. Any swapped quality pair changes the result. This follows the existing GDF-R10b copy contract; it adds no original-table cell or producer claim.
+
+The coverage suggestion noted that GDF-V01's reordered-header case gives nonzero values to only two of the 22 fields. It remains advisory: the case already discriminates header-name binding from input position, the direct conversion recipe is separately exercised, and the named per-field descriptor/data records support the remaining mapping. Twenty more cases repeating the same binding/conversion recipe would add no distinct behavioral branch or result. No additional exhaustive mapping fixtures were added.
+
+The three HARD cases required no changes: GDF-V09's collection index to extended link to returned mask, GDF-V21's independent generation/final selection and separate second text decode, and GDF-V19's wrapping, low-width stores and raw-byte limits remain explicit.
+
+The nine GATED outcomes cover GDF-R01c/R03c/R05b/R15b/R16b/R20b and GDF-O01/O02/O03. They retain the existing GDF-Q01/Q06/Q10/Q11/Q12/Q13 assertions and execution boundaries; this count uses a different reporting unit from FULL1's six question identities and closes no gap. All 36 rule labels, 22 vector families, earlier cases/results and seven gap rows remain. The new assertion requires FULL3, the third full campaign reader pass.
+
+## Focused blind-reader pass FULL3 (2026-10-15)
+
+The fresh third full reader reported MISMATCH 0, GUESS 0, GAP 0 and DISCRIM 0 after recomputing all 22 vector families. These were documented hand recomputations, not implementation tests or gameplay execution. No behavior or fixture corrections were required.
+
+GATED 6 retains the six existing question boundaries:
+
+- GDF-Q01: complete derived monster animation-rate production.
+- GDF-Q06: complete name/code links and expression/callback conversions.
+- GDF-Q10: treasure generation and global compiled correspondence.
+- GDF-Q11: attributable gameplay/runtime observation.
+- GDF-Q12: missing-column/default and complete linked-field behavior, including absent direction columns.
+- GDF-Q13: localized class display names.
+
+The reader's four COVERAGE observations were retained with these explicit dispositions:
+
+- GDF-R20a pre-conversion zeroing is explicitly untested by the supplied decoded outcomes in GDF-V21. The existing static zeroing record is not an execution claim; no fake producer fixture was added.
+- Original decoder/writer failure integration remains GDF-R20b's stated preparation boundary. GDF-V21 discriminates selected-resource absence and supplied successful outcomes; it does not establish all decoder/writer failure behavior.
+- GDF-R06b's upper mode domain is sampled by mode 13, with modes 3/4 also covered. Its signed linked-index guards, byte/mask selection and result distinction are explicit. No exhaustive repetition across modes 8..15 was required or claimed.
+- GDF-R15b has no nonzero supplied-direction fixture. The current vectors cover the stated zero-valued preparation case; missing direction-column defaults remain GDF-Q12. No complete original preparation claim or observation is inferred from that case.
+
+The three HARDEST checks were GDF-R20a/GDF-V21's independent generation/final selection and publication/abort ordering; GDF-R06b/GDF-V09's collection index versus linked identity and returned mask; and GDF-R01b/GDF-V19's wrapping, narrow stores, flags, code padding and raw byte strings. Their explicit assertions needed no changes.
+
+No unnecessary fixture expansion followed this pass. All 36 rule labels, 22 vector families and earlier cases/results, six question identities, seven gap rows, evidence labels and draft status remain. The main metadata's trailing hard-break spaces were removed solely to satisfy publication formatting. The mechanical check after this record reported 0 errors and 0 warnings. This review does not close the stated evidence gates, establish gameplay parity or imply user approval.
