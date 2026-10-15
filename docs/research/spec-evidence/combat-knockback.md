@@ -517,3 +517,15 @@ targeted lint on the pass-3 edits, which subsequently exited 0 with **0 errors, 
 After the review-5 fixture additions, targeted lint exited 0 with **0 errors, 0 warnings**.
 No original-source campaign, Git command, code test or gameplay action is part of this
 triage pass. Delta pass 6's actual results are recorded above.
+
+### Specification review (2026-10-15)
+
+An independent review recomputed all 36 vector families and found no numeric mismatch. It
+re-read the original disassembly for D2Game 0xACE60 (owner/target/record guards, signed
+stat test, default 64, large 32 before small 128, attacker seed, mask 127, OR 8), 0x75160
+(mGH then mKB availability, mode-0 guard, path type 8, distance 10 for base 78 else 5) and
+the missile chance slice of 0x3AE10; all agree with the current rules. KNB-R10a now calls
+HRC-R15 `unresolved`, matching that rule's current label. The implementation-gap rows had
+mechanical rename artefacts (`item_combat-knockback`, `missile_combat-knockback` and similar);
+they were restored to the implementation's actual names `item_knockback`/`missile_knockback`
+and to plain "knockback", without changing any finding. No vector, rule or gate changed.

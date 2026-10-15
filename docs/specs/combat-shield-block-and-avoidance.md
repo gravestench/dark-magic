@@ -282,22 +282,22 @@ Seed aliases in the vectors are exact pairs and successors: A={1,0x29A}, A1={0x6
 
 - **SBA-V04** (SBA-R04/SBA-R05; boundary: isolated rule)
   - (a)
-    - Inputs: AR 800, DEF-200
+    - Inputs: AR 800, DEF -200
     - Seeds: no draw.
     - Draws: none.
     - Trace: add 200 to AR
     - Outputs: AR 1000, DEF 0, ratio 100
   - (b)
-    - Inputs: AR-300, DEF 500
+    - Inputs: AR -300, DEF 500
     - Seeds: no draw.
     - Draws: none.
     - Trace: add 300 to DEF
     - Outputs: AR 0, DEF 800, ratio 0
   - (c)
-    - Inputs: AR-100, DEF-50
+    - Inputs: AR -100, DEF -50
     - Seeds: no draw.
     - Draws: none.
-    - Trace: AR becomes-50 then add 50 to DEF
+    - Trace: AR becomes -50 then add 50 to DEF
     - Outputs: AR 0, DEF 50, ratio 0
   - (d)
     - Inputs: AR 0, DEF 0.
@@ -338,25 +338,25 @@ Seed aliases in the vectors are exact pairs and successors: A={1,0x29A}, A1={0x6
     - Inputs: raw/effective mode 2.
     - Seeds: no draw.
     - Draws: none.
-    - Trace: 85*60/60=85 capped 75; eligible moving modes divide 75 by 3.
+    - Trace: 85*60/60=85 capped 75; effective mode 2 is moving, but raw Walk 2 excludes the division.
     - Outputs: 75
   - (b)
     - Inputs: raw/effective mode 3.
     - Seeds: no draw.
     - Draws: none.
-    - Trace: 85*60/60=85 capped 75; eligible moving modes divide 75 by 3.
+    - Trace: 85*60/60=85 capped 75; moving Run with raw mode not Walk divides 75 by 3.
     - Outputs: 25
   - (c)
     - Inputs: raw/effective mode 6.
     - Seeds: no draw.
     - Draws: none.
-    - Trace: 85*60/60=85 capped 75; eligible moving modes divide 75 by 3.
+    - Trace: 85*60/60=85 capped 75; moving Town Walk with raw mode not Walk divides 75 by 3.
     - Outputs: 25
   - (d)
     - Inputs: raw/effective mode 1.
     - Seeds: no draw.
     - Draws: none.
-    - Trace: 85*60/60=85 capped 75; eligible moving modes divide 75 by 3.
+    - Trace: 85*60/60=85 capped 75; effective mode 1 is not moving, so no division.
     - Outputs: 75.
   - Discriminates: Run 25 rejects dividing 85 before cap.
   - runtime_observed: no
@@ -366,8 +366,8 @@ Seed aliases in the vectors are exact pairs and successors: A={1,0x29A}, A1={0x6
   - Seeds: no draw.
   - Draws: none.
   - Trace: -5*40/60=-3; positive block check fails.
-  - Outputs: block-3, code 0, all seeds unchanged.
-  - Discriminates: returned-3 rejects floor 0 or round-4.
+  - Outputs: block -3, code 0, all seeds unchanged.
+  - Discriminates: returned -3 rejects floor 0 or round -4.
   - runtime_observed: no
 
 - **SBA-V09** (SBA-R09b/SBA-R17a; boundary: isolated rule)
@@ -463,9 +463,9 @@ Seed aliases in the vectors are exact pairs and successors: A={1,0x29A}, A1={0x6
   - Inputs: Stat 31=-20, Stat 2=0, Stat 171=50, Stat 16=0, Stat 182=0, state 101=false.
   - Seeds: no draw.
   - Draws: none.
-  - Trace: prod-1000; negative base subtracts-10.
-  - Outputs: TotalDefense-10.
-  - Discriminates: negative base-10 rejects adding percent to obtain-30.
+  - Trace: prod -1000; negative base subtracts -10.
+  - Outputs: TotalDefense -10.
+  - Discriminates: negative base -10 rejects adding percent to obtain -30.
   - runtime_observed: no
 
 - **SBA-V15** (SBA-R01a; boundary: supplied-input stage)
@@ -474,13 +474,13 @@ Seed aliases in the vectors are exact pairs and successors: A={1,0x29A}, A1={0x6
     - Inputs: Stat 182=50
     - Seeds: no draw.
     - Draws: none.
-    - Trace: small product branch adds 84 or-84.
+    - Trace: small product branch adds 84.
     - Outputs: 252
   - (b)
     - Inputs: Stat 182=-50.
     - Seeds: no draw.
     - Draws: none.
-    - Trace: small product branch adds 84 or-84.
+    - Trace: small product branch subtracts 84.
     - Outputs: 84.
   - Discriminates: final 252 rejects replacing defense with modifier 84.
   - runtime_observed: no

@@ -52,6 +52,20 @@ performed for this regeneration. Fresh table reads establish narrow text-cell ev
 | LOD113C-D2COMMON | 0x2EF30 / #10426 | Animation next-step/end predicate | R13d; complete C view checked against original bytes read 2026-10-15; no writes/RNG; server GH caller remains open |
 | LOD113C-D2GAME | 0x77240 | Reached monster elemental-slot processing | R15; retained 2026-10-12 decompiler/seed audit; complete disassembly read 2026-10-15, unvalidated byte runs and callees remain; direct slot draws consume NRF-R04b |
 
+### Root anchors for the reaction consumer
+
+The table above names 0xDCF20 as the computing consumer; its dispatch roots are the
+damage-pipeline and missile chains already recorded by their owners. Queued path
+([DPO companion](combat-damage-pipeline-order.md), DPO-R26): frame loop D2Game 0x79A10 ->
+frame-event table 0x1079D0 -> 0x79170 -> do entry 0xA2060 -> do dispatch 0xA19A0 -> do
+table slot 1, basic attack 0xA2C40 -> queued completion 0xDDDE0 -> enqueue 0xDAB90; the
+queue consumer 0xDED30 calls reaction 0xDCF20 after apply 0xDE0C0. Missile direct path
+(MHD-R26, SBA chain B): missile step 0x3F320 -> contact 0x3EDE0 -> damage fill/hand-off
+0x3A4E0/0x3AFF0 -> apply 0x3AE10, whose tail calls 0xDCF20 unconditionally. The two final
+call edges (0xDED30 -> 0xDCF20 and 0x3AE10 -> 0xDCF20) were re-checked in the original
+disassembly during the 2026-10-15 specification review; upstream links reuse the owners'
+dated records and add no new behavioral claim.
+
 ### Imported operations and semantic mapping
 
 These resolved original imports separate common-library primitives from game wrappers.
@@ -123,16 +137,16 @@ walking/running mode, then invokes path-speed setter 0x34D40 (NRF-R08b) with 409
 | Discrepancy in prior text | Original evidence and corrected claim | Remaining boundary |
 |---|---|---|
 | Stun bypass described as an active-state test | 2026-10-15 reaction-branch reading confirms Common #10871 / 0x38520 FindStateList(21), not active-bit testing; NRF-R12a/STL distinguish list presence from membership | R05/V03 now require a matching stun list; state 21 alone does not bypass veto |
-| Protected lethal branch called an ordinary death operation with id 92 | 2026-10-15 import resolution/reading identifies D2Common#10945/0x34510, request state 92, value 1; current NRF-R12a and STL-R07 own routing/membership | State 92 text name death_delay does not establish death/timer semantics; STL-Q07 disguise/NRF-Q17 update execution still open |
-| Class described as a word and helper retaining only low nibble | 0xDCF20 entry re-read2026-10-15 uses dword+0x60 and byte suppression; 0xDA660 retains entire source unless 0=>13; matches current NRF/DPO i32 contract | Existing small numeric results unchanged; V16 adds high-bit preservation |
+| Protected lethal branch called an ordinary death operation with id 92 | 2026-10-15 import resolution/reading identifies D2Common #10945/0x34510, request state 92, value 1; current NRF-R12a and STL-R07 own routing/membership | State 92 text name death_delay does not establish death/timer semantics; STL-Q07 disguise/NRF-Q17 update execution still open |
+| Class described as a word and helper retaining only low nibble | 0xDCF20 entry re-read 2026-10-15 uses dword+0x60 and byte suppression; 0xDA660 retains entire source unless 0=>13; matches current NRF/DPO i32 contract | Existing small numeric results unchanged; V16 adds high-bit preservation |
 | Element rotation was insufficiently verified | Full 112-byte helper and hash-matched image decode plus 64-byte repeated pair table at Game RVA 0xFB050 read 2026-10-15 | Helper algorithm closed at supplied-record boundary; no RNG, shared byte cursor increments; upstream producer remains separate |
-| Town set unresolved | Compatible KNB-R03b proof reuses complete Common#10331/0x2FE10→#10057/0x3C390→0x2D320 and checked table; exact{1, 40, 75, 103, 109} | Source/room records supplied; no client claim |
-| Missile rewrite left asm-only | Current SBA-R14 already verifies same request/rewrite stage; 0x3AE10 exact slice re-read2026-10-15 agrees | Upstream owner/contact/block producers retain SBA gates |
+| Town set unresolved | Compatible KNB-R03b proof reuses complete Common #10331/0x2FE10→#10057/0x3C390→0x2D320 and checked table; exact {1, 40, 75, 103, 109} | Source/room records supplied; no client claim |
+| Missile rewrite left asm-only | Current SBA-R14 already verifies same request/rewrite stage; 0x3AE10 exact slice re-read 2026-10-15 agrees | Upstream owner/contact/block producers retain SBA gates |
 | Player decision treated missing current skill as idle/walking; exception treated as skill ids | Full 0x77FA0 read 2026-10-15 agrees with current-skill fast allow, matching passed skill and srvdofunc 67/76; guard/roll order isolated |0x78340 validator byte tables and outer entry/helper effects unresolved; no global action-state equivalence |
 | Player GH preparation said to remove all timed events | Full 0xDA750 image decode shows matching-unit linked-record removal/free; node semantics not established | Neutral entry-preparation request only; current-skill write is separate; actual cancellation/timer integration open |
-| Block numeric predicate was conflated with completed animation | Complete cooldown branch re-read2026-10-15 establishes strict signed delta>trunc(FBR/8)+15, soft early return, mode request then unconditional stat-95 write request carrying current frame | Actual mode start and persisted writer effect remain gated; V06f supplies returned 0 to distinguish request order; fixture persistence is explicitly supplied |
-| GH duration was an unqualified ceiling formula; some data said absent | Complete2F090/2F060 and matched2EF30 establish isolated primitives; 335F0 branch facts/remap remain partial; loader establishes animation file presence | Actual GH driver, record/frame/start/end and breakpoints remain precise integration questions; no six-rung absence claim |
-| Full mode change said to draw nothing for GH | The requested-mode3 skip is established in 0x75E10; 0x77240 contains unvalidated byte runs/unread helpers; NRF-R04b verifies reached direct slot draws | Keep complete event draws unresolved; local rate/start no-direct-draw claims do not establish full event counts |
+| Block numeric predicate was conflated with completed animation | Complete cooldown branch re-read 2026-10-15 establishes strict signed delta>trunc(FBR/8)+15, soft early return, mode request then unconditional stat-95 write request carrying current frame | Actual mode start and persisted writer effect remain gated; V06f supplies returned 0 to distinguish request order; fixture persistence is explicitly supplied |
+| GH duration was an unqualified ceiling formula; some data said absent | Complete 0x2F090/0x2F060 and matched 0x2EF30 establish isolated primitives; 0x335F0 branch facts/remap remain partial; loader establishes animation file presence | Actual GH driver, record/frame/start/end and breakpoints remain precise integration questions; no six-rung absence claim |
+| Full mode change said to draw nothing for GH | The requested-mode-3 skip is established in 0x75E10; 0x77240 contains unvalidated byte runs/unread helpers; NRF-R04b verifies reached direct slot draws | Keep complete event draws unresolved; local rate/start no-direct-draw claims do not establish full event counts |
 
 The block cooldown's stat-write call is a boundary, not a newly read persisted write. The
 2026-10-15 caller slice at D2Game+0xDCF20 pushes layer 0, current game frame, stat 95 and
@@ -238,7 +252,7 @@ fractions are secondary, not proof of seed order. This confirms R06 only for obs
 
 ### HRC-O02
 
-With equal measured total 8000, M25600, compare ordinary, matching-stun-list, frozen, and matching-stun-list plus freeze
+With equal measured total 8000, M=25600, compare ordinary, matching-stun-list, frozen, and matching-stun-list plus freeze
 targets at D2Game+0xDCF20/0xDB910. Record whether veto was called and the selected reaction.
 For an existing lawful state 54 fixture, compare nonlethal and lethal result requests; capture
 D2Common+0x34510 arguments 92/1 and active/changed membership, then separately observe any
@@ -491,3 +505,16 @@ cursor 1 without a draw, rejecting an unwarranted critical code. It also confirm
 original inputs/results remain intact. Existing gates and advisory dispositions remain.
 This completes the applicable reader check; it implies neither maintainer approval,
 gameplay confirmation nor complete behavior reproduction.
+
+### Specification review (2026-10-15)
+
+An independent review recomputed all 22 vector families, including the stepped seeds, and
+found no numeric mismatch. It re-read the original disassembly for D2Game 0xDB910 (divisor
+jump table, floor 256, poison test, RandMask(2)/RandMask(4) order, monster availability),
+the 0xDCF20 block-cooldown slice (soft return, signed trunc(FBR/8)+15 strict comparison,
+mode-9 request then stat-95 write request) and monster block class exceptions 243/333/705,
+and D2Common 0x33110's block base 50/100, GH (D+50)*B/100 and KB speed 4096 branches; all
+agree with the current rules. Edits added the root-anchor paragraph above, spaced
+run-together values and case labels in V06/V08/V09/V11-V17/V20-V22 and R10a/R10b, and
+replaced historical rule numbers in the implementation-gap Spec rule column. No vector
+input, output, rule, label or gate changed, so no reader rerun is required.

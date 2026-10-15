@@ -166,7 +166,7 @@ collision and movement integration evidence.
 **KNB-R10a Draw boundaries** [verified in 1.13c code (static)]. Item chance draws once on
 attacker after positive-stat guards; missile chance once on missile after its two guards.
 Local selection/start/endpoint instructions add no direct draw. Supplied operations are
-excluded. HRC-R15's asm-only monster mode-change elemental path may draw; KNB-Q06 gates the
+excluded. HRC-R15's unresolved monster mode-change elemental path may draw; KNB-Q06 gates the
 complete event total. There is no universal zero-draw claim for full mode integration.
 
 **KNB-R10b Missile order** [verified in 1.13c code (static)]. Consume SBA-R20 and MHD-R26:

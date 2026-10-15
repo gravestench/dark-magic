@@ -99,8 +99,8 @@ Named text cells alone are data-verified; compiled runtime correspondence and cu
 
 **HRC-R10** Player GH.
 
-- **HRC-R10a** Local decision [verified in 1.13c code (static)]. Missing defender, state 54, or current mode 0/17 refuses. After these guards, requested mode 0 or zero context allows. For requested mode 4 with nonzero context, absent current skill or unavailable skill definition allows. Passed skill identical to current skill with srvdofunc 67/76 allows before interrupt checks. Otherwise interrupt false refuses, except current mode 1 requests neutral then allows. Interrupttrue with state 42 runs HRC-R10b; roll<own-list164 refuses with that same mode 1 exception. Then state 15 refuses with the same exception; otherwise allow. Neutral execution, outer validator and completed GH remain HRC-Q06. Missing-skill allowance does not establish idle/walking equivalence. Apart from the stated early requested-mode-0/zero-context allowance, branches for other requested modes are outside this verified GH decision slice.
-- **HRC-R10b** Draw [verified in 1.13c code (static)]. After earlier fast allowances, interrupt true+state 42 makes exactly one defender Rand(100), before state 15. Others skip. Own-list164 is uncapped here.
+- **HRC-R10a** Local decision [verified in 1.13c code (static)]. Missing defender, state 54, or current mode 0/17 refuses. After these guards, requested mode 0 or zero context allows. For requested mode 4 with nonzero context, absent current skill or unavailable skill definition allows. Passed skill identical to current skill with srvdofunc 67/76 allows before interrupt checks. Otherwise interrupt false refuses, except current mode 1 requests neutral then allows. Interrupt true with state 42 runs HRC-R10b; roll < own-list stat 164 refuses with that same mode 1 exception. Then state 15 refuses with the same exception; otherwise allow. Neutral execution, outer validator and completed GH remain HRC-Q06. Missing-skill allowance does not establish idle/walking equivalence. Apart from the stated early requested-mode-0/zero-context allowance, branches for other requested modes are outside this verified GH decision slice.
+- **HRC-R10b** Draw [verified in 1.13c code (static)]. After earlier fast allowances, interrupt true+state 42 makes exactly one defender Rand(100), before state 15. Others skip. Own-list stat 164 is uncapped here.
 - **HRC-R10c** Entry [unresolved]. Successful outer handling requests neutral entry preparation, mode 4, additional unit handling, current-skill clearing, and further action/path handling in that order. Preparation is not proved removal of all timed events. Actual effects/return handling/cancellation are HRC-Q06.
 
 **HRC-R11** Block cooldown [verified in 1.13c code (static)]. Selected player block with soft 16384 returns without either request. Otherwise wrapped `delta=frame-lastblockframe`, signed `threshold=trunc(FBR/8)+15`; only delta>threshold requests mode 9, then requests a layer-0 stat-95 write carrying the current frame. The stat-write request follows the mode request irrespective of its returned value. This verified boundary establishes the two requests and their arguments/order. Actual mode start and the stat writer's persisted effect remain HRC-Q06. No direct draw; monster block has no cooldown here.
@@ -257,16 +257,16 @@ Every case resets independently. Defaults: non-null live player mode 1, no activ
   - runtime_observed: no
 
 - **HRC-V06** Block cooldown (HRC-R11; boundary: supplied block)
-  - Inputs: R=16, frame 100; independent (a)FBR 24, last 82; (b)24, last 81; (c)0, last 85; (d)0, last 84; (e)R=16400, FBR 0, last 0; (f)b with supplied mode 9 return 0.
+  - Inputs: R=16, frame 100; independent (a) FBR 24, last 82; (b) FBR 24, last 81; (c) FBR 0, last 85; (d) FBR 0, last 84; (e) R=16400, FBR 0, last 0; (f) inputs of b with supplied mode 9 return 0.
   - Seeds: no draw.
   - Draws: none.
   - Trace: threshold 18/15, equality refuses; soft skips; mode-request return is ignored for the later stat-write request.
   - Outputs: a/c/e no calls/stamp writes, stamp 82/85/0; b/d/f log [mode 9, writeStat 95(100)]. The explicitly supplied writer stores stamp 100 in those fixtures; this does not verify original writer execution. Mode stays 1 under supplied mode 9.
-  - Discriminates: strict>, soft gate, and f reject>=, soft animation, or issuing the stat-write request only after successful mode start.
+  - Discriminates: strict >, soft gate, and f reject >=, soft animation, or issuing the stat-write request only after successful mode start.
   - runtime_observed: no
 
 - **HRC-V07** Order (HRC-R04a; boundary: supplied selector)
-  - Inputs: player; (a)R=12; (b)R=20, frame 100, last 0.
+  - Inputs: player; (a) R=12; (b) R=20, frame 100, last 0.
   - Seeds: no draw.
   - Draws: none.
   - Trace: KB precedes GH; block precedes GH and runs HRC-R11.
@@ -275,21 +275,21 @@ Every case resets independently. Defaults: non-null live player mode 1, no activ
   - runtime_observed: no
 
 - **HRC-V08** Rate edge (HRC-R12a; boundary: supplied rate)
-  - Inputs: effective player mode 4, prior rate 7; (a)F=-60, B=100; (b)F=120, B=0; (c)F=-120, B=100.
+  - Inputs: effective player mode 4, prior rate 7; (a) F=-60, B=100; (b) F=120, B=0; (c) F=-120, B=100.
   - Seeds: no draw.
   - Draws: none.
-  - Trace: a D=-120, factor-70, product-7000 as u32=4294960296, quotient 42949602; b product 0; c denominator 0.
-  - Outputs: a32767; b0; c division fault, prior rate 7 retained. Factor 0 also stores 0 by product rule.
+  - Trace: a D=-120, factor -70, product -7000 as u32=4294960296, quotient 42949602; b product 0; c denominator 0.
+  - Outputs: a 32767; b 0; c division fault, prior rate 7 retained. Factor 0 also stores 0 by product rule.
   - Discriminates: a rejects signed clamp 0; b rejects forced minimum 1.
   - runtime_observed: no
 
 - **HRC-V09** Melee request (HRC-R01a; boundary: post-resolution)
-  - Inputs: (a)R=1, state 54 off; (b)R=1, state 54 on; (c)R=16, state 54 off.
+  - Inputs: (a) R=1, state 54 off; (b) R=1, state 54 on; (c) R=16, state 54 off.
   - Seeds: no draw.
   - Draws: none.
   - Trace: retained hit plus absent 54 OR 4.
   - Outputs: R=5, 1, 16; no other effects.
-  - Discriminates: blocked c must not gainGH.
+  - Discriminates: blocked c must not gain GH.
   - runtime_observed: no
 
 - **HRC-V10** Missile request (HRC-R01b; boundary: supplied flags)
@@ -302,7 +302,7 @@ Every case resets independently. Defaults: non-null live player mode 1, no activ
   - runtime_observed: no
 
 - **HRC-V11** Kind/dead (HRC-R02a; boundary: after prior town/class/state stages)
-  - Inputs: (a)type 2; (b)monster 0; (c)monster 12; (d)hireling monster 1, mode 1, mGH true. Prior hit-class stage complete.
+  - Inputs: (a) type 2; (b) monster mode 0; (c) monster mode 12; (d) hireling monster mode 1, mode 1, mGH true. Prior hit-class stage complete.
   - Seeds: no draw.
   - Draws: none.
   - Trace: a/b/c return; d runs HRC-R06 allow then HRC-R09a start.
@@ -311,7 +311,7 @@ Every case resets independently. Defaults: non-null live player mode 1, no activ
   - runtime_observed: no
 
 - **HRC-V12** Protected lethal (HRC-R03a; boundary: supplied branch)
-  - Inputs: state 54 on, state 92 off/unchanged, storage present; (a)R=29; (b)R=3.
+  - Inputs: state 54 on, state 92 off/unchanged, storage present; (a) R=29; (b) R=3.
   - Seeds: no draw.
   - Draws: none.
   - Trace: a nonlethal returns; b SetState 92 on via NRF/STL.
@@ -320,7 +320,7 @@ Every case resets independently. Defaults: non-null live player mode 1, no activ
   - runtime_observed: no
 
 - **HRC-V13** Monster start (HRC-R09a; boundary: supplied start)
-  - Inputs: monster; (a)mode 1, mGH true; (b)mode 0; (c)mode 1, mGH false; (d)missing unit; prior modeChanged false.
+  - Inputs: monster; (a) mode 1, mGH true; (b) mode 0; (c) mode 1, mGH false; (d) missing unit; prior modeChanged false.
   - Seeds: no draw.
   - Draws: none directly; supplied preparation adds none.
   - Trace: guards before entry preparation and NRF-R14a mode write.
@@ -329,19 +329,19 @@ Every case resets independently. Defaults: non-null live player mode 1, no activ
   - runtime_observed: no
 
 - **HRC-V14** Interrupt rolls (HRC-R10a/HRC-R10b; boundary: local decision)
-  - Inputs: current mode 5, current skill A, passed absent, srvdofunc 0, interrupt true, state 42, own 164=30; (a/b)state 15 off; (c)42off, 15off; (d)interrupt false; (e)42+15on.
-  - Seeds: a{0, 29}; b{0, 30}; c/d{0, 29}; e{0, 30}, defender.
-  - Draws: a Rand 10029; b30; c/d none; e30 before state 15.
-  - Trace: a29<30 refuses; b equality passes; c no roll; d interrupt false refuses; e roll passes then 15 refuses.
-  - Outputs: a refuse, seed{29, 0}; b allow, {30, 0}; c allow, {0, 29}; d refuse, {0, 29}; e refuse, {30, 0}; all mode 5, no requests.
-  - Discriminates: e rejects testing 15 before draw; a/b distinguish< from<=.
+  - Inputs: current mode 5, current skill A, passed absent, srvdofunc 0, interrupt true, state 42, own 164=30; (a/b) state 15 off; (c) state 42 off, state 15 off; (d) interrupt false; (e) states 42 and 15 on.
+  - Seeds: defender a {0, 29}; b {0, 30}; c/d {0, 29}; e {0, 30}.
+  - Draws: a defender Rand(100)=29; b Rand(100)=30; c/d none; e Rand(100)=30 before the state 15 test.
+  - Trace: a 29<30 refuses; b equality passes; c no roll; d interrupt false refuses; e roll passes then 15 refuses.
+  - Outputs: a refuse, seed {29, 0}; b allow, {30, 0}; c allow, {0, 29}; d refuse, {0, 29}; e refuse, {30, 0}; all mode 5, no requests.
+  - Discriminates: e rejects testing 15 before draw; a/b distinguish < from <=.
   - runtime_observed: no
 
 - **HRC-V15** Block/KB rates (HRC-R14; boundary: supplied rate/speed)
-  - Inputs: B=256, stateCount 200; (a)player mode 9, FBR 0, 101off; (b)same FBR 30; (c)FBR 0, 101on; (d)player mode 9, B=1, FBR 0, 101off; (e)player mode 19, FHR 120, FBR 30; (f)monster mode 13, base 213, FHR 120, FBR 30; e/f speed 256, target 512, reset 7.
+  - Inputs: B=256, stateCount 200; (a) player mode 9, FBR 0, state 101 off; (b) as a with FBR 30; (c) player mode 9, FBR 0, state 101 on; (d) player mode 9, B=1, FBR 0, state 101 off; (e) player mode 19, FHR 120, FBR 30; (f) monster mode 13, base 213, FHR 120, FBR 30; e/f speed 256, target 512, reset 7.
   - Seeds: no draw.
   - Draws: none in stage.
-  - Trace: a50*256/100; bD 24, 74*256/100; c100*256/100; d=0 forced 1; e/fKB213 no stat factor.
+  - Trace: a 50*256/100; b D=24, 74*256/100; c 100*256/100; d 50*1/100=0 forced 1; e/f KB base 213, no stat factor.
   - Outputs: rates 128, 189, 256, 1, 213, 213; e/f speed 4096, target 4096, reset 15. Full KB event draws unasserted.
   - Discriminates: d separates block/GH minima; e rejects player Run rate 101; exact 4096 rejects unspecified speed.
   - (g) Nonpositive monster KB base:
@@ -354,11 +354,11 @@ Every case resets independently. Defaults: non-null live player mode 1, no activ
   - runtime_observed: no
 
 - **HRC-V16** Cyclic class (HRC-R07a; boundary: supplied record)
-  - Inputs: R=1, suppression 0, lastHitClass 7; (a)k=0, cursor 0, cold 10, fire 20; (b)k=0, cursor 1, cold 10, fire 20; (c)k=0, cursor 255, components 0, R=8193; (d)k=65541, cursor 0, cold 10; (e)k=53, cursor 0, cold 10; (f)R=0, k=0, cursor 0.
+  - Inputs: R=1, suppression 0, lastHitClass 7; (a) k=0, cursor 0, cold 10, fire 20; (b) k=0, cursor 1, cold 10, fire 20; (c) k=0, cursor 255, components 0, R=8193; (d) k=65541, cursor 0, cold 10; (e) k=53, cursor 0, cold 10; (f) R=0, k=0, cursor 0.
   - Seeds: no draw.
   - Draws: none.
-  - Trace: a48|13; b32|13; c16|13, byte wraps; d=65541|48; e high nibble skips; f no hit skips.
-  - Outputs: a class/last 61, cursor 1; b45, cursor 2; c29, cursor 0; d=65589, cursor 1; e53, last 53, cursor 0; (f) class 0, last 7, cursor 0.
+  - Trace: a 48|13; b 32|13; c 16|13, byte wraps; d 65541|48; e high nibble skips; f no hit skips.
+  - Outputs: a class/last 61, cursor 1; b 45, cursor 2; c 29, cursor 0; d 65589, cursor 1; e 53, last 53, cursor 0; (f) class 0, last 7, cursor 0.
   - Discriminates: b rejects fixed element priority; d rejects word truncation; c rejects no-element cursor freeze.
   - (g) No positive element and no critical indication:
     - Inputs: R=1, k=0, suppression 0, cursor 0, cold/fire/lightning/poison all 0, lastHitClass 7; other shared defaults.
@@ -370,12 +370,12 @@ Every case resets independently. Defaults: non-null live player mode 1, no activ
   - runtime_observed: no
 
 - **HRC-V17** Town (HRC-R02b; boundary: supplied guard)
-  - Inputs: (a)level 1, source absent; (b)40, monster valid inTown false; (c)75, monster valid inTown true; (d)103, player; (e)109, monster valid inTown true; (f)110, absent; (g)0, absent; (h)missing room.
+  - Inputs: (a) level 1, source absent; (b) level 40, monster valid inTown false; (c) level 75, monster valid inTown true; (d) level 103, player; (e) level 109, monster valid inTown true; (f) level 110, absent; (g) level 0, absent; (h) missing room.
   - Seeds: no draw.
   - Draws: none.
   - Trace: a-e members; c/e permitted; f/g bound/nonmembership; h skips.
   - Outputs: a/b/d reject; c/e/f/g/h continue; no writes.
-  - Discriminates: membership/permission rejects all-levels1..109 town approximation.
+  - Discriminates: membership/permission rejects all-levels 1..109 town approximation.
   - runtime_observed: no
 
 - **HRC-V18** Local fast paths (HRC-R10a; boundary: local decision)
@@ -418,7 +418,7 @@ Every case resets independently. Defaults: non-null live player mode 1, no activ
   - runtime_observed: no
 
 - **HRC-V20** Soft rewrite (HRC-R01c; boundary: post-block stage)
-  - Inputs: R=9, GetHit false, SoftHit false, KB 0, code 1; (b)same GetHit true; (c)same KB 1. No chance producer runs here.
+  - Inputs: (a) R=9, GetHit false, SoftHit false, KB 0, code 1; (b) as a with GetHit true; (c) as a with KB 1. No chance producer runs here.
   - Seeds: no draw.
   - Draws: none.
   - Trace: a clears 1, OR 16384, discards code 1; b/c map block 16, clear hit 1.
@@ -434,20 +434,20 @@ Every case resets independently. Defaults: non-null live player mode 1, no activ
   - runtime_observed: no
 
 - **HRC-V21** Priority contrast (HRC-R04a; boundary: supplied selector)
-  - Inputs: (a)monster, R=30; (b)player, R=30, frame 100; (c)player, R=148, state 65 off; (d)monster, R=20, class 243; (e)monster, R=20, class 100, mode 6 available.
+  - Inputs: (a) monster, R=30; (b) player, R=30, frame 100; (c) player, R=148, state 65 off; (d) monster, R=20, class 243; (e) monster, R=20, class 100, mode 6 available.
   - Seeds: no draw.
   - Draws: none.
   - Trace: a lethal first; b block first, runs HRC-R11; c avoidance branch owns return despite missing state; d special sync; e ordinary block.
-  - Outputs: a[death]; b[mode 9, writeStat 95(100)], stamp 100; c no requests/no block/GH fallthrough; d[monsterReactionSync]; e[mode 6]; modes 1 under supplied effects.
+  - Outputs: a [death]; b [mode 9, writeStat 95(100)], stamp 100; c no requests/no block/GH fallthrough; d [monsterReactionSync]; e [mode 6]; modes 1 under supplied effects.
   - Discriminates: a/b reject common death/block order; c rejects fallthrough; completed avoidance remains gated.
   - runtime_observed: no
 
 - **HRC-V22** Early draws/availability (HRC-R06; boundary: isolated veto)
-  - Inputs: total 1600, k=13; (a)player; (b)player; (c)monster, mGH false; (d)monster, mGH true, total 6400; (e)state 1, total 8000.
-  - Seeds: a{2, 0}; b{3, 0}; c/d/e{1, 0}, defender.
+  - Inputs: total 1600, k=13; (a) player; (b) player; (c) monster, mGH false; (d) monster, mGH true, total 6400; (e) state 1, total 8000.
+  - Seeds: defender a {2, 0}; b {3, 0}; c/d/e {1, 0}.
   - Draws: a mask 2=0; (b) mask 2=1, mask 4=0; (c) mask 2=1, mask 4=1; d/e none.
   - Trace: a first veto; b second veto; c thresholds pass then availability fails; d high band; e freeze.
-  - Outputs: (a) veto seed{3582796170, 0}; (b) veto{869181132, 450137329}; (c) veto{1721382809, 747178471}; (d) allow{1, 0}; (e) veto{1, 0}.
+  - Outputs: (a) veto, seed {3582796170, 0}; (b) veto, {869181132, 450137329}; (c) veto, {1721382809, 747178471}; (d) allow, {1, 0}; (e) veto, {1, 0}.
   - Discriminates: c rejects availability-before-draw; a rejects unconditional second draw.
   - (f) Zero max life without an invented floor:
     - Inputs: player, total 256, M=0, k=13, no freeze, poison 0; the valid stat definition has no minimum adjustment as in the shared defaults.

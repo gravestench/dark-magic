@@ -25,17 +25,17 @@ Descriptions are analyst labels. Original binary locations, calling conventions 
 | `LOD113C-D2GAME` | 0x372C0 | none | Selected weapon | SBA-R02f | Full 368-byte listing read; imported slot/equipment producers not accepted as defaults |
 | `LOD113C-D2GAME` | 0xE0A20 | none | Linked owner wrapper | SBA-R22 | Full 64-byte disassembly; valid-link test then 0xE03A0; table lookup remains dependency boundary |
 
-SBA-R01a/R02a arithmetic gates are closed by original-image opcode checks, not by recency or a new label. In total defense,0x3298C bytes 8D3C28 add the two defense percentages;0x32ADD bytes 0FAFFE multiply percent by base. At 0x31F42 bytes 8D5430F9 add tohit+dexterity-7, then the next instruction adds four Dexterities-28: the result is tohit+5*dexterity-35. Signed division/magic sequences were followed to returns. The total-defense negative branch divides its product by -100; subtraction of product/100 is the same signed result for the supported arithmetic.
+SBA-R01a/R02a arithmetic gates are closed by original-image opcode checks, not by recency or a new label. In total defense, 0x3298C bytes 8D3C28 add the two defense percentages; 0x32ADD bytes 0FAFFE multiply percent by base. At 0x31F42 bytes 8D5430F9 add tohit+dexterity-7, then the next instruction adds four Dexterities-28: the result is tohit+5*dexterity-35. Signed division/magic sequences were followed to returns. The total-defense negative branch divides its product by -100; subtraction of product/100 is the same signed result for the supported arithmetic.
 
 Correction: the earlier statement that null total-defense input safely returns 0 was wrong. The initial null branch reaches 0x3290E, then 0x32919/0x3291D unconditionally reload/dereference the unit. The revised null failure claim does not change any existing numeric vector. The Holy Shield skill lookup call at 0x32A95 targets 0x1250, not the earlier 0x2250 locator. At 0x32ACC evaluation calls 0x51BF0; matched front-end confirms SCX context and no direct random draw. Expression-specific producers/draws remain owned by SCX, not erased by supplying a result. State-list reads 350/351 call 0x38B00, the own-array operation under NRF-R12c; ordinary unit readers use 0x38A80, selected-array operation.
 
-The stat-getter question is closed:0x39430 rejects invalid signed stat ids, missing list or missing definition; normalizes layer to `u16` and forwards to the same selected-array 0x38A80 that ordinary reads use. It dereferences its unit before list checks, so no null-unit default is established for that wrapper. Local callers use non-null units.
+The stat-getter question is closed: 0x39430 rejects invalid signed stat ids, missing list or missing definition; normalizes layer to `u16` and forwards to the same selected-array 0x38A80 that ordinary reads use. It dereferences its unit before list checks, so no null-unit default is established for that wrapper. Local callers use non-null units.
 
 SBA-R09d reuses NRF's game.expansion semantic input and the previously complete caller-argument trace; the old blanket selector gate is removed. Classic gameplay remains unobserved. SBA-R12d now states the previously read consumer behavior (no cap); its upstream production question remains outside-boundary. The newly added supplied 101/roll 99 example distinguishes a local 95 cap without claiming any live character has that supplied value.
 
 SBA-R18b remains asm-only: reading the complete applier resolves its request skeleton but does not establish all indirect writes. Compatible STL primitive contracts support the state-effect boundary; CSA-R05 is a cold-applier pattern, not the owner of this generic applier. The local hook establishes supplied request assertions; attach/replacing/free propagation gates remain. The earlier timed-list description is retained below as historical evidence, not promoted to verified stored effects.
 
-Correction of a historical mastery locator: the D2Common + 0x4F640 instruction calling the context helper names a section-relative label corresponding to original RVA 0x303A0, not 0x2F3A0. The actual producer remains unread/gated; no mastery result is promoted. The generic applier record's zero field at+0x08 is called effectIdentity in the contract; its larger gameplay meaning is not established. D2Game thunk 0xAE3E resolves D2Common ordinal 10725/RVA 0x37D60, which writes list+0x1C; thunk0xAE50 resolves ordinal 11081/RVA 0x37D40, which writes list+0x20 with the supplied level. Both setters and the identity getter ordinal 10555/RVA 0x37D50 were read as reconstruction checked against original bytes on 2026-10-15. These field writes do not justify a skill identity name or close the complete applier gate.
+Correction of a historical mastery locator: the D2Common + 0x4F640 instruction calling the context helper names a section-relative label corresponding to original RVA 0x303A0, not 0x2F3A0. The actual producer remains unread/gated; no mastery result is promoted. The generic applier record's zero field at+0x08 is called effectIdentity in the contract; its larger gameplay meaning is not established. D2Game thunk 0xAE3E resolves D2Common ordinal 10725/RVA 0x37D60, which writes list+0x1C; thunk 0xAE50 resolves ordinal 11081/RVA 0x37D40, which writes list+0x20 with the supplied level. Both setters and the identity getter ordinal 10555/RVA 0x37D50 were read as reconstruction checked against original bytes on 2026-10-15. These field writes do not justify a skill identity name or close the complete applier gate.
 
 ## Gap assessment
 
@@ -374,3 +374,17 @@ the arithmetic-error/retraction outcome above; the other cases also recompute to
 specified values, requests and seeds. Existing gates and advisory dispositions remain.
 This completes the applicable reader check for this contract, without user approval,
 gameplay confirmation or complete behavior reproduction.
+
+### Specification review (2026-10-15)
+
+An independent review recomputed every executable vector and the six seed aliases from
+NRF-R01/NRF-R02 and found no numeric mismatch. It re-read the original disassembly for
+D2Game 0xDB790, 0xDB030, 0xDE5A0, 0xDCE70, 0x3AE10, 0xDB1F0 and the cap/hook region of
+0xDDE90, and D2Common 0x31D20 and 0x313F0: the movement penalty (effective 2/3/6, raw mode
+not 2, signed division by 3), strict block/avoidance comparisons, defender draws and
+assertion order, melee and missile code maps, the 16384 discard branch, the prevent-heal
+request (classes 704..709 excluded, state 52, duration 120000, stat 31) and the defense
+reduction branches agree with the current rules. Edits were presentation only: SBA-V07
+case traces now state why modes 2 and 1 keep 75, negative values are spaced, and
+implementation-gap rows cite current rule ids. No vector input, output, rule, label or gate
+changed, so no reader rerun is required.
