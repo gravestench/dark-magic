@@ -63,20 +63,20 @@ new rules of this spec.
 | `LOD113C-D2COMMON` | `0x1A2D0` | 11104 | hireling-class category | DMI-R01/R10 | Full instruction read; null/type guards and five fixed class comparisons |
 | `LOD113C-D2COMMON` | `0x1A5B0` | 10239 | undead category test (check A) | DMI-R04/R07/R10 | Full instruction read; class bounds and low/high undead bits |
 | `LOD113C-D2COMMON` | `0x1A610` | 10255 | demon category test (check B) | DMI-R04/R10 | Full instruction read; class bounds and demon bit |
-| `LOD113C-D2COMMON` | `0x603C0` | 10237 | difficulty-row getter | DMI-R07/R10 | Reconstruction checked against original bytes; clamped index and row pointer; GDF-R02 owns supplied field preparation, not this getter |
-| `LOD113C-D2COMMON` | `0x33CD0` | 10494 | unit state-test wrapper | DMI-R07/R10; NRF-R12a | Disassembly; calls state bit test |
-| `LOD113C-D2COMMON` | `0x37DB0` | — | state bit test | DMI-R07/R10; NRF-R12a | Disassembly; reads state bitfield with exported mask table |
-| `LOD113C-D2COMMON` | `0x38B70` | 10973 | unit stat getter wrapper | DMI-R02/R07/R08/R10; NRF-R12b | Guard read on 2026-10-13; full getter-boundary verification on 2026-10-14 in foundations |
-| `LOD113C-D2COMMON` | `0x38A80` | — | existing-array stat getter | DMI-R02/R07/R08/R10; NRF-R12c | Original-byte call scan on 2026-10-13; full 2026-10-14 read in foundations |
-| `LOD113C-D2COMMON` | `0x382B0` | — | exact stat-identity search | DMI-R10; NRF-R12c | Reconstruction checked against original bytes; leaf without calls or RNG step |
+| `LOD113C-D2COMMON` | `0x603C0` | 10237 | difficulty-row getter | DMI-R07/R10 | Reconstruction checked against original bytes; clamped index and row pointer; GDA-R05 owns supplied field preparation, not this getter |
+| `LOD113C-D2COMMON` | `0x33CD0` | 10494 | unit state-test wrapper | DMI-R07/R10; RLI-R03 | Disassembly; calls state bit test |
+| `LOD113C-D2COMMON` | `0x37DB0` | — | state bit test | DMI-R07/R10; RLI-R03 | Disassembly; reads state bitfield with exported mask table |
+| `LOD113C-D2COMMON` | `0x38B70` | 10973 | unit stat getter wrapper | DMI-R02/R07/R08/R10; RLI-R02a | Guard read on 2026-10-13; full getter-boundary verification on 2026-10-14 in foundations |
+| `LOD113C-D2COMMON` | `0x38A80` | — | existing-array stat getter | DMI-R02/R07/R08/R10; RLI-R02b | Original-byte call scan on 2026-10-13; full 2026-10-14 read in foundations |
+| `LOD113C-D2COMMON` | `0x382B0` | — | exact stat-identity search | DMI-R10; RLI-R02b | Reconstruction checked against original bytes; leaf without calls or RNG step |
 | `LOD113C-D2COMMON` | `0x39430` | 10910 | alternate stat-read wrapper | DMI-R10 | Recorded no-draw callee of strip/selector path; forwards to `0x38A80` |
 | `LOD113C-D2COMMON` | `0x1A550` | 10064 | monster-class predicate | DMI-R10 | Recorded strip/selector callee in no-draw audit |
 | `LOD113C-D2COMMON` | `0x1A720` | 10278 | monster bit-7 predicate | DMI-R10; PVP-R02a setup | Full instruction read on 2026-10-13; rejects non-monsters before class flag read |
 | `LOD113C-FOG` | `0x1CCC0` | 10046 | event-node release wrapper | DMI-R03 dependency | Full 48-byte instruction read on 2026-10-13; forwards to `0x1B0C0` |
 | `LOD113C-FOG` | `0x1B0C0` | — | release implementation | outside DMI contract | Internals not fully decoded; no release-implementation behavior is asserted here |
 | `LOD113C-D2GAME` | `0x102AB0` | — | mitigation type-binding table (data) | DMI-R06 and section 3 | Original image: twelve `0x2C`-byte entries; historical read-only memory correspondence below |
-| `LOD113C-D2GAME` | `0x1074A8` | — | skill do-function pointer table (data) | dispatch root; GDF-R08 | Original image: slots 1–3 identify action targets above |
-| `LOD113C-FOG` | `0x26798` | 10259 | `gdwBitMasks` (original exported data name) | DMI-R04/R07/R10; GDF-R18 | Original image: 32 u32 masks, `mask[n] = 1 << n`; export name/ordinal/RVA correspondence checked in the original PE name table on 2026-10-14 |
+| `LOD113C-D2GAME` | `0x1074A8` | — | skill do-function pointer table (data) | dispatch root; GDA-R11 | Original image: slots 1–3 identify action targets above |
+| `LOD113C-FOG` | `0x26798` | 10259 | `gdwBitMasks` (original exported data name) | DMI-R04/R07/R10; GDA-R16 | Original image: 32 u32 masks, `mask[n] = 1 << n`; export name/ordinal/RVA correspondence checked in the original PE name table on 2026-10-14 |
 
 ### Import resolution
 
@@ -103,7 +103,7 @@ The Fog mask export is imported at D2Game IAT RVA `0xF8BE0` and D2Common IAT RVA
 
 1. The skill do dispatcher at D2Game `0xA19A0` loads `SkillsRecord.srvdofunc` at record
    `+0x2E`, indexes the function-pointer table at `0x1074A8`, and calls the selected target.
-   GDF-R08 identifies the selector; SCD-R06 owns dispatch eligibility. Slot 1 points to
+   GDA-R11 identifies the selector; SCD-R06 owns dispatch eligibility. Slot 1 points to
    `0xA2C40`; slots 2 and 3 point to `0xA3220` and `0xA2B40`.
 2. Weapon action `0xA2C40` calls `0xDDDE0`. That queued build path calls builder `0xDD450`
    when damage-record flag `0x2` is clear, then calls shared entry `0xDC0B0`. Its original
@@ -153,12 +153,12 @@ combat subsystem relationship.
 | entry field/resist/max/pierce/%absorb/flat/slot/regular-attacker marker | entry `+0x00/+0x04/+0x08/+0x0C/+0x10/+0x14/+0x18/+0x1C` | DMI-R06/R07/R08 |
 | other type-entry fields | `+0x20` scaling flag, `+0x24` name-string pointer, `+0x28` unused here | DPO-R08a; no local behavior assigned to unused field |
 | game difficulty/expansion | Game `+0x6D` u8 / `+0x70` nonzero flag | DMI-R07 |
-| selected difficulty row | D2Common #10237; stride `0x58`, ResistPenalty at `+0x00`; array/count at D2Common data-section offsets `+0x7B54/+0x7B58` | DMI-R07 getter selection; GDF-R02 supplied field preparation |
+| selected difficulty row | D2Common #10237; stride `0x58`, ResistPenalty at `+0x00`; array/count at D2Common data-section offsets `+0x7B54/+0x7B58` | DMI-R07 getter selection; GDA-R05 supplied field preparation |
 | unit type/class | Unit `+0x00/+0x04`; original type 0 player, 1 monster | DMI-R01/R04 |
 | MonStats array/count | DataTables `+0xA78/+0xA80`, record stride `0x1A8` | DMI-R04 |
-| lUndead/hUndead/demon | MonStatsRecord `+0x0C` bits 11/12/13; byte `+0x0D` tested with mask indices 3/4/5 | DMI-R04; GDF-R18 |
-| unit stat list | Unit `+0x5C` | NRF-R12b; DMI-V27 getter integration |
-| stat definition array/count | DataTables `+0xBCC/+0xBD4`, record stride `0x144`; packed key `(id << 16) + u16(layer)` | NRF-R12b/R12c; DMI stat reads |
+| lUndead/hUndead/demon | MonStatsRecord `+0x0C` bits 11/12/13; byte `+0x0D` tested with mask indices 3/4/5 | DMI-R04; GDA-R16 |
+| unit stat list | Unit `+0x5C` | RLI-R02a; DMI-V27 getter integration |
+| stat definition array/count | DataTables `+0xBCC/+0xBD4`, record stride `0x144`; packed key `(id << 16) + u16(layer)` | RLI-R02a/RLI-R02b; DMI stat reads |
 | defender event list | Unit `+0x90` | DMI-R03; IEP-R07 |
 | event entry event/flags/type | byte `+0x00`; flags `+0x02` (1 active callback, 2 removal mark); type `+0x04` (0 one-shot) | IEP-R07; consumed by DMI-R03 |
 | callback values/callback/previous/next | node `+0x0C/+0x10`, `+0x14`, `+0x18/+0x1C` | IEP-R07 |
@@ -229,7 +229,7 @@ address. Valid inputs pass the definition address and packed stat/layer identity
 That guard read alone did not verify the helper or resolve the then-open DMI-Q01 integration.
 
 On 2026-10-14, full entry-to-return reads of the unit/list wrappers, both getter helpers and
-the exact-search leaf settled Q01 at the **existing-array getter boundary**. NRF-R12b/NRF-R12c
+the exact-search leaf settled Q01 at the **existing-array getter boundary**. RLI-R02a/RLI-R02b
 now carry verified static labels. The earlier description had assumed summation and a general
 shift/clamp; the instructions select one existing array and apply a conditional
 MinAccr/ValShift replacement. Original-profile reduction/flat-absorb definitions have fMin
@@ -323,14 +323,14 @@ header field). Whole-file positional row-index correspondence was not checked.
 | `passive_cold_pierce` | 335 |
 | `passive_pois_pierce` | 336 |
 
-Interpretation: name/id identities consumed by DMI section 3 and GDF-R11. Code fixes stat
+Interpretation: name/id identities consumed by DMI section 3 and GDF-R02. Code fixes stat
 selectors in D2Game `0xDC0B0/0xDD450` and the type table `0x102AB0`; finding a numeric id
 in data does not make those consumers dynamically remapped. `itemstatcost.bin` was not read
 in TD-1; the later named getter-metadata correspondence is a separate 2026-10-14 record.
 
 **TD-2 — `data/global/excel/states.txt`.** Total 20920 bytes. Reads: 0–300 (header),
 5000–5600, 5800–6500. Coverage is header and target row, not the full table. Row by
-`state=sanctuary`, column `id`, raw value `47`. Interpretation: state identity (GDF-R12);
+`state=sanctuary`, column `id`, raw value `47`. Interpretation: state identity (GDF-R03);
 D2Game `0xDB3C0` fixes selector `0x2F` for DMI-R07. `states.bin` was not read.
 
 **TD-3 — `data/global/excel/difficultylevels.txt`.** Total 586 bytes, full read 0–586.
@@ -551,7 +551,7 @@ dates and limits; this pass did not renew source, data or gameplay verification.
 |---|---|---|
 | Reduction-scale producer, DMI-Q05 | The current pipeline calls this field `flatReductionScale`; foundations and DMI call it `reductionScale`. Both supply the same i32 quantity. The 2026-10-13 D2Game candidate-store search did not identify its record-building writer; current sibling contracts still do not name one. | Remains outside boundary and blocks no supplied-input mitigation assertion. Each record-builder owner must trace its writer. Repeating the same broad search would not distinguish unrelated structures. |
 | Per-type observation, DMI-O01 | Existing source branches and TD-1 to TD-5 support numeric reduction/resistance/absorb with supplied values. The 2026-10-13 memory comparison establishes only type-table correspondence. | Remains observation pending. Run the existing O01 procedure on identified original artifacts and measured inputs; no new gameplay was authorized in this pass. |
-| Penalty growth, DMI-Q04 / DMI-O02 | DMI-R07's recorded branches and TD-3's text/compiled 0/-40/-100 values support the static DMI-V15/V16 expectations. Current GDF-R02 retains supplied data-field preparation; DMI's recorded #10237 getter evidence supports clamped row selection. | Remains observation pending, with static arithmetic available. The existing O02 capture must measure drain/length inputs and outputs on expansion Hell and its control. |
+| Penalty growth, DMI-Q04 / DMI-O02 | DMI-R07's recorded branches and TD-3's text/compiled 0/-40/-100 values support the static DMI-V15/V16 expectations. Current GDA-R05 retains supplied data-field preparation; DMI's recorded #10237 getter evidence supports clamped row selection. | Remains observation pending, with static arithmetic available. The existing O02 capture must measure drain/length inputs and outputs on expansion Hell and its control. |
 | Negative physical value, DMI-Q03 / DMI-O03 | The recorded per-type store has no subtraction clamp; current DPO-R12a sums the supplied field and DPO-R17 skips life subtraction for nonpositive total. These support DMI-V08's supplied-input expectation. | Remains observation pending. The existing O03 capture must isolate an input smaller than flat reduction, then measure field, total and later life. |
 
 The verified IEP-R07 contract still owns traversal, registered callback values, successor reload,
@@ -559,7 +559,7 @@ shared-record mutation and the last callback result. IEP-V08 distinguishes callb
 the successor. DMI-V19 owns local placement and continuation and retains its nonzero final
 dispatcher result. Its stale sentence describing those now-static integration assertions as
 gated was removed; no new integration guarantee was added. The same fixture, results and
-ownership paragraph remain. Foundations NRF-R12b/NRF-R12c still own existing-array reads and
+ownership paragraph remain. Foundations RLI-R02a/RLI-R02b still own existing-array reads and
 conditional minimum adjustment; DMI-V27 supplies those arrays, definitions and associated owners,
 rather than claiming their production.
 
@@ -570,7 +570,7 @@ already required. Alias clarification preserves units: foundations `poison` is p
 `poisonMagnitude`; DMI `lifeDrain`/`manaDrain`/`staminaDrain` denote foundations
 `lifeLeech`/`manaBurn`/`staminaBurn` raw quantities; durations remain frame counts. CSA-R01 is
 a supporting reverse-consumer relationship rather than a rule owned by numeric foundations.
-DMI-R07's existing difficulty-clamp assertion was incorrectly attributed to GDF-R02, which
+DMI-R07's existing difficulty-clamp assertion was incorrectly attributed to GDA-R05, which
 defines field preparation and the original three-row initialization count. The established
 selection is now attributed to D2Common #10237 at RVA `0x603C0` in this companion's existing
 checked-reconstruction record. Its supplied positive-count/u8-index case is stated explicitly;
@@ -671,11 +671,11 @@ All remaining advisory entries have the dispositions below; no case was added or
 
 | Finding | Disposition |
 |---|---|
-| Shifted flat-reduction overflow | No change: R02 explicitly requires the wrapping i32 shift without an overflow guard. NRF's low-32-bit notation and NRF-V26(f) already distinguish wrapped shift from saturation. V06 exercises positive shifted reduction and the scale guard; V20 exercises the resulting negative-reduction branch. Combining the same specified shift with either existing signed branch adds no missing decision. No exhaustive high-word fixture is claimed. |
+| Shifted flat-reduction overflow | No change: R02 explicitly requires the wrapping i32 shift without an overflow guard. NRF's low-32-bit notation and RLI-V03(f) already distinguish wrapped shift from saturation. V06 exercises positive shifted reduction and the scale guard; V20 exercises the resulting negative-reduction branch. Combining the same specified shift with either existing signed branch adds no missing decision. No exhaustive high-word fixture is claimed. |
 | Event 11 nonmatching entries / null owner | No change: V19 already leaves its event-5 entry uncalled during event 11; IEP-V08(a)/(b) independently cover an all-nonmatching list and absent owner. R03 explicitly routes owner=defender. |
 | Additional per-type fields | No change: the fixed binding table and entry order are recorded in original-image evidence and R06 applies the same operation to each selected entry. Existing cases distinguish physical, fire, cold, magic, poison length and drain policy, including the drain-loop stop. Repeating every numeric fixture for each binding adds no separate operation or outcome. |
 | Resistance-cap combinations above the ceiling | No change: V03(d) now has maximum-stat sum 115, effective resistance 95 and fire 128; it rejects an omitted ceiling. V21 separately covers the negative-cap result after the earlier floor step. No concrete additional branch with a different unspecified outcome was identified. |
-| High-end stat / table inputs | No change: NRF-V25(d)/(g) distinguish getter bounds, NRF-V26 defines minimum metadata and wrapped replacement, and DMI-V27 consumes the supplied getter contract. DMI-V18(e)/(f) cover upper and negative class bounds; V10(d)/(e) cover difficulty beyond 2. Empty prepared difficulty data is explicitly outside the positive-count boundary. The broad suggestion identifies no additional missing input or decision. |
+| High-end stat / table inputs | No change: RLI-V02(d)/(g) distinguish getter bounds, RLI-V03 defines minimum metadata and wrapped replacement, and DMI-V27 consumes the supplied getter contract. DMI-V18(e)/(f) cover upper and negative class bounds; V10(d)/(e) cover difficulty beyond 2. Empty prepared difficulty data is explicitly outside the positive-count boundary. The broad suggestion identifies no additional missing input or decision. |
 | Callback record mutation and draws at dispatcher boundary | No change: IEP-V08(c) distinguishes shared-record mutation and insertion during traversal; its base case distinguishes successor removal. IEP-R07 owns callback invocation and does not suppress callback effects. DMI-R03 permits callback writes/draws and R10 excludes them from its no-draw claim. Callback bodies and their seed behavior remain their owners' contracts (NRF-R04c); duplicating them here would expand mitigation's boundary. |
 
 ### Hardest material

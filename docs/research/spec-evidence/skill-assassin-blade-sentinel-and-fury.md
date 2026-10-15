@@ -28,7 +28,7 @@ upgrade unrelated MHD branches, collection profiles or runtime coverage.
 | `LOD113C-D2GAME` | 0x96310 | none | Sentinel action 44 | R01/R10a | Original instructions 2026-10-11/12; full targeted reread 2026-10-15 through return 1 and both failure epilogues |
 | `LOD113C-D2GAME` | 0x9EE50 | none | summon identity resolver wrapper | R01/Q01 | New 2026-10-15: calls Common ordinal selection and validates monster count; fallback monster data read. Supplied resolved value boundary; complete selector integration open |
 | `LOD113C-D2GAME` | 0x95D50 | none | summon creation request | R01/R10/Q08 | Reused seed chain and 2026-10-15 reread: selection, room/location gates, creator 0xA3610 then summon setup/mode; not a full creation budget |
-| `LOD113C-D2GAME` | 0xE1D90; 0xE0110 | none | generic unit creator; seeder | R10a/R11 | Reused 2026-10-12 game-seed call sites and current NRF-R03a/NRF-R17a: reached non-player seeding only |
+| `LOD113C-D2GAME` | 0xE1D90; 0xE0110 | none | generic unit creator; seeder | R10a/R11 | Reused 2026-10-12 game-seed call sites and current NRF-R03a/NRF-R12a: reached non-player seeding only |
 | `LOD113C-D2GAME` | 0xE19C0 | none | placement/relocation-shaped side operation | R01/Q09 | New complete instruction-form read 2026-10-15; imports/path/room/collision/update effects remain integration gates; no whole-helper no-draw claim |
 | `LOD113C-D2GAME` | 0x21290 | none | route command copy | R01/Q01 | New 2026-10-15 read: copies caller command words and sets monster command association; allocation/storage integration remains open |
 | `LOD113C-D2GAME` | 0x8E6F0; 0x8EA80 | none | event unlink; scheduler | R01/R04/R10b | Compatible prior record and STL-R01: removes reached type 2 events, requested frame and actual clamp distinct; state 54/type 2 branch can draw |
@@ -36,7 +36,7 @@ upgrade unrelated MHD branches, collection profiles or runtime coverage.
 | `LOD113C-D2GAME` | 0x91340; 0x91240 | none | selected missile; progression result | R02/Q03 | New 2026-10-15 instruction-form readings: prepared Skills selections, progression-family state path, expression requests; encoded progression bytes not independently resolved here, so P supplied |
 | `LOD113C-D2GAME` | 0x95BC0 | none | start-table 26 candidate | R06b/Q02 | New original-image slice from entry through return at 0x95D43; all local branches located; imported lifecycle, mana and animation effects not fully read |
 | `LOD113C-D2GAME` | 0xE2480 | none | animation event refresh-shaped side operation | R02/Q09 | New instruction-form reading 2026-10-15: removes event 0/1 and schedules animation event requests; encoded loop and imports unresolved, so effects/draw budget gated |
-| `LOD113C-D2GAME` | 0x6F930 | none | missile creator | R11/R07 | Compatible 2026-10-12 reached seeder and current MCI-R10/R24; failures before seeding and downstream creation draws remain external |
+| `LOD113C-D2GAME` | 0x6F930 | none | missile creator | R11/R07 | Compatible 2026-10-12 reached seeder and current MCI-R10/MIR-R13; failures before seeding and downstream creation draws remain external |
 | `LOD113C-D2GAME` | 0x40860 | none | owner-follow missile action 20 | R03/R05a/R09a | Full original disassembly 2026-10-15: owner condition, lookup, unavailable result; sync/frame 10/collision then return 1 or end then return 2 |
 | `LOD113C-D2GAME` | 0x3A1D0; 0xDFA90 | none | owner-position sync request; unavailable decision | R03 | New 2026-10-15: room/position/path request and explicit kind/mode/completion tests; full relocation integration gated |
 | `LOD113C-D2GAME` | 0xE03A0 | none | owner unit lookup | R03/Q04 | Encoded table/hash lookup candidate read 2026-10-15; supplied owner result, not a newly verified real lookup chain |
@@ -67,19 +67,19 @@ symbolic AI-name compiler or numeric 102 binding. No absence or complete six-run
 
 | Semantic operation | Original D2Common ordinal | Target RVA | Support / remaining limit |
 |---|---|---|---|
-| layer-0 unit stat read |10973|0x38B70|NRF-R12b/R12c existing-stat contract; does not establish source contribution production |
-| replacing unit stat request |10887|0x3A740|Sentinel level request; NRF-Q20/STL-R06c propagation gated |
+| layer-0 unit stat read |10973|0x38B70|RLI-R02a/RLI-R02b existing-stat contract; does not establish source contribution production |
+| replacing unit stat request |10887|0x3A740|Sentinel level request; RLI-Q03/STL-R06c propagation gated |
 | skill release-time store |10243|0x4DF60|Reconstruction checked against original bytes: non-null node stores supplied i32 at node+0x18; null fatal assertion |
 | skill release-time read |10980|0x4E030|Reconstruction checked against original bytes: non-null node returns signed node+0x18; null fatal assertion |
 | find owned skill node |10630|0x4F070|SCD-R06; supplied node result |
 | remaining-lifetime counter setter |10970|0x6A6D0|New 2026-10-15 full disassembly: missile kind 3 with data stores signed i16 after clamp[-32768, 32767]; absent/wrong-kind/data returns without write; action 20 supplies 10 |
-| active-state read |10494|0x33CD0|NRF-R12a, not associated-list lookup |
+| active-state read |10494|0x33CD0|RLI-R03, not associated-list lookup |
 | caster room read (R01 placement) |10331|0x2FE10|Review 2026-10-15 thunk resolution; room-getter semantics reuse the KNB/HRC companion records |
 | cooldown list allocation (R04) |11013|0x38100|Review 2026-10-15 thunk resolution; STL-R06a owns allocation |
 | list state tag (R04) |10785|0x38060|Review 2026-10-15 thunk resolution; STL list-field contract; called with state 86 |
 | list expiry callback (R04) |10911|0x37D70|Review 2026-10-15 thunk resolution; STL list-field contract; called with D2Game 0x38E60 |
 | list attach (R04) |10807|0x3A7D0|Review 2026-10-15 thunk resolution; STL-R06b (gated); called with full=1 |
-| state-on request (R04) |10945|0x34510|Review 2026-10-15 thunk resolution; NRF-R12a/STL-R07 routing; called with state 86, value 1 |
+| state-on request (R04) |10945|0x34510|Review 2026-10-15 thunk resolution; RLI-R03/STL-R07 routing; called with state 86, value 1 |
 
 The original local call thunks are D2Game 0xA42A/0xA472/0xAC94/0xAD12/0xA3F4/0xAC7C/0xA68E
 respectively for the first seven rows, then 0xA478/0xA6A0/0xA5B6/0xA75A/0xA60A/0xA3CA.
@@ -117,7 +117,7 @@ This public record retains every material correction and usable original-artifac
 | R10a/R11 | Earlier one game draw per cast / blocked cast draws nothing | Reached seeder still exactly one game step, child initialized not drawn. MCI failures may bypass it; downstream operations and state 12 refresh can draw. Removed unsupported whole-cast budget, preserving exact seed values |
 | R03/R05a/R09a | Earlier owner exists shorthand omitted reference condition and unavailable kinds/modes; labels asm-only | New 0x40860 and 0xDFA90 reads establish reached decision; sync/collision/end imported effects remain supplied. Return 1/2 ignore dependency result |
 | R04 | Earlier every contact arms / fixed delay implied full expiry | Original contact 0x3EDE0 early state/type/relation exits precede arming.0x3E590 arms miss and reached handoff only, tests allocation, schedules before tags/attach/state. STL stores due/past event next frame while list retains requested expiry. Actual attach/free remain gates |
-| R07/R08 | Weapon ownership transfer and global no-change-in-flight inferred from labels and missing reads | MCI-R24/MDP own building/storage. New full image shows the base roller reads missile stats; later 0x3A4E0 code reads TARGET-dependent facts, not proof of a universal owner/equipment snapshot. Retain unchanged-supplied-stat result only; integrated capture/procs open |
+| R07/R08 | Weapon ownership transfer and global no-change-in-flight inferred from labels and missing reads | MIR-R13/MDP own building/storage. New full image shows the base roller reads missile stats; later 0x3A4E0 code reads TARGET-dependent facts, not proof of a universal owner/equipment snapshot. Retain unchanged-supplied-stat result only; integrated capture/procs open |
 | R12a/R12b | Earlier adjusted result always within min..max-1 | Signed guards apply before percentage; low32 changes can reverse/wrap endpoints. No post-percentage swap. V10(c) demonstrates pct-200 =>-5/-9, return-5, no draw |
 | R12c/Q10 | Earlier physical/fire/magic-min argument unresolved because encoded bytes were unchecked |2026-10-15 matching original image decoded across all 688 bytes.0x3A4FD zeroing, 0x3A4FF max 22 read, 0x3A513 min 21, 0x3A531 Rand, 0x3A53A physical store, 0x3A548 fire helper and 0x3A54D magic min 52 corroborate full base slice. R12c becomes verified static; complete MHD fill/integration and observations remain open |
 | R12 identities | Older poison/burn/mastery names absent from GDF's selected list | Existing compatible loader record names 57/58 poisonmindam/poisonmaxdam, 316/317 burningmin/burningmax, 332 passive_pois_mastery; TD-BLADE-STATS below. Fixed code ids unchanged |
@@ -141,7 +141,7 @@ override inventory or pristine archive claim is made. Physical supplying MPQs an
 runtime correspondence are uncaptured. A successful text read is data evidence, not gameplay.
 
 Skills reuses the same day's compatible complete loader record in the
-[sentry evidence](skill-assassin-sentry-firing-and-range.md#td-skills17): requests
+[sentry launch evidence](skill-assassin-sentry-missile-launch.md#td-skills17): requests
 (offset, length)=(0, 60000),(60000, 60000),(120000, 53535), all returned exactly requested,
 total 173535 bytes, SHA-256 `465c28e83657540e0d7ae5b0de826d5657be7fba1aa539a85c3ca3aeea34b498`.
 New Missiles requests were(0, 60000),(60000, 60000),(120000, 60000),(180000, 12979), all exact,
@@ -203,7 +203,7 @@ the selected GDF table omits some of these names, which is not evidence of absen
 | Q02 start/mana | New Skills start 26 cell, original start-table 26 pointer and original 0x95BC0 body through return | Locates state 12-list and timer branches and conditional 0x95560/0x9F850 calls; full lifecycle/mana/repeat semantics unresolved |
 | Q03 progression vs `Param4` | New `prgcalc1`=`par4`,`Param4`=5 cells; 0x91240/0x91340 readings and SCX expression context | Text relation resolved; compiled selection/state/evaluation correspondence open; supplied P remains verified consumer input |
 | Q04 delay/do mapping | New complete Missiles named cells and original missile slot 20; full follow/contact/arm local reread; current STL-R01/R06a/R06b/R05 compatibility assessment | Named delay 25 and action 20 cells closed. Actual compiled selection, collision/path and list attach/free/expiry still integration gaps |
-| Q05 exact snapshot/owner bonuses | Current MCI-R24/MDP parameter owner records assessed; full 0x3A4E0 original image and complete element helper read | Label-based transfer inference removed. Base stored-stat stage verified; exact real capture/mutable stats/creator draws open |
+| Q05 exact snapshot/owner bonuses | Current MIR-R13/MDP parameter owner records assessed; full 0x3A4E0 original image and complete element helper read | Label-based transfer inference removed. Base stored-stat stage verified; exact real capture/mutable stats/creator draws open |
 | Q06 procs/removal/interruption | Full fill image establishes downstream target/critical stages; current MHD/HRC boundaries assessed; start candidate reaches timed state and mana call | Complete post-fill/proc/interruption effects remain in named dependency paths; no universal cancellation or unchanged damage conclusion |
 | Q07 other builds | Evidence policy restricted to original 1.13c; no other build inspected | Outside boundary; no equivalence claim |
 | Q08 initialization draws | Reused seeder chain; new spawner read plus MSD-R01..R19 and HRC mode context | Source step retained exactly; class/data/path-specific extra count requires instantiated creation inputs |
@@ -439,7 +439,7 @@ Run type: full (rule behavior of R01/R03 and the Q04 gate changed after FULL3, s
 check applies). A fresh reader recomputed 44 cases (41 lettered, 3 base), including V11(e)
 and the new V02(g), V03(g, h), V05(e), V10(f), V11(g). Counts: MISMATCH 0, GUESS 7, GAP 7,
 DISCRIM 11, GATED grouped (R05b/R05c/R06b/R07/R09b/R10b; Q01..Q10; STL-Q10, STL attach/free,
-NRF-Q20, MMC-Q09; stage-only vectors and O01..O03), COVERAGE 22 items, HARDEST 3. Reader
+RLI-Q03, MMC-Q08; stage-only vectors and O01..O03), COVERAGE 22 items, HARDEST 3. Reader
 coverage limit: it reported reading only SCD-R12 from SCD and not opening SCX, MCI, MDP, MSD,
 HRC, MHD, GDF or the companion; it states none was needed to execute a vector.
 
@@ -586,7 +586,7 @@ Run type: full (R01 order wording and vectors changed). This was the fourth and 
 | GUESS placement zeros / absent caster room | No change: literal arguments; meanings Q09 |
 | GUESS R02 node key | No change: SCD-R06 owned-skill lookup; supplied result |
 | GUESS creation request shape | No change: MCI-owned request; semantic fields listed |
-| GUESS state 12 test | No change: NRF-R12a active-state read, GDF-R12 |
+| GUESS state 12 test | No change: RLI-R03 active-state read, GDF-R03 |
 | GUESS owner without a room | No change: supplied synchronization; Q04/Q09 |
 | GUESS kind vs completion order | No change: equivalent outcome |
 | GUESS miss/hit contact returns | No change: MMC-R14/R15 and MMC-V10 own them; not asserted |

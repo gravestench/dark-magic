@@ -27,24 +27,24 @@ Integer additions, products and negation retain low 32 bits as signed i32; signe
 
 | Input | Semantic source | Width and format | Meaning |
 |---|---|---|---|
-| player/mode | unit presence, type 0; GDF-R14a | logical; mode u32, supported 0..19 | Run 3 permits call; Walk 2 requested on return 0 |
+| player/mode | unit presence, type 0; GDF-R05a | logical; mode u32, supported 0..19 | Run 3 permits call; Walk 2 requested on return 0 |
 | game/current unit identity | supplied game context G and current unit U | logical identities | All unit/mode/path requests retain these exact identities; isolated wrapper cases may supply a nonplayer type without asserting a nonplayer drain |
 | room/level | supplied dynamic path's room and valid linked level | optional room; level i32 | Absent path gives absent room; town ids 1,40,75,103,109 |
-| class/count/record | prepared CharStats, GDF-R03a | i32 index/count; optional computed record | Valid index required; absent collection is not a general safe-null case |
+| class/count/record | prepared CharStats, GDA-R06a | i32 index/count; optional computed record | Valid index required; absent collection is not a general safe-null case |
 | RunDrain | CharStats.RunDrain | u8 | Base amount is twice this value |
 | inventory | absent, invalid or valid inventory | logical | Absence stops drain; invalid inventory gives no torso item |
 | body page/allocations | prepared dimensions/slots; supplied successful allocation when required | logical page; dimensions u8 | 13 by 1; only slot 3 contributes; no safe allocator-failure fallback |
 | torso/class/record | body slot 3; prepared items collection | class u32; optional record | Out-of-range class gives absent record; valid class needs present collection |
 | speed | items record speed | i32 | Torso weight |
-| percent p | stat 154 item_staminadrainpct, layer 0 | i32 getter result | NRF-R12b/NRF-R12c result used unchanged |
+| percent p | stat 154 item_staminadrainpct, layer 0 | i32 getter result | RLI-R02a/RLI-R02b result used unchanged |
 | post-add stamina | stat 10 stamina, layer 0 | i32 getter result | Read after addition request; positivity decides return |
 | inner replacement result | supplied result from the list replacement operation | i32 | Unit wrapper requests tracking exactly when nonzero and unit is player; this is distinct from the whole wrapper's ignored return |
-| stat definitions/arrays | NRF-R12b/NRF-R12c | existing ordered arrays/definitions | Select own/resolved arrays, without building/summing contributions |
+| stat definitions/arrays | RLI-R02a/RLI-R02b | existing ordered arrays/definitions | Select own/resolved arrays, without building/summing contributions |
 | own stat list | supplied current-unit own-list presence/identity | logical list or absent | Mutation wrappers forward to this list; actual storage/propagation remains SDR-Q02 |
 | events/callbacks | lists, type, frame, target, A/B, direct callback, running/removal conditions | logical; type u8, frame i32 | Supplied frame-event traversal boundary |
 | handler result | selected mode handler | supplied i32 | Exactly 2 requests mode-end processing |
 | movement/transition inputs | post-preparation unit, path/arrival results, continuation condition, room, skill context | supplied logical/numeric state | Full producers SDR-Q04/SDR-Q07 |
-| cadence/writers | invocation count, rate and no intervening writer | supplied frames/i32 | Duration fixture supplies 25 fps; live invariant rate remains NRF-Q03 |
+| cadence/writers | invocation count, rate and no intervening writer | supplied frames/i32 | Duration fixture supplies 25 fps; live invariant rate remains NRF-Q02 |
 
 | Mapping/constant | Origin | Binding / named support |
 |---|---|---|
@@ -64,7 +64,7 @@ Named cells and profile limits are in the [companion](../research/spec-evidence/
 - **SDR-R01a** Frame entry [verified in 1.13c code (static)]. Each supplied frame pass calls the frame-event pump once. This establishes a call, not live-player registration or invariant elapsed time.
 - **SDR-R01b** Player-group pass [verified in 1.13c code (static)]. Dispatch persistent player list without due-frame test, then current bucket with that test enabled. Only bucket entries whose frame equals currentFrame dispatch. Before each callback save successor and mark running; afterwards clear running. Remove dispatched bucket entries; remove persistent entries only when pending-removal is set. Continue at saved successor, including removal's changes to it. This local traversal accepts supplied lists/callback results; arbitrary callback lifecycle/population remain SDR-Q01.
 - **SDR-R01c** Event selection [verified in 1.13c code (static)]. Direct callback receives `(game,target,type,A,B)`. Otherwise type<15 selects the fixed handler; absent handler or type>=15 skips call. Type 0 calls player-mode dispatch `(game,target,A,B)`; type 1 selects mode-end processing with the same arguments. List pass ignores callback results.
-- **SDR-R01d** Recurring registration [unresolved]. Reached mode-setter path requests pending-event removal then persistent type-0 registration. Complete creation/join/nonfresh/reentrant population is SDR-Q01. MCI-R12b's fresh allocation association does not establish complete recurring dispatch.
+- **SDR-R01d** Recurring registration [unresolved]. Reached mode-setter path requests pending-event removal then persistent type-0 registration. Complete creation/join/nonfresh/reentrant population is SDR-Q01. MIR-R01b's fresh allocation association does not establish complete recurring dispatch.
 - **SDR-R01e** Mode selection [verified in 1.13c code (static)]. Supplied supported mode 0..19 selects fixed handler; absent unit selects mode 0. Null handler skips call. Modes 2,3,6,19 select movement. Forward `(game,unit,A,B)` unchanged. Handler result exactly 2 requests mode-end processing with same arguments. Original indexing has no bounds test; no safe out-of-domain fallback is established.
 - **SDR-R01f** Running gate [verified in 1.13c code (static)]. At supplied post-preparation stage, call drain only for present unit/mode 3. Return 0 requests mode 2 with that unit/game; then continue path processing. Drain result does not become the movement handler's final return. Full preparation/path/arrival/history effects are SDR-Q07; they are not assumed inert.
 
@@ -90,7 +90,7 @@ Named cells and profile limits are in the [companion](../research/spec-evidence/
 
 **SDR-R10** Post-add decision (subrules).
 
-- **SDR-R10a** Positive read [verified in 1.13c code (static)]. After R09 read stat 10/layer 0 through NRF-R12b/NRF-R12c. Supplied signed result>0 returns 1 without zero replacement.
+- **SDR-R10a** Positive read [verified in 1.13c code (static)]. After R09 read stat 10/layer 0 through RLI-R02a/RLI-R02b. Supplied signed result>0 returns 1 without zero replacement.
 - **SDR-R10b** Zero request [verified in 1.13c code (static)]. Supplied post-add result<=0 requests `(unit,stat 10,value 0,layer 0)`, ignores the whole unit-replacement wrapper's return and returns 0. At the separate wrapper-routing stage, forward the replacement to own list. If the supplied inner list-replacement result is any nonzero i32 and unit type is player, request changed-stat tracking for that list/stat/layer; otherwise do not. The wrapper's final numeric return is not used by the drain and is not equated to its inner result. Actual storage, the producer of the inner result, tracking effects and client delivery remain SDR-Q02/SDR-Q03; no notification default prescribed.
 
 **SDR-R11** Walking transition [unresolved]. R01f establishes mode-2 request. Transition consults town status to select Town Walk 6 or Walk 2, performs path/skill preparation and branches on continuation condition. Complete stop branch/mode setter/event removal/registration/path outcomes/messages remain SDR-Q04. Drain return 0 alone does not prove final mode. New Run refusal at zero belongs to player-mode transitions.
@@ -151,7 +151,7 @@ RunDrain=0 still floors to 1. Negative speed/percent are synthetic arithmetic in
 | Question | Kind / exact boundary | Evidence that would settle it |
 |---|---|---|
 | **SDR-Q01** | integration: full recurring population, creation/join/nonfresh/reentrant registration | Complete lifecycle/one-entry-per-running-player invariant; local removal/association alone does not prove it |
-| **SDR-Q02** | integration: Add/Replace storage, intermediate clamp, own/resolved-array production, final zero | Complete additive propagation and NRF-Q20/STL-R06c; distinguish request/storage/read |
+| **SDR-Q02** | integration: Add/Replace storage, intermediate clamp, own/resolved-array production, final zero | Complete additive propagation and RLI-Q03/STL-R06c; distinguish request/storage/read |
 | **SDR-Q03** | integration: changed-stat tracking to actual client stamina update | Complete tracking-to-message-to-client path |
 | **SDR-Q04** | integration: full Walk transition/zero-stamina new-Run refusal | Complete preparation/stop branches/mode write/registration/messages |
 | **SDR-Q05** | observation/data-profile qualification: gameplay unobserved; recent cells lack independent complete vanilla-profile identity | Matching owned 1.13c observations and profile/override identification |
@@ -325,7 +325,7 @@ Each has a [companion procedure](../research/spec-evidence/player-stamina-drain-
 
 Partial acceptance requires verified arithmetic/supplied lookup/control/ordered requests in SDR-V01..SDR-V12 including every case. Fixture stamina is not original storage. SDR-R01d/SDR-R11 remain unresolved. Full reproduction needs SDR-Q01/SDR-Q02/SDR-Q03/SDR-Q04/SDR-Q07 integration, writer/scheduling relation SDR-Q06, profile qualification/matching observations SDR-Q05. A supplied subset/table read never establishes complete parity.
 
-**Depends on:** [NRF](core-numeric-and-rng-foundations.md) NRF-R08a units, NRF-R09a rate, NRF-R12b/NRF-R12c existing-array reads, NRF-Q20 writes; [GDF](core-game-data-fields.md) GDF-R03a/GDF-R11a/GDF-R14a class/stat/mode names/fields; [STL](state-timed-state-lifecycle.md) STL-R06c write integration; [MCI](missile-creation-and-initialization.md) MCI-R12b fresh event association/MCI-Q03 limits. Complete player-mode/frame-event/additive/network contracts remain named gaps.
+**Depends on:** [NRF](core-numeric-and-rng-foundations.md) NRF-R08a units, NRF-R09a rate, RLI-R02a/RLI-R02b existing-array reads, RLI-Q03 writes; [GDF](core-game-data-fields.md) GDA-R06a/GDF-R02/GDF-R05a class/stat/mode names/fields; [STL](state-timed-state-lifecycle.md) STL-R06c write integration; [MIR](missile-initialization-and-registry.md) MIR-R01b fresh event association/MIR-Q01 limits. Complete player-mode/frame-event/additive/network contracts remain named gaps. Owners of the cited GDA, RLI ids: [core-game-data-table-records](core-game-data-table-records.md) (GDA); [core-record-layouts-and-ids](core-record-layouts-and-ids.md) (RLI).
 
 **Depended on by:** candidate player-mode behavior consumes drain return/Walk request; candidate regeneration accounts for this consumer; candidate stat-update behavior consumes resulting changes. These are relationships, not delivery prerequisites/completed contracts.
 

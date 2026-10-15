@@ -61,11 +61,11 @@ conventions are in the [companion](../research/spec-evidence/combat-damage-mitig
 ## 3. Inputs and data
 
 Operation names below are illustrative. They impose no function signatures or storage layout.
-`Stat(unit, id)` means the layer-0 read supplied by NRF-R12b; a null unit or a unit without a
-stat list reads 0 there. Its stored-value selection is NRF-R12b and conditional minimum
-adjustment is NRF-R12c; both are verified at the getter boundary with existing stat arrays
+`Stat(unit, id)` means the layer-0 read supplied by RLI-R02a; a null unit or a unit without a
+stat list reads 0 there. Its stored-value selection is RLI-R02a and conditional minimum
+adjustment is RLI-R02b; both are verified at the getter boundary with existing stat arrays
 and loaded definitions. Constructing and updating those arrays is outside this stage.
-`HasState(unit, id)` is NRF-R12a's state test, false for a null unit.
+`HasState(unit, id)` is RLI-R03's state test, false for a null unit.
 Every vector except DMI-V27 supplies the stat values for non-null attacker and
 defender units; DMI-V17 separately tests null input to the classification predicate.
 Attacker and defender are optional logical unit associations at the isolated mitigation
@@ -83,15 +83,15 @@ operation's null-unit guards belong to the pipeline, rather than being added her
 | defender resistance, maximum resistance, and absorb stats | type bindings below | i32 percent; flat absorb is whole points | DMI-R07/DMI-R08 |
 | attacker pierce stats 333-336 | type bindings below | i32 percent | DMI-R07 step 2 |
 | attacker state 47 `sanctuary` | `HasState(attacker, 47)` | logical state | physical resistance exception, DMI-R07 step 6 |
-| attacker and defender type/class | unit identity, GDF-R17 | type u32; class i32 | regular-monster and class tests; "monster" is the unit type whose class is a MonStats row; every other type, including a player, is a non-monster |
-| `monsterClassCount`, class `lUndead`, `hUndead`, `demon` | MonStats data, GDF-R05/GDF-R18 | count i32; logical flags | bounds check and category tests, DMI-R04 |
+| attacker and defender type/class | unit identity, GDF-R08 | type u32; class i32 | regular-monster and class tests; "monster" is the unit type whose class is a MonStats row; every other type, including a player, is a non-monster |
+| `monsterClassCount`, class `lUndead`, `hUndead`, `demon` | MonStats data, GDA-R08/GDA-R16 | count i32; logical flags | bounds check and category tests, DMI-R04 |
 | `game.difficulty` | game | u8: 0 Normal, 1 Nightmare, 2 Hell; remaining u8 values follow DMI-R07 | penalty selection; expansion clamps the row index, classic applies no penalty above 2 |
 | `game.expansion` | game | logical (original non-zero flag) | expansion data penalty versus classic constants |
-| `difficulty.ResistPenalty` | selected difficulty row, GDF-R02 | i32 | expansion penalty: Normal 0, Nightmare -40, Hell -100 (section 3.1) |
-| `difficultyRowCount` and prepared difficulty rows | GDF-R02 field preparation; selection in DMI-R07 | positive i32 count; original-profile count 3 | selected row is `min(game.difficulty, difficultyRowCount - 1)`; an unavailable/empty prepared collection is outside the supplied-table boundary |
+| `difficulty.ResistPenalty` | selected difficulty row, GDA-R05 | i32 | expansion penalty: Normal 0, Nightmare -40, Hell -100 (section 3.1) |
+| `difficultyRowCount` and prepared difficulty rows | GDA-R05 field preparation; selection in DMI-R07 | positive i32 count; original-profile count 3 | selected row is `min(game.difficulty, difficultyRowCount - 1)`; an unavailable/empty prepared collection is outside the supplied-table boundary |
 | defender event list | entries created by IEP-R01 (event id, callback, two callback values, entry type) | logical ordered entries | walked for event 11 by DPO-R23; DMI-R03 |
 | attacker, defender, game RNG seeds | NRF-R01 | each `{lo, hi}`, two u32 words | unchanged by mitigation itself |
-| stat/state-read context | NRF section 3.8 and NRF-R12a/NRF-R12b/NRF-R12c | optional lists/storage/owners; i32 state and definition counts; ordered stat identities and i32 values; signed 16-bit active array counts; boolean `usesResolvedStats`/`fMin`, i32 `MinAccr`, u8 `ValShift` | supplied getter inputs in DMI-V27; other numeric vectors supply returned values, not array production |
+| stat/state-read context | NRF section 3.8 and RLI-R03/RLI-R02a/RLI-R02b | optional lists/storage/owners; i32 state and definition counts; ordered stat identities and i32 values; signed 16-bit active array counts; boolean `usesResolvedStats`/`fMin`, i32 `MinAccr`, u8 `ValShift` | supplied getter inputs in DMI-V27; other numeric vectors supply returned values, not array production |
 | whole-entry scale-selector conditions | PVP-R02a/PVP-R02b | logical conditions and selected i32 percent `P` | common whole-entry setup supplies the attacker's PVP-R02b flag clear and `P=100`; isolated mitigation does not select `P` |
 | supplied event callbacks | IEP-R07 | logical callback behavior; i32 results and two registered i32 values | callback effects, draws and record/list mutations are explicit fixture inputs; DMI-V19 supplies logging callbacks with no writes or draws |
 
@@ -102,7 +102,7 @@ DMI-R02 computes the reductions. Their original temporary layout is evidence onl
 
 **Type bindings and execution order.** `none` means this entry has no stat binding (the
 original sentinel is recorded in the companion). These bindings are an engine-defined table,
-not an MPQ damage-policy table. Each named stat/id maps to GDF-R11. Field names map to the
+not an MPQ damage-policy table. Each named stat/id maps to GDF-R02. Field names map to the
 foundations' damage-record fields (section 3.2, CSA-R01): physical; fire, lightning, cold,
 magic and poison damage; poisonLength = poison length; coldLength and freezeLength = cold and
 freeze length; lifeDrain, manaDrain and staminaDrain = the foundations' `lifeLeech`,
@@ -135,11 +135,11 @@ uses are cited separately.
 | Mapping or constant | Origin | Binding in original 1.13c | Table identity / evidence |
 |---------------------|--------|--------------------------|---------------------------|
 | reduction/flat-absorb minimum metadata | table data | fMin is clear and the getter retains the stored value before DMI converts whole points to 8.8 | ItemStatCost rows 34,35,143,145,147,149, columns fMin/MinAccr/ValShift; [text and compiled evidence](../research/spec-evidence/core-numeric-and-rng-foundations.md#stat-table-verification-2026-10-14) |
-| stat names and numeric identities in this spec, including common-vector stats 118 and 153 | table data | named identity supplied by data; mitigation type bindings and build-stat selectors are fixed by code | `data/global/excel/itemstatcost.txt`, row by `Stat` name, column `ID` (GDF-R11); TD-1 |
-| state 47 `sanctuary` | table data | identity supplied by data; selector fixed in code | `data/global/excel/states.txt`, row `state=sanctuary`, column `id` (GDF-R12); TD-2 |
+| stat names and numeric identities in this spec, including common-vector stats 118 and 153 | table data | named identity supplied by data; mitigation type bindings and build-stat selectors are fixed by code | `data/global/excel/itemstatcost.txt`, row by `Stat` name, column `ID` (GDF-R02); TD-1 |
+| state 47 `sanctuary` | table data | identity supplied by data; selector fixed in code | `data/global/excel/states.txt`, row `state=sanctuary`, column `id` (GDF-R03); TD-2 |
 | type bindings, entry order, reduction slots, regular-attacker marker | engine code | fixed by original code's internal table | image read and live read-only memory corroboration in the companion; not MPQ policy |
-| expansion `ResistPenalty` | table data | resolved from selected difficulty row | `data/global/excel/difficultylevels.txt`, rows `Name` Normal/Nightmare/Hell = zero-based data rows 0/1/2, column `ResistPenalty`: 0, -40, -100 (GDF-R02); compiled table agrees; TD-3 |
-| monster class identity and classification | table data | `hcIdx` selects class; code tests data flags | `data/global/excel/monstats.txt`, row by `Id`, column `hcIdx`; category columns `lUndead`, `hUndead`, `demon` (GDF-R05/GDF-R17/GDF-R18); vector class: `sandleaper1` `hcIdx` 78 (0x4E); TD-4 |
+| expansion `ResistPenalty` | table data | resolved from selected difficulty row | `data/global/excel/difficultylevels.txt`, rows `Name` Normal/Nightmare/Hell = zero-based data rows 0/1/2, column `ResistPenalty`: 0, -40, -100 (GDA-R05); compiled table agrees; TD-3 |
+| monster class identity and classification | table data | `hcIdx` selects class; code tests data flags | `data/global/excel/monstats.txt`, row by `Id`, column `hcIdx`; category columns `lUndead`, `hUndead`, `demon` (GDA-R08/GDF-R08/GDA-R16); vector class: `sandleaper1` `hcIdx` 78 (0x4E); TD-4 |
 | hireling exceptions: 0x10F, 0x152, 0x167, 0x230, 0x231 | engine code for selection; table data for names | original code compares fixed class IDs; it does not select an arbitrary data-defined hireling category | MonStats `Id` `roguehire` 271, `act2hire` 338, `act3hire` 359, `act5hire1` 560, `act5hire2` 561, column `hcIdx`; class 0x232 (562) is `baaltentacle1`; TD-4 |
 | event 11 dispatch | engine code | fixed event selector; callback registrations supplied elsewhere | `data/global/excel/events.txt` zero-based data row 11, column `event` = `absorbdamage`; TD-5 |
 | classic penalties 20/50; resistance floor -100; caps 50/75/95; absorb cap 40; scale unit 0x400 | engine code | fixed arithmetic constants | DMI-R02, DMI-R07, DMI-R08; source citations in companion |
@@ -282,7 +282,7 @@ Use the entry's `resistId`, `maxId`, `pierceId`, and `regularDef=context.regular
    expansion adds the selected row's `difficulty.ResistPenalty` value unchanged. With the
    supplied positive `difficultyRowCount`, select row
    `min(game.difficulty, difficultyRowCount - 1)`; the game's difficulty is u8, so its index
-   is nonnegative. GDF-R02 supplies field preparation; the clamping getter's existing
+   is nonnegative. GDA-R05 supplies field preparation; the clamping getter's existing
    [source evidence](../research/spec-evidence/combat-damage-mitigation.md#rule-linked-rationale)
    supports this consumed selection within DMI-R07. Classic
    subtracts 20 at difficulty 1, 50 at difficulty 2, and nothing for any other difficulty
@@ -382,8 +382,8 @@ not required APIs. No shared-entry return value is part of this spec's acceptanc
   defenders are pierced at any resistance, penalized except physical/magic, and capped.
   Only regular-monster attackers have their drain inputs mitigated (DMI-R01, DMI-R06).
 - **Null units.** A null attacker is not regular and has no sanctuary state; its pierce reads
-  follow NRF-R12b. A null defender is not regular; bypass depends only on
-  `bypassOther`; its stat reads follow NRF-R12b; the event dispatch runs no callback.
+  follow RLI-R02a. A null defender is not regular; bypass depends only on
+  `bypassOther`; its stat reads follow RLI-R02a; the event dispatch runs no callback.
 - **Difficulty.** Expansion adds the selected data penalty (0/-40/-100) except physical/magic;
   classic subtracts 20/50. Poison length and absent-resistance drain entries can therefore
   increase up to twice their input on Hell (DMI-V15/DMI-V16).
@@ -417,7 +417,7 @@ not required APIs. No shared-entry return value is part of this spec's acceptanc
 
 | Id | Status | Question and evidence that would settle it |
 |----|--------|-------------------------------------------|
-| **DMI-Q01** | settled | NRF-R12b/NRF-R12c are verified for reads from existing stat arrays and loaded definitions. Original-profile reduction and flat-absorb definitions have `fMin` clear and return stored values unchanged before DMI's whole-point-to-8.8 conversion. DMI-V27 exercises getter-to-mitigation integration; it does not exercise production of the arrays. |
+| **DMI-Q01** | settled | RLI-R02a/RLI-R02b are verified for reads from existing stat arrays and loaded definitions. Original-profile reduction and flat-absorb definitions have `fMin` clear and return stored values unchanged before DMI's whole-point-to-8.8 conversion. DMI-V27 exercises getter-to-mitigation integration; it does not exercise production of the arrays. |
 | **DMI-Q05** | open (outside this boundary) | Which rule produces `record.reductionScale` on each path that builds a damage record. The build steps DPO-R02 to DPO-R07 do not mention it and no sibling spec owns it. DMI-R02 consumes it as a supplied input, so it gates no rule here. Settled when the spec that owns each record builder names the writer. |
 | **DMI-Q03** | unresolved (runtime cross-check) | Does a negative physical field survive into the total as the static reading says (DMI-V08)? DMI-O03 measures field and total after mitigation when flat reduction exceeds damage. |
 | **DMI-Q04** | unresolved (runtime cross-check) | Confirm penalty-induced growth of absent-resistance drain entries and poison length (DMI-V15/DMI-V16). DMI-O02 measures both sides of the stage on Hell. |
@@ -436,7 +436,7 @@ defender 118 `item_halffreezeduration` and 153 `item_cannotbefrozen`. No states 
 explicitly named attacker sanctuary state, so DPO-R10 leaves cold/freeze/poison lengths and
 the burn length (CSA-R01; not read by this stage) unchanged. The defender's event list is empty.
 
-Default attacker: regular monster class 0x4E `sandleaper1` (GDF-R17); defender: player.
+Default attacker: regular monster class 0x4E `sandleaper1` (GDF-R08); defender: player.
 "Monster defender" means a monster whose class id `c` satisfies `0 <= c < monsterClassCount`
 and is not one of DMI-R01's five hireling classes (so it is a regular monster), with lUndead,
 hUndead, and demon clear unless a vector supplies other class flags; the attacker is a player.
@@ -458,7 +458,7 @@ PVP-R02a would select another `P` and DPO-R08a would scale first.
 Numeric vectors can be executed at the mitigation boundary: use the stated stat reads,
 class flags, and difficulty data as supplied inputs, compute DMI-R01/DMI-R02 intermediates,
 then DMI-R05/DMI-R06. A whole-entry execution under the setup additionally consumes PVP-R02a,
-DPO-R08a, DMI-R03 with an empty list, DPO-R10, and the stat reads of NRF-R12b/NRF-R12c.
+DPO-R08a, DMI-R03 with an empty list, DPO-R10, and the stat reads of RLI-R02a/RLI-R02b.
 Vectors V01-V26 supply the values those reads return; V27 supplies the arrays and definitions.
 Each vector uses **no draw** (DMI-R10);
 DMI-V14 explicitly supplies unchanged seeds.
@@ -763,7 +763,7 @@ values for the isolated numeric checks. IDs and names map through section 3's bi
   These cases check all three mitigation call-site orders, separately from V13's helper checks.
   `runtime_observed: no`.
 
-- **DMI-V27** (NRF-R12b, NRF-R12c; DMI-R02, DMI-R06, DMI-R07, DMI-R08)
+- **DMI-V27** (RLI-R02a, RLI-R02b; DMI-R02, DMI-R06, DMI-R07, DMI-R08)
   **getter integration from supplied arrays**. Use the common setup and default pairing;
   both units have non-null lists with `usesResolvedStats=true` and associated owners equal
   to themselves. Definition count is 359; all reads have available definitions with
@@ -807,7 +807,7 @@ These are proposed observations, not reproduced results.
 DMI-R01, DMI-R02 and DMI-R04 to DMI-R10 at the mitigation boundary using supplied stat values
 and classifications; DMI-V19 exercises DMI-R03's placement. Passing their numeric, placement
 and no-draw assertions is partial acceptance. DMI-V27 additionally exercises verified
-NRF-R12b/NRF-R12c with existing arrays and loaded definitions; it does not confirm array
+RLI-R02a/RLI-R02b with existing arrays and loaded definitions; it does not confirm array
 production or gameplay observations. Dispatcher assertions consume the reconciled IEP-R07;
 this does not verify the production registration path or each item's callback behavior.
 
@@ -819,7 +819,7 @@ post-dispatch cold-length removal). Callback order and
 arguments in DMI-V19 belong to DPO-R23 and IEP-R07. These integration assertions keep their dependency
 labels and are reported separately from isolated DMI numeric results.
 
-**Gates and full reproduction.** Stat-getter behavior is supplied by verified NRF-R12b/NRF-R12c;
+**Gates and full reproduction.** Stat-getter behavior is supplied by verified RLI-R02a/RLI-R02b;
 dispatcher behavior is supplied by IEP-R07 through DPO-R23. Full reproduction within this stage's
 boundary requires DMI-V01 to DMI-V27 to pass and DMI-O01 to DMI-O03 to match on an owned 1.13c
 game. Supplying existing stat arrays does not verify their production by other systems.
@@ -830,14 +830,14 @@ DMI-Q04 are pending observation cross-checks: they block runtime-confirmation cl
 the existing static arithmetic. DMI-Q05 concerns an outside-boundary producer and blocks no
 local supplied-input rule. A gap-file reference to a rule does not expand these gates.
 
-**Depends on:**
+**Depends on:** Owners of the cited GDA, RLI ids: [core-game-data-table-records](core-game-data-table-records.md) (GDA); [core-record-layouts-and-ids](core-record-layouts-and-ids.md) (RLI).
 
 - [core-numeric-and-rng-foundations](core-numeric-and-rng-foundations.md): NRF-R05 exact
-  mulDiv, NRF-R08a units, NRF-R12a/NRF-R12b/NRF-R12c stat/state reads,
+  mulDiv, NRF-R08a units, RLI-R03/RLI-R02a/RLI-R02b stat/state reads,
   NRF-R01/NRF-R02 seed contracts for DMI-V14, section 3.2 damage-field meanings.
-- [core-game-data-fields](core-game-data-fields.md): GDF-R02 difficulty data,
-  GDF-R05/GDF-R18 monster category flags, GDF-R11 stat identities, GDF-R12 sanctuary state,
-  GDF-R17 class identities. These are data/meaning contracts, not original layout requirements.
+- [core-game-data-fields](core-game-data-fields.md): GDA-R05 difficulty data,
+  GDA-R08/GDA-R16 monster category flags, GDF-R02 stat identities, GDF-R03 sanctuary state,
+  GDF-R08 class identities. These are data/meaning contracts, not original layout requirements.
 - [combat-damage-pipeline-order](combat-damage-pipeline-order.md): DPO-R05/DPO-R06 built
   inputs; DPO-R08a scaling loop, DPO-R09 event 11 placement, DPO-R23 dispatcher, DPO-R10 strip,
   DPO-R08c/DPO-R08d timing/count; DPO-R12a totals and DPO-R16/DPO-R17 later healing/life
@@ -852,9 +852,9 @@ local supplied-input rule. A gap-file reference to a rule does not expand these 
 - [combat-damage-pipeline-order](combat-damage-pipeline-order.md): DPO-R11 consumes this
   loop; DPO-R14 to DPO-R18 consume its results.
 - [combat-status-application](combat-status-application.md): consumes mitigated
-  poison and lengths; [combat-leech-and-status-effects](combat-leech-and-status-effects.md): regular-monster drain inputs.
+  poison and lengths; [combat-leech-and-drain](combat-leech-and-drain.md): regular-monster drain inputs.
 
-**Supporting relationships.** GDF-R08/SCD-R06 identify the original dispatch root; they are
+**Supporting relationships.** GDA-R11/SCD-R06 identify the original dispatch root; they are
 evidence references here. CSA-R01 in
 [combat-status-application](combat-status-application.md) consumes the record's status and
 drain fields; it does not execute during mitigation. Reverse consumers and supporting
@@ -866,11 +866,11 @@ references do not automatically set implementation-plan prerequisites.
   scaling/strip, totals, healing/life application, and event dispatch points.
 - [combat-pvp-damage-and-kill-credit](combat-pvp-damage-and-kill-credit.md): PvP/hireling
   scale selected before this loop; an adjacent stage rather than a consumer of this loop.
-- [combat-status-application](combat-status-application.md): later use of length fields; [combat-leech-and-status-effects](combat-leech-and-status-effects.md): later use of drain fields.
+- [combat-status-application](combat-status-application.md): later use of length fields; [combat-leech-and-drain](combat-leech-and-drain.md): later use of drain fields.
 - [combat-item-event-triggers-and-procs](combat-item-event-triggers-and-procs.md): event
   entries and callbacks eligible for the event 11 dispatch, separate from mitigation arithmetic.
 - [skill-cast-start-and-do-dispatch](skill-cast-start-and-do-dispatch.md): SCD-R06 original
-  dispatch-root evidence, together with GDF-R08's srvdofunc identity.
+  dispatch-root evidence, together with GDA-R11's srvdofunc identity.
 - [combat-shield-block-and-avoidance](combat-shield-block-and-avoidance.md),
   [combat-knockback](combat-knockback.md), [combat-hit-recovery](combat-hit-recovery.md):
   adjacent hit outcomes outside this boundary.

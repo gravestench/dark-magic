@@ -34,7 +34,7 @@ reconstruction paths, tool sessions and fixture encodings are kept in a separate
 ### Creation chain
 
 Generic unit creation `D2Game.dll+0xE1D90` validates the class, calls the unit seeder
-`0xE0110` (NRF-R17a) and dispatches unit type 1 through its type table to the monster
+`0xE0110` (NRF-R12a) and dispatches unit type 1 through its type table to the monster
 initializer `0xB0320`. The initializer calls the preset lookup `0xCA5F0` and passes its result
 to stat initialization `0xAFDB0`. After the initializer returns, a set creation condition bit
 leads to `0xE0F40` and, for monsters, `0xAFAB0` → `0x75E10` → `0x77240`.
@@ -56,7 +56,7 @@ MonProp loop `0xB024B..0xB02F2`; equipment roll `0x92ED0` (`0xB0304`).
 | Artifact | Function RVA | Export ordinal | Analyst description | Rules | Method / boundary |
 |---|---|---|---|---|---|
 | LOD113C-D2GAME | `0xE1D90` | — | Generic unit creation | MSD-R01, MSD-R19 | Disassembly 2026-10-12; listing of seeding and post-init call 2026-10-14 |
-| LOD113C-D2GAME | `0xE0110` | — | Unit seeder | MSD-R01 | Reused foundations reading (NRF-R03a, NRF-R17a) |
+| LOD113C-D2GAME | `0xE0110` | — | Unit seeder | MSD-R01 | Reused foundations reading (NRF-R03a, NRF-R12a) |
 | LOD113C-D2GAME | `0xB0320` | — | Monster initializer | MSD-R02 | Disassembly 2026-10-12 |
 | LOD113C-D2GAME | `0xCA5F0` | — | Preset lookup and registration | MSD-R02 | Disassembly 2026-10-12; class byte table at `0xC96F8` |
 | LOD113C-D2GAME | `0xDF1A0` | — | Preset variant build | MSD-R02 | Disassembly 2026-10-12 |
@@ -93,11 +93,11 @@ MonProp loop `0xB024B..0xB02F2`; equipment roll `0x92ED0` (`0xB0304`).
 | LOD113C-D2COMMON | `0x3C000` | 10826 | Level id of a room | MSD-R02, MSD-R08, MSD-R21 | Reconstruction checked against bytes |
 | LOD113C-D2COMMON | `0x6E0C0` | 10894 | Area monster level | MSD-R08 | Full listing 2026-10-14 |
 | LOD113C-D2COMMON | `0x2FE10` | 10331 | Room of a unit | MSD-R21 | Disassembly 2026-10-14 |
-| LOD113C-D2COMMON | `0x33CD0` | 10494 | State test | MSD-R05 | Reused foundations reading (NRF-R12a) |
+| LOD113C-D2COMMON | `0x33CD0` | 10494 | State test | MSD-R05 | Reused foundations reading (RLI-R03) |
 | LOD113C-D2COMMON | `0x1A2D0` | 11104 | `unitGate` | MSD-R07 | Reused status-gate reading (CSA-R02) |
 | LOD113C-D2COMMON | `0x603C0` | 10237 | DifficultyLevels row, index clamped | MSD-R06, MSD-R14 | Reconstruction checked against bytes |
-| LOD113C-D2COMMON | `0x3A740` | 10887 | Replacing stat write | MSD-R09, MSD-R12, MSD-R13 | Reused foundations reading (NRF-Q20) |
-| LOD113C-D2COMMON | `0x38B70` | 10973 | Stat read | MSD-R20, MSD-R21 | Reused foundations reading (NRF-R12b) |
+| LOD113C-D2COMMON | `0x3A740` | 10887 | Replacing stat write | MSD-R09, MSD-R12, MSD-R13 | Reused foundations reading (RLI-Q03) |
+| LOD113C-D2COMMON | `0x38B70` | 10973 | Stat read | MSD-R20, MSD-R21 | Reused foundations reading (RLI-R02a) |
 | LOD113C-D2COMMON | `0x3AF00` | 11166 | Stat-list setup | MSD-R18 | Disassembly 2026-10-12; one indirect call unresolved |
 | LOD113C-D2COMMON | `0x3A7B0` | 10188 | Damage-stat write used by the damage setup | MSD-R20 | Reconstruction checked against bytes; forwards to `0x39280`, not read |
 | LOD113C-D2COMMON | `0x391F0` | 10830 | Damage-term skip test | MSD-R20 | Disassembly 2026-10-14; meaning outside (MSD-Q05) |
@@ -148,7 +148,7 @@ Imported calls from D2Game (thunk → module export): `0xA7F6` → D2Common #111
   both read `0, 0, 50, 100, 150, 200, 250, 300, 350`; for `n >= 9` life is `(n - 2) * 0x32` and
   experience `(5n + 0x82) * 2`. The function then calls #10237 with the game difficulty byte
   `Game +0x6D` (index clamped to the row range), rewrites `Game +0x6D` to 2 when it is 3 or
-  more, and stores the row's `MonsterSkillBonus` (`+0x10`, GDF-R02) as output `+0x08`.
+  more, and stores the row's `MonsterSkillBonus` (`+0x10`, GDA-R05) as output `+0x08`.
 - **MSD-R07.** `0xAFE7F..0xAFEBA` clamps `Game +0x6D` into 0..2 and calls #11104 on the
   monster; a nonzero result sets the index to 0.
 - **MSD-R08.** Level is the MonStats word `+0xAA + 2d`. With `Game +0x70` nonzero, `d > 0` and
@@ -304,9 +304,9 @@ structure address is the value of D2Common `0x99E1C`; its `+0xC58`, `+0xC30`, `+
 | Claim | Source | Original date and method | Scope reused |
 |---|---|---|---|
 | Life roll owner and form `min + Rand(max - min + 1)`, bonus `mulDiv(bonusPct, hp, 100)` | [foundations companion](core-numeric-and-rng-foundations.md#reached-draw-site-ownership), row `0xAFDB0`, NRF-R04a | 2026-10-12/13 disassembly; 2026-10-14 numeric pass | MSD-R11 seed owner and operand order |
-| Clamp `>= 0x800000` to `0x7FFFFF`, `hp << 8`, stat 7 then 6 through #10887 | [foundations companion](core-numeric-and-rng-foundations.md#fixed-point-time-movement-and-object-animation), record retained there for MSD-R12 | Same | MSD-R12 arithmetic and order; stored-write integration stays NRF-Q20 |
+| Clamp `>= 0x800000` to `0x7FFFFF`, `hp << 8`, stat 7 then 6 through #10887 | [foundations companion](core-numeric-and-rng-foundations.md#fixed-point-time-movement-and-object-animation), record retained there for MSD-R12 | Same | MSD-R12 arithmetic and order; stored-write integration stays RLI-Q03 |
 | `mulDiv` branches and operand order | Foundations, NRF-R05; pipeline arithmetic audit 2026-10-13 | Disassembly | MSD-R10, MSD-R11, MSD-R13 |
-| Draw forms, seeder, `HasState`, `unitGate`, stat reads | Foundations NRF-R02, NRF-R03a, NRF-R12a, NRF-R12b, NRF-R17a/b; CSA-R02 | 2026-10-12 to 2026-10-14 | MSD-R01, MSD-R04, MSD-R05, MSD-R07, MSD-R20, MSD-R21 |
+| Draw forms, seeder, `HasState`, `unitGate`, stat reads | Foundations NRF-R02, NRF-R03a, RLI-R03, RLI-R02a, NRF-R12a/NRF-R12b; CSA-R02 | 2026-10-12 to 2026-10-14 | MSD-R01, MSD-R04, MSD-R05, MSD-R07, MSD-R20, MSD-R21 |
 | Preset build, appearance, property, equipment, other callees, post-init route | This spec's 2026-10-12 readings | Disassembly | MSD-R02, MSD-R03, MSD-R15 to MSD-R19; the 2026-10-14 listings re-read `0xAFDB0` and `0x92ED0` in full |
 
 The 2026-10-14 listing of the life slice in `0xAFDB0` matches the reused record; it adds no
@@ -343,7 +343,7 @@ None. No vector has `runtime_observed: yes`.
 | Creation seeding, preset build, appearance, class draw | verified in 1.13c code (static) |
 | Effective count with state-7 exclusion, alive test and override | verified in 1.13c code (static) |
 | Percents, `Align`, difficulty index, level, area level, base values | verified in 1.13c code (static) |
-| Life roll, bonus, clamp, write requests; armor class and experience requests | verified in 1.13c code (static); stored-write integration NRF-Q20 |
+| Life roll, bonus, clamp, write requests; armor class and experience requests | verified in 1.13c code (static); stored-write integration RLI-Q03 |
 | Skill-level bonus, property chances, equipment roll | verified in 1.13c code (static) |
 | Equipment item seeding; other callees; post-creation draws | asm-only |
 | Damage term and expansion application | verified in 1.13c code (static); inputs and skip condition MSD-Q05 |
@@ -502,11 +502,11 @@ A fresh reader must re-run because vectors, inputs and expected outputs changed.
 Fresh reader. Counts: MISMATCH 0, GUESS 3, GAP 7, DISCRIM 13, COVERAGE 42 (advisory).
 Outcomes:
 
-- GUESS 1 (invalid class): spec edit; MSD-R01 cites NRF-R17a: a rejected class creates no
+- GUESS 1 (invalid class): spec edit; MSD-R01 cites NRF-R12a: a rejected class creates no
   monster; MSD-R04's invalid-class sentence marked unreachable through generic creation.
 - GUESS 2 / GAP 3 (composite inputs): spec edit; MSD-V21 supplies the room level id, MonLvl row
   count, DifficultyLevels rows and MonProp row validity.
-- GUESS 3 (word signedness): spec edit; section 3 states that the GDF-R05a 16-bit words are read
+- GUESS 3 (word signedness): spec edit; section 3 states that the GDA-R08a 16-bit words are read
   sign-extended (the `0x54A00` listing reads each with a signed word load); MSD-V10 (l) shows
   0xFFF6 read as -10.
 - GAP 1 (player-unit row): spec edit; the section 3 row now says each entry's type is tested.
@@ -552,14 +552,14 @@ UNRESOLVED 0, GUESS 0, GAP 0, DISCRIM 6. Outcomes:
   `0xDFA90`; only the player iterator `0xDFC10` of MSD-R05 tests state 7); MSD-V18 adds a
   state-7 member case.
 - DISCRIM 5 (vacuous cap claim): spec edit; the claim is removed from MSD-V15 (d).
-- DISCRIM 6 (rejected class): no new case; NRF-V17 (d) asserts that a monster of class -1 or
+- DISCRIM 6 (rejected class): no new case; NRF-V16 (d) asserts that a monster of class -1 or
   of class MonStatsCount returns before any allocation or seeder request with `game.seed`
   unchanged. MSD-R01 now cites it.
 
 ## Delta check 2 (2026-10-14)
 
 Delta reader on the seven changes of delta check 1. Counts: MISMATCH 0, UNRESOLVED 0, GUESS 0,
-GAP 0, DISCRIM 0. All seven changes were confirmed, including NRF-V17 (d) as the vector for
+GAP 0, DISCRIM 0. All seven changes were confirmed, including NRF-V16 (d) as the vector for
 MSD-R01's rejected-class sentence. The blind-implementer pass is complete for the current
 contract.
 
@@ -582,12 +582,12 @@ MonLvl/Levels/MonProp/MonEquip column record remains evidence of engine-defined 
 bindings, not a read of archive cell values. Fixture cells remain supplied values.
 
 Input and result inventories now identify existing preset storage, record counts, creation
-eligibility and named stage results. NRF-R17a rejects an absent or ineligible monster record
+eligibility and named stage results. NRF-R12a rejects an absent or ineligible monster record
 as well as an out-of-range class before allocation/seeding. The successful creation fixture
 supplies that eligibility separately from the post-initialization mode-update condition.
-The three-row DifficultyLevels fixture follows GDF-R02; its unused bonus cells are explicitly
+The three-row DifficultyLevels fixture follows GDA-R05; its unused bonus cells are explicitly
 supplied as zero. The dependency-operation fixture remains a supplied-input boundary: its
-persisted stat values do not verify the original replacing-write integration of NRF-Q20.
+persisted stat values do not verify the original replacing-write integration of RLI-Q03.
 
 MSD-O05 previously said to expect no change after a player joins or leaves, although MSD-Q03
 leaves recomputation unestablished. It now asks whether values change, with no predicted
@@ -601,9 +601,9 @@ equipment rows or supplied zero variant count used by the executable fixtures.
 | MSD-Q01 | Existing selector writes and alive-test decisions are sufficient for supplied values. Neither the current shared contracts nor those producer slices establish the selectors' wider meaning or the unit-condition producer. No local assertion is gated. |
 | MSD-Q02 | The existing conversion sequence and truncation helper remain applicable. Numeric foundations defines integer operations, not the hosting process's floating-point control state. No record closes precision-sensitive results or inputs outside the covered domain. |
 | MSD-Q03 | Creation writes remain established; the limited historical stat-100 search is not exhaustive. No shared record establishes join/leave recomputation or its absence. MSD-O05 is an open observation. |
-| MSD-Q04 | Current NRF-R17a/NRF-R17b verifies direct successful item seeding, and NRF-R04b verifies reached elemental draw sites. Neither reads the equipment request wrappers, resolves both initialization indirect calls, or establishes upstream mode-slot eligibility. Timed-state list contracts do not establish the targets of these creation-path indirect calls. Complete creation replay remains gated. |
+| MSD-Q04 | Current NRF-R12a/NRF-R12b verifies direct successful item seeding, and NRF-R04b verifies reached elemental draw sites. Neither reads the equipment request wrappers, resolves both initialization indirect calls, or establishes upstream mode-slot eligibility. Timed-state list contracts do not establish the targets of these creation-path indirect calls. Complete creation replay remains gated. |
 | MSD-Q05 | Existing term arithmetic with supplied values remains available. Current damage-pipeline and reaction contracts do not supply this monster damage setup's base values, skip producer or stored effects of its distinct write operation. |
-| MSD-Q06 | GDF-R05a establishes the MonStats-to-MonStats2 link; the existing loader record binds TotalPieces. Neither establishes preparation of the per-slot component counts or variant-limit byte. Supplied values remain available. |
+| MSD-Q06 | GDA-R08a establishes the MonStats-to-MonStats2 link; the existing loader record binds TotalPieces. Neither establishes preparation of the per-slot component counts or variant-limit byte. Supplied values remain available. |
 | MSD-Q07 | No gameplay observation record exists; source and table identity checks do not replace the six pending procedures. |
 | MSD-Q08 | The existing pick slice establishes the bypass's effect, not which callers choose it. A caller survey remains outside this supplied-condition contract. |
 | MSD-Q09 | No applicable gold-amount or magic-find producer record was identified. Absence from the scaling slices is not a whole-program result. |
@@ -627,7 +627,7 @@ executable-vector families. Counts: MISMATCH 0, GUESS 0, GAP 0, DISCRIM 0, GATED
 COVERAGE 12 groups, HARDEST 3. The reader did not approve the spec.
 
 MISMATCH, GUESS, GAP and DISCRIM have no entries to resolve. GATED 12: MSD-Q01 through
-MSD-Q11 plus NRF-Q20 are already documented with their boundaries; no change. In particular,
+MSD-Q11 plus RLI-Q03 are already documented with their boundaries; no change. In particular,
 MSD-R17 to MSD-R19 remain asm-only and MSD-R22b remains unresolved. A supplied-input
 arithmetic or request assertion is not a complete creation replay or stored-write assertion.
 
@@ -685,8 +685,8 @@ Hardest dispositions, all no change:
    explicit. MSD-Q02 retains intermediate precision limits; these cases do not settle them.
 
 Primary review also corrected ownership and evidence wording: unitGate belongs to CSA-R02,
-and local stat-write requests do not establish stored integration (NRF-Q20), update
-bookkeeping (NRF-Q17) or client delivery. The previous client-update statements exceeded
+and local stat-write requests do not establish stored integration (RLI-Q03), update
+bookkeeping (RLI-Q02) or client delivery. The previous client-update statements exceeded
 the verified boundary. No new message or update behavior is asserted. These boundary wording
 corrections and added fixtures require a fresh full second reader.
 

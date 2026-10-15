@@ -35,7 +35,7 @@ event 1 for queued melee, or eligible attacker event 6 then defender event 2 for
 apply. IEP-R07 invokes the callback once per matching registration reached. This is before the
 physical clamp, leech, ordinary life subtraction and status application (DPO-R14 to DPO-R19).
 A supplied non-queued caller can raise event 6 without being a missile; the event still selects
-the doubled divisor. Original missile owner/eligibility belongs to MHD-R13/MHD-R26.
+the doubled divisor. Original missile owner/eligibility belongs to MHD-R01/MHD-R12.
 
 The callback sends no client message. Requested stat writes and update marking do not establish
 message selection or delivery (CBL-Q08). The [dispatch evidence](../research/spec-evidence/combat-crushing-blow.md#dispatch-evidence)
@@ -44,20 +44,20 @@ records both original roots and their remaining producer limits.
 ## 3. Inputs and data
 
 Names describe logical operations, not required APIs or layouts. `Stat` consumes the existing
-selected-array getter NRF-R12b/NRF-R12c: it adds no contributions during a read. The chance read
+selected-array getter RLI-R02a/RLI-R02b: it adds no contributions during a read. The chance read
 uses the registered stat identity; other reads explicitly select the ids below. `ReplaceLife`
-is a replacing unit-stat request, not an established stored effect (CBL-Q10/NRF-Q20).
+is a replacing unit-stat request, not an established stored effect (CBL-Q10/RLI-Q03).
 `low32` and signed division use the foundations' notation; divisions truncate toward zero.
 
 | Input | Semantic source | Width and format | Meaning |
 |---|---|---|---|
 | Attacker and defender | Callback owner and other | optional unit references | absent either returns 0 |
-| Chance identity/value | Registration `(136,0)`, stat `item_crushingblow` through NRF-R12b/NRF-R12c | signed i32 percent | nonpositive skips draw |
+| Chance identity/value | Registration `(136,0)`, stat `item_crushingblow` through RLI-R02a/RLI-R02b | signed i32 percent | nonpositive skips draw |
 | Attacker seed | Attacker-owned NRF-R01 state | two u32 values `{lo,hi}` | advanced for chance |
 | Event id | Supplied item event | i32: 5 `domeleedamage`, 6 `domissiledamage` | only id 6 doubles divisor |
 | Defender type/class | Logical type and class | u32 type; i32 class | type 0 player, 1 monster |
-| Hireling membership | GDF-R17 class identities; engine membership test | boolean | monster classes 271 `roguehire`, 338 `act2hire`, 359 `act3hire`, 560 `act5hire1`, 561 `act5hire2`; false for non-monster |
-| Boss record/value | Loaded MonStats class record/count, GDF-R18/GDF-R19a | optional record, boolean `boss` | false for missing/out-of-range class record |
+| Hireling membership | GDF-R08 class identities; engine membership test | boolean | monster classes 271 `roguehire`, 338 `act2hire`, 359 `act3hire`, 560 `act5hire1`, 561 `act5hire2`; false for non-monster |
+| Boss record/value | Loaded MonStats class record/count, GDA-R16/GDA-R04a | optional record, boolean `boss` | false for missing/out-of-range class record |
 | `monsterDivisorFlag` | Supplied monster-data condition | boolean | false for non-monster/absent monster data; assignment remains CBL-Q01 |
 | Player count | Defender stat 100 `monster_playercount`, layer 0 | signed i32 | caller floors to 1, no upper cap |
 | Bonus table | CBL-R05 engine constants | nine i32 entries indexed 0..8 | `{0,0,50,100,150,200,250,300,350}` |
@@ -66,11 +66,11 @@ is a replacing unit-stat request, not an established stored effect (CBL-Q10/NRF-
 | Damage result | Optional shared record | `hit`, `suppressEvents`, `death` booleans; other fields retained | dispatch tests and death write |
 | Apply mode/conditions | Supplied DPO apply stage | `queuedMelee`/`nonQueued`; `itemEventsEnabled`, `suppressAttackerMissileEvent` booleans | CBL-R02a gates |
 | Missile conditions | Supplied missile/data | `enablesItemEvents`, `suppressesAttackerEvent` booleans | false for absent data/non-missile; OR transfer preserves incoming flags |
-| Registration/data | IEP-R01/R02/R03/R05/R07 and GDF-R09 | ordered entries, event/selector fields | item kind, identity, handler and callback values |
-| Overlay id/count | Fixed request id 147 (`0x93`); supplied `overlayCount` | signed i32 | LSE-R14 guard; original count identity remains CBL-Q04 |
-| Overlay list inputs | LSE-R14/STL-R06a | pool/type/id, optional base list, primary chain and conditions | selection/creation requests; stored effects remain CBL-Q09 |
-| Getter inputs | NRF section 3.8, NRF-R12b/NRF-R12c | definitions/minimum metadata, existing ordered arrays | missing definitions/entries/list follow getter guards |
-| Write operations | Replacing unit write; LSE-R14 attach/list-write/update operations | ordered requests | actual effects separately gated |
+| Registration/data | IEP-R01/R02/R03/R05/R07 and GDA-R12 | ordered entries, event/selector fields | item kind, identity, handler and callback values |
+| Overlay id/count | Fixed request id 147 (`0x93`); supplied `overlayCount` | signed i32 | LSE-R13 guard; original count identity remains CBL-Q04 |
+| Overlay list inputs | LSE-R13/STL-R06a | pool/type/id, optional base list, primary chain and conditions | selection/creation requests; stored effects remain CBL-Q09 |
+| Getter inputs | NRF section 3.8, RLI-R02a/RLI-R02b | definitions/minimum metadata, existing ordered arrays | missing definitions/entries/list follow getter guards |
+| Write operations | Replacing unit write; LSE-R13 attach/list-write/update operations | ordered requests | actual effects separately gated |
 
 ### 3.1 Origin and binding of mappings and constants
 
@@ -93,10 +93,10 @@ claimed here. Code consumers remain supported by the companion's source records.
 | Player count: `monster_playercount` = 100 | Table data for name/id; engine code for selection | `itemstatcost.txt`, row `Stat = monster_playercount`, column `ID = 100`; R04a explicitly reads original id 100. Its value at creation belongs to MSD-R09. |
 | Overlay stat: `unit_dooverlay` = 178 | Table data for name/id; engine code for selection | `itemstatcost.txt`, row `Stat = unit_dooverlay`, column `ID = 178`; the overlay helper requests original id 178 (R08; stored effects gated). |
 | Event names and ids | Table data for names/indices; engine code for dispatch | `events.txt`, column `event`, zero-based data rows excluding the header: 1 `damagedinmelee`, 2 `damagedbymissile`, 5 `domeleedamage`, 6 `domissiledamage`. R02a's dispatch selects these ids; R04a doubles the divisor for id 6. |
-| Event registration choices | Table data | `itemstatcost.txt`, row `Stat = item_crushingblow`: `itemevent1 = domeleedamage`, `itemevent2 = domissiledamage`; resolved through the event-name lookup (GDF-R09, IEP-R03). |
+| Event registration choices | Table data | `itemstatcost.txt`, row `Stat = item_crushingblow`: `itemevent1 = domeleedamage`, `itemevent2 = domissiledamage`; resolved through the event-name lookup (GDA-R12, IEP-R03). |
 | Crushing Blow handler selection | Table data selecting an engine-defined handler | Same row: `itemeventfunc1 = 16`, `itemeventfunc2 = 16`. Data selects 16; the engine handler mapping supplies its behavior (IEP-R02, IEP-R12). |
-| Class `boss` value | Table data | `monstats.txt`, defender class row identified by `Id`/`hcIdx`, column `boss` (GDF-R17, GDF-R18). Resolved from that record; R04a defines its divisor effect. |
-| Hireling classes | Table data for class identities; engine code for membership test | `monstats.txt`, rows `Id = roguehire`, `act2hire`, `act3hire`, `act5hire1`, `act5hire2`, column `hcIdx` (GDF-R17). The original helper recognizes the five listed class ids; a new class is not automatically a hireling. |
+| Class `boss` value | Table data | `monstats.txt`, defender class row identified by `Id`/`hcIdx`, column `boss` (GDF-R08, GDA-R16). Resolved from that record; R04a defines its divisor effect. |
+| Hireling classes | Table data for class identities; engine code for membership test | `monstats.txt`, rows `Id = roguehire`, `act2hire`, `act3hire`, `act5hire1`, `act5hire2`, column `hcIdx` (GDF-R08). The original helper recognizes the five listed class ids; a new class is not automatically a hireling. |
 | Divisors 4/8/10, missile factor 2, resistance ceiling 100 | Engine code | Fixed by R04a/R06, not loaded from game-table columns. |
 | Player-count bonus table and formula | Engine code | The constant table and `(n - 2) * 50` branch are fixed by R05; player count itself is an input. |
 | Overlay id `0x93` | Engine code | Fixed request argument in R08. Its overlay-table row identity remains unestablished; no named overlay row is claimed. |
@@ -218,14 +218,14 @@ if new <= 0 and result exists: result.death = true
 
 The request occurs even for an unchanged value; the death flag is never cleared here. Actual
 array/contribution changes, insertion/no-op behavior, propagation and player notification
-remain CBL-Q10/NRF-Q20. A supplied fixture write can persist the value independently. Positive
+remain CBL-Q10/RLI-Q03. A supplied fixture write can persist the value independently. Positive
 life with divisor at least 4 and nonoverflowing arithmetic leaves positive requested life;
 extreme counts do not establish that divisor condition (CBL-V15).
 
 **CBL-R08 Overlay request and successful return** [verified in 1.13c code (static)]. After
-the life request/death write, if signed `q > 0`, call LSE-R14's overlay operation with
+the life request/death write, if signed `q > 0`, call LSE-R13's overlay operation with
 `(defender, id=147)`; otherwise skip it. Then return 1 without testing the
-overlay operation's return. No additional draw. LSE-R14 supplies the count guard, first
+overlay operation's return. No additional draw. LSE-R13 supplies the count guard, first
 matching overlay-list selection or creation, pending-condition write, stat-178 request and
 update request. CBL-Q09 gates actual attach/list-write/update effects; CBL-Q04 leaves the
 original count/row identity open. Supplied inputs permit local requests and return.
@@ -244,7 +244,7 @@ original count/row identity open. Supplied inputs permit local requests and retu
 | CBL-R04b | Monster-condition producer | unresolved | CBL-Q01: original assignment/classification | none |
 | CBL-R05 | Bonus table/wrapped multiplication | verified in 1.13c code (static) | none | CBL-V04, CBL-V05, CBL-V08, CBL-V15 |
 | CBL-R06 | Signed fraction and resistance | verified in 1.13c code (static) | none at supplied getter boundary | CBL-V06, CBL-V10, CBL-V11, CBL-V15 |
-| CBL-R07 | Requested life/floor/death flag | verified in 1.13c code (static) | CBL-Q10/NRF-Q20: stored replacing-write effects | CBL-V02, CBL-V09, CBL-V15 |
+| CBL-R07 | Requested life/floor/death flag | verified in 1.13c code (static) | CBL-Q10/RLI-Q03: stored replacing-write effects | CBL-V02, CBL-V09, CBL-V15 |
 | CBL-R08 | Overlay call and return 1 | verified in 1.13c code (static) | CBL-Q09: stored overlay/update effects; supplied count eligible | CBL-V01 to CBL-V11, CBL-V15; LSE-V11 |
 
 ## 5. Outputs and side effects
@@ -256,11 +256,11 @@ original count/row identity open. Supplied inputs permit local requests and retu
 | Attacker seed | CBL-R03 | one step after both unit guards when chance positive |
 | Replacing-write request | CBL-R07 | defender stat 6/layer 0, value `new`; stored effects gated |
 | Result death flag | CBL-R07 | set when `new <= 0` and result exists; other flags retained |
-| Overlay operation and requests | CBL-R08 | defender/id 147; LSE-R14 list/pending/update requests |
+| Overlay operation and requests | CBL-R08 | defender/id 147; LSE-R13 list/pending/update requests |
 | Return | CBL-R03/CBL-R08 | early 0, completed success 1; arithmetic fault has no normal return |
 
 No direct client message, timed-state/timer scheduling, unit creation/destruction or save write
-occurs in this callback. Overlay list creation belongs to LSE-R14.
+occurs in this callback. Overlay list creation belongs to LSE-R13.
 
 ## 6. Branches and edge cases
 
@@ -280,7 +280,7 @@ occurs in this callback. Overlay list creation belongs to LSE-R14.
   when result exists and skips overlay. Tiny life can give amount 0: unchanged request,
   successful return, draw retained, no overlay.
 - Missing result skips only death write. Null attacker/defender returns before reads/draws.
-  Missing stat storage/definitions/entries follows NRF-R12b; actual write effects stay gated.
+  Missing stat storage/definitions/entries follows RLI-R02a; actual write effects stay gated.
 - Multiple callbacks use registration order, not a fixed Crushing Blow priority; callback
   mutation/deferred-removal behavior follows IEP-R07.
 
@@ -291,11 +291,11 @@ occurs in this callback. Overlay list creation belongs to LSE-R14.
 | **CBL-Q01** | outside-boundary / open | Monster kinds/creation paths assigning the separate divisor condition. Trace classification through setters and record condition with divisor; no local gate on supplied values. CBL-R04b remains unresolved. |
 | **CBL-Q03** | observation / pending | Attributed gameplay sequence with Crushing Blow, Knockback and Open Wounds registered in known order; static traversal is IEP-R07. |
 | **CBL-Q04** | outside-boundary / open | Overlay-count loader/row identity and original missile-condition/record producers, owned by LSE-Q03/MHD. Supplied values remain usable. |
-| **CBL-Q05** | outside-boundary / open | Complete MHD-R13/MHD-R26 owner lookup/contact eligibility. The hand-off uses its resolved owner; supplied attacker remains eligible locally. |
+| **CBL-Q05** | outside-boundary / open | Complete MHD-R01/MHD-R12 owner lookup/contact eligibility. The hand-off uses its resolved owner; supplied attacker remains eligible locally. |
 | **CBL-Q07** | outside-boundary / open | Other non-queued callers' record preparation/eligibility. Their owners establish reachability; supplied event-6 behavior is fixed here. |
 | **CBL-Q08** | outside-boundary / open | Networking owner traces stat/overlay sender, player notification and delivery; this callback sends no message directly. |
-| **CBL-Q09** | integration / open | Stored overlay attach/list writes (STL-R06b/STL-R06c), update effects (NRF-Q17) and propagation. LSE-R14 establishes local search/creation and ordered requests. |
-| **CBL-Q10** | integration / open | Actual replacing unit-stat write/propagation under NRF-Q20; requested value/order and death flag are independently verified. |
+| **CBL-Q09** | integration / open | Stored overlay attach/list writes (STL-R06b/STL-R06c), update effects (RLI-Q02) and propagation. LSE-R13 establishes local search/creation and ordered requests. |
+| **CBL-Q10** | integration / open | Actual replacing unit-stat write/propagation under RLI-Q03; requested value/order and death flag are independently verified. |
 | **CBL-Q11** | integration / open | IEP-Q01/IEP-Q03 automatic notification production/order; supplied IEP-R03 operation remains verified. |
 | **CBL-Q12** | observation / pending | Matching gameplay observations of verified assertions, including CBL-O01 to CBL-O03; hand calculations/table reads do not confirm gameplay. |
 
@@ -309,7 +309,7 @@ distinguishes compatible evidence reuse from new readings.
 
 Every case starts fresh from its family's inputs/defaults; cases never inherit another case's
 outputs. Unless stated, execute the supplied-input callback CBL-R03 to CBL-R08 with actual
-NRF-R01/NRF-R05/NRF-R12b/NRF-R12c and supplied write/overlay boundaries. Life is raw 8.8.
+NRF-R01/NRF-R05/RLI-R02a/RLI-R02b and supplied write/overlay boundaries. Life is raw 8.8.
 
 - Attacker present, type player; defender present, type monster, non-hireling class 0,
   class/monster data present, boss false, separate divisor condition false, stat 100=1,
@@ -323,7 +323,7 @@ NRF-R01/NRF-R05/NRF-R12b/NRF-R12c and supplied write/overlay boundaries. Life is
   settle CBL-Q10. Thus each value called stored/read-back below is a fixture assertion only.
 - A supplied overlay-boundary operation records `(defender,147)` after the life request/death
   write and returns 37; the callback ignores that value. It does not execute the helper's
-  stored effects. LSE-V11 independently discriminates LSE-R14 search/allocation/ordered
+  stored effects. LSE-V11 independently discriminates LSE-R13 search/allocation/ordered
   requests with supplied attach/list-write/update operations. These callback fixtures test
   the overlay call's arguments, condition and order, not CBL-Q09 integration.
 - Default seed `{4,666}` draws `(attacker,100,10)`, ending `{0xAB1A45AE,1}`; completed success
@@ -491,23 +491,23 @@ identify setup, measurements, original locations and limits.
 Passing verified subsets is partial reproduction. Full original-route reproduction needs its
 applicable integration/producers and observations; no user approval is inferred.
 
-**Depends on:** [numeric foundations](core-numeric-and-rng-foundations.md) NRF-R01/NRF-R05 for
-RNG/arithmetic, NRF-R08a for units, NRF-R12b/NRF-R12c for existing reads; [game-data fields](core-game-data-fields.md)
-GDF-R09/GDF-R11/GDF-R17/GDF-R18/GDF-R19a for named values/record selection; [item events](combat-item-event-triggers-and-procs.md)
+**Depends on:** [numeric foundations](core-numeric-and-rng-foundations.md) NRF-R01/NRF-R05 for Owners of the cited GDA, RLI ids: [core-game-data-table-records](core-game-data-table-records.md) (GDA); [core-record-layouts-and-ids](core-record-layouts-and-ids.md) (RLI).
+RNG/arithmetic, NRF-R08a for units, RLI-R02a/RLI-R02b for existing reads; [game-data fields](core-game-data-fields.md)
+GDA-R12/GDF-R02/GDF-R08/GDA-R16/GDA-R04a for named values/record selection; [item events](combat-item-event-triggers-and-procs.md)
 IEP-R01/R02/R03/R05/R07 for registration/dispatch; [damage pipeline](combat-damage-pipeline-order.md)
-DPO-R13a/DPO-R23 for placement; [leech/status](combat-leech-and-status-effects.md) LSE-R14 for
-overlay requests, consuming STL-R06a/STL-R06b/STL-R06c and NRF-Q17 with their gates. Actual unit
-replacing writes remain NRF-Q20.
+DPO-R13a/DPO-R23 for placement; [leech/drain](combat-leech-and-drain.md) LSE-R13 for
+overlay requests, consuming STL-R06a/STL-R06b/STL-R06c and RLI-Q02 with their gates. Actual unit
+replacing writes remain RLI-Q03.
 
 **Depended on by:** [damage pipeline](combat-damage-pipeline-order.md) for Crushing Blow effects;
 [item events](combat-item-event-triggers-and-procs.md) IEP-R12b for selector 16's owned behavior;
-[numeric foundations](core-numeric-and-rng-foundations.md) NRF-R04c/NRF-Q10 for the local draw.
+[numeric foundations](core-numeric-and-rng-foundations.md) NRF-R04c/NRF-Q04 for the local draw.
 Reverse consumers/supporting citations are not automatic planning prerequisites.
 
 ## 10. Related specs
 
 - [Monster scaling](monster-scaling-by-players-and-difficulty.md): MSD-R09 produces player count, not required for a supplied count.
-- [Missile hit/damage](missile-hit-and-damage-calculation.md): MHD-R13/MHD-R26 owns original contact/owner setup.
+- [Missile hit/damage](missile-hit-and-damage-calculation.md): MHD-R01/MHD-R12 owns original contact/owner setup.
 - [Missile movement](missile-movement-and-collision.md): MMC-R01/MMC-R03/MMC-R14 supplies the contact root.
 - [Cast dispatch](skill-cast-start-and-do-dispatch.md): SCD-R06/SCD-R09b supplies the melee root.
 - [Open Wounds](combat-open-wounds.md) and [Knockback](combat-knockback.md): separate item-event effects.

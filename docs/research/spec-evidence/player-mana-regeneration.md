@@ -26,14 +26,14 @@ All entries target LoD Expansion 1.13c. Module locations are RVAs; export ordina
 | D2Game 0x79E10 | none | Immediate dispatch through player table | 2026-10-12 lead for natural monster entry; producer remains PMR-Q05 |
 | D2Game 0xDE0C0; 0x336D0 | none | Type 3 scheduling at frame+1 on damage and frame+25 via helper | 2026-10-12 call-site readings; 2026-10-14 reconstruction checked against original bytes confirms 0x336D0 request; its root caller remains unresolved |
 | D2Game 0x79210; 0x78DD0 | none | Player creation/join leads | 2026-10-14 limited direct scheduler/helper label search found no matching call in these functions; not complete dispatch-root exclusion |
-| D2Common 0x38B70; 0x38A80 | 10973 / internal | Generic existing stat read | Reused NRF-R12b/c contract, including definition minimum; no new claim about producing resolved arrays |
+| D2Common 0x38B70; 0x38A80 | 10973 / internal | Generic existing stat read | Reused RLI-R02a/RLI-R02b contract, including definition minimum; no new claim about producing resolved arrays |
 | D2Common 0x390A0 | 10186 | Guarded maximum mana getter | 2026-10-12 disassembly; complete 80-byte function reread 2026-10-14, null/list/count/selected-definition guards and stat 9 call into 0x38A80 |
-| D2Common 0x33CD0; 0x37DB0 | 10494 / internal | State presence | Current NRF-R12a handles absent storage/type/range; earlier unread-guard question no longer applies to this consumed boundary |
-| D2Common 0x38520; 0x37F80 | 10871 / internal | State-list lookup | 2026-10-12 lookup reading; current NRF-R12a supplies complete selection contract |
+| D2Common 0x33CD0; 0x37DB0 | 10494 / internal | State presence | Current RLI-R03 handles absent storage/type/range; earlier unread-guard question no longer applies to this consumed boundary |
+| D2Common 0x38520; 0x37F80 | 10871 / internal | State-list lookup | 2026-10-12 lookup reading; current RLI-R03 supplies complete selection contract |
 | D2Common 0x3A5F0; 0x3A3B0 | 11111 / internal | Detach request | Historical unlink/partial propagation reading; complete effects remain STL-R05/PMR-Q03 |
 | D2Common 0x3AD40; 0x3A9F0 | 11108 / internal | Free request | Historical reconstructions checked against original bytes; complete integrated lifecycle remains gated |
 | D2Common 0x3A710; 0x3A330 | 10551 / internal | Add stat request and underlying mutation | 2026-10-14 reconstruction checked against original bytes of wrapper confirms nonzero guard and unit base-list forwarding; underlying propagation 0x39F70/0x38550 remains unread here |
-| D2Common 0x60A80 | none | ManaRegen preparation | 2026-10-12 descriptor identifies unsigned byte field; current GDF-R03a owns its logical schema |
+| D2Common 0x60A80 | none | ManaRegen preparation | 2026-10-12 descriptor identifies unsigned byte field; current GDA-R06a owns its logical schema |
 
 D2Game's mana caller resolves the shared operations through thunks 0xA42A(10973), 0xA4EA(10186), 0xA68E(10494), 0xA5D4(10871), 0xABB6(11111), 0xABAA(11108), 0xA4D2(10551). D2Common data export 11170 supplies table context; original D2Game data import slot RVA0xF829C. The max getter passes stat identity 9/layer 0 to the same underlying reader as generic unit stats.
 
@@ -41,7 +41,7 @@ Original ABI details supporting the semantic mapping: mana unit is carried in ED
 
 ## Table evidence
 
-Historical 2026-10-12 record: the owned game loader read CharStats, ItemStatCost and States; the draft named Sorceress/Amazon ManaRegen 120 and stat/state identities. Full hashes/ranges and supplying archives were not recorded. Reuse GDF-R03a/b, GDF-R11/GDF-R12 and their named-cell records for schema/identity; GDF's 2026-10-14 TD-CLASS record also corroborates Sorceress ManaRegen 120 against selected compiled data. No new compiled-table correspondence is claimed by this mana pass.
+Historical 2026-10-12 record: the owned game loader read CharStats, ItemStatCost and States; the draft named Sorceress/Amazon ManaRegen 120 and stat/state identities. Full hashes/ranges and supplying archives were not recorded. Reuse GDA-R06a/GDF-R01, GDF-R02/GDF-R03 and their named-cell records for schema/identity; GDF's 2026-10-14 TD-CLASS record also corroborates Sorceress ManaRegen 120 against selected compiled data. No new compiled-table correspondence is claimed by this mana pass.
 
 Effective-file reread 2026-10-14: reported launch key lod-113c, same historical vanilla source profile; current member inventory excludes the separate PD2 members. The own-loader read of data/global/excel/charstats.txt requested off 0/whole file and returned 3360/3360 bytes, range 0..3360. The complete returned body was decoded and parsed as tab-separated data; column selection used header names class/ManaRegen (positions 0/12), not assumed positions. Target rows were complete.
 
@@ -50,7 +50,7 @@ Effective-file reread 2026-10-14: reported launch key lod-113c, same historical 
 | Amazon, zero-based file data row 0 / prepared class 0 | ManaRegen | 120 | Unsigned byte 120; PMR-V03/V04 input |
 | Sorceress, file data row 1 / prepared class 1 | ManaRegen | 120 | Unsigned byte 120; PMR-V01/V02 input |
 
-File row 5 is the Expansion separator; GDF-R03b supplies the filtered class convention. Current patch inventory reports file override disabled, but no complete override/archive inventory or supplying-MPQ attribution was captured. Version-console refresh failed with connection refused; historical vanilla identity and current reported launch key are reused with that limitation. Effective-file hash was not captured. This current read corroborates effective text cells; it is not a fresh claim of pristine installation identity, compiled runtime equivalence or gameplay execution.
+File row 5 is the Expansion separator; GDF-R01 supplies the filtered class convention. Current patch inventory reports file override disabled, but no complete override/archive inventory or supplying-MPQ attribution was captured. Version-console refresh failed with connection refused; historical vanilla identity and current reported launch key are reused with that limitation. Effective-file hash was not captured. This current read corroborates effective text cells; it is not a fresh claim of pristine installation identity, compiled runtime equivalence or gameplay execution.
 
 ## Historical runtime records
 
@@ -71,7 +71,7 @@ No mismatches recorded. Both observation hooks were disarmed after that pass. Hi
 - PMR-Q04: reread maximum getter and matched add wrapper; existing NRF stat reads close getter uncertainty, not write effects. Underlying add/propagation and sync are separate unanswered paths.
 - PMR-Q05: historical immediate-dispatch lead remains; accepted type 1 case is not proof of a natural producer.
 - PMR-Q06: preserved actual observations; no gameplay campaign requested or performed. Cadence/arguments/living arithmetic remain pending.
-- PMR-Q08: generic state-test storage guard resolved through NRF-R12a. Null-target scheduler consequences remain outside the verified scheduling request.
+- PMR-Q08: generic state-test storage guard resolved through RLI-R03. Null-target scheduler consequences remain outside the verified scheduling request.
 - PMR-Q09: current lifecycle cancellation contract does not establish every unit-teardown producer; chain lifetime remains unverified here.
 
 No rule is claimed not found after a partial search. No source/table age alone caused re-verification.
@@ -86,7 +86,7 @@ No rule is claimed not found after a partial search. No source/table age alone c
 
 2026-10-14: preserved existing boundary, PMR identifiers and ten original numerical scenarios. Binary locations/layouts moved to public source mapping or private audit. Original symbolic event arguments are instantiated as 11/22 in the supplied request vector; this changes no copying rule. New V11 isolates historically observed exit; V12..V15 distinguish request gates/order, getter guard, operand/wrap arithmetic and cleanup timing/captured values. Complete mutation remains gated; supplied fixture balances are not integrated proof.
 
-Corrections: original Stat notation incorrectly excluded NRF-R12c; the max getter uses the same underlying reader, so consume its minimum semantics. GDF now already lists ManaRegen. Removed the unsupported assertion that arbitrary i32 inputs in 8.8 units cannot overflow, and the implementation default of assuming no additional stat effect. Original broad runtime labels are narrowed to the actually observed exit. The other-build question is outside 1.13c scope; no parity inferred.
+Corrections: original Stat notation incorrectly excluded RLI-R02b; the max getter uses the same underlying reader, so consume its minimum semantics. GDF now already lists ManaRegen. Removed the unsupported assertion that arbitrary i32 inputs in 8.8 units cannot overflow, and the implementation default of assuming no additional stat effect. Original broad runtime labels are narrowed to the actually observed exit. The other-build question is outside 1.13c scope; no parity inferred.
 
 Historical blind review 2026-10-12 reported 14 GUESS/5 GAP; old draft said they were folded but no rerun was performed. Its detailed original notes remain archived; that review does not certify this changed contract. No implementation tests, gameplay action or new gameplay observation occurred.
 
@@ -138,7 +138,7 @@ The grouped gates restate existing questions and do not replace their individual
 | Finding | Outcome |
 |---|---|
 | DISCRIM V01 first tick permits retained fractional remainder | Made the existing cumulative-refill assertion executable as V01(a): explicit initial current 0, repeated direct calls with the synthetic balance fed back, exact request sequence and balances at calls 3000/3414. The earlier output already named 3414 calls, but the new fixture makes the repeated execution and assertions unambiguous |
-| COVERAGE R03 conditional minimum replacement | No local duplicate: NRF-R12c and NRF-V26 own the actual conditional replacement branches; this consumer explicitly supplies getter results and does not reimplement that dependency |
+| COVERAGE R03 conditional minimum replacement | No local duplicate: RLI-R02b and RLI-V03 own the actual conditional replacement branches; this consumer explicitly supplies getter results and does not reimplement that dependency |
 | COVERAGE R07a clamp order under arbitrary i32 values | Added V14(e), supplied maximum -100/current 100 and suppressed zero recovery. Upper-then-lower requests -100; reversing them requests -200 |
 | HARDEST V14 wrapped arithmetic/clamps | No rule change: explicit wrapping and signed tests remain; the new order case discriminates an additional already-stated behavior |
 | HARDEST V12 eligibility/order | No change: V12's exact logs distinguish each supplied handler gate, including monster mode 0 |

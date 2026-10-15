@@ -27,13 +27,13 @@ life write (damage build, mitigation and the life clamp) is
 [combat-damage-pipeline-order](combat-damage-pipeline-order.md) and
 [combat-damage-mitigation](combat-damage-mitigation.md); leech, the mana and stamina drain arithmetic
 and the poison term of the immediate damage total stay in
-[combat-leech-and-status-effects](combat-leech-and-status-effects.md) and the pipeline; random
+[combat-leech-and-drain](combat-leech-and-drain.md) and the pipeline; random
 stepping, draw forms, stat reads, state lookup/test/set routing and the seed-ownership table stay in
 [core-numeric-and-rng-foundations](core-numeric-and-rng-foundations.md), whose NRF-R04a rows for the
 stun-cancel, cold-shatter and freeze-fallback sites refer to the rules here; the timer queue, list
 construction, attachment, list-stat propagation, expiry, removal, the generic expiry callback and
 stay-death stay in [state-timed-state-lifecycle](state-timed-state-lifecycle.md); what the cold and
-freeze states do once applied, including the freeze expiry callback (MMF-R13c), is
+freeze states do once applied, including the freeze expiry callback (MMF-R09b), is
 [state-movement-modifiers-and-freeze](state-movement-modifiers-and-freeze.md); lengths reaching the
 record (resistance, cannot-be-frozen) are produced upstream.
 
@@ -66,39 +66,39 @@ expiry frames are absolute game frames.
 | Input | Semantic source | Width and format | Meaning |
 |---|---|---|---|
 | attacker `A`, defender `D` | units passed by the hit-application operation | association, may be null | Roles are named; no positional order is required |
-| unit identity | `unit.type`, `unit.classId`, `unit.id`, `unit.mode` | i32 type/class/mode, u32 id | Types 0 player, 1 monster (NRF section 3.4); a null defender is type 6 in the freeze routing test; modes by GDF-R14/GDF-R15 |
+| unit identity | `unit.type`, `unit.classId`, `unit.id`, `unit.mode` | i32 type/class/mode, u32 id | Types 0 player, 1 monster (NRF section 3.4); a null defender is type 6 in the freeze routing test; modes by GDF-R05/GDF-R06 |
 | seeds | `A.seed`, `D.seed` | pair `{lo,hi}` of u32 | One step is NRF-R01; `r = lo mod 100` is unsigned |
 | attacker game | `A.game.frame`, `A.game.difficulty`, `A.game.pool` | i32 frame, u8 difficulty 0..2, allocation context | Every applier takes frame, difficulty and pool from the attacker's game |
-| damage record | NRF section 3.2 fields `manaBurn`, `staminaBurn`, `stunLength`, `coldLength`, `freezeLength`, `poison`, `poisonLength`, `burnMagnitude`, `burnLength`, `resultFlags.lethal` | i32 (magnitudes 8.8 per frame, lengths frames); `lethal` is the 0x0002 bit of the u16 `resultFlags` | `manaBurn` holds the value left by the leech stage (LSE-R17); CSA-R01 modifies only the 0x0002 bit |
+| damage record | NRF section 3.2 fields `manaBurn`, `staminaBurn`, `stunLength`, `coldLength`, `freezeLength`, `poison`, `poisonLength`, `burnMagnitude`, `burnLength`, `resultFlags.lethal` | i32 (magnitudes 8.8 per frame, lengths frames); `lethal` is the 0x0002 bit of the u16 `resultFlags` | `manaBurn` holds the value left by the leech stage (LSE-R15); CSA-R01 modifies only the 0x0002 bit |
 | monster data | `D.monsterData` present or absent; its 16-bit condition word | association; u16 | `monsterFlag8`: monster data present and condition word AND 8 nonzero; wider meaning CSA-Q03 |
 | alive exclusion | `unit.aliveExclusionCondition` | boolean | When true the unit is not alive for CSA-R13 (the same condition STL-R11 tests); wider meaning CSA-Q03 |
 | pending timer nodes | `D.eventChain`: ordered nodes, each with `kind` (u8) and successor | ordered list | Walked by CSA-R09 and CSA-R11 |
-| MonStats | `MonStats.Velocity`, `MonStats.boss`, `MonStats.ColdEffect` / `ColdEffect(N)` / `ColdEffect(H)`, `MonStats.MonStatsEx`, record count | i16, boolean, i8 per difficulty, i16 index, i32 | Per-class loaded data (GDF-R05, GDF-R18) |
-| MonStats2 | `MonStats2.deadCol`, record count | boolean, i32 | Shatter suppression (GDF-R06) |
-| difficulty divisors | `DifficultyLevels.MonsterColdDivisor`, `MonsterFreezeDivisor` | i32 | Row Normal, Nightmare or Hell for the attacker game's difficulty 0, 1 or 2 (GDF-R02); this contract covers difficulty 0..2 only (CSA-Q06) |
-| state set | `HasState`, `FindStateList` results | NRF-R12a | States 1 `freeze`, 2 `poison`, 11 `cold`, 21 `stunned`, 54 `uninterruptable`, 107 `shatter`, 115 `burning` (GDF-R12) |
-| list stat | own stat 74 `hpregen` of an existing poison/burn list | i32 | Read through the list read of NRF-R12b/NRF-R12c |
-| defender life | `Stat(D, 6, 0)` | i32 8.8 | Unit read of NRF-R12b/NRF-R12c, after all appliers |
+| MonStats | `MonStats.Velocity`, `MonStats.boss`, `MonStats.ColdEffect` / `ColdEffect(N)` / `ColdEffect(H)`, `MonStats.MonStatsEx`, record count | i16, boolean, i8 per difficulty, i16 index, i32 | Per-class loaded data (GDA-R08, GDA-R16) |
+| MonStats2 | `MonStats2.deadCol`, record count | boolean, i32 | Shatter suppression (GDA-R09) |
+| difficulty divisors | `DifficultyLevels.MonsterColdDivisor`, `MonsterFreezeDivisor` | i32 | Row Normal, Nightmare or Hell for the attacker game's difficulty 0, 1 or 2 (GDA-R05); this contract covers difficulty 0..2 only (CSA-Q06) |
+| state set | `HasState`, `FindStateList` results | RLI-R03 | States 1 `freeze`, 2 `poison`, 11 `cold`, 21 `stunned`, 54 `uninterruptable`, 107 `shatter`, 115 `burning` (GDF-R03) |
+| list stat | own stat 74 `hpregen` of an existing poison/burn list | i32 | Read through the list read of RLI-R02a/RLI-R02b |
+| defender life | `Stat(D, 6, 0)` | i32 8.8 | Unit read of RLI-R02a/RLI-R02b, after all appliers |
 | helper arguments | optional supplied monster record, `mask`, callback state `s` | record association; u32 mask; i32 state | Supplied record takes precedence in `recordGate`; `monsterGate` intersects the low 16 mask bits; callback state comes from its removed list |
-| state and stat-read context | base list/state storage, state count; selected stat array, stat-definition count and availability, `fMin`, `MinAccr`, `ValShift` | optional associations; i32 counts, stat values and `MinAccr`; u8 `ValShift`; boolean conditions | Supplied state lookups/tests and list/unit stat reads consume NRF-R12a/NRF-R12b/NRF-R12c; these inputs are distinct from list writes |
+| state and stat-read context | base list/state storage, state count; selected stat array, stat-definition count and availability, `fMin`, `MinAccr`, `ValShift` | optional associations; i32 counts, stat values and `MinAccr`; u8 `ValShift`; boolean conditions | Supplied state lookups/tests and list/unit stat reads consume RLI-R03/RLI-R02a/RLI-R02b; these inputs are distinct from list writes |
 
 | Mapping / constant | Origin | Binding |
 |---|---|---|
-| States 1, 2, 11, 21, 54, 107, 115; stats 6, 67 `velocitypercent`, 68 `attackrate`, 69 `other_animrate`, 74 `hpregen` | Names from original-profile tables (GDF-R11, GDF-R12) | Fixed by original code; custom remapping is not established |
+| States 1, 2, 11, 21, 54, 107, 115; stats 6, 67 `velocitypercent`, 68 `attackrate`, 69 `other_animrate`, 74 `hpregen` | Names from original-profile tables (GDF-R02, GDF-R03) | Fixed by original code; custom remapping is not established |
 | Timer kinds 2, 3, 12 | Engine code | Fixed by original code; their handlers are lifecycle-owned (STL-R01, STL-R03) |
 | Stun cancel threshold 90, shatter threshold 20, modulus 100, stun caps 13 and 250, cold minimum 1, cold default effect -50, list flags 2, attach mode 1, recordGate result 64 | Engine code | Fixed by original code. List flags 2 marks the list as timed, so the lifecycle's expiry walk considers it (STL-R04, STL-R06a). Attach mode 1 is the mode that applies all of the list's stats to the unit (STL-R06b, gated: CSA-Q01). recordGate's 64 is the boss bit's value; callers test only nonzero |
-| Class groups 271 `roguehire`, 338 `act2hire`, 359 `act3hire`, 560 `act5hire1`, 561 `act5hire2` | Class numbers fixed in code; names from MonStats (GDF-R17) | Fixed numeric bindings, not resolved from editable class names |
+| Class groups 271 `roguehire`, 338 `act2hire`, 359 `act3hire`, 560 `act5hire1`, 561 `act5hire2` | Class numbers fixed in code; names from MonStats (GDF-R08) | Fixed numeric bindings, not resolved from editable class names |
 | Cold and freeze divisors: Normal 1 and 1, Nightmare 2 and 2, Hell 4 and 4 | `data/global/excel/difficultylevels.txt`, rows `Normal`, `Nightmare`, `Hell`, columns `MonsterColdDivisor`, `MonsterFreezeDivisor` ([table records](../research/spec-evidence/core-game-data-fields.md#named-cell-records)) | Loaded data; code fixes which consumer divides and the zero-divisor policy |
 | `ColdEffect`, `Velocity`, `boss`, `deadCol` per class | MonStats / MonStats2 per-class cells | Loaded data; vectors supply them as named inputs |
 
-Callback identities: `coldExpiryCallback` (CSA-R13), `freezeExpiryCallback` (MMF-R13c) and
+Callback identities: `coldExpiryCallback` (CSA-R13), `freezeExpiryCallback` (MMF-R09b) and
 `genericStatusCallback` (STL-R11). Dependency operations, each with its owning contract:
-`FindStateList`, `HasState`, `SetState` request (NRF-R12a; bookkeeping STL-R07, STL-R07a);
+`FindStateList`, `HasState`, `SetState` request (RLI-R03; bookkeeping STL-R07, STL-R07a);
 `NewList`, `SetListState`, `SetListCallback`, `SetListExpiry`, `GetListExpiry` (STL-R06a);
-`Attach` (STL-R06b); replacing list `SetStat` (STL-R06c); `GetStat` / `Stat` (NRF-R12b, NRF-R12c);
+`Attach` (STL-R06b); replacing list `SetStat` (STL-R06c); `GetStat` / `Stat` (RLI-R02a, RLI-R02b);
 `Schedule(game, unit, kind, frame)` (STL-R01); `RemoveTimerNode(game, node)` and
 `AnimationRefresh(unit)` (CSA-Q02); `StayDeath(unit, s)` (STL-R12a). The mana and stamina drains
-are LSE-R17 and DPO-R18.
+are LSE-R15 and DPO-R18.
 
 ## 4. Rules (execution order)
 
@@ -109,14 +109,14 @@ later state. `step(S)` advances seed `S` once by NRF-R01; `low32` keeps the low 
 defender's current-life write, the hit-application operation requests, in this order, with record `R`:
 
 ```
-ManaDrain(D, R.manaBurn)                                   // LSE-R17
+ManaDrain(D, R.manaBurn)                                   // LSE-R15
 StaminaDrain(D, R.staminaBurn)                             // DPO-R18
 Stun(A, D, R.stunLength)                                   // CSA-R03, CSA-R04
 Cold(A, D, R.coldLength)                                   // CSA-R05, CSA-R06
 Freeze(attacker = A, defender = D, length = R.freezeLength) // CSA-R07 to CSA-R09
 Poison(A, D, magnitude = R.poison, length = R.poisonLength)               // CSA-R10 to CSA-R12
 Burn(A, D, magnitude = R.burnMagnitude, length = R.burnLength)            // CSA-R10 to CSA-R12
-life = Stat(D, 6, 0)                                       // NRF-R12b, NRF-R12c
+life = Stat(D, 6, 0)                                       // RLI-R02a, RLI-R02b
 if life > 0 (signed): R.resultFlags.lethal = false
 else:                 R.resultFlags.lethal = true
 ```
@@ -162,7 +162,7 @@ CSA-R04's assertion.
 **CSA-R04** **Stun list requests** [verified in 1.13c code (static)].
 
 ```
-    L = FindStateList(D, 21)                               // a null D faults here (NRF-R12a)
+    L = FindStateList(D, 21)                               // a null D faults here (RLI-R03)
     if A == null: fatal
     g = A.game; expiry = low32(g.frame + len)
     if L == null:
@@ -332,7 +332,7 @@ kind-3 node the poison pre-step scheduled.
         SetListState(L, s); SetListCallback(L, genericStatusCallback)
         Attach(D, L, 1)
     else:
-        cur = GetStat(L, 74, 0)                            // own list stat, NRF-R12b/NRF-R12c
+        cur = GetStat(L, 74, 0)                            // own list stat, RLI-R02a/RLI-R02b
         if i32(low32(-cur)) > mag: return                  // a stronger existing effect wins
         SetListExpiry(L, expiry)                           // unconditional: may shorten
         Schedule(g, D, 12, expiry)
@@ -360,7 +360,7 @@ ColdExpiry(unit, s):
 makes no draw. The lifecycle calls a list's callback only when the list has a unit (STL-R05), so the
 callback is not reached with a null unit on that path; a direct call with a null unit would consult
 `StayDeath(null, s)` and, when it returns 0, request a state change on a null unit, which
-NRF-R12a leaves outside the successful boundary.
+RLI-R03 leaves outside the successful boundary.
 
 ### Id map
 
@@ -436,7 +436,7 @@ fixture operations. Disguise and update-queue integration remain gated.
 
 | Question | Kind / status | Evidence that would settle it |
 |---|---|---|
-| **CSA-Q01** | integration / open | Stored effects of `Attach`, replacing list `SetStat`, disguise and state-update bookkeeping where STL-R06b, STL-R06c, STL-R07a and NRF-Q17 are gated: accept those contracts with integration vectors. Ordered requests, arithmetic and the verified membership subset of STL-R07 remain available. |
+| **CSA-Q01** | integration / open | Stored effects of `Attach`, replacing list `SetStat`, disguise and state-update bookkeeping where STL-R06b, STL-R06c, STL-R07a and RLI-Q02 are gated: accept those contracts with integration vectors. Ordered requests, arithmetic and the verified membership subset of STL-R07 remain available. |
 | **CSA-Q02** | integration / open | Animation refresh effects; active/deferred frame-event node removal; kind-2, kind-3 and kind-12 handler execution; actual list contribution removal and callback invocation through unresolved STL-R05; and the scheduler's own handling of a kind-2 request for a monster holding state 54, which the freeze path can reach only if a dependency sets that state after CSA-R07's test. Accept the lifecycle and animation owners' contracts. Direct supplied-entry callback requests remain available. |
 | **CSA-Q03** | outside-boundary / open | Producer and wider meaning of the monster condition word's bit 8 (`monsterFlag8`) and of `aliveExclusionCondition`: trace their writers in monster spawning and unit lifecycle owners. The tested branches here are verified. |
 | **CSA-Q04** | outside-boundary / open | Which server-to-client messages carry these state and stat changes: trace the update sender in a `net-` spec. |
@@ -484,7 +484,7 @@ every case states its own outputs.
   `GetListExpiry`, `HasState`, the gate helpers and data reads (MonStats, MonStats2, difficulty record,
   `ColdEffect`) are not logged; their order is therefore not asserted by these vectors. None of these
   operations draws. Supplied drains and, where a vector says so, supplied appliers only log.
-- Unit stat reads: `Stat(D, 6, 0)` reads `D`'s unit stat list (`D.statList`), as NRF-R12b defines;
+- Unit stat reads: `Stat(D, 6, 0)` reads `D`'s unit stat list (`D.statList`), as RLI-R02a defines;
   definition 6 is available with `fMin` false.
 - Entry: CSA-V01 to CSA-V03 run the CSA-R01 hand-off with a damage record. CSA-V04 to CSA-V15 call
   the named helper, applier or callback directly with the stated arguments; record fields play no
@@ -980,17 +980,17 @@ with supplied operations does not accept those integrations. Full reproduction a
 accepting those dependency contracts and matching observations for CSA-O01, CSA-O02 and the verified
 rules (CSA-Q05).
 
-**Depends on:** [core-numeric-and-rng-foundations](core-numeric-and-rng-foundations.md) NRF-R01
-(seed step), NRF-R12a (state lookup, test and set routing), NRF-R12b and NRF-R12c (stat reads),
+**Depends on:** [core-numeric-and-rng-foundations](core-numeric-and-rng-foundations.md) NRF-R01 Owners of the cited GDA, RLI ids: [core-game-data-table-records](core-game-data-table-records.md) (GDA); [core-record-layouts-and-ids](core-record-layouts-and-ids.md) (RLI).
+(seed step), RLI-R03 (state lookup, test and set routing), RLI-R02a and RLI-R02b (stat reads),
 section 3.2 (damage record); [state-timed-state-lifecycle](state-timed-state-lifecycle.md) STL-R01
 (scheduling and frame clamp), STL-R03 (expiry routing) and STL-R05 (actual free/callback integration,
 unresolved), STL-R06a
 (list primitives), STL-R06b and STL-R06c (attach and list-stat writes, gated), STL-R07 and STL-R07a
 (verified state membership and unresolved disguise), STL-R11 (generic callback identity),
-STL-R12a (stay-death consumer with supplied masks); NRF-Q17 retains update-queue integration;
-[core-game-data-fields](core-game-data-fields.md) GDF-R02, GDF-R05, GDF-R06, GDF-R11, GDF-R12,
-GDF-R14, GDF-R15, GDF-R17, GDF-R18 (names and fields);
-[combat-leech-and-status-effects](combat-leech-and-status-effects.md) LSE-R17 (mana drain) and
+STL-R12a (stay-death consumer with supplied masks); RLI-Q02 retains update-queue integration;
+[core-game-data-fields](core-game-data-fields.md) GDA-R05, GDA-R08, GDA-R09, GDF-R02, GDF-R03,
+GDF-R05, GDF-R06, GDF-R08, GDA-R16 (names and fields);
+[combat-leech-and-drain](combat-leech-and-drain.md) LSE-R15 (mana drain) and
 [combat-damage-pipeline-order](combat-damage-pipeline-order.md) DPO-R18 (stamina drain), DPO-R17
 (the preceding life write).
 
@@ -1006,11 +1006,11 @@ lists it describes); [combat-hit-recovery](combat-hit-recovery.md) (reads states
 - [combat-damage-pipeline-order](combat-damage-pipeline-order.md): the hit path around this stage;
   DPO-R19a, DPO-R19b, DPO-R27 and DPO-R28a describe the applier order, final life decision and draws
   this spec owns.
-- [combat-leech-and-status-effects](combat-leech-and-status-effects.md): leech, drain and the poison
+- [combat-leech-and-drain](combat-leech-and-drain.md): leech, drain and the poison
   term of the immediate total, which run before or beside this stage.
 - [state-movement-modifiers-and-freeze](state-movement-modifiers-and-freeze.md): what cold and freeze
-  do once applied; MMF-R07, MMF-R08a to MMF-R08d, MMF-R11 and MMF-R12 describe the same cold-effect, routing and
-  length decisions this spec owns; MMF-R13c defines the freeze expiry callback that CSA-R08 installs.
+  do once applied; it consumes this spec's cold-effect, routing and length decisions (CSA-R01,
+  CSA-R02, CSA-R05 to CSA-R09); MMF-R09b defines the freeze expiry callback that CSA-R08 installs.
 - [combat-open-wounds](combat-open-wounds.md): OWD-R12 consumes CSA-R01's final lethal decision for
   the surviving-monster regeneration restart that follows this stage.
 - [state-timed-state-lifecycle](state-timed-state-lifecycle.md): list, timer, expiry and callback

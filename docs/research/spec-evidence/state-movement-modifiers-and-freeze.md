@@ -47,8 +47,8 @@ STL-R03/STL-R05 and remains gated.
 
 New cold list creation and cold expiry call the imported Common #10819 at RVA 0x33110. The
 [NRF animation-preparation record](core-numeric-and-rng-foundations.md#fixed-point-time-movement-and-object-animation)
-also identifies Common 0x32220/0x501E0; their complete remapping/preparation remains NRF-Q17 and
-MMF-Q11. The dispatcher calls 0x501E0, then animation preparation 0x32670, then predicates and
+also identifies Common 0x32220/0x501E0; their complete remapping/preparation remains NRF-Q07 and
+MMF-Q09. The dispatcher calls 0x501E0, then animation preparation 0x32670, then predicates and
 rate branches. The local consumer boundary starts after supplied effective inputs/preparation;
 a call chain alone does not verify their effects.
 
@@ -67,28 +67,28 @@ player creation is not newly claimed by its three requests.
 | LOD113C-D2COMMON | 0xCEB0 / 0xD240 / 0xCF40 | none | Step/ramp and direction production | MMF-R06d/MMF-R06e | NRF-R11a/R11b records: direction constant-table read 2026-10-14; full path production not inferred |
 | LOD113C-D2COMMON | 0x30B80 / 0x2EF90 / 0x2EFC0 / 0x2F010 / 0x2FAC0 | none | Cast/block/get-hit/knockback/base-only predicates | MMF-R06f | 2026-10-12 retained; HRC-R12a/R14 supplies three rate branches; skill/sequence integration gated |
 | LOD113C-D2COMMON | 0x30C70 / 0x30BD0 | none | Movement / attack predicates | MMF-R06g | Complete disassembly 2026-10-15 identifies table and selected-skill branches; dependent skill production not all read |
-| LOD113C-D2COMMON | 0x501E0 / 0x32670 / 0x32EF0 | none / 11122 / 10932 | Effective-input preparation / animation preparation / attack preparation | MMF-R06g/MMF-R05a | NRF/HRC reuse and caller inspection; actual effects remain MMF-Q08/MMF-Q11 |
+| LOD113C-D2COMMON | 0x501E0 / 0x32670 / 0x32EF0 | none / 11122 / 10932 | Effective-input preparation / animation preparation / attack preparation | MMF-R06g/MMF-R05a | NRF/HRC reuse and caller inspection; actual effects remain MMF-Q07/MMF-Q09 |
 | LOD113C-D2COMMON | 0x30530 | 10747 | Eligibility by kind/class | MMF-R05b | Complete disassembly 2026-10-15; entry-to-return class comparisons, no callee |
-| LOD113C-D2COMMON | 0x1E1B0 / 0x23EF0 / 0x24430 | none / 11006 / 10744 | Inventory grid / acceptance / type relationship | MMF-Q08 | Complete relevant disassembly 2026-10-15; encoded regions corroborated for latter two; allocator/type-provider callees remain integration gaps |
-| LOD113C-D2COMMON | 0x33C20 / 0x50CE0 | none / 10639 | Active-state mask intersection / player base override | MMF-R05a/MMF-Q08 | First's role reused from NRF/PVP; original listing corroboration 2026-10-15; second checked C read, selected-weapon/calculation callees unverified here |
+| LOD113C-D2COMMON | 0x1E1B0 / 0x23EF0 / 0x24430 | none / 11006 / 10744 | Inventory grid / acceptance / type relationship | MMF-Q07 | Complete relevant disassembly 2026-10-15; encoded regions corroborated for latter two; allocator/type-provider callees remain integration gaps |
+| LOD113C-D2COMMON | 0x33C20 / 0x50CE0 | none / 10639 | Active-state mask intersection / player base override | MMF-R05a/MMF-Q07 | First's role reused from NRF/PVP; original listing corroboration 2026-10-15; second checked C read, selected-weapon/calculation callees unverified here |
 | LOD113C-D2GAME | 0xEB2C0 | none | Player initialization fixed-stat requests | MMF-R06b | 2026-10-12 retained; narrow ordered request slice checked 2026-10-15 |
 | LOD113C-D2GAME | 0xAFDB0 | none | Monster initialization fixed-stat requests | MMF-R06c | MSD full original listing 2026-10-14 retained; entry-to-fixed-request slice assessed 2026-10-15 |
 | LOD113C-D2COMMON | 0x3A740 | 10887 | Unit stat-write request entry | MMF-R06b/MMF-R06c | Game thunk 0xA472 resolved 2026-10-15; forwards replacing write to 0x3A280; actual propagation is STL-R06c |
-| LOD113C-D2GAME | 0xDE0C0 / 0xDC780 / 0xDDAC0 / 0xDAE20 | none | Applied-hit handoff / cold / freeze / cold effect | MMF-R07/MMF-R08a/MMF-R08b/MMF-R08d/MMF-R11/MMF-R12/MMF-R13a/MMF-R13d/MMF-R14a | CSA-R01/R05-R09 original readings 2026-10-13/14 retained |
-| LOD113C-D2GAME | 0xDA7B0 / 0xDC0B0 / 0xDB3C0 / 0xDBD00 | none | Length strip / mitigation / resistance / entry arithmetic | MMF-R09/MMF-R10a/MMF-R10b/MMF-R10c | DPO-R10 and DMI-R01/R02/R05-R09 current records; not reread or expanded here |
-| LOD113C-D2GAME | 0xDB4C0 | none | Cold callback | MMF-R13c | Checked reconstruction, CSA-R13 dated 2026-10-14; callback-local only |
-| LOD113C-D2GAME | 0xDBD90 | none | Freeze callback | MMF-R13c | 2026-10-12 retained; complete disassembly and complete independent original listing 2026-10-15; cleanup call/effects separated |
-| LOD113C-D2GAME | 0xDA750 | none | Associated-record cleanup | MMF-Q12 | Complete disassembly assessed 2026-10-15; encoded regions/free integration not verified, no stored cleanup claim |
-| LOD113C-D2GAME | 0x13B0 / 0x22A80 | none | Extended-monster flag / condition-word intersection | MMF-R08c/MMF-R14a | CSA-R02/R06 retained 2026-10-14; GDF-R06a identifies deadCol |
-| LOD113C-D2COMMON | 0x1A550 / 0x1A2D0 | 10064 / 11104 | Boss / fixed hireling category | MMF-R08c | CSA-R02 original full disassembly 2026-10-14 retained |
-| LOD113C-D2COMMON | 0x33CD0 / 0x34510 / 0x37DB0 | 10494 / 10945 / none | State test / state request / membership leaf | MMF-R08c/MMF-R13a/MMF-R14a | NRF-R12a/STL-R07; GDF-R11b selects state 101 for block |
-| LOD113C-D2COMMON | 0x603C0 | 10237 | Difficulty row getter | MMF-R11/MMF-R12 | CSA checked reconstruction; domain 0..2 |
-| LOD113C-D2COMMON | 0x38520 / 0x39140 / 0x38B70 | 10871 / 10680 / 10973 | State-list / own-list / unit selected-array lookup | MMF-R13d/MMF-R13b | NRF-R12a/R12b/R12c retained; not contribution mutation |
-| LOD113C-D2COMMON | 0x38100 / 0x38060 / 0x37D70 | 11013 / 10785 / 10911 | New list / state / callback | MMF-R13a | STL-R06a retained checked reconstruction |
-| LOD113C-D2COMMON | 0x38000 / 0x38020 | 10412 / 10161 | Expiry read/write | MMF-R13d | STL-R06a retained checked reconstruction |
-| LOD113C-D2COMMON | 0x3A7D0 / 0x3A280 / 0x3A7B0 | 10807 / 10261 / 10188 | Attach / replacing stat writes | MMF-R13b/MMF-R13e | STL-R06b/R06c gated execution, CSA caller requests established |
-| LOD113C-D2COMMON | 0x33AB0 / 0x33920 | 11061 / 11090 | Stay-death / mode write | MMF-R13c | STL-R12a/NRF-R14a retained local consumers |
-| LOD113C-D2GAME | 0x8EA80 / 0x8E6F0 | none | Schedule / timer-node removal | MMF-R13c/MMF-R13e | STL-R01 / CSA-Q02 limits retained |
+| LOD113C-D2GAME | 0xDE0C0 / 0xDC780 / 0xDDAC0 / 0xDAE20 | none | Applied-hit handoff / cold / freeze / cold effect | consumed CSA-R01, CSA-R05 to CSA-R09; no local rule | CSA-R01/R05-R09 original readings 2026-10-13/14 retained |
+| LOD113C-D2GAME | 0xDA7B0 / 0xDC0B0 / 0xDB3C0 / 0xDBD00 | none | Length strip / mitigation / resistance / entry arithmetic | MMF-R07/MMF-R08a/MMF-R08b/MMF-R08c | DPO-R10 and DMI-R01/R02/R05-R09 current records; not reread or expanded here |
+| LOD113C-D2GAME | 0xDB4C0 | none | Cold callback | consumed CSA-R13; alive gate shared by MMF-R09b | Checked reconstruction, CSA-R13 dated 2026-10-14; callback-local only |
+| LOD113C-D2GAME | 0xDBD90 | none | Freeze callback | MMF-R09b | 2026-10-12 retained; complete disassembly and complete independent original listing 2026-10-15; cleanup call/effects separated |
+| LOD113C-D2GAME | 0xDA750 | none | Associated-record cleanup | MMF-Q10 | Complete disassembly assessed 2026-10-15; encoded regions/free integration not verified, no stored cleanup claim |
+| LOD113C-D2GAME | 0x13B0 / 0x22A80 | none | Extended-monster flag / condition-word intersection | consumed CSA-R02/CSA-R06 | CSA-R02/R06 retained 2026-10-14; GDA-R09a identifies deadCol |
+| LOD113C-D2COMMON | 0x1A550 / 0x1A2D0 | 10064 / 11104 | Boss / fixed hireling category | consumed CSA-R02 | CSA-R02 original full disassembly 2026-10-14 retained |
+| LOD113C-D2COMMON | 0x33CD0 / 0x34510 / 0x37DB0 | 10494 / 10945 / none | State test / state request / membership leaf | MMF-R09b; consumed CSA-R05 to CSA-R08 | RLI-R03/STL-R07; GDF-R04 selects state 101 for block |
+| LOD113C-D2COMMON | 0x603C0 | 10237 | Difficulty row getter | consumed CSA-R05/CSA-R08 | CSA checked reconstruction; domain 0..2 |
+| LOD113C-D2COMMON | 0x38520 / 0x39140 / 0x38B70 | 10871 / 10680 / 10973 | State-list / own-list / unit selected-array lookup | MMF-R09a; consumed CSA-R05/CSA-R08 | RLI-R03/RLI-R02a/RLI-R02b retained; not contribution mutation |
+| LOD113C-D2COMMON | 0x38100 / 0x38060 / 0x37D70 | 11013 / 10785 / 10911 | New list / state / callback | consumed CSA-R05/CSA-R08 | STL-R06a retained checked reconstruction |
+| LOD113C-D2COMMON | 0x38000 / 0x38020 | 10412 / 10161 | Expiry read/write | consumed CSA-R05/CSA-R08 | STL-R06a retained checked reconstruction |
+| LOD113C-D2COMMON | 0x3A7D0 / 0x3A280 / 0x3A7B0 | 10807 / 10261 / 10188 | Attach / replacing stat writes | MMF-R09a/MMF-R09c | STL-R06b/R06c gated execution, CSA caller requests established |
+| LOD113C-D2COMMON | 0x33AB0 / 0x33920 | 11061 / 11090 | Stay-death / mode write | MMF-R09b | STL-R12a/RLI-R04a retained local consumers |
+| LOD113C-D2GAME | 0x8EA80 / 0x8E6F0 | none | Schedule / timer-node removal | MMF-R09b/MMF-R09c | STL-R01 / CSA-Q02 limits retained |
 
 Resolved Game import thunks are retained in the [CSA table](combat-status-application.md#function-references):
 0xA3CA -> Common #10945/0x34510; 0xA68E -> #10494/0x33CD0; 0xA5D4 -> #10871/0x38520;
@@ -162,7 +162,7 @@ helper 0x267F0 or default divisor 19, applied to a masked numerator. The helper 
 
 Movement/attack predicates 0x30C70/0x30BD0 were read in full. They consume per-mode engine tables
 and sometimes selected-skill properties; these are not equivalent to an unconditional list of
-mode numbers. This prompted explicit supplied predicates and the MMF-Q11 integration gate.
+mode numbers. This prompted explicit supplied predicates and the MMF-Q09 integration gate.
 Common 0x33110's encoded head was corroborated in the original independent listing; later newly
 used consumer branches are ordinary disassembly instructions. Earlier complete instruction-region
 corroboration dated 2026-10-12 remains retained, not relabeled as a new full producer reading.
@@ -188,9 +188,9 @@ flag 8 with a broader champion/unique label. Game 0x13B0(class,19) selects MonSt
 MonStatsEx and tests deadCol, closing its local identity question. Corpse behavior stays outside.
 
 The original text overstated a globally unique state list, summed contributions, unchanged E
-lookup and realized lifecycle effects. Current NRF-R12a finds the first matching primary list,
+lookup and realized lifecycle effects. Current RLI-R03 finds the first matching primary list,
 then secondary; CSA-R05 still looks up E on each eligible application, but never rewrites an
-existing cold list's stats. Current NRF-R12b/R12c selects existing arrays; it does not sum or
+existing cold list's stats. Current RLI-R02a/RLI-R02b selects existing arrays; it does not sum or
 mutate them. STL-R05/R06b/R06c leaves actual propagation/removal unresolved. The spec therefore
 preserves verified requests separately from supplied fixture storage and actual lifecycle effects.
 
@@ -198,7 +198,7 @@ A complete independent original listing of Game 0xDBD90 corroborated its encoded
 2026-10-15: dead/stay-death guard, state-off request, null-unit fatal guard, call 0xDA750, imported
 mode 1 write, then guarded monster game/data/record delay selection and kind 2 removal/scheduling
 requests. The Game 0xDA750 disassembly reveals linked associated-record removal/free calls but
-encoded-region and free effects were not fully verified here. Its effects remain MMF-Q12 rather
+encoded-region and free effects were not fully verified here. Its effects remain MMF-Q10 rather
 than an unqualified cleanup claim. The callback-local no-direct-draw statement excludes dependency
 effects. Normal aidel is selected only when both neutral game conditions are false; otherwise
 selected difficulty is used. This preserves the known branch without guessing names for game fields.
@@ -218,7 +218,7 @@ floor/caps and positive bypass. DMI's code-defined entries 5/6 have reduction sl
 bindings, so length absorption does not run. DMI-R06/R09 consumes NRF-R05 `mulDiv(100-r,len,100)`;
 it is not universally equivalent to multiplying in an unbounded integer or always low32 before
 division. These same-artifact current dependency records supersede the partial helper fragment.
-All retained small length outputs remain identical; MMF-V26 separates the corrected eligibility/
+All retained small length outputs remain identical; MMF-V20 separates the corrected eligibility/
 penalty behavior, using already recorded named difficulty cells. No new DMI source reading was claimed.
 
 ## Evidence-gap assessment
@@ -229,20 +229,20 @@ This table records dispositions rather than a new acceptance contract.
 | Topic | Assessment / targeted work | Current disposition |
 |---|---|---|
 | Cold/freeze length production | DPO-R06b and DPO-R07 now identify cold stat and conversion producers; complete arbitrary skill/missile producers not inferred | MMF-Q01 outside-boundary, none locally for supplied lengths |
-| Four freeze checks | Same-function CSA-R02/R07 fully resolves local identities and precedence | Closed locally; MMF-R08b/MMF-R08c; flag 8 wider classification stays neutral |
-| Divisor/ColdEffect/aidel data | Reuse GDF named Normal/Nightmare/Hell divisor cells; no arbitrary per-class cold/delay cell read | Divisors settled, MMF-Q03 supplies precise actual-cell limit |
-| Monster baseline stats | Reused MSD root/full listing and targeted fixed-write assessment, original thunk resolution | Fixed requests settled by MMF-R06c; MMF-Q04 is later outside producer coverage |
-| Run baseline/path/direction | Common movement consumer checked; NRF-R11a/R11b supplies complete isolated step and scale | MMF-R06d/MMF-R06e verified supplied boundary; full creator/caller path remains MMF-Q05 |
-| Stat sums/overflow | NRF selected-array contract contradicts summation inference; caller low32 arithmetic traced | Arithmetic explicit; stored contribution integration MMF-Q06, not guessed |
-| Shatter meaning/names | GDF names, CSA deadCol helper and draw establish local requests; no death-path sweep authorized | MMF-Q07 outside-boundary, no local draw gate |
-| Pair slots/type/override | Complete caller arithmetic/helper conditions read; inventory allocator and item-type/override providers identified but not completely verified | MMF-R05b supplied arithmetic verified, actual production/preparation MMF-Q08 |
-| Division-by-zero observation | Static NRF helper already establishes fault; no gameplay in migration | MMF-Q09 observation only |
-| Class flag 19 record/column | Same-function CSA-R06 and GDF-R06a establishes MonStats2.deadCol | Closed locally; corpse consequence remains separate |
-| Derived monster animation bases | Current GDF-R05b already records exact producer dependency and limits | GDF-Q01 integration remains; supplied signed words usable |
-| Unread dispatcher/predicate callees | Complete relevant movement/attack predicates read; selected skill, remap and preparation not all verified | MMF-R06g/MMF-Q11 explicit production gate |
-| Callback lifecycle/cleanup | Reused CSA cold callback and full freeze callback listing; cleanup dependency assessed | MMF-R13e/MMF-Q12; local callback log available independently |
-| Verified rules without executable vectors | Retain 22 families, concretize symbolic ones, add paired/step/fallback/resistance/callback families | MMF-V01 through MMF-V28; all unobserved |
-| Pending original observations | Four procedures retained and expanded to cover current verified branches | MMF-Q09; no runtime promotion |
+| Four freeze checks | Same-function CSA-R02/R07 fully resolves local identities and precedence | Closed locally; consumed CSA-R02/CSA-R07; flag 8 wider classification stays neutral |
+| Divisor/ColdEffect/aidel data | Reuse GDF named Normal/Nightmare/Hell divisor cells; no arbitrary per-class cold/delay cell read | Divisors settled, MMF-Q02 supplies precise actual-cell limit |
+| Monster baseline stats | Reused MSD root/full listing and targeted fixed-write assessment, original thunk resolution | Fixed requests settled by MMF-R06c; MMF-Q03 is later outside producer coverage |
+| Run baseline/path/direction | Common movement consumer checked; NRF-R11a/R11b supplies complete isolated step and scale | MMF-R06d/MMF-R06e verified supplied boundary; full creator/caller path remains MMF-Q04 |
+| Stat sums/overflow | NRF selected-array contract contradicts summation inference; caller low32 arithmetic traced | Arithmetic explicit; stored contribution integration MMF-Q05, not guessed |
+| Shatter meaning/names | GDF names, CSA deadCol helper and draw establish local requests; no death-path sweep authorized | MMF-Q06 outside-boundary, no local draw gate |
+| Pair slots/type/override | Complete caller arithmetic/helper conditions read; inventory allocator and item-type/override providers identified but not completely verified | MMF-R05b supplied arithmetic verified, actual production/preparation MMF-Q07 |
+| Division-by-zero observation | Static NRF helper already establishes fault; no gameplay in migration | MMF-Q08 observation only |
+| Class flag 19 record/column | Same-function CSA-R06 and GDA-R09a establishes MonStats2.deadCol | Closed locally; corpse consequence remains separate |
+| Derived monster animation bases | Current GDA-R08b already records exact producer dependency and limits | GDA-Q05 integration remains; supplied signed words usable |
+| Unread dispatcher/predicate callees | Complete relevant movement/attack predicates read; selected skill, remap and preparation not all verified | MMF-R06g/MMF-Q09 explicit production gate |
+| Callback lifecycle/cleanup | Reused CSA cold callback and full freeze callback listing; cleanup dependency assessed | MMF-R09c/MMF-Q10; local callback log available independently |
+| Verified rules without executable vectors | Retain 22 families, concretize symbolic ones, add paired/step/fallback/resistance/callback families | MMF-V01 through MMF-V22 after the 2026-10-15 restructure, with duplicated cold/freeze cases left to CSA vectors; all unobserved |
+| Pending original observations | Four procedures retained and expanded to cover current verified branches | MMF-Q08; no runtime promotion |
 
 Historical absence claims had no retained six-rung search record. They are not renewed as
 `not found in d2-decomp`. Bounded positive source/dependency assessments above replace those
@@ -371,7 +371,7 @@ copied into a parallel authority here.
 |---|---|
 | 1. MMF-R02 upper percentage/no ceiling | No change: existing MMF-V09(d) uses pct 16777216 with exact wrapped outputs; a ceiling of 175 would produce speed 2688 instead of 0 and fails that vector |
 | 2. MMF-R03 monster velocity/invalid record | Added MMF-V09(e)/(f) using monster Velocity 8 and exact speed 3072, plus isolated invalid-record fault case (g) rejecting zero fallback |
-| 3. MMF-R04a ordinary/run monster bases | Added MMF-V09(e)/(f): supplied ordinary/run values 200/100 yield distinct rates 300/150 at pct 150; derived-value production stays GDF-Q01 |
+| 3. MMF-R04a ordinary/run monster bases | Added MMF-V09(e)/(f): supplied ordinary/run values 200/100 yield distinct rates 300/150 at pct 150; derived-value production stays GDA-Q05 |
 | 4. MMF-R05a extreme wrapped product | Added MMF-V10(f): low32(1073741824*100)=0, so both rates 0 reject unbounded multiplication then cap |
 | 5. MMF-R05b averaging in an ineligible class | Added MMF-V23(e): class 0, eligibility false, qualified supplied items 60/20, final rate 256 rejects applying the adjustment that would yield 204 |
 | 6. MMF-R06f remaining overlaps/early returns | Added MMF-V22(k) excluded null/type 4/type 5 entries and (l)-(q) adjacent precedence cases with different rates, path results or actionRate/log writes. Existing (g) covers cast before block. No internal query count is asserted |
@@ -391,7 +391,7 @@ inputs, vector assertions and the output inventory changed, fresh full review FU
 FULL1's zero mismatches does not complete review of this revision.
 
 Root review of the added cases found that the initial MMF-V13(e) fixture supplied class 0/count 1
-while declaring its record unavailable. The consumed GDF-R05a getter must select that in-range
+while declaring its record unavailable. The consumed GDA-R08a getter must select that in-range
 record, so the fixture was inconsistent with its dependency. Before FULL2, it was replaced with
 class -1/count 1, exercising the signed lower bound alongside case (d)'s upper bound. Expected
 E=-50, end 1010, own-list values, draw and final seed are unchanged; no new predicate, rule or gate
@@ -411,7 +411,7 @@ were preserved privately before edits. Findings do not approve the spec.
 | DISCRIM 2: MMF-V06 default divisor 1 does not reject player division | Supplies cold divisor 4/freeze divisor 2; correct player fallback still ends 1060. Incorrect division would end 1015 or 1030, respectively |
 | DISCRIM 3: MMF-V17 does not distinguish mulDiv operand order | Added MMF-V17(b), length 65537/r33: correct NRF-R05 operands (67,65537,100) multiply first and return 43909; swapping them selects divide-first and returns 43885 |
 | DISCRIM 4: log-only MMF-V19 removal cannot reject an unsaved successor | No new removal fixture: main MMF-V19 now explicitly limits itself to supplied traversal logs and cites consumed CSA-R09/CSA-V11(a) for the saved-successor discriminator with mutating removal. Actual original removal/lifecycle stays gated; this fixture does not claim to establish it |
-| GATED 16 | Retained the five unresolved rule leaves, the ten current questions and GDF-Q01; actual integration remains unverified |
+| GATED 16 | Retained the five unresolved rule leaves, the ten current questions and GDA-Q05; actual integration remains unverified |
 | HARDEST 1: MMF-R06f/MMF-V22 overlapping predicates/different writes/HRC dependencies | No change: MMF-V22(g)/(l)-(q) now has distinct final rates, path writes, actionRate or preparation logs for each adjacency; HRC-R12a/R14 owns the three delegated formulas. Supplied predicates remain independent of actual producer integration |
 | HARDEST 2: MMF-R13d/MMF-V20 expiry/new-duration AI | No change: explicit existing expiry, new candidate, unchanged list stats and final seed distinguish cold; freeze keeps end 1050 while requesting AI 1021. Equal/later dependency cases are named below |
 | HARDEST 3: MMF-R13c/MMF-V19/MMF-V27 callback gates and requests | Existing supplied callback inputs/logs remain explicit; added MMF-V27(e) fixes a null freeze callback's state-off-before-fatal sequence. Actual cleanup/mode-bound processing/timer/lifecycle effects retain their gates |
@@ -453,13 +453,13 @@ and the complete report transcription were preserved privately before fixes.
 |---|---|
 | 1. MMF-R05b wrapping pair sum/adjustment | Added MMF-V23(f)/(g): INT_MAX pair wraps its sum before averaging, while INT_MIN/INT_MAX wraps the adjustment; both finish at rate 38 rather than the respective unbounded alternatives 256/448 |
 | 2. MMF-R06a negative/wrapped unsigned product | Added MMF-V11(b)/(c): negative B=-1 gives u32 product 4294967196 and capped 32767; large positive B=1073741824 wraps the product to 0 and stores 0. These exercise the default caller independently of the attack caller or bare division helper |
-| 3. MMF-R06d ramp, target and negative-speed clamps | No change: NRF-V22(a) discriminates five-tick ramp/target clamp and cleared acceleration; (b) retains acceleration at the negative-speed clamp; (e) distinguishes target equality; (f) establishes target-before-negative order. MMF-R06d consumes NRF-R11a directly |
+| 3. MMF-R06d ramp, target and negative-speed clamps | No change: NRF-V14(a) discriminates five-tick ramp/target clamp and cleared acceleration; (b) retains acceleration at the negative-speed clamp; (e) distinguishes target equality; (f) establishes target-before-negative order. MMF-R06d consumes NRF-R11a directly |
 | 4. MMF-R09 negative partner halving | No change: DPO-V21 supplies coldLength=-3/freezeLength=20/stat 118=1, requiring -1/10 and rejecting floor division or skipping the negative partner; DPO-R10 owns the consumed strip |
 | 5. MMF-R10a positive-resistance bypass | No change: DMI-V07(a)/(c) and DMI-V24 already discriminate positive bypass versus negative-resistance preservation and player selection; same owner/vector citations as prior dispositions |
 | 6. MMF-R11 wrapped cold end | Added MMF-V13(g): frame 2147483640 plus duration 20 requests expiry -2147483636, not an unbounded/saturated positive value; list fields and requested frames are supplied-stage assertions only |
 | 7. MMF-R12 wrapped freeze end | Added MMF-V18(d): same wrapped list expiry with independently wrapped kind-2 request -2147483635; no actual queue execution claim |
 | 8. MMF-R13d freeze extension/equality | No change: CSA-V11(c) explicitly covers old expiry 1020 retained, equal 1010 with no write, and earlier 1005 replaced by 1010, including required kind-12 requests; CSA-R08 owns the consumed refresh |
-| 9. MMF-R13d first matching state list | No change: NRF-V33(a) supplies two state 11 lists across primary/secondary chains and requires the primary P11; (g) selects secondary S11 when primary has none. NRF-R12a owns lookup and MMF-R13d consumes its returned list; no replacement selection policy added locally |
+| 9. MMF-R13d first matching state list | No change: RLI-V05(a) supplies two state 11 lists across primary/secondary chains and requires the primary P11; (g) selects secondary S11 when primary has none. RLI-R03 owns lookup and MMF-R13d consumes its returned list; no replacement selection policy added locally |
 | 10. MMF-R14a exact roll 20 | No change: CSA-V09(h)/(i) supplies exact 20/off and 19/on under the same cold-shatter operation; no duplicate seed binding |
 
 There is no remaining eleventh coverage finding. The reader's withdrawn MMF-R06f entry causes
@@ -512,3 +512,37 @@ V17(a)/(b), V18(a)/(b)/(d), V19, V20, V21 (including second seed {3459745073,164
 V22(a)-(j)/(q), V23(a)/(b)/(f)/(g), V24(a), V27(b)-(e), V28(b): no mismatch. Edits in this pass were
 notation only (run-together tokens and one missing `=` in MMF-V08(a)); no rule, input, output or
 gate changed, so no fresh reader rerun is required.
+
+## Restructure - 2026-10-15
+
+The spec-review restructure removed rules that restated
+[combat-status-application](../../specs/combat-status-application.md) (CSA) and renumbered the
+unconsumed spec. No rule behavior, label, value or retained vector result changed, and no source,
+data or gameplay evidence was added. The remaining contract has 22 rule ids, so it stays one spec
+with prefix MMF; no cold/freeze split was made.
+
+What moved where. Cold effect, cold-before-freeze order, freeze routing and check identities,
+the nonnegative freeze gate, cold and freeze durations, application list/state/stat requests,
+refresh and the cold side draw (pre-restructure MMF-R07, MMF-R08a to MMF-R08d, MMF-R11, MMF-R12,
+MMF-R13a, MMF-R13d, MMF-R14a) are now consumed by reference to CSA-R01, CSA-R02 and CSA-R05 to
+CSA-R09 in one non-rule paragraph of section 4. The cold-callback paragraph of the old callback
+rule now refers to CSA-R13; its freeze-tail paragraph refers to CSA-R09; the freeze callback
+remains local as MMF-R09b. The remaining rules renumber in order: old R09 to R07, R10a to R10c to
+R08a to R08c, R13b/R13c/R13e to R09a/R09b/R09c, R14b to R10. Questions renumber Q03 to Q09 to
+Q02 to Q08, Q11 to Q09, Q12 to Q10. Observations are unchanged.
+
+Vectors. Old MMF-V06, MMF-V14, MMF-V15, MMF-V16, MMF-V20 and MMF-V25 were removed: each
+assertion is already discriminated by CSA-V08, CSA-V09, CSA-V10 or CSA-V11 (case mapping in the
+FULL1 to FULL3 dispositions above and the restructure id map). Partly duplicated vectors keep
+only their unique cases and cite the consumed CSA rule: old V13 keeps cases (d) to (g) as new
+V12 (a) to (d), and its (a) to (c) are CSA-V09 (a), (d), (o); old V18 keeps (c) and (d) as new
+V14 (a) and (b), its (a) and (b) being CSA-V11 (d) and (a); old V21 keeps only (e) as new V16,
+its (a) to (d) being CSA-V09 (a)/(i), (b), CSA-V03 with CSA-V09 (e), and CSA-V09 (c); old V27
+keeps (c) to (e) as new V21 (a) to (c), its (a) and (b) being CSA-V15 (b) and (c). Other
+vectors renumber in order: V07 to V13 become V06 to V12, V17 to V19 become V13 to V15, V22 to
+V24 become V17 to V19, V26 to V28 become V20 to V22. Old V04, V05, V19 and V28 now name the
+consumed CSA rules in their headings.
+
+The function table, semantic mapping, rationale, evidence-gap assessment and observation
+procedures above use the new ids. The dated migration, review and spot-check records above keep
+the ids they were written with.

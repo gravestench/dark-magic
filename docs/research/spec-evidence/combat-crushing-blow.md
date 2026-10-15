@@ -37,14 +37,14 @@ campaign occurred.
 | LOD113C-D2GAME | `0xD9470`, `0x9E290`, `0x37190`, `0x370E0`, `0x37110`, `0x37030` | none | Registration, selector, insertion, lookup, removal, dispatch | CBL-R01 | Reused IEP-R01/R02/R03/R05/R07 dated 2026-10-12/13, targeted registration correction 2026-10-14; automatic notifications remain IEP-Q01/IEP-Q03 |
 | LOD113C-D2GAME | table `0x1077A8`, slot 16 | none | Callback selector binding | CBL-R01 | Original-image and historical live pointer read maps selector 16 to `0xACC30`; cell names alone do not identify callback |
 | LOD113C-D2GAME | `0x3EDE0` -> `0x3AFF0` -> `0x3AE10` | none | Missile contact hand-off | CBL-R02b/CBL-Q05 | 2026-10-13 chain, targeted 2026-10-15 `0x3AE10` reading; OR transfer and resolved-owner hand-off, wider contact eligibility is MHD-owned |
-| LOD113C-D2COMMON | `0x39430` -> `0x38A80` | 10910 | Read registered stat identity | CBL-R03 | Consumed NRF-R12b/NRF-R12c, existing selected array/definition guards/minimum; no summation during getter |
+| LOD113C-D2COMMON | `0x39430` -> `0x38A80` | 10910 | Read registered stat identity | CBL-R03 | Consumed RLI-R02a/RLI-R02b, existing selected array/definition guards/minimum; no summation during getter |
 | LOD113C-D2COMMON | `0x38B70` -> `0x38A80` | 10973 | Read unit stat | CBL-R04a/CBL-R06 | Same current getter owner; historic summed-read description corrected below |
-| LOD113C-D2COMMON | `0x3A740` -> `0x3A280` | 10887 | Replacing unit-stat request | CBL-R07/CBL-Q10 | Caller request established; historical partial setter read does not verify full propagation/notification; NRF-Q20 remains |
+| LOD113C-D2COMMON | `0x3A740` -> `0x3A280` | 10887 | Replacing unit-stat request | CBL-R07/CBL-Q10 | Caller request established; historical partial setter read does not verify full propagation/notification; RLI-Q03 remains |
 | LOD113C-D2COMMON | `0x1A2D0` | 11104 | Five hireling-class membership | CBL-R04a | Reused 2026-10-13 reading: recognized classes 271/338/359/560/561; false for non-monster |
 | LOD113C-D2COMMON | `0x1A550` | 10064 | Class boss predicate | CBL-R04a | Reused 2026-10-13 reading: supplied record or bounded class lookup, record byte bit 6; missing/out-of-range false |
 | LOD113C-D2COMMON | `0x6A330` | 10623 | Missile runtime-condition getter | CBL-R02b | 2026-10-13 reconstruction checked against original machine code reused; 2026-10-15 source read: null/non-type-3/null-data gives 0, otherwise runtime condition word; no producer classification |
-| LOD113C-D2COMMON | `0x32C10` | 10689 | Overlay operation | CBL-R08 | LSE-R14 dated 2026-10-14, checked against current 2026-10-15 boundary: guard/search/allocation/ordered requests; attach/list-write/update stored effects gated |
-| LOD113C-D2COMMON | `0x37F40`, `0x38100`, `0x3A7D0`, `0x3A280`, `0x665C0` | internal | Overlay local search/allocation and boundary calls | CBL-R08/CBL-Q09 | LSE-R14/STL-R06a local search/allocation; attach STL-R06b, list write STL-R06c and update NRF-Q17 retain integration gates |
+| LOD113C-D2COMMON | `0x32C10` | 10689 | Overlay operation | CBL-R08 | LSE-R13 dated 2026-10-14, checked against current 2026-10-15 boundary: guard/search/allocation/ordered requests; attach/list-write/update stored effects gated |
+| LOD113C-D2COMMON | `0x37F40`, `0x38100`, `0x3A7D0`, `0x3A280`, `0x665C0` | internal | Overlay local search/allocation and boundary calls | CBL-R08/CBL-Q09 | LSE-R13/STL-R06a local search/allocation; attach STL-R06b, list write STL-R06c and update RLI-Q02 retain integration gates |
 
 ### Import resolution
 
@@ -111,7 +111,7 @@ strings; the index-to-event use in combat requires the separate code evidence.
 
 Status of these named cells: **verified in 1.13c data**. They do not introduce new gameplay
 rule ids or alter the existing Id map. `.txt` archive contents were read; compiled runtime
-table equivalence was not newly established (GDF-R20a/GDF-R20b describe loader boundaries).
+table equivalence was not newly established (GDA-R01/GDA-R02 describe loader boundaries).
 No attack, trace, memory write, save edit, launch or hook change was performed for these reads.
 No gameplay vector becomes runtime-observed from this evidence.
 
@@ -171,14 +171,14 @@ Other nonzero-flag callers share that branch; this does not prove their record e
 
 ### Getter and write boundaries
 
-The 2026-10-13 draft said the getter summed own/attached contributions and credited NRF-R12c
+The 2026-10-13 draft said the getter summed own/attached contributions and credited RLI-R02b
 with replacing-base propagation, entry insertion/no-op and player notification. Current
-NRF-R12b/NRF-R12c instead selects an existing array and conditionally adjusts a minimum. It
+RLI-R02a/RLI-R02b instead selects an existing array and conditionally adjusts a minimum. It
 neither sums contributions during the call nor establishes the setter's effects. The original
 callback requests #10887 with stat 6, the computed value and layer 0; its succeeding death test
 uses the local computed value, not a read-back. Accordingly CBL-R07 verifies that request and
 local flag write, preserving every numerical requested value while gating actual stored
-effects under CBL-Q10/NRF-Q20. Claims about `new + attached contribution` read-back are removed
+effects under CBL-Q10/RLI-Q03. Claims about `new + attached contribution` read-back are removed
 as unsupported integration. Fixture persistence is explicitly supplied and proves no original
 setter behavior. Notification production is likewise gated by IEP-Q01/IEP-Q03, rather than
 equating a supplied notification with a real equip action. No client delivery follows merely
@@ -186,7 +186,7 @@ from these local calls (CBL-Q08).
 
 ### Overlay and successful return
 
-The original CBL-R08 was asm-only because local overlay helpers were unread. LSE-R14's
+The original CBL-R08 was asm-only because local overlay helpers were unread. LSE-R13's
 2026-10-14 reading identifies the identical D2Common #10689/RVA `0x32C10`, with guard and first
 primary-chain match, allocation through `0x38100`, attach request `0x3A7D0`, reloaded base-list
 pending condition, list-stat request `0x3A280` and update request `0x665C0`. Its current contract
@@ -241,12 +241,12 @@ Assessment date 2026-10-15; reused attempts keep their original dates and limits
 | Pair count/order (settled; folded into CBL-R01) | Current IEP-R01/R03/R05/R07, actual named ItemStatCost cells and callback table | Supplied notification identity/count/order supported; no new table or automatic-notification claim |
 | CBL-Q03 relative order | IEP traversal and historical unperformed CBL-O01/O03 | Static newest-first available; no attributed gameplay sequence exists |
 | CBL-Q04 overlay count and missile conditions | Existing LSE-Q03 search dated 2026-10-14 found readers only; 2026-10-15 shared GDF/overlay contracts, contact transfer and #10623 leaf read | Definition fields or another consumer do not establish collection publication or original rows; incoming conditions not assumed clear. Trace loader publication and owning missile condition producers |
-| CBL-Q05 owner | Historical melee/missile chains, current MHD-R13/MHD-R26, direct `0x3AE10` hand-off | Resolved owner passed as attacker; wider lookup/contact eligibility remains MHD-owned. Consume completed owner contract rather than infer live identity from a stack argument |
+| CBL-Q05 owner | Historical melee/missile chains, current MHD-R01/MHD-R12, direct `0x3AE10` hand-off | Resolved owner passed as attacker; wider lookup/contact eligibility remains MHD-owned. Consume completed owner contract rather than infer live identity from a stack argument |
 | Build equivalence (evidence-build policy) | Current evidence-build policy and original-profile records | Closed: no other build is claimed |
 | CBL-Q07 other non-queued routes | Current DPO-R13a/R23 and IEP-R14 retaliation suppression | Supplied flag/event behavior fixed, not all call sites' reachability. Complete each producer under its owner |
-| CBL-Q08 messages | Existing local setter/overlay records, current LSE-Q04/NRF-Q17/STL networking limits | No sender/body/delivery contract; do not promote a request to delivery |
-| CBL-Q09 overlay helpers | Compatible LSE-R14/STL-R06a read, retained STL-R06b/STL-R06c/NRF-Q17 gates | Local helper gap closes, original stored integration does not; complete owning attach/write/update contracts |
-| CBL-Q10 replacing write | Historical partial #10887/`0x3A280` read; current NRF-Q20/STL lifecycle contracts | Local value/order eligible; propagation/callees/notification remain unverified |
+| CBL-Q08 messages | Existing local setter/overlay records, current LSE-Q04/RLI-Q02/STL networking limits | No sender/body/delivery contract; do not promote a request to delivery |
+| CBL-Q09 overlay helpers | Compatible LSE-R13/STL-R06a read, retained STL-R06b/STL-R06c/RLI-Q02 gates | Local helper gap closes, original stored integration does not; complete owning attach/write/update contracts |
+| CBL-Q10 replacing write | Historical partial #10887/`0x3A280` read; current RLI-Q03/STL lifecycle contracts | Local value/order eligible; propagation/callees/notification remain unverified |
 | CBL-Q11 notifications | Current IEP-R03/R04 and IEP-Q01/IEP-Q03 | Supplied notification available; complete actual production/traversal order |
 | CBL-Q12 observations | 2026-10-13 record: no gameplay traces; read-only slot/constants only | Authorized migration excludes gameplay; no runtime label/observed flag changes |
 | Data support | Complete 2026-10-13 named cells above; current GDF names/classes/records | Reused exact cells and original coverage; new hashes do not identify historical bytes; no new unsupported named table value |
@@ -362,7 +362,7 @@ preserved publicly or in a SHA-256-verified private archive. No game assets or r
 are published.
 
 Labels changed: CBL-R02b asm-only -> verified static for supplied flag transfer; CBL-R08
-asm-only -> verified static for local overlay operation/return through LSE-R14, with stored
+asm-only -> verified static for local overlay operation/return through LSE-R13, with stored
 integration gated. CBL-R07 retains verified static only for local request/flag behavior;
 its unsupported stored effects are now explicitly gated. CBL-R04b remains unresolved. New
 CBL-Q10/Q11/Q12 distinguish write integration, notification integration and observations.
@@ -401,8 +401,8 @@ entry; fixture additions require a fresh full run on the resulting contract.
 | GATED: CBL-Q05 owner/contact | No change: full MHD integration stays its owner; supplied attacker callback remains executable |
 | GATED: CBL-Q07 other routes | No change: producer reachability not inferred from shared non-queued branch |
 | GATED: CBL-Q08 messages | No change: local requests do not establish sender/player notification/delivery |
-| GATED: CBL-Q09 overlay stored integration | No change: LSE-R14 local requests retain STL-R06b/STL-R06c/NRF-Q17 integration gates |
-| GATED: CBL-Q10 replacing write | No change: requested life/order/death flag verified; actual storage/propagation remains NRF-Q20 |
+| GATED: CBL-Q09 overlay stored integration | No change: LSE-R13 local requests retain STL-R06b/STL-R06c/RLI-Q02 integration gates |
+| GATED: CBL-Q10 replacing write | No change: requested life/order/death flag verified; actual storage/propagation remains RLI-Q03 |
 | GATED: CBL-Q11 notification | No change: supplied IEP-R03 notification does not settle IEP-Q01/IEP-Q03 production/order |
 | GATED: CBL-Q12 gameplay | No change: no gameplay performed or runtime label promoted |
 | COVERAGE: separate divisor condition true/boss false | Added CBL-V02(b), divisor 8/amount 32000/requested life 224000; this is a result-distinct supplied predicate branch |
@@ -436,7 +436,7 @@ retained privately from the reader's final response.
 | GATED: CBL-Q07 other non-queued callers | No change: local route semantics do not prove all producer reachability |
 | GATED: CBL-Q08 delivery | No change: sender/player notification/client delivery not inferred from requests |
 | GATED: CBL-Q09 overlay storage | No change: attach/list-write/update integration retains its existing gates |
-| GATED: CBL-Q10 stat storage | No change: replacing-write effects remain NRF-Q20; local request remains eligible |
+| GATED: CBL-Q10 stat storage | No change: replacing-write effects remain RLI-Q03; local request remains eligible |
 | GATED: CBL-Q11 automatic notification | No change: IEP-Q01/IEP-Q03 production/order remain distinct from supplied notification |
 | GATED: CBL-Q12 observations | No change: no gameplay performed or runtime label promoted |
 | COVERAGE: other defender type | No change: retained divisor 4 has the same local amount/request recipe and no extra effect/draw as the existing default CBL-V02; no result-distinct branch requires another fixture |
@@ -470,14 +470,14 @@ this third mismatch-free full run and its complete triage.
 | GATED: CBL-Q07 other non-queued callers | No change: producer reachability is not inferred from supplied route semantics |
 | GATED: CBL-Q08 delivery | No change: no sender/player notification/delivery established from requests |
 | GATED: CBL-Q09 overlay storage | No change: stored attach/list-write/update integration retains its gates |
-| GATED: CBL-Q10 replacing storage | No change: NRF-Q20 retains stored effects; request remains eligible |
+| GATED: CBL-Q10 replacing storage | No change: RLI-Q03 retains stored effects; request remains eligible |
 | GATED: CBL-Q11 notifications | No change: automatic production/order remains IEP-Q01/IEP-Q03 |
 | GATED: CBL-Q12 gameplay | No change: no observation or runtime promotion |
 | COVERAGE: table counts 2/4–7 | Count 2 added as CBL-V08(e), exercising the first nonzero table bonus. No exhaustive extra cases for fixed entries 4–7: the explicit nine-value binding uses the same indexed-table branch; counts 1/2/3/8 already sample that branch and the table/formula boundary |
 | COVERAGE: event 6 for player/other types | Player added as CBL-V06(e). Other type is the existing divisor-4 recipe followed by the same unconditional doubling as CBL-V03; no extra kind-specific effect/draw or new arithmetic branch |
 | COVERAGE: shared result mutation | Added CBL-V13(g) with the exact mutation and ordered log; defender still executes on the already-entered route |
-| COVERAGE: missing/out-of-range class and other defender type | No change: missing/out-of-range boss record selects the existing false-predicate branch, supported by GDF-R19a; supplied false is covered by CBL-V02. Other type retains the same divisor-4/no-extra-effect recipe and draw count, rather than introducing a distinct calculation |
-| COVERAGE: extreme count plus event 6; negative amount plus positive resistance | No change: event doubling is the unconditional low32 operation already tested across monster/player/hireling, while wrapped divisor/life and both fault paths are CBL-V15. No count- or divisor-sign branch is added by event 6. For negative amount/positive resistance, the positive-resistance branch is CBL-V06(a), and the signed narrow product/truncation/wrap recipe belongs to NRF-R05 and is discriminated by NRF-V04(a)/(k); negative-amount overlay suppression is CBL-V09(d)/CBL-V15(a). The combination adds no uncovered algorithm branch or independent operation |
+| COVERAGE: missing/out-of-range class and other defender type | No change: missing/out-of-range boss record selects the existing false-predicate branch, supported by GDA-R04a; supplied false is covered by CBL-V02. Other type retains the same divisor-4/no-extra-effect recipe and draw count, rather than introducing a distinct calculation |
+| COVERAGE: extreme count plus event 6; negative amount plus positive resistance | No change: event doubling is the unconditional low32 operation already tested across monster/player/hireling, while wrapped divisor/life and both fault paths are CBL-V15. No count- or divisor-sign branch is added by event 6. For negative amount/positive resistance, the positive-resistance branch is CBL-V06(a), and the signed narrow product/truncation/wrap recipe belongs to NRF-R05 and is discriminated by NRF-V09(a)/(k); negative-amount overlay suppression is CBL-V09(d)/CBL-V15(a). The combination adds no uncovered algorithm branch or independent operation |
 | HARDEST: CBL-V15(c/d) fault prefixes | No change: zero-divisor and INT_MIN/-1 cases give exact completed draw/life-read prefixes and exclude later operations/recovery; independent arithmetic checks agree |
 | HARDEST: CBL-R04a/R05 count chain | Existing CBL-V04/V05/V07/V08/V15 discriminate type/count/formula/wrap recipes; added CBL-V08(e) tests first nonzero table bonus and CBL-V06(e) player doubling. No rule change needed |
 | HARDEST: CBL-R02a/R03 mutable dispatch and callback draw | Added CBL-V13(g) for mutable shared-record order. Callback guards/chance draw remain separately executable in CBL-V01; supplied dispatch recorders do not claim to execute those callback effects |

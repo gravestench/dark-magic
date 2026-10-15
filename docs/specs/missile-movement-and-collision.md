@@ -19,7 +19,8 @@ This contract covers the server dispatcher, plain movement caller, lifetime/coll
 ordered cell/candidate selection, contact eligibility, pierce, cooldown requests and termination
 results. Hit, event and damage interiors belong to [missile-hit-and-damage-calculation](missile-hit-and-damage-calculation.md)
 (MHD) and combat contracts. Creation supplies speed, lifetime, activation, owner and path state
-through [missile-creation-and-initialization](missile-creation-and-initialization.md) (MCI).
+through [missile-creation-and-seeding](missile-creation-and-seeding.md) (MCI) and
+[missile-initialization-and-registry](missile-initialization-and-registry.md) (MIR).
 Other server do handlers, full generic path planning/collision-map maintenance, streams,
 networking and client presentation are outside this boundary. Supplied dependency results
 support the local consumers below without establishing unread producers.
@@ -29,8 +30,8 @@ support the local consumers below without establishing unread producers.
 D2Game `MISSILES` owns dispatch/contact policy; do selector 1 forwards to the plain step.
 D2Common `PATH`/`COLLISN` own movement and collision operations. Movement precedes lifetime,
 collision gates and at most one selected unit contact per supplied plain update. Creation's
-event association consumes MCI-R12b; the callback-free event walker calls this dispatcher.
-Recurring queue production and relative system/missile order remain MMC-Q03. No direct network
+event association consumes MIR-R01b; the callback-free event walker calls this dispatcher.
+Recurring queue production and relative system/missile order remain MMC-Q02. No direct network
 message is produced here; delegated combat effects retain their owners' message boundaries.
 
 ## 3. Inputs and data
@@ -46,30 +47,29 @@ names impose no language/API/storage design. Supplied values do not establish th
 | owner | valid owner-link condition, type/id, supplied game lookup | association | Direct creator before hostility's further resolution |
 | flags | LastCollide, Explosion, Pierce, CanDestroy | booleans | Record policy |
 | collision fields | CollideType, Collision, CollideKill, CollideFriend, NextHit, NextDelay, Size, ToHit, AlwaysExplode | u8 | CollideType also stored on missile |
-| remaining/activationCounter | MCI-R14/MCI-R21 metadata | signed i16 frames | Activation compared after decrement |
+| remaining/activationCounter | MIR-R03/MIR-R10 metadata | signed i16 frames | Activation compared after decrement |
 | last collision | lastType/lastId, target type/id | i32 | Empty source id -1 |
 | velocity | path presence, speed/targetSpeed/accel/tick, directions, step | i32; speed 8.8, directions scale 4096, step 16.16 | NRF-R11a/NRF-R11b |
 | trace state | fixed position/step, accumulated bits, recording/restricted-blocking/trace conditions; specialRelocationCondition | u32 16.16; u16 bits; booleans | Consumer MMC-R05b; special relocation is false in its supplied missile boundary; producers MMC-Q01 |
 | path selector | Engine-defined path-type selector; value 4 on the fresh missile-allocation branch | i32 selector | Selects the initial recording/restricted conditions in MMC-R05c; complete path production remains gated |
-| movement operations | room-link update, path-step result, transition predicate/update | supplied operations/results | Actual effects MMC-Q04 |
+| movement operations | room-link update, path-step result, transition predicate/update | supplied operations/results | Actual effects MMC-Q03 |
 | collision query | room, integer x/y, size, mask, returned bits | i32; u16 result | Stationary mask 32767; scan mask MMC-R08 |
 | pathFootprintSize | Stored path footprint size | i32 | Stationary query input; distinct from Missiles.Size used by cell scan/candidate search/final footprint request |
 | cells | entered cells in stored order; count | u16 x/y pairs; i32 count | Recorded list; no sorting |
 | candidates | ordered adjacent rooms/unit lists, bounds, candidate type/mode/position/size | logical collections; i32 bounds/sizes; u16 dynamic coordinates | MMC-R09b |
 | eligibility | candidateEligibleA/B; active state 86; alignment tier | booleans; i32 | Both conditions required; tier PVP-R05a |
 | hostility | owner, candidate, directional relations/owner-resolution inputs | PVP-R05a/PVP-R07 inputs | Producer gates retained |
-| stats | missile 19 tohit,328 pierce_idx; owner/source 156 item_pierce,166 skill_pierce; source own-base 328 | signed i32 layer 0 | NRF-R12b/NRF-R12c; own-base differs from aggregate |
+| stats | missile 19 tohit,328 pierce_idx; owner 156 item_pierce,166 skill_pierce | signed i32 layer 0 | RLI-R02a/RLI-R02b; entering missile 328 from MIR-R15a |
 | hand-off | hit result, event callbacks, hit/damage handlers/results | supplied operations/i32 results | MHD/SBA/IEP own interiors |
 | cooldown | game.frame, allocation result, list/state/timer operations | i32 frame; u8 delay; optional list | STL-R01/STL-R06a/STL-R06b/STL-R07 |
-| seeds | source/missile/game/local seed | two u32 each | Local pierce steps only local seed |
 
 | Mapping / constant | Origin | Binding |
 |---|---|---|
 | Stat names/ids 19,156,166,172,328; states 86 justhit,105 alignment | Named ItemStatCost/States cells, [records](../research/spec-evidence/missile-movement-and-collision.md#named-cell-records) | Names from data; numeric selectors fixed by code |
-| Missile columns/flags | GDF-R07 loader descriptors | Data selects engine-defined policy |
+| Missile columns/flags | GDA-R10 loader descriptors | Data selects engine-defined policy |
 | Handler counts 53/71/31, action bits 1/2/4, masks, scale 1024, trace cap 10 | Engine code/tables | Fixed by original code |
-| Collision values 1,4,64,128,256 | Numeric consumers/mask table | Wider writer meanings MMC-Q05 |
-| Candidate size | Player 2; monster signed class-size; missile unsigned Size; supplied size result | Code selects type/field | Actual data/list/map integration MMC-Q04 |
+| Collision values 1,4,64,128,256 | Numeric consumers/mask table | Wider writer meanings MMC-Q04 |
+| Candidate size | Player 2; monster signed class-size; missile unsigned Size; supplied size result | Code selects type/field | Actual data/list/map integration MMC-Q03 |
 
 ## 4. Rules (execution order)
 
@@ -83,7 +83,7 @@ coordinate-containing-room selection, and direct owner. Present owner in town ca
 when SrcTown is set or owner is player. Independently, Town clear and missile room town causes
 removal. Otherwise call the selected do handler and request removal exactly for result 2.
 Null room is not town. No pointer guard exists: slots 4 and 38..52 are null and fault if selected.
-Actual destruction is MMC-Q04; other do interiors are outside scope.
+Actual destruction is MMC-Q03; other do interiors are outside scope.
 
 **MMC-R02** Plain selector [verified in 1.13c code (static)]. Slot 1 calls plain step and
 forwards its result unchanged, without an additional local effect/draw.
@@ -99,14 +99,14 @@ faults; no successful end/removal result follows. Ordinary dispatcher rejects in
   flooring speed to 0 remains stored, but later plain updates skip the moving stage.
 - **MMC-R04b** [verified in 1.13c code (static)]. Prepared direction scale 4096 and cited
   axis/diagonal entries consume NRF-R11b. Creation speed/acceleration/maximum consume MCI-R07,
-  MCI-R18a/MCI-R20. Actual direction production retains MCI-Q04/NRF-Q04; supplied arithmetic
+  MIR-R07a/MIR-R09. Actual direction production retains MIR-Q04/NRF-Q03; supplied arithmetic
   remains available independently.
 
 **MMC-R05** Movement and bounded trace.
 - **MMC-R05a** [verified in 1.13c code (static)]. With nonzero entering speed, request room-link
   update, path step(missile,1024), then conditional room-transition update when its predicate is
   set. Wrapper returns 2 for path-step 0, otherwise 1. On wrapper 2, call Contact(null,force=1)
-  and forward its result before lifetime/scan. Actual room/path effects remain MMC-Q04.
+  and forward its result before lifetime/scan. Actual room/path effects remain MMC-Q03.
 - **MMC-R05b** [verified in 1.13c code (static)]. With specialRelocationCondition false and
   supplied CheckMove collision results,the bounded tracer resets count to 0. Copy
   requested step to temporary increment; arithmetic-shift both components right one repeatedly
@@ -115,12 +115,12 @@ faults; no successful end/removal result follows. Ordinary dispatcher rejects in
   until its u16 integer-cell pair equals the full endpoint's pair. Only changed cells call
   CheckMove(old,new). Its supplied query bits are ORed into accumulated u16 bits; ordinary
   blocking accepts iff bits=0, restricted blocking iff (bits&5)=0. A separate player/monster
-  relocation branch is outside this missile consumer (MMC-Q04). Refusal excludes the new cell:
+  relocation branch is outside this missile consumer (MMC-Q03). Refusal excludes the new cell:
   return blocked=1, current count and centre of the last accepted temporary cell. Acceptance
   appends the new cell only with recording-condition, then increments count regardless of that
   condition. At count>=10 return blocked=0,count=10,original full endpoint without more tests.
   Normal arrival returns blocked=0/full endpoint/count. Unblocked return with count>0 sets
-  traceCondition. Local results do not establish path-step return/publication (MMC-Q04).
+  traceCondition. Local results do not establish path-step return/publication (MMC-Q03).
 - **MMC-R05c** [verified in 1.13c code (static)]. On the fresh type-3 path-allocation branch,
   path selector 4 selects the fixed entry that sets recording-condition and restricted-blocking
   condition true. This verifies those local initialization writes; complete later planning and
@@ -153,7 +153,7 @@ continue to cell scan
 ```
 
 Result-2 gates invoke no contact,cooldown,event,hit handler or MMC-R15 footprint request.
-Actual Collision footprint/query effects remain MMC-Q04; own-footprint presence is not assumed.
+Actual Collision footprint/query effects remain MMC-Q03; own-footprint presence is not assumed.
 
 **MMC-R08** Selector table [verified in 1.13c code (static)].
 
@@ -170,7 +170,7 @@ Actual Collision footprint/query effects remain MMC-Q04; own-footprint presence 
 
 Filters require present context/record/candidate; non-7 filters then invoke MMC-R10. Tier uses
 PVP-R05a's matching state-105 list own stat 172, independently of active alignment bit. Values
-above 8 index beyond the table without a guard; no successful fallback is specified (MMC-Q04).
+above 8 index beyond the table without a guard; no successful fallback is specified (MMC-Q03).
 
 **MMC-R09** Cell/candidate order.
 - **MMC-R09a** [verified in 1.13c code (static)]. In recorded-cell order query
@@ -195,7 +195,7 @@ accept room
   Read candidate size, clamp >=3 to 3 and skip <=0. Let dx=abs(x-unitX),dy=abs(y-unitY) over
   u16 dynamic coordinates. Apply geometry below, then filter(candidate,unchanged context).
   Return first nonzero-filter candidate; exhaustion returns absent. Actual list/size/position
-  producers retain MMC-Q04.
+  producers retain MMC-Q03.
 
 | Missile size,candidate size | Geometry |
 |---|---|
@@ -220,25 +220,20 @@ owner requires hostility or CollideFriend; absent owner skips this test. Failure
 Type/hostility-refused targets can become last collision. CT=1 finds a tier-2 monster but rejects
 it at contact, ending this frame's scan while continuing the missile.
 
-**MMC-R12** Pierce.
-- **MMC-R12a** [verified in 1.13c code (static)]. Consume MCI-R26a creation with player/monster
-  source,type-3 missile and Pierce. MCI-R26a/MCI-R26b own the complete calculation: supply source
-  current aggregate stats 156/166 for chance and source own-base stat 328 for its local seed.
-  Consume its exact ordered local draws,count and layer-0 missile-328 write request; zero chance
-  skips that request. Source/missile/game seeds are unchanged by this helper. MMC-V09 exercises
-  the dependency contract's seed/count boundary; actual stored count remains MMC-Q07 and the
-  owner own-base producer remains MMC-Q02.
-- **MMC-R12b** [verified in 1.13c code (static)]. After gates, with owner,target,Pierce and
+**MMC-R12** Pierce. The entering missile stat 328 count is produced at creation by MIR-R15a
+(chance,local seed,draws and count request) and MIR-R15b (stat reads and replacing request);
+MIR-V13 exercises that calculation. This spec consumes that count and only decrements it.
+- **MMC-R12a** [verified in 1.13c code (static)]. After gates, with owner,target,Pierce and
   current owner 166!=0 or current owner 156!=0, read missile 328. Read 166 first and 156 only
   if that result is zero. Nonzero n requests low32(n-1),
   layer 0 and sets stopMask=2; zero leaves stopMask=3. Other branches retain 3. Owner stats are
-  read anew per contact; negative n is nonzero. No local draw. Actual persistence MMC-Q07.
-- **MMC-R12c** [unresolved]. Layer-0 replacing requests are established; storage/propagation
-  consumes STL-R06c/NRF-Q20, remains MMC-Q07. Supplied persistence supports the multi-contact
+  read anew per contact; negative n is nonzero. No local draw. Actual persistence MMC-Q06.
+- **MMC-R12b** [unresolved]. Layer-0 replacing requests are established; storage/propagation
+  consumes STL-R06c/RLI-Q03, remains MMC-Q06. Supplied persistence supports the multi-contact
   vector without establishing actual stored counts.
 
 **MMC-R13** Initial actions [verified in 1.13c code (static)]. act=0 for Explosion else 2;
-CollideKill!=0 ORs mask 1. stopMask starts 3, overridden only by MMC-R12b. Mask 1 permits contact
+CollideKill!=0 ORs mask 1. stopMask starts 3, overridden only by MMC-R12a. Mask 1 permits contact
 ending,mask 2 selects damage,hit-function mask 4 aborts.
 
 **MMC-R14** Hand-off [verified in 1.13c code (static)]. Target plus ToHit requests SBA roll
@@ -253,11 +248,11 @@ null pointers; selected null slots fault. Absent event owner invokes no callback
 Target plus act&2 requests damage fill,then handler when 0<damage selector<31,then application;
 ignore damage-handler/application numeric results for ending. No target,force=0,AlwaysExplode=0
 skips those operations. Finish at MMC-R15. Handler/damage/proc/draw interiors retain MHD/IEP/SBA
-contracts and gates (MMC-Q08).
+contracts and gates (MMC-Q07).
 
 **MMC-R15** Finish [verified in 1.13c code (static)]. If neither act&1 nor force,return 1.
 If stopMask&1 clear,return 1. Otherwise present room requests footprint removal(room,currentX,
-currentY,Size,64); absent room skips request. Return 2. Actual map/unit destruction MMC-Q04.
+currentY,Size,64); absent room skips request. Return 2. Actual map/unit destruction MMC-Q03.
 Force-end can continue on hit abort except MMC-R09a's barrier discards that result.
 
 **MMC-R16** Cooldown requests [verified in 1.13c code (static)]. NextHit=0 or absent target
@@ -265,12 +260,12 @@ returns with no request. expiry=low32(game.frame+unsigned NextDelay). Allocate l
 owner=target type/id,expiry). Absent result returns before later operations. Success in order:
 schedule target timer 12 at expiry,callback absent/auxiliaries 0; set list state 86; set contact-expiry
 callback; attach to target with condition 1; request target state 86 enabled. No internal
-existing-list check. Attach/state/expiry effects remain MMC-Q09. Once active,state 86 gates all
+existing-list check. Attach/state/expiry effects remain MMC-Q08. Once active,state 86 gates all
 NextHit missiles,not just the missile that requested it.
 
 **MMC-R17** Draw scope [verified in 1.13c code (static)]. Dispatcher guards,lifetime/gates,
 local trace/search/contact decisions,cooldown caller,action selection and finish make no direct
-draw. Creation pierce alone steps a local seed in this slice. Path/room/collision/removal interiors,
+draw. Creation pierce's local seed draws belong to MIR-R15a,outside this slice. Path/room/collision/removal interiors,
 other do handlers,event callbacks,hit/damage/to-hit operations retain their draw boundaries.
 No whole-update zero-draw assertion follows.
 
@@ -278,28 +273,27 @@ No whole-update zero-draw assertion follows.
 
 | Id | Summary | Status label | Gates | Vectors |
 |---|---|---|---|---|
-| MMC-R01 | Dispatcher/towns | verified in 1.13c code (static) | MMC-Q03 queue; MMC-Q04 removal | MMC-V01 |
+| MMC-R01 | Dispatcher/towns | verified in 1.13c code (static) | MMC-Q02 queue; MMC-Q03 removal | MMC-V01 |
 | MMC-R02 | Plain forwarding | verified in 1.13c code (static) | none locally | MMC-V01 |
 | MMC-R03 | Invalid direct-step fault | verified in 1.13c code (static) | none locally | MMC-V01 |
-| MMC-R04a | Supplied velocity | verified in 1.13c code (static) | MMC-Q04 path integration | MMC-V02 |
-| MMC-R04b | Direction/creation dependency | verified in 1.13c code (static) | NRF-Q04/MCI-Q04 direction producer only | MMC-V02 |
-| MMC-R05a | Moving caller | verified in 1.13c code (static) | MMC-Q04 path/room | MMC-V03 |
-| MMC-R05b | Trace consumer | verified in 1.13c code (static) | MMC-Q04 queries/publication | MMC-V03 |
+| MMC-R04a | Supplied velocity | verified in 1.13c code (static) | MMC-Q03 path integration | MMC-V02 |
+| MMC-R04b | Direction/creation dependency | verified in 1.13c code (static) | NRF-Q03/MIR-Q04 direction producer only | MMC-V02 |
+| MMC-R05a | Moving caller | verified in 1.13c code (static) | MMC-Q03 path/room | MMC-V03 |
+| MMC-R05b | Trace consumer | verified in 1.13c code (static) | MMC-Q03 queries/publication | MMC-V03 |
 | MMC-R05c | Initial path-condition writes | verified in 1.13c code (static) | MMC-Q01 later planner/retention only | MMC-V03 |
 | MMC-R06 | Lifetime | verified in 1.13c code (static) | none with supplied movement | MMC-V04 |
-| MMC-R07 | Collision gates | verified in 1.13c code (static) | MMC-Q04 actual bits | MMC-V05 |
-| MMC-R08 | Mask/filter table | verified in 1.13c code (static) | MMC-Q04 selector/producer | MMC-V05,MMC-V08 |
-| MMC-R09a | Cell/final barrier result | verified in 1.13c code (static) | MMC-Q04 cells/queries | MMC-V06 |
-| MMC-R09b | Candidate order/geometry | verified in 1.13c code (static) | MMC-Q04 lists/sizes | MMC-V07 |
+| MMC-R07 | Collision gates | verified in 1.13c code (static) | MMC-Q03 actual bits | MMC-V05 |
+| MMC-R08 | Mask/filter table | verified in 1.13c code (static) | MMC-Q03 selector/producer | MMC-V05,MMC-V08 |
+| MMC-R09a | Cell/final barrier result | verified in 1.13c code (static) | MMC-Q03 cells/queries | MMC-V06 |
+| MMC-R09b | Candidate order/geometry | verified in 1.13c code (static) | MMC-Q03 lists/sizes | MMC-V07 |
 | MMC-R10 | Search filter | verified in 1.13c code (static) | PVP producer limits | MMC-V08 |
 | MMC-R11 | Contact filters | verified in 1.13c code (static) | PVP producer limits | MMC-V08 |
-| MMC-R12a | Pierce count request | verified in 1.13c code (static) | MMC-Q07 storage; MMC-Q02 upstream only | MMC-V09 |
-| MMC-R12b | Pierce decrement request | verified in 1.13c code (static) | MMC-Q07 storage | MMC-V09 |
-| MMC-R12c | Replacing integration | unresolved | MMC-Q07 | MMC-V09 gated persistence |
+| MMC-R12a | Pierce decrement request | verified in 1.13c code (static) | MMC-Q06 storage | MMC-V09 |
+| MMC-R12b | Replacing integration | unresolved | MMC-Q06 | MMC-V09 gated persistence |
 | MMC-R13 | Initial bits | verified in 1.13c code (static) | none locally | MMC-V10 |
-| MMC-R14 | Hand-off consumer | verified in 1.13c code (static) | MMC-Q08 interiors | MMC-V10 |
-| MMC-R15 | End/footprint request | verified in 1.13c code (static) | MMC-Q04 map/removal | MMC-V10 |
-| MMC-R16 | Cooldown request order | verified in 1.13c code (static) | MMC-Q09 attach/expiry | MMC-V11 |
+| MMC-R14 | Hand-off consumer | verified in 1.13c code (static) | MMC-Q07 interiors | MMC-V10 |
+| MMC-R15 | End/footprint request | verified in 1.13c code (static) | MMC-Q03 map/removal | MMC-V10 |
+| MMC-R16 | Cooldown request order | verified in 1.13c code (static) | MMC-Q08 attach/expiry | MMC-V11 |
 | MMC-R17 | Direct draw scope | verified in 1.13c code (static) | dependency draws excluded | MMC-V09,MMC-V10,MMC-V11 |
 
 ## 5. Outputs and side effects
@@ -314,12 +308,12 @@ No whole-update zero-draw assertion follows.
 | Initial recording/restricted-blocking conditions | MMC-R05c |
 | Remaining lifetime,stationary accumulated-bit cache | MMC-R06/MMC-R07 |
 | Last-collision identity | MMC-R11 |
-| Local seed,count/decrement replacing requests | MMC-R12a/MMC-R12b |
+| Pierce decrement replacing request | MMC-R12a |
 | Hit-roll/event/hit/damage-fill/handler/application requests | MMC-R14 |
 | Footprint-removal request | MMC-R15 |
 | Allocation/timer/list-state/callback/attach/state-enable requests | MMC-R16 |
-| Actual map/removal,replacing-stat/cooldown persistence/expiry | Gated MMC-Q04/MMC-Q07/MMC-Q09 |
-| Delegated damage/procs/messages/draws | MMC-R14 dependencies,MMC-Q08 |
+| Actual map/removal,replacing-stat/cooldown persistence/expiry | Gated MMC-Q03/MMC-Q06/MMC-Q08 |
+| Delegated damage/procs/messages/draws | MMC-R14 dependencies,MMC-Q07 |
 
 ## 6. Branches and edge cases
 
@@ -330,8 +324,8 @@ No whole-update zero-draw assertion follows.
 - Absent owner skips hostility/pierce but does not guarantee damage under MHD/SBA guards.
 - Invalid dispatcher row returns; invalid direct-step row faults; null slots are not fallbacks.
 - Size 0 or >3 finds no unit but can reach barrier termination.
-- Chance 0 skips initialization; negative chance draws once/count 0; chance >99 can succeed four
-  times. Negative nonzero count decrements with low32 wrap.
+- Creation-count chance branches belong to MIR-R15a. A negative nonzero entering count
+  decrements with low32 wrap.
 - Cooldown allocation failure stops only that helper's later requests,not the surrounding contact.
 - Dependencies retain difficulty/PvP/classic/expansion distinctions; no additional local branch.
 
@@ -340,14 +334,13 @@ No whole-update zero-draw assertion follows.
 | Question | Kind / blocked assertions | Evidence that settles it |
 |---|---|---|
 | **MMC-Q01** | integration: final path conditions after planning | Initial writes are MMC-R05c; complete later planner/retention chain; supplied trace/list consumers available |
-| **MMC-Q02** | outside-boundary: owner own-base 328 producer | Identify player/monster writers; supplied seed does not imply universally fixed rolls |
-| **MMC-Q03** | integration: recurring queue/relative order | Registration/requeue/event chain; supplied update available |
-| **MMC-Q04** | integration: actual path/query/cell/list/size/map/removal,out-of-table selectors | Complete nested path/collision/room/removal; supplied results do not establish effects |
-| **MMC-Q05** | outside-boundary: collision-bit writer meanings | Terrain/player/monster map writers; numeric masks need no guessed names |
-| **MMC-Q06** | observation: local rules unobserved | Controlled matching 1.13c records; other builds outside boundary |
-| **MMC-Q07** | integration: replacing-stat storage/propagation | NRF-Q20/STL-R06c; arithmetic/requests available |
-| **MMC-Q08** | integration: to-hit/event/hit/damage interiors | Applicable SBA/IEP/MHD/handler contracts retain gates |
-| **MMC-Q09** | integration: attach/state/expiry/callback effects | STL-R05/STL-R06b and expiry chain; request order available |
+| **MMC-Q02** | integration: recurring queue/relative order | Registration/requeue/event chain; supplied update available |
+| **MMC-Q03** | integration: actual path/query/cell/list/size/map/removal,out-of-table selectors | Complete nested path/collision/room/removal; supplied results do not establish effects |
+| **MMC-Q04** | outside-boundary: collision-bit writer meanings | Terrain/player/monster map writers; numeric masks need no guessed names |
+| **MMC-Q05** | observation: local rules unobserved | Controlled matching 1.13c records; other builds outside boundary |
+| **MMC-Q06** | integration: replacing-stat storage/propagation | RLI-Q03/STL-R06c; arithmetic/requests available |
+| **MMC-Q07** | integration: to-hit/event/hit/damage interiors | Applicable SBA/IEP/MHD/handler contracts retain gates |
+| **MMC-Q08** | integration: attach/state/expiry/callback effects | STL-R05/STL-R06b and expiry chain; request order available |
 
 Attempts and remaining limits are in the [gap file](../plans/gaps/missile-movement-and-collision.md).
 
@@ -569,40 +562,40 @@ separately from verified local requests.
     before mutation,CT=7 bypass.
   - runtime_observed: no
 
-- **MMC-V09** Local pierce seed/storage boundary (MMC-R12a/MMC-R12b/MMC-R12c/MMC-R17; boundary: supplied-input stage)
-  - Inputs: source type 0,missile type 3,Pierce=1,source own-base 328=0; chance=source 156+166 as
-    independently supplied below; source/missile/game seeds {1,0}.
-  - Seeds: local starts {0,666}.
-  - Draws: ordered reached steps (local,modulus 100): {lo 666,hi 0}->66;
-    {lo 3365183618,hi 277}->18; {lo 3979650335,hi 1403592407}->35;
-    {lo 101162930,hi 1659881787}->30.
-  - Trace: NRF-R01 full product/high carry each step; strict signed comparison with chance.
-  - Outputs: chance 50 or 66 draws once,requests count 0; chance 67 draws four,requests count 4.
-    Low words respectively 0x29A,0xC894A082,0xED34A51F,0x06079FB2. All three other seeds unchanged.
-  - (a) Inputs: chance 0,entering missile 328=9. Draws: none. Outputs: no count request,local
-    caller leaves entering 9 untouched. Independent chance=-1: one draw 66,request count 0.
-  - (b) Inputs: five supplied sequential contacts with present direct owner P(type 0,id 1),
+- **MMC-V09** Pierce decrement/storage boundary (MMC-R12a/MMC-R12b/MMC-R17; boundary: supplied-input stage)
+  - Inputs: five supplied sequential contacts with present direct owner P(type 0,id 1),
     valid missile owner link resolving P,and five present eligible type 1 targets T1..T5;
     supplied hostility(P,each target)=true. Entering count 4,current owner 166=67,156=0,
     Pierce=1,CollideKill=1,Explosion=1,no hit handler; supplied replacing operation persists counts.
-    Draws: none. Trace: four decrements set stopMask=2; fifth sees 0/stopMask=3. Outputs: replacing
-    log [328=3,328=2,328=1,328=0],contact results [1,1,1,1,2],Remove only fifth. Actual engine
-    persistence remains gated MMC-R12c.
-  - (c) Inputs: independent present direct owner P(type 0,id 1),valid missile owner link resolving P,
+  - Seeds: no draw.
+  - Draws: none.
+  - Trace: four decrements set stopMask=2; fifth sees 0/stopMask=3.
+  - Outputs: replacing log [328=3,328=2,328=1,328=0],contact results [1,1,1,1,2],Remove only
+    fifth. Actual engine persistence remains gated MMC-R12b.
+  - (a) Inputs: independent present direct owner P(type 0,id 1),valid missile owner link resolving P,
     present eligible type 1 target T,supplied hostility(P,T)=true,count 4,current owner 156=166=0,
     Pierce=1,CollideKill=1,Explosion=1.
     Draws: none. Outputs: no count read/write,result 2,Remove despite entering count 4.
-  - (d) Inputs: independent present direct owner P(type 0,id 1),valid missile owner link resolving P,
+  - (b) Inputs: independent present direct owner P(type 0,id 1),valid missile owner link resolving P,
     present eligible type 1 target T,hostility(P,T)=true,Pierce=1,CollideKill=1,Explosion=1,
     owner 166=0,owner 156=67,missile 328=-1. Draws: none. Trace: zero skill component falls back to
     item component; nonzero negative count decrements. Outputs: request missile 328=-2/layer 0,
     stopMask=2,result 1,no footprint/Remove; actual stored count remains gated.
-  - (e) Inputs: present eligible target T(type 1,id 7),count=4,Explosion=1,CollideKill=1;
+  - (c) Inputs: present eligible target T(type 1,id 7),count=4,Explosion=1,CollideKill=1;
     independent (owner absent,Pierce=1) and (present linked owner P,hostility(P,T)=true,
     owner 166=67,Pierce=0). Draws: none. Trace: each misses a pierce precondition. Outputs:
     no count read/write,[Event(0,T,missile,null,0,0),Footprint(R,10,10,1,64),Remove],result 2.
-  - Discriminates: chance comparison,local seed owner/full carry,current owner gate and explicit
-    persistence boundary.
+  - (d) Inputs: creation-stage count producer MIR-R15a with source type 0,missile type 3,
+    Pierce=1,source own-base 328=0; independent chance 50,66 and 67; source/missile/game seeds
+    {1,0}. Seeds: local starts {0,666}. Draws: ordered reached steps (local,modulus 100):
+    {lo 666,hi 0}->66; {lo 3365183618,hi 277}->18; {lo 3979650335,hi 1403592407}->35;
+    {lo 101162930,hi 1659881787}->30. Trace: MIR-R15a strict signed comparison; remainder 66
+    equal to chance 66 stops. Outputs: chance 50 or 66 draws once,requests count 0; chance 67
+    draws four,requests count 4. Low words respectively 0x29A,0xC894A082,0xED34A51F,0x06079FB2.
+    All three other seeds unchanged.
+  - Discriminates: current owner gate,item-stat fallback,negative-count wrap and explicit
+    persistence boundary; (d) adds the zero own-base seed and equal-chance stop to MIR-V13's
+    creation cases.
   - runtime_observed: no
 
 - **MMC-V10** Hand-off/final results (MMC-R13/MMC-R14/MMC-R15/MMC-R17; boundary: supplied-input stage)
@@ -644,7 +637,7 @@ separately from verified local requests.
   - (b) Inputs: NextHit=0,target T. Draws: none. Outputs: []; independent NextHit=1,target absent: [].
   - (c) Inputs: second missile NextHit=1,target T with supplied persisted active state 86=true.
     Draws: none. Outputs: search rejects/direct contact 1 before arming; actual persistence/expiry
-    at 1015 remain MMC-Q09.
+    at 1015 remain MMC-Q08.
   - (d) Inputs: target T(type 1,id 7),NextHit=1,NextDelay=0,frame=1000,allocation returns fresh L.
     Draws: none. Outputs: [Allocate(type 2,owner 1/7,1000)=L,Schedule(T,12,1000,null,0,0),
     ListState(L,86),ListCallback(L,contactExpiry),Attach(T,L,1),State(T,86,true)]. Requested expiry
@@ -668,16 +661,16 @@ No gameplay observation was performed. Table reads do not set runtime_observed.
 Partial acceptance is verified local arithmetic/writes,request order and final results in
 MMC-V01..MMC-V11. Supplied path/results/bits/cells/lists/sizes/hit operations do not establish
 original producers. Persistent count/cooldown assertions remain gated even when their supplied
-model passes. Full reproduction also requires MMC-R12c and MMC-Q01/Q03/Q04/Q07/Q08/Q09
-integration,plus matching observations for every verified local rule (MMC-Q06). Outside-boundary
-MMC-Q02/MMC-Q05 do not gate supplied consumers. Partial acceptance establishes no parity or approval.
+model passes. Full reproduction also requires MMC-R12b and MMC-Q01/Q02/Q03/Q06/Q07/Q08
+integration,plus matching observations for every verified local rule (MMC-Q05). Outside-boundary
+MMC-Q04 does not gate supplied consumers. Partial acceptance establishes no parity or approval.
 
-**Depends on:** NRF-R01/NRF-R03a seed,NRF-R11a/NRF-R11b velocity/direction,
-NRF-R12a/NRF-R12b/NRF-R12c state/stat reads,NRF-Q20 writes; GDF-R07/GDF-R11a/GDF-R12 names;
-MCI-R03 room,MCI-R07/MCI-R18a/MCI-R20 speed,MCI-R12b event,MCI-R14/MCI-R21 lifetime,MCI-R26a
-pierce; PVP-R05a/PVP-R07 hostility/tier/owner; SBA-R01..SBA-R08 to-hit; IEP-R07/IEP-R09a event;
+**Depends on:** NRF-R01/NRF-R03a seed,NRF-R11a/NRF-R11b velocity/direction, Owners of the cited HIT, GDA, RLI ids: [combat-hit-roll](combat-hit-roll.md) (HIT); [core-game-data-table-records](core-game-data-table-records.md) (GDA); [core-record-layouts-and-ids](core-record-layouts-and-ids.md) (RLI).
+RLI-R03/RLI-R02a/RLI-R02b state/stat reads,RLI-Q03 writes; GDA-R10/GDF-R02/GDF-R03 names;
+MCI-R03 room,MCI-R07/MIR-R07a/MIR-R09 speed,MIR-R01b event,MIR-R03/MIR-R10 lifetime,
+MIR-R15a/MIR-R15b creation pierce count; PVP-R05a/PVP-R07 hostility/tier/owner; HIT-R01..HIT-R08 to-hit; IEP-R07/IEP-R09a event;
 STL-R01/STL-R06a/STL-R06b/STL-R06c/STL-R07 timer/list/attach/stat/state;
-MHD-R18/MHD-R20/MHD-R21/MHD-R23/MHD-R25/MHD-R26 hand-off/interiors. All retain their gates;
+MHD-R06/MHD-R08/MHD-R09/MHD-R10/MHD-R11/MHD-R12 hand-off/interiors. All retain their gates;
 request logs do not close integration.
 
 **Depended on by:** MHD timing/termination,MCI post-creation,Blade Sentinel/Fury cooldown.
@@ -685,7 +678,7 @@ Reverse citations are not delivery prerequisites.
 
 ## 10. Related specs
 
-- [missile-creation-and-initialization](missile-creation-and-initialization.md): creates consumed inputs.
+- [missile-creation-and-seeding](missile-creation-and-seeding.md) and [missile-initialization-and-registry](missile-initialization-and-registry.md): create and initialize consumed inputs.
 - [missile-hit-and-damage-calculation](missile-hit-and-damage-calculation.md): owns hit/damage interiors.
 - [missile-damage-parameters](missile-damage-parameters.md): owns creation damage values.
 - [combat-shield-block-and-avoidance](combat-shield-block-and-avoidance.md): owns to-hit/defenses.

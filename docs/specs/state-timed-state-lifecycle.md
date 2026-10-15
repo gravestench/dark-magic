@@ -13,7 +13,7 @@ Open evidence gaps: [gap file](../plans/gaps/state-timed-state-lifecycle.md)
 
 ## 1. Scope
 
-This contract covers timed-state list creation, attachment, state membership, expiry scheduling and traversal, removal callbacks, refresh policies by reference, death cleanup, and client state-callback dispatch. Effect magnitudes belong to [combat-status-application](combat-status-application.md) and [state-movement-modifiers-and-freeze](state-movement-modifiers-and-freeze.md); expression evaluation belongs to [skill-calc-expressions-and-synergies](skill-calc-expressions-and-synergies.md). Curse overrides, aura ticks, network message layouts and client visual callback bodies are separate behaviors. STL-R16 records the unresolved transition boundary. STL-R17 bounds a separate auxiliary timed effect without state identity. No local rule draws randomness.
+This contract covers timed-state list creation, attachment, state membership, expiry scheduling and traversal, removal callbacks, refresh policies by reference, death cleanup, and client state-callback dispatch. Effect magnitudes belong to [combat-status-application](combat-status-application.md) and [state-movement-modifiers-and-freeze](state-movement-modifiers-and-freeze.md); expression evaluation belongs to [skill-calc-expressions](skill-calc-expressions.md). Curse overrides, aura ticks, network message layouts and client visual callback bodies are separate behaviors. STL-R16 records the unresolved transition boundary. STL-R17 bounds a separate auxiliary timed effect without state identity. No local rule draws randomness.
 
 ## 2. Trigger and ownership
 
@@ -31,19 +31,19 @@ Semantic operation names are illustrative and impose no API or storage layout.
 |---|---|---|---|
 | Current/requested frame, list expiry | Game frame; effect expiry | i32 frames | Signed comparisons, except unsigned auxiliary expiry |
 | Target and owner identity | Unit type/id | u32 type; i32 id | Player 0, monster 1, object 2, missile 3, item 4; absent owner 6/-1 |
-| Unit mode | GDF-R14a/GDF-R15a | u32 | Player death/dead 0/17; monster death/dead 0/12 |
-| Additional death condition | `unit.expiryDeathCondition` | boolean | Treated as dead by removal callbacks for every unit type; the same condition CSA names `aliveExclusionCondition`; wider meaning STL-Q06 |
-| Base list and chains | NRF-R12a | Optional base, ordered primary/secondary lists | State storage eligibility and effect-list traversal |
+| Unit mode | GDF-R05a/GDF-R06a | u32 | Player death/dead 0/17; monster death/dead 0/12 |
+| Additional death condition | `unit.aliveExclusionCondition` | boolean | Treated as dead by removal callbacks for every unit type; shared name from [core-game-data-fields](core-game-data-fields.md) section 3; wider meaning STL-Q06 |
+| Base list and chains | RLI-R03 | Optional base, ordered primary/secondary lists | State storage eligibility and effect-list traversal |
 | Timed list | Owner, state, expiry, stats, callback | i32 state/expiry/stat values; callable | Effect metadata independent of active membership |
 | List conditions | `timed`, `hasStateStorage`, `secondary`, `removeOnModeChange` (NRF name), `filteredApply`, `deathRemovalExempt` | booleans | Code-tested conditions; unidentified category meanings STL-Q06 |
 | State membership | Active and changed state sets | Bounded state identities | State count determines valid identities |
 | Frame event | Type, target, frame, override, two parameters | Signed type; i32 frame/parameters | Timed-state callers use type 12/no override/parameters 0,0 |
-| State definitions | GDF-R12/GDF-R13 | Named fields | `nosend`, `disguise`, `notondead`, player/monster/boss stay-death flags |
+| State definitions | GDF-R03/GDA-R13 | Named fields | `nosend`, `disguise`, `notondead`, player/monster/boss stay-death flags |
 | Stay-death masks | Supplied player/monster/boss state sets | Membership bits | Consumer STL-R12a; producer STL-R12b |
 | Skill fields | `Skills.aurastate`, `auralencalc`, `aurastat1..6`, `aurastatcalc1..6` | i16 selectors; expression references | State, duration and six ordered stat slots |
 | Application inputs | Skill count, skill identity/level, caster, target | i32 identity/level; optional caster | Expression inputs and effect owner |
 | Client selectors | `States.setfunc`, `remfunc`, `cltevent`, `clteventfunc` | i16 | Select dispatch behavior, not callback bodies |
-| Boss condition | GDF-R05a `MonStats.boss` | boolean | Selects boss death partition |
+| Boss condition | GDA-R08a `MonStats.boss` | boolean | Selects boss death partition |
 | Unit timer entries | Kind, key, busy, pending removal | i32 kind/key; booleans | Kind 1/key state cancellation |
 | Auxiliary effect | Optional effect and expiry | u32 expiry | Independent type 6 lifetime |
 
@@ -51,8 +51,8 @@ Semantic operation names are illustrative and impose no API or storage layout.
 |---|---|---|
 | Event types 12/6, type bound 15, 64 frame slots | Engine code | Fixed by original code |
 | Unit/dead-mode tests above | Engine code; names through GDF | Fixed by original code |
-| State/stat identities in policy table and vectors | GDF-R11/GDF-R12 data identity | Appliers use fixed identities; skill selectors resolve from data |
-| Definition fields and stay-death membership | Table schema, GDF-R13 | Resolved from data; execution meaning established separately |
+| State/stat identities in policy table and vectors | GDF-R02/GDF-R03 data identity | Appliers use fixed identities; skill selectors resolve from data |
+| Definition fields and stay-death membership | Table schema, GDA-R13 | Resolved from data; execution meaning established separately |
 | Six stat slots; attackrate 68 and paired stat 69 | Engine code | Fixed by original code; paired operation STL-Q07 |
 
 Vectors supply masks and selectors explicitly; they do not claim archive values for unnamed rows. Actual named cells require their own table-data evidence.
@@ -71,23 +71,23 @@ Vectors supply masks and selectors explicitly; they do not claim archive values 
 
 **STL-R05** Free effects [unresolved]. Candidate observable behavior removes the list's applied contributions before invoking its callback with associated unit, state and still-readable list, then releases it. Secondary lists do not invoke that callback. Complete propagation/indirect effects have not been read through all output writes (STL-Q07); a callback-order reading alone does not establish stored totals.
 
-**STL-R06a** Creation/expiry primitives [verified in 1.13c code (static)]. Successful allocation initializes supplied owner type/id, list conditions and expiry, with other semantic fields zero/empty. State, callback and expiry setters ignore null lists. Setting expiry on a non-null list always stores it; a positive value sets timed, and a nonpositive value never clears timed. Null-list expiry read returns 0. Lookup consumes NRF-R12a: state 0 returns null; otherwise the first primary match precedes secondary matches, with no state-range test.
+**STL-R06a** Creation/expiry primitives [verified in 1.13c code (static)]. Successful allocation initializes supplied owner type/id, list conditions and expiry, with other semantic fields zero/empty. State, callback and expiry setters ignore null lists. Setting expiry on a non-null list always stores it; a positive value sets timed, and a nonpositive value never clears timed. Null-list expiry read returns 0. Lookup consumes RLI-R03: state 0 returns null; otherwise the first primary match precedes secondary matches, with no state-range test.
 
 **STL-R06b** Attach [unresolved]. Candidate observable behavior attaches secondary lists without applying stats, and primary lists newest-first with full or filtered stat application. Cycle refusal, reattachment callbacks, extended-list processing and stored totals require complete verification (STL-Q07). Timed states request full application.
 
 **STL-R06c** Replacing list-stat write [unresolved]. Candidate behavior replaces the stat/layer value, does nothing for equality, removes a zero entry, and propagates new-minus-old. Direct replacement control flow is read; entry management, propagation and special-list effects remain STL-Q07.
 
-**STL-R07** State membership [verified in 1.13c code (static)]. Signed s<0 or s>=stateCount makes no request. Otherwise request the active-bit operation carrying on unchanged, then update marking. With state storage present, nonzero on sets active membership and zero clears it; only a membership change sets changed membership. No list is allocated or found. A state can be active without a list and a list can exist with its state off. Disguise is STL-R07a; update-queue integration is NRF-Q17.
+**STL-R07** State membership [verified in 1.13c code (static)]. Signed s<0 or s>=stateCount makes no request. Otherwise request the active-bit operation carrying on unchanged, then update marking. With state storage present, nonzero on sets active membership and zero clears it; only a membership change sets changed membership. No list is allocated or found. A state can be active without a list and a list can exist with its state off. Disguise is STL-R07a; update-queue integration is RLI-Q02.
 
 **STL-R07a** Disguise [unresolved]. A changed disguise state is intended to update the unit's disguise condition; clearing must account for another active disguise state. Byte decoding and the full state-test helper remain STL-Q07; no guessed default is established.
 
-**STL-R08** Forced changed membership [verified in 1.13c code (static)]. For non-null unit with state storage and valid signed state, set/clear changed membership according to nonzero/zero on, leaving active membership unchanged; request update even when the changed bit already matched. Invalid state or missing unit/list/storage makes no request. Update-queue effects remain NRF-Q17.
+**STL-R08** Forced changed membership [verified in 1.13c code (static)]. For non-null unit with state storage and valid signed state, set/clear changed membership according to nonzero/zero on, leaving active membership unchanged; request update even when the changed bit already matched. Invalid state or missing unit/list/storage makes no request. Update-queue effects remain RLI-Q02.
 
 **STL-R09** Per-applier refresh [verified in 1.13c code (static)]. There is no shared policy. Consume the contracts below, including when each applier requests another type 12 event (freeze requests one even when its expiry is unchanged; STL-R10a requests one on every successful application). A queued event for an earlier scheduled expiry can fire with no due list.
 
 | Applier | State | Existing expiry | Values | Contract |
 |---|---|---|---|---|
-| Cold |11 cold|Extend only|Unchanged|CSA-R05, MMF-R13d|
+| Cold |11 cold|Extend only|Unchanged|CSA-R05|
 | Freeze |1 freeze|Extend only|No magnitude|CSA-R08|
 | Stun |21 stunned|Replace, can shorten|No magnitude|CSA-R04|
 | Poison/burn |2 poison/115 burning|Replace when new magnitude>=old|Replace hpregen|CSA-R12|
@@ -97,7 +97,7 @@ Vectors supply masks and selectors explicitly; they do not claim archive values 
 
 **STL-R10b** Skill stat slots [unresolved]. Visit six slots in order. Invalid stat or zero expression result skips writing; zero leaves a stored value. Valid nonzero result requests a layer 0 list-stat write. Stat 68 also requests a separate operation for 69. The paired operation forwards to the same replacing list-stat writer after a null-list guard. Checked decoding of this caller and complete write/refresh effects remain STL-Q07; the shared writer is STL-R06c.
 
-**STL-R11** Generic removal callback [verified in 1.13c code (static)]. Null unit is fatal. First request cancellation of unit timers kind 1/key state. Alive means expiryDeathCondition false and either player mode outside{0,17} or monster mode outside{0,12}; all other types count as dead. If dead and StayDeath nonzero, return with state unchanged. Otherwise request state off, animation-rate refresh, passive refresh, and pet update for a player. These are ordered requests; refresh effects remain STL-Q07. Cold instead requests state off, then shatter 107 off when alive, then animation-rate refresh (MMF-R13c). A retained state does not retain the already-removed list.
+**STL-R11** Generic removal callback [verified in 1.13c code (static)]. Null unit is fatal. First request cancellation of unit timers kind 1/key state. Alive means aliveExclusionCondition false and either player mode outside{0,17} or monster mode outside{0,12}; all other types count as dead. If dead and StayDeath nonzero, return with state unchanged. Otherwise request state off, animation-rate refresh, passive refresh, and pet update for a player. These are ordered requests; refresh effects remain STL-Q07. Cold instead requests state off, then shatter 107 off when alive, then animation-rate refresh (CSA-R13). A retained state does not retain the already-removed list.
 
 **STL-R11a** Unit-timer cancellation [verified in 1.13c code (static)]. Missing unit/timer chain does nothing. Save successor before each entry. Matching kind/key: busy entry becomes pending removal, otherwise detach/release it. Nonmatching entries remain. These timers are separate from frame-event type 12 queues.
 
@@ -105,9 +105,9 @@ Vectors supply masks and selectors explicitly; they do not claim archive values 
 
 **STL-R12b** Stay-death mask producer [unresolved]. Candidate producer groups states by definition flags, including player/monster/boss stay-death fields. Loader bit-setting and byte decoding remain STL-Q07. The consumer can use supplied masks without asserting particular table cells.
 
-**STL-R13a** Death requests/traversal [verified in 1.13c code (static)]. Non-staying-list removal returns without requests for null unit, missing base or a base without state storage. Otherwise walk the primary chain, saving each successor. Test in order: an item-owned list (owner type 4), a deathRemovalExempt list, then a list for which StayDeath(dying unit, list state) is nonzero is retained and the walk continues at the saved successor. Any other list is not retained: request FreeList unless its hasStateStorage condition is true, then restart at the current head in both cases (a hasStateStorage list can make this loop indefinitely, STL-Q05). There are two separate death operations, chosen by their callers rather than by a type test inside one operation. Player death requests a stat write (stat 6, value 0, layer 0), non-staying-list removal, state partition(false), then removal of the unit's pending type 8 and type 9 frame events. Monster death first, when an auxiliary effect is present, requests its removal (one logged request; its effects stay STL-Q07), then non-staying-list removal, then partition with the boss condition of the monster's MonStats record (GDF-R05a; vectors supply it). Monster death completes only for a monster with loaded monster data: after the auxiliary step, any other unit (including a non-monster that had an auxiliary effect) reads its monster definition through a null reference and faults before any list request; a null unit skips the auxiliary step and faults the same way. Both death operations make further requests between these steps (for example player death's position/collision request after the partition) that are outside this contract; the ordered logs below list only lifecycle requests. Actual free/auxiliary effects and mask production remain STL-Q07; supplied-mask partition is STL-R13b.
+**STL-R13a** Death requests/traversal [verified in 1.13c code (static)]. Non-staying-list removal returns without requests for null unit, missing base or a base without state storage. Otherwise walk the primary chain, saving each successor. Test in order: an item-owned list (owner type 4), a deathRemovalExempt list, then a list for which StayDeath(dying unit, list state) is nonzero is retained and the walk continues at the saved successor. Any other list is not retained: request FreeList unless its hasStateStorage condition is true, then restart at the current head in both cases (a hasStateStorage list can make this loop indefinitely, STL-Q05). There are two separate death operations, chosen by their callers rather than by a type test inside one operation. Player death requests a stat write (stat 6, value 0, layer 0), non-staying-list removal, state partition(false), then removal of the unit's pending type 8 and type 9 frame events. Monster death first, when an auxiliary effect is present, requests its removal (one logged request; its effects stay STL-Q07), then non-staying-list removal, then partition with the boss condition of the monster's MonStats record (GDA-R08a; vectors supply it). Monster death completes only for a monster with loaded monster data: after the auxiliary step, any other unit (including a non-monster that had an auxiliary effect) reads its monster definition through a null reference and faults before any list request; a null unit skips the auxiliary step and faults the same way. Both death operations make further requests between these steps (for example player death's position/collision request after the partition) that are outside this contract; the ordered logs below list only lifecycle requests. Actual free/auxiliary effects and mask production remain STL-Q07; supplied-mask partition is STL-R13b.
 
-**STL-R13b** Death partition [verified in 1.13c code (static)]. Return without requests for null unit, absent state storage or missing active/changed arrays. Test the boss selector first: a nonzero boss selector selects the boss mask for any unit type, including a player. Otherwise select the supplied player mask for a player and the monster mask for every other unit. Membership is processed as ceil(stateCount/32) words, state s being bit (s mod 32) of word floor(s/32). For each state word, first write `changed = changed OR (active AND NOT mask)`, then `active = active AND mask`. Request update marking afterward, including when state count is zero but the arrays exist. Actual mask production remains STL-R12b and update-queue integration NRF-Q17; supplied-mask state writes are independently verified.
+**STL-R13b** Death partition [verified in 1.13c code (static)]. Return without requests for null unit, absent state storage or missing active/changed arrays. Test the boss selector first: a nonzero boss selector selects the boss mask for any unit type, including a player. Otherwise select the supplied player mask for a player and the monster mask for every other unit. Membership is processed as ceil(stateCount/32) words, state s being bit (s mod 32) of word floor(s/32). For each state word, first write `changed = changed OR (active AND NOT mask)`, then `active = active AND mask`. Request update marking afterward, including when state count is zero but the arrays exist. Actual mask production remains STL-R12b and update-queue integration RLI-Q02; supplied-mask state writes are independently verified.
 
 **STL-R14** State-message selection [unresolved]. Candidate sender visits changed states with nosend false: inactive selects state-off 0xA9; active without list/exported stats selects state-on 0xA7; otherwise state-with-stats 0xA8 exports at most 16 stats. Real sync caller, eligibility, exporter and changed-state clearing remain STL-Q01/STL-Q07. Changed membership alone does not guarantee delivery.
 
@@ -127,12 +127,12 @@ Vectors supply masks and selectors explicitly; they do not claim archive values 
 | STL-R03 | Expiry handler | verified in 1.13c code (static) | STL-Q10: object failure only | STL-V02, STL-V16 |
 | STL-R04 | Traversal | verified in 1.13c code (static) | STL-Q07: actual free only | STL-V03, STL-V04, STL-V11, STL-V17 |
 | STL-R05 | Free effects | unresolved | STL-Q07: complete free | STL-V03 |
-| STL-R06a | Creation/expiry | verified in 1.13c code (static) | none at supplied-allocation boundary | STL-V05, STL-V17; NRF-V33 |
+| STL-R06a | Creation/expiry | verified in 1.13c code (static) | none at supplied-allocation boundary | STL-V05, STL-V17; RLI-V05 |
 | STL-R06b | Attach | unresolved | STL-Q07: attach effects | none |
 | STL-R06c | Replacing write | unresolved | STL-Q07: replacing effects | STL-V05 |
-| STL-R07 | Membership | verified in 1.13c code (static) | STL-Q07: disguise only; NRF-Q17: update queue | STL-V06 |
+| STL-R07 | Membership | verified in 1.13c code (static) | STL-Q07: disguise only; RLI-Q02: update queue | STL-V06 |
 | STL-R07a | Disguise | unresolved | STL-Q07: disguise condition | none |
-| STL-R08 | Forced change | verified in 1.13c code (static) | NRF-Q17: update queue | STL-V12, STL-V17 |
+| STL-R08 | Forced change | verified in 1.13c code (static) | RLI-Q02: update queue | STL-V12, STL-V17 |
 | STL-R09 | Refresh policy | verified in 1.13c code (static) | Applier integration gates only | STL-V07 |
 | STL-R10a | Skill requests | verified in 1.13c code (static) | STL-Q07: actual write/refresh | STL-V07, STL-V18 |
 | STL-R10b | Skill slots | unresolved | STL-Q07: paired operation/refresh | none |
@@ -141,7 +141,7 @@ Vectors supply masks and selectors explicitly; they do not claim archive values 
 | STL-R12a | StayDeath consumer | verified in 1.13c code (static) | STL-Q07: producer only | STL-V08, STL-V15 |
 | STL-R12b | Mask producer | unresolved | STL-Q07: mask production | none |
 | STL-R13a | Death traversal | verified in 1.13c code (static) | STL-Q07: free/partition/auxiliary effects | STL-V09, STL-V19 |
-| STL-R13b | Death partition | verified in 1.13c code (static) | STL-Q07: data-derived mask producer only; NRF-Q17: update queue | STL-V14 |
+| STL-R13b | Death partition | verified in 1.13c code (static) | STL-Q07: data-derived mask producer only; RLI-Q02: update queue | STL-V14 |
 | STL-R14 | Messages | unresolved | STL-Q01/STL-Q07: sender integration | none |
 | STL-R15 | Client callbacks | unresolved | STL-Q02/STL-Q07: dispatch integration | none |
 | STL-R16 | Transition | unresolved | STL-Q03: transition retention | none |
@@ -176,7 +176,7 @@ No local rule creates units or writes saves. Requests establish actual stored/de
 
 Zero/negative duration still schedules an ordinary expiry clamped to next frame. Nonpositive expiry writes never clear timed. Any type 12 event visits every due primary list; an extended list can survive an event at its scheduled expiry. Secondary lists are not traversed. An expiring stay-death state can retain membership after list contributions disappear; resurrection cleanup is STL-Q04. A retained due list with state storage can make head restart nonterminating (STL-Q05).
 
-State lookup and membership use different guards (NRF-R12a). Missing caster uses owner 6/-1. Outside explicit unit/dead-mode/boss branches, no local rule branches on difficulty, PvP, melee/missile origin or classic/expansion; evidence remains expansion 1.13c. Skill allocation failure returns 0. The nonplayer death cleanup faults for a non-monster unit before list removal (STL-R13a). Malformed event/frame behavior is STL-Q10.
+State lookup and membership use different guards (RLI-R03). Missing caster uses owner 6/-1. Outside explicit unit/dead-mode/boss branches, no local rule branches on difficulty, PvP, melee/missile origin or classic/expansion; evidence remains expansion 1.13c. Skill allocation failure returns 0. The nonplayer death cleanup faults for a non-monster unit before list removal (STL-R13a). Malformed event/frame behavior is STL-Q10.
 
 ## 7. Open questions
 
@@ -187,7 +187,7 @@ State lookup and membership use different guards (NRF-R12a). Missing caster uses
 | **STL-Q03** | integration / unresolved | Transition dispatch-to-list/state trace, retention/removal outcome |
 | **STL-Q04** | outside-boundary / unresolved | Resurrection owner's retained-state cleanup; no local default |
 | **STL-Q05** | outside-boundary / unresolved | Producer of primary hasStateStorage lists; supplied traversal remains available |
-| **STL-Q06** | outside-boundary / unresolved | Wider meanings/producers of deathRemovalExempt and expiryDeathCondition |
+| **STL-Q06** | outside-boundary / unresolved | Wider meanings/producers of deathRemovalExempt and aliveExclusionCondition |
 | **STL-Q07** | behavior / unresolved | Complete callee/decoding/output-write paths for each gated rule; separate boundaries in gap file |
 | **STL-Q08** | observation / pending | Matching original 1.13c captures; none recorded |
 | **STL-Q09** | outside-boundary / unresolved | Caller supplying 0 to countdown expiry; ordinary handlers supply game frame |
@@ -274,7 +274,7 @@ Each vector uses supplied dependencies that log calls in order. FreeList removes
   - runtime_observed: no
 
 - **STL-V08** Removal gate (STL-R11/STL-R12a; boundary: supplied-input stage)
-  - Inputs: state 21/count 185/active true; expiryDeathCondition false; cancellation/refresh operations log; state writer persists; masks and unit type/mode supplied per independent case
+  - Inputs: state 21/count 185/active true; aliveExclusionCondition false; cancellation/refresh operations log; state writer persists; masks and unit type/mode supplied per independent case
   - Seeds: `no draw`
   - Draws: none
   - Trace: cancel(kind 1,key 21) first; choose mask and alive branch; return or clear/refresh.
@@ -284,7 +284,7 @@ Each vector uses supplied dependencies that log calls in order. FreeList removes
   - (c) Inputs: player mode 17, player mask bit false. Draws: none. Outputs: ordered[cancel(1,21),state off,animation,passive,pet]; active false.
   - (d) Inputs: monster mode 12, monster mask bit true/player bit false. Draws: none. Outputs: cancel(1,21) only; active true.
   - (e) Inputs: object mode 1, player mask bit true/monster bit false. Draws: none. Outputs: cancel(1,21) only; active true.
-  - (f) Inputs: player mode 1, expiryDeathCondition true, player mask bit true. Draws: none. Outputs: cancel(1,21) only; active true.
+  - (f) Inputs: player mode 1, aliveExclusionCondition true, player mask bit true. Draws: none. Outputs: cancel(1,21) only; active true.
   - (g) Inputs: null unit. Draws: none. Outputs: fatal assertion before any cancellation, state write or refresh; operation does not return normally.
   - (h) Inputs: player mode 0, player mask bit true. Draws: none. Outputs: cancel(1,21) only; active true.
   - (i) Inputs: player mode 12, player mask bit true. Draws: none. Outputs: ordered[cancel(1,21),state off,animation,passive,pet]; active false.
@@ -292,7 +292,7 @@ Each vector uses supplied dependencies that log calls in order. FreeList removes
   - (k) Inputs: monster mode 12, monster mask bit false/player bit true. Draws: none. Outputs: ordered[cancel(1,21),state off,animation,passive]; active false; no pet request.
   - (l) Inputs: monster mode 1, monster mask bit true/player bit true. Draws: none. Outputs: ordered[cancel(1,21),state off,animation,passive]; active false; no pet request.
   - (m) Inputs: monster mode 17, monster mask bit true/player bit true. Draws: none. Outputs: ordered[cancel(1,21),state off,animation,passive]; active false; no pet request.
-  - (n) Inputs: monster mode 1, expiryDeathCondition true, monster mask bit true/player bit false. Draws: none. Outputs: cancel(1,21) only; active true.
+  - (n) Inputs: monster mode 1, aliveExclusionCondition true, monster mask bit true/player bit false. Draws: none. Outputs: cancel(1,21) only; active true.
   - Discriminates: monster selects monster mask (d, k); each type's dead set is exactly its own pair, so player 12 and monster 17 are alive (i, m) and both mode-0 cases are dead (h, j); the additional death condition applies to monsters too (n); object never counts alive; the additional death condition changes a living-mode player to the retained-state branch; a living unit ignores a true mask bit (a, l); null asserts before callbacks; only players get the pet request.
   - runtime_observed: no
 
@@ -452,16 +452,16 @@ Each vector uses supplied dependencies that log calls in order. FreeList removes
 
 Partial static acceptance is the verified assertions of STL-V01 through STL-V09 and STL-V11 through STL-V19 with expressly supplied operations. It covers schedule arithmetic, exact-frame routing, expiry/death traversal, creation/expiry fields, membership/forced marks, applier request order, callback gates and timer cancellation. It excludes every assertion attributed to a gated rule, actual free/attach/stat propagation, mask production, client delivery, refresh side effects and transition persistence. Full reproduction additionally needs STL-Q01/STL-Q02/STL-Q03/STL-Q07/STL-Q10 closed, executable discriminating vectors for resolved rules and matching observations of every verified behavioral rule (STL-Q08). Partial acceptance does not establish complete parity.
 
-**Depends on:** [core-numeric-and-rng-foundations](core-numeric-and-rng-foundations.md) NRF-R09a frames, NRF-R12a state lookup/routing, NRF-R12b stat reads, NRF-R14b mode-bound lists (NRF-Q17/NRF-Q20 integration limits); [core-game-data-fields](core-game-data-fields.md) GDF-R05a/GDF-R11/GDF-R12/GDF-R13/GDF-R14a/GDF-R15a names/schema/modes/boss; [combat-status-application](combat-status-application.md) CSA-R04/CSA-R05/CSA-R08/CSA-R12 applier requests; [skill-calc-expressions-and-synergies](skill-calc-expressions-and-synergies.md) SCX-R11 supplied expression results; [state-movement-modifiers-and-freeze](state-movement-modifiers-and-freeze.md) MMF-R13c/MMF-R13d cold removal/refresh.
+**Depends on:** [core-numeric-and-rng-foundations](core-numeric-and-rng-foundations.md) NRF-R09a frames, RLI-R03 state lookup/routing, RLI-R02a stat reads, RLI-R04b mode-bound lists (RLI-Q02/RLI-Q03 integration limits); [core-game-data-fields](core-game-data-fields.md) GDA-R08a/GDF-R02/GDF-R03/GDA-R13/GDF-R05a/GDF-R06a names/schema/modes/boss; [combat-status-application](combat-status-application.md) CSA-R04/CSA-R05/CSA-R08/CSA-R12 applier requests, CSA-R13 cold removal callback and CSA-R05 cold refresh; [skill-calc-expressions](skill-calc-expressions.md) SCX-R11 supplied expression results. Owners of the cited GDA, RLI ids: [core-game-data-table-records](core-game-data-table-records.md) (GDA); [core-record-layouts-and-ids](core-record-layouts-and-ids.md) (RLI).
 
-**Depended on by:** foundations state/mode-bound traversal, combat status application, [combat-leech-and-status-effects](combat-leech-and-status-effects.md) overlay lists, movement/freeze callbacks, [combat-open-wounds](combat-open-wounds.md) timed effects and damage-pipeline deferred expiry. Reverse consumers are not automatic prerequisites.
+**Depended on by:** foundations state/mode-bound traversal, combat status application, [combat-leech-and-drain](combat-leech-and-drain.md) overlay lists, movement/freeze callbacks, [combat-open-wounds](combat-open-wounds.md) timed effects and damage-pipeline deferred expiry. Reverse consumers are not automatic prerequisites.
 
 ## 10. Related specs
 
 - [core-numeric-and-rng-foundations](core-numeric-and-rng-foundations.md): lookup, stat reads and mode-bound lists.
 - [combat-status-application](combat-status-application.md): status inputs and magnitudes.
 - [state-movement-modifiers-and-freeze](state-movement-modifiers-and-freeze.md): cold/freeze consumers.
-- [skill-calc-expressions-and-synergies](skill-calc-expressions-and-synergies.md): duration/value expressions.
+- [skill-calc-expressions](skill-calc-expressions.md): duration/value expressions.
 - [combat-damage-pipeline-order](combat-damage-pipeline-order.md): damage hand-off to timed appliers.
 
 ## Appendix A. Provenance

@@ -13,15 +13,15 @@ Open evidence gaps: [gap file](../plans/gaps/missile-damage-parameters.md)
 
 ## 1. Scope
 
-This contract covers creation-time missile damage parameters: column and skill endpoints, source or parent contribution, creation critical decision, elemental routing and scaling, and ordered stat-write requests. Equipment/mastery and attack-preparation results have explicit supplied-result boundaries where their production remains gated. [Missile creation](missile-creation-and-initialization.md) owns the call, unit initialization and ownership; [missile hit and damage](missile-hit-and-damage-calculation.md) owns contact, hit-time rolls and later damage processing. Shared skill endpoints and calculation-language execution belong to their named dependencies. No original internal object representation is required by this contract.
+This contract covers creation-time missile damage parameters: column and skill endpoints, source or parent contribution, creation critical decision, elemental routing and scaling, and ordered stat-write requests. Equipment/mastery and attack-preparation results have explicit supplied-result boundaries where their production remains gated. [Missile creation](missile-creation-and-seeding.md) owns the call and [missile initialization](missile-initialization-and-registry.md) owns unit initialization and ownership; [missile hit and damage](missile-hit-and-damage-calculation.md) owns contact, hit-time rolls and later damage processing. Shared skill endpoints and calculation-language execution belong to their named dependencies. No original internal object representation is required by this contract.
 
 ## 2. Trigger and ownership
 
-D2Common computes the parameters and issues the writes from its missile subsystem. D2Game requests this once within missile creation, after fresh stat-list setup, creation callback, skill and level assignment, and before owner attribution (MCI-R22 through MCI-R25). The semantic builder inputs are source, optional parent missile, new missile and requested level; the caller then passes the resulting parameter record to the store stage. The [companion](../research/spec-evidence/missile-damage-parameters.md#dispatch-and-functions) gives the original caller/import/output chain. This operation has no independent frame schedule and sends no client message; subsequent server hit processing consumes the missile stats.
+D2Common computes the parameters and issues the writes from its missile subsystem. D2Game requests this once within missile creation, after fresh stat-list setup, creation callback, skill and level assignment, and before owner attribution (MIR-R11 through MIR-R14). The semantic builder inputs are source, optional parent missile, new missile and requested level; the caller then passes the resulting parameter record to the store stage. The [companion](../research/spec-evidence/missile-damage-parameters.md#dispatch-and-functions) gives the original caller/import/output chain. This operation has no independent frame schedule and sends no client message; subsequent server hit processing consumes the missile stats.
 
 ## 3. Inputs and data
 
-Unless specified otherwise, arithmetic is signed i32 with low-32-bit wrapping products/additions and signed division truncating toward zero. `share(v,p)` means `i32(low32(v*p))/128` under NRF-R06a. `mulDiv(p,v,100)` consumes NRF-R05 in that exact operand order. Shift counts are masked by 31; shifted damage is raw 8.8 when `HitShift = 8` (NRF-R08a). Durations are signed frame counts. Stat reads use layer zero and NRF-R12b/NRF-R12c, including absent-list/definition and selected-array/minimum behavior. No stat getter here implies a verified stat writer.
+Unless specified otherwise, arithmetic is signed i32 with low-32-bit wrapping products/additions and signed division truncating toward zero. `share(v,p)` means `i32(low32(v*p))/128` under NRF-R06a. `mulDiv(p,v,100)` consumes NRF-R05 in that exact operand order. Shift counts are masked by 31; shifted damage is raw 8.8 when `HitShift = 8` (NRF-R08a). Durations are signed frame counts. Stat reads use layer zero and RLI-R02a/RLI-R02b, including absent-list/definition and selected-array/minimum behavior. No stat getter here implies a verified stat writer.
 
 | Input | Semantic source | Width / format | Meaning |
 |---|---|---|---|
@@ -40,7 +40,7 @@ Unless specified otherwise, arithmetic is signed i32 with low-32-bit wrapping pr
 | source stats 0, 2, 17, 18, 21, 22, 23, 24, 25, 103, 104, 106, 120, 121, 122, 141, 159, 160, 337 | source's layer-zero stats | i32 | Attribute, endpoint, percent, bypass and critical inputs |
 | parent stats 17, 18, 21, 22, 25, 120, 121, 122, 141, 337 | parent's layer-zero stats | i32; damage already raw | Parent contribution/critical inputs |
 | source/parent stats 48..60, 62, 101, 315, 316, 317, 326 | selected contributing unit | i32 | Elemental additions under R11a; only the listed mapping is read |
-| source mastery stats 329, 330, 331, 332 | source at layer zero | i32 | Elemental percentage; GDF-R11 and SLD-R10 names |
+| source mastery stats 329, 330, 331, 332 | source at layer zero | i32 | Elemental percentage; GDF-R02 and SLD-R10 names |
 | missile stat 25 | new missile at layer zero | i32 | Added to physical percent |
 | selected weapon, item classification and predicates | equipment/source operations | optional item; i32/conditions | Supplied producer results under Q04 |
 | strength/dexterity coefficients | item-record operations | low16 reinterpreted as signed i16 | Attribute percentages under R07a |
@@ -57,7 +57,7 @@ The parameter record contains physical minimum/maximum; fire minimum/maximum and
 | Missiles fields and flags; Skills `SrcDam` and `EType` | table data | Values selected from prepared records; column identities established by original descriptor code, [record](../research/spec-evidence/missile-damage-parameters.md#field-bindings) |
 | `Holy` bits 0/1/2 to undead/demon/beast bypass; EType routing; mastery stat selection | engine code | Fixed by handlers; text names do not establish handler execution |
 | Bands, divisors 100/128, physical-percent floor -90, type test 57, copied-entry capacity 128 | engine code | Fixed by original code |
-| Stat identities and hireling-category class membership | engine code | Fixed numeric reads; shared names consume GDF-R11; category consumes CSA-R02 |
+| Stat identities and hireling-category class membership | engine code | Fixed numeric reads; shared names consume GDF-R02; category consumes CSA-R02 |
 
 All numeric row values in the vectors are synthetic supplied records, not claims about archive cells. Table preparation and effective text-to-compiled correspondence retain GDF's evidence limits.
 
@@ -75,7 +75,7 @@ return low32(v << (HitShift & 31))
 
 The arithmetic itself draws nothing. Calculation execution can draw and retains R01b's integration limits.
 
-**MDP-R01b** Missile calculation boundary [verified in 1.13c code (static)]. Consume SCX-R34a for the missile pool, unsigned reference bound, remaining-length evaluation and context `(missile,source,class,L)`, and the shared interpreter's verified token rules. Its own negative-only level fallback differs from R01a's nonpositive fallback. Parameter/resolver and owner-entry production retain SCX-R34b, SCX-Q05/SCX-Q09 and MDP-Q02. Supplied calculation results verify local arithmetic without verifying their producer.
+**MDP-R01b** Missile calculation boundary [verified in 1.13c code (static)]. Consume SCX-R29a for the missile pool, unsigned reference bound, remaining-length evaluation and context `(missile,source,class,L)`, and the shared interpreter's verified token rules. Its own negative-only level fallback differs from R01a's nonpositive fallback. Parameter/resolver and owner-entry production retain SCX-R29b, SCX-Q04/SCX-Q07 and MDP-Q02. Supplied calculation results verify local arithmetic without verifying their producer.
 
 **MDP-R02** Level bands [verified in 1.13c code (static)]. Consume SLD-R02's five-band progression with the selected endpoint's five increments and level from R01a. Its signed i32 wrapping arithmetic, no-draw behavior and absent-array result 0 apply unchanged. R01a owns which columns and level reach this shared operation.
 
@@ -85,7 +85,7 @@ The arithmetic itself draws nothing. Calculation execution can draw and retains 
 
 Otherwise start with the signed linked `Skill`. When `MissileSkill` is true, request the missile's stored skill, and use that result only if signed positive; otherwise keep the linked skill. Missing/invalid selected Skills entry returns with the zero record before bypass processing. For a valid skill set physical share to its unsigned `SrcDam`, except missile `SrcDamage == 255` forces it to 0; parent share is 0. Request, in order, physical minimum and maximum with source inclusion 0, then element minimum and maximum with mastery condition 1, then duration, always passing `(source,skill,requested level)`. Consume SLD-R01 through SLD-R11 and SLD-R19, including their endpoint sentinels, source/Kick/calculation gates. Use the skill's `EType`. These local requests add no draws; requested operations retain their own draws/gates. The builder returns a record, with no success integer specified.
 
-**MDP-R05** Column elemental mastery [verified in 1.13c code (static)]. Element types 1/2/4-or-12/5 select source stats 329/330/331/332 respectively; all other types give bonus 0. For selected mastery `m`, return 0 if `m == 0`, otherwise `mulDiv(m,v,100)`. R04 adds the bonus to each endpoint with wrapping addition. No local draw. Ordinary selected stat reads consume NRF-R12b/NRF-R12c, including the optimized cold getter's same selected/minimum behavior.
+**MDP-R05** Column elemental mastery [verified in 1.13c code (static)]. Element types 1/2/4-or-12/5 select source stats 329/330/331/332 respectively; all other types give bonus 0. For selected mastery `m`, return 0 if `m == 0`, otherwise `mulDiv(m,v,100)`. R04 adds the bonus to each endpoint with wrapping addition. No local draw. Ordinary selected stat reads consume RLI-R02a/RLI-R02b, including the optimized cold getter's same selected/minimum behavior.
 
 **MDP-R06** Row bypass conditions [verified in 1.13c code (static)]. After successful endpoint selection, `Holy` bit 0 sets `bypassUndead`, bit 1 `bypassDemons`, bit 2 `bypassBeasts`; other bits have no effect here. No draw. This selects parameter conditions; R12a owns write requests and Q06 gates stored effects.
 
@@ -99,7 +99,7 @@ Without an item weapon, use source stats 21/22 shifted by 8; a monster with nonz
 
 **MDP-R08a** Creation critical decision [verified in 1.13c code (static)]. For a present contributing unit, read critical chance from stat 337 (zero for absent list/definition), advance that unit's seed once under NRF-R01, and take unsigned new low modulo 100. Compare the remainder to signed chance; return 1 on strict less-than. Otherwise read stat 141. If nonzero, draw again on the same seed and return 1 on strict less-than. Otherwise continue without that draw. If weapon exists, request mastery `(unit,weapon,0,2)`; if its result is nonzero, draw once more and compare likewise. Return 0 after all reached failures. Negative nonzero chances still consume their conditional draw; chance at least 100 succeeds on its reached draw. Short-circuit on success. The first draw always occurs for a valid unit, even with every chance zero. An absent unit faults at first seed access and has no integer return. Source contribution uses the source seed, parent contribution the parent seed. Calculation draws are separate. Q04 gates producing the weapon-mastery result, not this supplied-chance decision.
 
-**MDP-R08b** Weapon mastery critical production [unresolved]. The third chance and any producer effects remain Q04; returning 1 only sets the parameter's `critical` condition. R12a requests stat 141 = 1, and hit-time doubling belongs to MHD-R23e with its own evidence label.
+**MDP-R08b** Weapon mastery critical production [unresolved]. The third chance and any producer effects remain Q04; returning 1 only sets the parameter's `critical` condition. R12a requests stat 141 = 1, and hit-time doubling belongs to MHD-R10f with its own evidence label.
 
 **MDP-R09** Parent physical contribution [verified in 1.13c code (static)]. Choose this branch only when the physical share entering R07a is zero, parent share nonzero and parent present; run R08a on the parent with no weapon. R07a's later share halving does not revisit this branch. Scale parent stat 21/22 directly with `share(value,parentShare)`; do not shift them by 8. Contribution percent is parent stat 25; competing bonuses are parent stats 18/17. Add parent stats 121/122/120 to the corresponding percent fields. This path does not set `sourcePhysical` and does not copy parent bypass stats. Missing parent or zero share leaves these contributions zero. No local draw beyond the critical decision.
 
@@ -147,14 +147,14 @@ Scale the whole resulting fire/lightning/magic/cold min/max, coldLength, poison 
 
 Then, in order, for each true `bypassUndead`, `bypassDemons`, `bypassBeasts`, `critical`, request unit replacing stat 103/104/106/141 = 1 at layer 0. False conditions issue no corresponding request and do not request clearing an existing value. If source is present and its list satisfies enumeration eligibility, request up to 128 entries for stat 180, then issue replacing requests on the destination list for each returned entry in enumeration order, retaining its unsigned 16-bit layer and signed value. Otherwise skip enumeration/copy. Enumeration and replacing writes are supplied operations for request-log acceptance; no stored-state assertion follows from a logged request. There is no specified success return. This local sequence contains no RNG step; dependency effects remain Q06.
 
-**MDP-R12b** Stat mutation and duplicate replacement [unresolved]. Actual stat propagation, replacement/removal by zero, and enumeration production consume NRF-Q20/STL-R06c and MDP-Q06. In particular, two requests to stat 315 do not prove the final stored fire/burn duration. The ordinary getters NRF-R12b/NRF-R12c cannot close this write contract.
+**MDP-R12b** Stat mutation and duplicate replacement [unresolved]. Actual stat propagation, replacement/removal by zero, and enumeration production consume RLI-Q03/STL-R06c and MDP-Q06. In particular, two requests to stat 315 do not prove the final stored fire/burn duration. The ordinary getters RLI-R02a/RLI-R02b cannot close this write contract.
 
 ### Id map
 
 | Id | Summary | Status label | Gates | Vectors |
 |---|---|---|---|---|
 | MDP-R01a | Column endpoints | verified in 1.13c code (static) | MDP-Q02: actual unresolved calculation results only | MDP-V01, MDP-V02, MDP-V08 |
-| MDP-R01b | Calculation boundary | verified in 1.13c code (static) | MDP-Q02: resolver/owner-entry integration | MDP-V02, SCX-V34 |
+| MDP-R01b | Calculation boundary | verified in 1.13c code (static) | MDP-Q02: resolver/owner-entry integration | MDP-V02, SCX-V29 |
 | MDP-R02 | Five level bands | verified in 1.13c code (static) | none | MDP-V03, SLD-V01 |
 | MDP-R03 | Element length | verified in 1.13c code (static) | none | MDP-V04 |
 | MDP-R04 | Builder selection/requests | verified in 1.13c code (static) | MDP-Q02/MDP-Q04: requested producer results only | MDP-V09, MDP-V16 |
@@ -177,7 +177,7 @@ Then, in order, for each true `bypassUndead`, `bypassDemons`, `bypassBeasts`, `c
 |---|---|
 | Endpoint, length, mastery, critical returns and transient semantic parameter fields | MDP-R01a through MDP-R11a |
 | Contributing source or parent seed changes, one to three reached steps | MDP-R08a; weapon producer effects remain Q04 |
-| Calculation-context seed changes when expression requests a draw | MDP-R01b via SCX-R15/SCX-R34a; exact context owns seed |
+| Calculation-context seed changes when expression requests a draw | MDP-R01b via SCX-R15/SCX-R29a; exact context owns seed |
 | Destination metadata source-physical and second marker OR updates | MDP-R12a |
 | Ordered replacing stat requests for 12, 21, 22, 25, 48..66, 103, 104, 106, 120..122, 141, 180, 315..317, 326 as explicitly mapped | MDP-R12a; mutation gated by MDP-R12b |
 | Source preparation and equipment/mastery dependency requests | MDP-R07a, MDP-R08a, MDP-R11a; actual effects gated by Q04 |
@@ -194,9 +194,9 @@ Attempted evidence and exact blocked assertions are in the [gap file](../plans/g
 
 | Id | Status and boundary | Evidence that would settle it |
 |---|---|---|
-| **MDP-Q02** | integration: actual calculation parameter/owner-entry results | Close SCX-Q05/SCX-Q09/SCX-Q11 for the expressions requested by these endpoints; no gate on a supplied calculation's arithmetic consumer |
+| **MDP-Q02** | integration: actual calculation parameter/owner-entry results | Close SCX-Q04/SCX-Q07/SCX-Q08 for the expressions requested by these endpoints; no gate on a supplied calculation's arithmetic consumer |
 | **MDP-Q04** | integration: equipment/mastery/preparation and skill override results | Complete producer contracts for R07b/R08b/R11b and SLD's source/Kick dependencies; quantify actual effects/draw ownership for the reached path |
-| **MDP-Q06** | integration: replacing writes, zero replacement/removal and stat-180 enumeration | Close NRF-Q20/STL-R06c plus the enumeration producer; distinguish final stat 315 after fireLength then burnLength=0 requests |
+| **MDP-Q06** | integration: replacing writes, zero replacement/removal and stat-180 enumeration | Close RLI-Q03/STL-R06c plus the enumeration producer; distinguish final stat 315 after fireLength then burnLength=0 requests |
 | **MDP-Q07** | observation: gameplay confirmation pending for every behavioral rule | Observe valid 1.13c creations/endpoints with recorded inputs, ordered writes/returns/seeds and evidence identity; existing availability failure supplies no match |
 
 ## 8. Test vectors
@@ -424,13 +424,14 @@ All cases have `runtime_observed: no`. Unspecified fields and stats are 0; sourc
 
 Partial static acceptance consists of the verified supplied-input assertions in MDP-V01 through MDP-V18, including exact record results, requests and local seed changes. It excludes actual unresolved calculation/skill/equipment/mastery/preparation production, stat-180 enumeration and stat-write propagation. MDP-Q02, MDP-Q04 and MDP-Q06 gate those exact integrations; no gate on their separately supplied consumer arithmetic is implied. Full reproduction requires closing applicable integration assertions and matching observations for every behavioral rule under Q07. Passing a request log does not prove stored missile stats or complete parity; an archive cell is not gameplay observation.
 
-**Depends on:** [core-numeric-and-rng-foundations](core-numeric-and-rng-foundations.md), NRF-R01/R02 for seeds/draw reduction, NRF-R05 for operand-ordered mulDiv, NRF-R06a for signed wrapped share division, NRF-R08a for units, NRF-R12b/NRF-R12c for selected stat reads, NRF-Q20 for replacing-write integration; [core-game-data-fields](core-game-data-fields.md), GDF-R07/R08/R11 for fields and available stat names; [skill-calc-expressions-and-synergies](skill-calc-expressions-and-synergies.md), SCX-R34a/SCX-R34b and their referenced interpreter contracts; [skill-leveled-damage-tohit-and-elements](skill-leveled-damage-tohit-and-elements.md), SLD-R01 through SLD-R11/SLD-R19 for supplied skill endpoints and bands with their own gates; [combat-status-application](combat-status-application.md), CSA-R02 for fixed hireling category; [state-timed-state-lifecycle](state-timed-state-lifecycle.md), STL-R06c for replacing-write integration; [missile-creation-and-initialization](missile-creation-and-initialization.md), MCI-R23/MCI-R24 for caller identity, stored skill/level and invocation.
+**Depends on:** [core-numeric-and-rng-foundations](core-numeric-and-rng-foundations.md), NRF-R01/R02 for seeds/draw reduction, NRF-R05 for operand-ordered mulDiv, NRF-R06a for signed wrapped share division, NRF-R08a for units, RLI-R02a/RLI-R02b for selected stat reads, RLI-Q03 for replacing-write integration; [core-game-data-fields](core-game-data-fields.md), GDA-R10/GDA-R11/GDF-R02 for fields and available stat names; [skill-calc-expressions](skill-calc-expressions.md), SCX-R29a/SCX-R29b and their referenced interpreter contracts; [skill-leveled-damage-tohit-and-elements](skill-leveled-damage-tohit-and-elements.md), SLD-R01 through SLD-R11/SLD-R19 for supplied skill endpoints and bands with their own gates; [combat-status-application](combat-status-application.md), CSA-R02 for fixed hireling category; [state-timed-state-lifecycle](state-timed-state-lifecycle.md), STL-R06c for replacing-write integration; [missile-initialization-and-registry](missile-initialization-and-registry.md), MIR-R12/MIR-R13 for caller identity, stored skill/level and invocation. Owners of the cited GDA, RLI ids: [core-game-data-table-records](core-game-data-table-records.md) (GDA); [core-record-layouts-and-ids](core-record-layouts-and-ids.md) (RLI).
 
-**Depended on by:** [missile-hit-and-damage-calculation](missile-hit-and-damage-calculation.md), MHD-R23 for consuming the resulting missile stats; creation consumes the builder/store hand-off. Reverse consumers are not prerequisites for supplied arithmetic.
+**Depended on by:** [missile-hit-and-damage-calculation](missile-hit-and-damage-calculation.md), MHD-R10 for consuming the resulting missile stats; creation consumes the builder/store hand-off. Reverse consumers are not prerequisites for supplied arithmetic.
 
 ## 10. Related specs
 
-- [missile-creation-and-initialization](missile-creation-and-initialization.md): creation sequence and ownership.
+- [missile-creation-and-seeding](missile-creation-and-seeding.md): creation sequence.
+- [missile-initialization-and-registry](missile-initialization-and-registry.md): initialization and ownership.
 - [missile-hit-and-damage-calculation](missile-hit-and-damage-calculation.md): contact-time rolling and critical application.
 - [skill-assassin-blade-sentinel-and-fury](skill-assassin-blade-sentinel-and-fury.md): downstream stored-stat roll boundary and creation consumers.
 

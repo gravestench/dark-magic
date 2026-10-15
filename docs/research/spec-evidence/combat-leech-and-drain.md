@@ -1,8 +1,8 @@
 # Evidence: leech and drain
 
-Spec: [Leech and Drain](../../specs/combat-leech-and-status-effects.md).
+Spec: [Leech and Drain](../../specs/combat-leech-and-drain.md).
 Artifacts: [original source manifest](../source-manifest.md).
-Limits: [evidence gaps](../../plans/gaps/combat-leech-and-status-effects.md).
+Limits: [evidence gaps](../../plans/gaps/combat-leech-and-drain.md).
 
 ## Identity and verification method
 
@@ -53,31 +53,31 @@ drain call sites in `0xDE0C0` were reread by the status-application work on 2026
 
 | Artifact | Function RVA | Export ordinal | Analyst description | Rules | Method / boundary |
 |---|---|---|---|---|---|
-| LOD113C-D2GAME | `0xDBA40` | — | Leech operation | LSE-R02 to LSE-R09, LSE-R13, LSE-R15 | Disassembly 2026-10-13; full reread 2026-10-14 |
-| LOD113C-D2GAME | `0xDAE70` | — | Capped mana add | LSE-R10 | Byte run decoded and checked against an independent listing 2026-10-13; decode rechecked 2026-10-14 |
-| LOD113C-D2GAME | `0xDB570` | — | Capped life add with gates | LSE-R10, LSE-R12 | Disassembly with a decoded byte-run tail (checked 2026-10-13; rechecked 2026-10-14) |
-| LOD113C-D2GAME | `0xDFA90` | — | Not-alive test | LSE-R12 | Disassembly 2026-10-13; reread 2026-10-14 |
-| LOD113C-D2GAME | `0xDA970` | — | Defender mana drain | LSE-R17 | Disassembly 2026-10-13; reread 2026-10-14 |
-| LOD113C-D2GAME | `0xDE0C0` | — | Hit application: leech placement | LSE-R16 | Disassembly 2026-10-13; call slice reread 2026-10-14 (status work) |
-| LOD113C-D2GAME | `0xDC0B0` | — | Scale/mitigation entry writing the total | LSE-R01 | Disassembly 2026-10-13 (owner DPO-R12a) |
-| LOD113C-D2GAME | `0x1180`, `0x14D0` | — | Draw, mulDiv | LSE-R09, LSE-R13 | Owned by NRF-R02, NRF-R05 |
-| LOD113C-D2COMMON | `0x603C0` | 10237 | Difficulty record, clamped index | LSE-R06 | Reconstruction checked against bytes |
-| LOD113C-D2COMMON | `0x1A2D0` | 11104 | Class-group selector | LSE-R01, LSE-R05 | Owned by CSA-R02 |
-| LOD113C-D2COMMON | `0x390A0` | 10186 | Mana cap: stat 9 read | LSE-R10, LSE-R11 | Full disassembly 2026-10-14 |
-| LOD113C-D2COMMON | `0x390F0` | 10913 | Life cap: stat 7 read | LSE-R10, LSE-R11, LSE-R15 | Full disassembly 2026-10-14 |
-| LOD113C-D2COMMON | `0x38B70` | 10973 | Unit stat read | LSE-R10, LSE-R15, LSE-R17 | Guard sequence read 2026-10-14; owned by NRF-R12b |
-| LOD113C-D2COMMON | `0x38A80` | — | Selected-array getter | LSE-R11 | Owned by NRF-R12b, NRF-R12c |
-| LOD113C-D2COMMON | `0x3A740` | 10887 | Unit replacing stat write | LSE-R10, LSE-R17 | Requested operation only; stored effect LSE-Q01; NRF-R08a owns the numeric format, not this write |
-| LOD113C-D2COMMON | `0x3A710` | 10551 | Unit additive stat write | LSE-R15 | Reconstruction checked against bytes 2026-10-14; core `0x3A330` not read (LSE-Q01) |
-| LOD113C-D2COMMON | `0x33CD0` | 10494 | State test | LSE-R12 | Owned by NRF-R12a |
-| LOD113C-D2COMMON | `0x32C10` | 10689 | Overlay write | LSE-R14 | Full disassembly 2026-10-14 |
-| LOD113C-D2COMMON | `0x37F40` | — | First list on the primary chain with given flags | LSE-R14 | Full disassembly 2026-10-14 |
-| LOD113C-D2COMMON | `0x38100` | 11013 (called directly here) | New list | LSE-R14 | Owned by STL-R06a |
-| LOD113C-D2COMMON | `0x3A7D0` | 10807 | Attach list | LSE-R14 | Dependency STL-R06b (gated) |
-| LOD113C-D2COMMON | `0x3A280` | 10261 | List stat write | LSE-R14 | Dependency STL-R06c (gated) |
-| LOD113C-D2COMMON | `0x665C0` | 10158 | Unit update mark | LSE-R14 | Full disassembly 2026-10-14; that attempt did not read room getter `0x2FE10` or establish the queue effect; current compatible room-getter evidence does not close LSE-Q01/NRF-Q17 |
-| LOD113C-D2COMMON | `0x501E0` | 10350 | Apparent form (type, class, mode) | LSE-R15 | Full disassembly 2026-10-14 |
-| LOD113C-D2COMMON | `0x4F780` | — | Monster mode fallback lookup | LSE-R15 (unused output) | Byte run hand-decoded 2026-10-14 |
+| LOD113C-D2GAME | `0xDBA40` | — | Leech operation | LSE-R01 to LSE-R08, LSE-R12, LSE-R14 | Disassembly 2026-10-13; full reread 2026-10-14 |
+| LOD113C-D2GAME | `0xDAE70` | — | Capped mana add | LSE-R09 | Byte run decoded and checked against an independent listing 2026-10-13; decode rechecked 2026-10-14 |
+| LOD113C-D2GAME | `0xDB570` | — | Capped life add with gates | LSE-R09, LSE-R11 | Disassembly with a decoded byte-run tail (checked 2026-10-13; rechecked 2026-10-14) |
+| LOD113C-D2GAME | `0xDFA90` | — | Not-alive test | LSE-R11 | Disassembly 2026-10-13; reread 2026-10-14 |
+| LOD113C-D2GAME | `0xDA970` | — | Defender mana drain | LSE-R15 | Disassembly 2026-10-13; reread 2026-10-14 |
+| LOD113C-D2GAME | `0xDE0C0` | — | Hit application: leech placement | none here (placement owned by DPO-R14 to DPO-R18, CSA-R01; context for LSE-V13) | Disassembly 2026-10-13; call slice reread 2026-10-14 (status work) |
+| LOD113C-D2GAME | `0xDC0B0` | — | Scale/mitigation entry writing the total | none here (owner DPO-R12a; context for LSE-V01) | Disassembly 2026-10-13 |
+| LOD113C-D2GAME | `0x1180`, `0x14D0` | — | Draw, mulDiv | LSE-R08, LSE-R12 | Owned by NRF-R02, NRF-R05 |
+| LOD113C-D2COMMON | `0x603C0` | 10237 | Difficulty record, clamped index | LSE-R05 | Reconstruction checked against bytes |
+| LOD113C-D2COMMON | `0x1A2D0` | 11104 | Class-group selector | LSE-R04 | Owned by CSA-R02 |
+| LOD113C-D2COMMON | `0x390A0` | 10186 | Mana cap: stat 9 read | LSE-R09, LSE-R10 | Full disassembly 2026-10-14 |
+| LOD113C-D2COMMON | `0x390F0` | 10913 | Life cap: stat 7 read | LSE-R09, LSE-R10, LSE-R14 | Full disassembly 2026-10-14 |
+| LOD113C-D2COMMON | `0x38B70` | 10973 | Unit stat read | LSE-R09, LSE-R14, LSE-R15 | Guard sequence read 2026-10-14; owned by RLI-R02a |
+| LOD113C-D2COMMON | `0x38A80` | — | Selected-array getter | LSE-R10 | Owned by RLI-R02a, RLI-R02b |
+| LOD113C-D2COMMON | `0x3A740` | 10887 | Unit replacing stat write | LSE-R09, LSE-R15 | Requested operation only; stored effect LSE-Q01; NRF-R08a owns the numeric format, not this write |
+| LOD113C-D2COMMON | `0x3A710` | 10551 | Unit additive stat write | LSE-R14 | Reconstruction checked against bytes 2026-10-14; core `0x3A330` not read (LSE-Q01) |
+| LOD113C-D2COMMON | `0x33CD0` | 10494 | State test | LSE-R11 | Owned by RLI-R03 |
+| LOD113C-D2COMMON | `0x32C10` | 10689 | Overlay write | LSE-R13 | Full disassembly 2026-10-14 |
+| LOD113C-D2COMMON | `0x37F40` | — | First list on the primary chain with given flags | LSE-R13 | Full disassembly 2026-10-14 |
+| LOD113C-D2COMMON | `0x38100` | 11013 (called directly here) | New list | LSE-R13 | Owned by STL-R06a |
+| LOD113C-D2COMMON | `0x3A7D0` | 10807 | Attach list | LSE-R13 | Dependency STL-R06b (gated) |
+| LOD113C-D2COMMON | `0x3A280` | 10261 | List stat write | LSE-R13 | Dependency STL-R06c (gated) |
+| LOD113C-D2COMMON | `0x665C0` | 10158 | Unit update mark | LSE-R13 | Full disassembly 2026-10-14; that attempt did not read room getter `0x2FE10` or establish the queue effect; current compatible room-getter evidence does not close LSE-Q01/RLI-Q02 |
+| LOD113C-D2COMMON | `0x501E0` | 10350 | Apparent form (type, class, mode) | LSE-R14 | Full disassembly 2026-10-14 |
+| LOD113C-D2COMMON | `0x4F780` | — | Monster mode fallback lookup | LSE-R14 (unused output) | Byte run hand-decoded 2026-10-14 |
 
 Imported calls from D2Game go through thunks: difficulty record `0xA7BA` -> #10237, class group
 `0xA7F6` -> #11104, apparent form `0xA7CC` -> #10350, life cap `0xA3A0` -> #10913, mana cap `0xA4EA`
@@ -119,47 +119,46 @@ of callee cleanup; overlay `(unit, id, 0)`; additive write `(unit, stat, value, 
 
 ## Rule rationale
 
-- **LSE-R01.** `0xDC0B0` sums `+0x08`, `+0x10`, `+0x1C`, `+0x20`, `+0x24`, `+0x28` into `+0x4C` and adds
-  `+0x38` when its regular-monster local is set (type 1 and #11104 zero); read 2026-10-13, owned by
-  DPO-R12a. `0xDBA40` contains no access to `+0x4C` (2026-10-14 reread).
-- **LSE-R02.** Entry loads `+0x38`; when zero, loads `+0x3C`; both zero jump to the common epilogue.
-- **LSE-R03.** A null defender or a type other than 1 stores 100 in the slot later read as `P`. For a
+- **LSE-R01.** Entry loads `+0x38`; when zero, loads `+0x3C`; both zero jump to the common epilogue.
+- **LSE-R02.** A null defender or a type other than 1 stores 100 in the slot later read as `P`. For a
   monster: null MonsterData or null record exits; otherwise `movzx` of the record byte at
   `+0xA0 + game difficulty` (game from `edx`); `test; jle` exits on 0.
-- **LSE-R04.** `shl 6` of both fields, stored, before the attacker test.
-- **LSE-R05.** Null attacker sets local type 6 and joins the apparent-form call with class -1 and mode
+- **LSE-R03.** `shl 6` of both fields, stored, before the attacker test. `0xDBA40` contains no
+  access to `+0x4C` (`R.total`) on any path (2026-10-14 reread). The total itself is written by
+  `0xDC0B0` (read 2026-10-13), owned by DPO-R12a.
+- **LSE-R04.** Null attacker sets local type 6 and joins the apparent-form call with class -1 and mode
   0. Type 0 takes the divisor block. Type 1 calls #11104; nonzero jumps to the base block. Every other
   case joins the apparent-form call.
-- **LSE-R06.** #10237 with the attacker game's difficulty byte; `+0x28` nonzero: `cdq; idiv` of `+0x38`,
+- **LSE-R05.** #10237 with the attacker game's difficulty byte; `+0x28` nonzero: `cdq; idiv` of `+0x38`,
   stored; `+0x2C` nonzero: same for `+0x3C`.
-- **LSE-R08.** Base block loads `+0x08`, clears the mana flag register, and `jle` exits.
-- **LSE-R09.** `+0x3C` nonzero: mulDiv(`+0x3C`, base, 100), then mulDiv(P, m, 100) when P is not 100;
+- **LSE-R07.** Base block loads `+0x08`, clears the mana flag register, and `jle` exits.
+- **LSE-R08.** `+0x3C` nonzero: mulDiv(`+0x3C`, base, 100), then mulDiv(P, m, 100) when P is not 100;
   `cdq; and edx, 3Fh; add; sar 6` (signed division by 64); pushed to `0xDAE70`; flag set to 1. Then
   `+0x38` likewise into `0xDB570`.
-- **LSE-R10.** `0xDAE70`: `jg` on the amount, else return 0; cap through #10186; current through
+- **LSE-R09.** `0xDAE70`: `jg` on the amount, else return 0; cap through #10186; current through
   #10973 stat 8 layer 0; `lea` sum; signed `jl` keeps the sum, else the cap; #10887 write stat 8 layer
   0; equal-to-cap returns `cap - cur`, else the amount. `0xDB570` is the same with #10913 and stat 6
   after its gates. Decodes rechecked 2026-10-14: `8D 04 2B` lea, `3B C6` cmp, `7C 02` jl, `8B DE` mov,
   the write call to thunk `0xA472`, `3B DE` / `74 0A` for the return choice.
-- **LSE-R11.** `0x390A0`: null unit returns 0; null stat list returns 0; ItemStatCost count `<= 9`
+- **LSE-R10.** `0x390A0`: null unit returns 0; null stat list returns 0; ItemStatCost count `<= 9`
   returns 0; record = records + `9 * 0x144` (null returns 0); then the selected-array getter
   `0x38A80` with key `0x90000` (stat 9, layer 0) and the unit's stat list. `0x390F0` is the same with
   `7 * 0x144` and key `0x70000`. `0x38B70` performs the same guards for a supplied id and layer before
-  the same getter, so both caps equal `Stat(u, 9, 0)` and `Stat(u, 7, 0)` of NRF-R12b/NRF-R12c.
-- **LSE-R12.** `0xDB570` after the amount test calls `0xDFA90` (unit in `eax`), whose nonzero result
+  the same getter, so both caps equal `Stat(u, 9, 0)` and `Stat(u, 7, 0)` of RLI-R02a/RLI-R02b.
+- **LSE-R11.** `0xDB570` after the amount test calls `0xDFA90` (unit in `eax`), whose nonzero result
   returns 0; then #10494 with state `0x5C`, nonzero returns 0. `0xDFA90` returns 1 for null, byte
   `+0xC6` bit 0, type 0 with mode 0 or 17, type 1 with mode 0 or 12, or any other type; else 0.
-- **LSE-R13.** After the life add: with the flag set and `+0x38` nonzero, draw `0x1180` with modulus 2
+- **LSE-R12.** After the life add: with the flag set and `+0x38` nonzero, draw `0x1180` with modulus 2
   on the attacker seed; zero pushes `0x97`, nonzero `0x98`. Flag clear: `0x97`. `+0x38` zero: flag set
   pushes `0x98`, else the function returns. Each push is followed by #10689 `(attacker, id, 0)`.
-- **LSE-R14.** `0x32C10`: `id < 0` or `id >= ` DataTables `+0xBC0` returns. With a stat list whose
+- **LSE-R13.** `0x32C10`: `id < 0` or `id >= ` DataTables `+0xBC0` returns. With a stat list whose
   flags have the sign bit set, `0x37F40` (flags `0x80`) walks from the extended list's `+0x3C` head along
   `+0x2C` returning the first list with any requested flag bit; it makes no write. No list: `0x38100`
   with `(unit +0x08, 0x80, 0, unit type, unit id)`, then `0x3A7D0 (unit, list, 1)`. Then the unit's
   stat list (reloaded) gets `or [list+0x10], 0x100` when present; `0x3A280 (list, 0xB2, movzx id, 0)`;
   `0x665C0 (unit)`. `0x665C0` asserts on a null unit and otherwise queues the unit on its room's update
   list once, using `0x2FE10`.
-- **LSE-R15.** After #10350 the local type is reloaded; 0 joins the base block. Otherwise #10973 reads
+- **LSE-R14.** After #10350 the local type is reloaded; 0 joins the base block. Otherwise #10973 reads
   defender stats 8 and 10 (layer 0); both fields are divided by 64 (`cdq; and 3Fh; add; sar 6`) and
   stored; signed `jl` selects `min(+0x38, +0x08)` and `min(+0x3C, defender mana)`; signed `jge` selects
   `min(+0x40, defender stamina)` with `+0x40` undivided; the sum's zero flag exits. mulDiv(P, total,
@@ -175,8 +174,7 @@ of callee cleanup; overlay `(unit, id, 0)`; additive write `(unit, stat, value, 
   (hand decode 2026-10-14) reads MonStats, MonStats2 and the bit-mask table, follows a mode fallback
   table until an available mode or mode 1, and writes only its return register and its own argument
   slot; it calls nothing and makes no draw. Leech reads only the type local after the call.
-- **LSE-R16.** Call order in `0xDE0C0` (reused, see dispatch chain).
-- **LSE-R17.** `0xDA970`: `jg` on the amount else return 0; #10973 stat 8; subtract; signed compare with
+- **LSE-R15.** `0xDA970`: `jg` on the amount else return 0; #10973 stat 8; subtract; signed compare with
   `0x100`, `jge` keeps; #10887 write; `neg; sbb; and` returns the amount when the new value is
   nonzero, else 0.
 
@@ -200,16 +198,16 @@ functions read on 2026-10-14:
 | `0x37550` | `0x38550` | Player call inside the replacing write ([crushing-blow evidence](combat-crushing-blow.md)) |
 
 Effect on claims: the earlier question whether the cap reader sums attached lists rested on the
-wrong location. The cap getters reach `0x38A80`, the getter of NRF-R12b/NRF-R12c, so the caps are
+wrong location. The cap getters reach `0x38A80`, the getter of RLI-R02a/RLI-R02b, so the caps are
 the unit reads (LSE-R11). No vector value changed.
 
 Label changes from new evidence (2026-10-14): the cap sources (LSE-R11), the overlay write requests
 (LSE-R14) and the monster-attacker branch (LSE-R15) moved from asm-only to verified in 1.13c code
-(static): every local callee on their paths is now read, the stat reads are owned by NRF-R12b, and
+(static): every local callee on their paths is now read, the stat reads are owned by RLI-R02a, and
 the remaining stored effects are explicit integration gates (LSE-Q01). The branch's earlier
-note that defender stat reads with a null defender were unread is settled by NRF-R12b (a null unit
+note that defender stat reads with a null defender were unread is settled by RLI-R02a (a null unit
 reads 0). The divisor values (LSE-R07) are backed by a new table read; their earlier support was the
-2026-10-12 live record of GDF-R02, kept in that companion.
+2026-10-12 live record of GDA-R05, kept in that companion.
 
 <a id="table-records"></a>
 ## Table records
@@ -221,18 +219,18 @@ the header and begins at 0.
 
 | Effective virtual path (`data/global/excel/`) | Range read / total bytes | Coverage | Row | Column | Raw cell | Supports |
 |---|---|---|---|---|---|---|
-| `difficultylevels.txt` | 0+586 / 586 | full file | `Normal` | `LifeStealDivisor` | `1` | LSE-R07 |
-| `difficultylevels.txt` | same | full file | `Nightmare` | `LifeStealDivisor` | `2` | LSE-R07 |
-| `difficultylevels.txt` | same | full file | `Hell` | `LifeStealDivisor` | `3` | LSE-R07 |
-| `difficultylevels.txt` | same | full file | `Normal` | `ManaStealDivisor` | `1` | LSE-R07 |
-| `difficultylevels.txt` | same | full file | `Nightmare` | `ManaStealDivisor` | `2` | LSE-R07 |
-| `difficultylevels.txt` | same | full file | `Hell` | `ManaStealDivisor` | `3` | LSE-R07 |
-| `itemstatcost.txt` | 0+2600 / 40109 | header and rows 0 to 19 | `Stat = maxmana` | `ID` | `9` | stat 9 name (LSE-R11) |
-| `states.txt` | 9000+3000 / 20920 | rows 70 to 99 within the range; header from the full read recorded in [game-data evidence](core-game-data-fields.md) | `state = death_delay` | `id` | `92` | state 92 name (LSE-R12) |
+| `difficultylevels.txt` | 0+586 / 586 | full file | `Normal` | `LifeStealDivisor` | `1` | LSE-R06 |
+| `difficultylevels.txt` | same | full file | `Nightmare` | `LifeStealDivisor` | `2` | LSE-R06 |
+| `difficultylevels.txt` | same | full file | `Hell` | `LifeStealDivisor` | `3` | LSE-R06 |
+| `difficultylevels.txt` | same | full file | `Normal` | `ManaStealDivisor` | `1` | LSE-R06 |
+| `difficultylevels.txt` | same | full file | `Nightmare` | `ManaStealDivisor` | `2` | LSE-R06 |
+| `difficultylevels.txt` | same | full file | `Hell` | `ManaStealDivisor` | `3` | LSE-R06 |
+| `itemstatcost.txt` | 0+2600 / 40109 | header and rows 0 to 19 | `Stat = maxmana` | `ID` | `9` | stat 9 name (LSE-R10) |
+| `states.txt` | 9000+3000 / 20920 | rows 70 to 99 within the range; header from the full read recorded in [game-data evidence](core-game-data-fields.md) | `state = death_delay` | `id` | `92` | state 92 name (LSE-R11) |
 
 Interpretation: decimal text to i32. Stat 178 `unit_dooverlay` reuses the
 [crushing-blow table record](combat-crushing-blow.md). Stats 6, 7, 8, 10 and state names other than
-92 reuse GDF-R11a and GDF-R12. These reads are archive contents only; the code consumers are cited in
+92 reuse GDF-R02 and GDF-R03. These reads are archive contents only; the code consumers are cited in
 the rationale. Compiled-table correspondence for the divisor rows is recorded by the game-data
 companion's 2026-10-13 live record of all three difficulty records.
 
@@ -290,7 +288,7 @@ or 0 when that is below 256.
 - Gaps closed: cap sources and the cap-reader question (LSE-R11); overlay helper callees (LSE-R14
   requests); the monster-attacker branch's apparent form, additive write and null-unit reads (LSE-R15);
   divisor table cells (LSE-R07). Each closure's evidence is above.
-- Gaps left open: [gap file](../../plans/gaps/combat-leech-and-status-effects.md) (stored-effect
+- Gaps left open: [gap file](../../plans/gaps/combat-leech-and-drain.md) (stored-effect
   integration, disguise and form-list producers, overlay count identity, client messages, pending
   gameplay observation).
 - Label changes: LSE-R11, LSE-R14 and LSE-R15 asm-only -> verified in 1.13c code (static). The rule
@@ -329,7 +327,7 @@ GAP 6, DISCRIM 9, GATED 15, COVERAGE 24, HARDEST 3. Outcomes, spec edits unless 
 | GUESS 4 (difficulty sources) | LSE-R03 and LSE-R06 state `G.difficulty` and `A.game.difficulty` as separate inputs |
 | GAP 1 (overlay list flag and pending condition names) | Neutral names `overlayListCondition`, `overlayPendingCondition` with LSE-Q03; raw values stay in this companion; STL-R06a and STL-R04 cited |
 | GAP 2 (missing dependencies) | Section 9 adds DPO-R16, DPO-R17, DPO-R18 and CSA-R01 |
-| GAP 3 (state 92 identity) | No change in the spec: GDF-R12 does not list state 92 (nor GDF-R11a stats 9 and 178), so the spec cites this companion's table record; reported as a game-data follow-up |
+| GAP 3 (state 92 identity) | No change in the spec: GDF-R03 does not list state 92 (nor GDF-R02 stats 9 and 178), so the spec cites this companion's table record; reported as a game-data follow-up |
 | GAP 4 (state storage for form states) | LSE-V12 (g), (h), (i), (l) state `hasStateStorage` true |
 | GAP 5 (type-2 unit's exclusion condition) | LSE-V08 (f) states it false and mode 1 |
 | GAP 6 (clamp state in LSE-V13) | LSE-V13 states defender life 0x20000 and the already-clamped, unchanged physical value |
@@ -357,7 +355,7 @@ DISCRIM 6, COVERAGE 24. Outcomes, spec edits unless stated:
 
 | Entry | Outcome |
 |---|---|
-| GUESS 1 / GAP 3 (difficulty clamp versus GDF-R02 rows 0..2) | Section 3 rows for `G.difficulty` and `A.game.difficulty`, LSE-R06 and section 6 restrict the contract to 0..2 and cite CSA-Q06; the clamp and the unguarded drain read are kept in the mapping table above as evidence |
+| GUESS 1 / GAP 3 (difficulty clamp versus GDA-R05 rows 0..2) | Section 3 rows for `G.difficulty` and `A.game.difficulty`, LSE-R06 and section 6 restrict the contract to 0..2 and cite CSA-Q06; the clamp and the unguarded drain read are kept in the mapping table above as evidence |
 | GUESS 2 (when the stat list is read in LSE-R14) | Settled from `0x32C10`: the unit's stat list field is reloaded after the attach call before the `0x100` test; LSE-R14 says it is re-read after `Attach` |
 | GUESS 3 / GAP 1 (raw flag in LSE-V11) | LSE-V11 writes `conditions {overlayListCondition}`; `0x80` mapping added above |
 | GUESS 4 (pending condition in the log) | Preamble logs setting `overlayPendingCondition` as an ordered event in LSE-V11 |
@@ -436,7 +434,7 @@ campaign's stable cross-spec references.
   limits refusal to the ordinary life-add path. It describes an effect request rather than
   claiming confirmed stored overlay state or client display. No eligibility rule changed.
 - The client-view and output summaries likewise state update requests and retain the open
-  sender/body/delivery boundary under LSE-Q04/NRF-Q17; unresolved STL-R14 selection does not
+  sender/body/delivery boundary under LSE-Q04/RLI-Q02; unresolved STL-R14 selection does not
   establish it. The original source-folder assert used for category attribution remains in
   this companion's owning-category record rather than the language-neutral trigger summary.
 - Section 3, section 9 and LSE-Q01 previously cited NRF-R08a as the replacing-stat-write owner.
@@ -453,16 +451,16 @@ campaign's stable cross-spec references.
 - The update-mark reference now includes original D2Common ordinal 10158, as recorded by the
   [numeric foundations](core-numeric-and-rng-foundations.md#states-mode-and-creation) and
   [hit-recovery](combat-hit-recovery.md) function tables. This is a shared original-artifact
-  locator, not a new behavioral reading. Update-queue effects remain NRF-Q17/LSE-Q01.
+  locator, not a new behavioral reading. Update-queue effects remain RLI-Q02/LSE-Q01.
 
 ### Evidence reuse and remaining gaps
 
 | Gap | Compatible evidence considered | Current outcome and smallest remaining check |
 |---|---|---|
-| LSE-Q01 stored write integration | Original local requests and cap/return reasoning above; current NRF-R08a/R12b/R12c and NRF-Q17; STL-R06a/R06b/R06c; HRC-R02b and KNB-R03b room lookup | Numeric/stat retrieval and successful list creation remain usable. Attach and list writes remain unresolved, and no complete replacing/additive write contract is supplied. The 2026-10-15 HRC/KNB record identifies and reads D2Common `0x2FE10` -> `0x3C390` -> `0x2D320` for room/level/town selection; it does not verify update queue mutation through `0x665C0`. Complete the stored-write and update-queue output paths with integration vectors; no gate closes |
-| LSE-Q02 disguise and form list | Local `0x501E0` reading and LSE-V12 (g), (h), (i), (l); current STL-R07a and NRF-Q17 | Supplied-form selection remains verified, but disguise bookkeeping and list production remain unresolved. Trace the disguise writer and list/count producer; the historical readers-only search is not absence proof |
-| LSE-Q03 overlay identity | Local `0x32C10` reading, LSE-V11, GDF-R13 definition fields, compatible item-event overlay references and the crushing-blow question | Supplied count/conditions and ordered requests remain supported. Neither definition-field correspondence nor another consumer identifies the counted collection or its original rows. Trace publication of the collection/count and verify named overlay cells before accepting profile-specific ids |
-| LSE-Q04 client messages | Local update request, current NRF-Q17 and unresolved STL-R14/STL-Q01 | No compatible sender/body/delivery contract establishes this message boundary. Trace the actual server update sender under a net owner; a queue request alone proves no client message |
+| LSE-Q01 stored write integration | Original local requests and cap/return reasoning above; current NRF-R08a/RLI-R02a/RLI-R02b and RLI-Q02; STL-R06a/R06b/R06c; HRC-R02b and KNB-R03b room lookup | Numeric/stat retrieval and successful list creation remain usable. Attach and list writes remain unresolved, and no complete replacing/additive write contract is supplied. The 2026-10-15 HRC/KNB record identifies and reads D2Common `0x2FE10` -> `0x3C390` -> `0x2D320` for room/level/town selection; it does not verify update queue mutation through `0x665C0`. Complete the stored-write and update-queue output paths with integration vectors; no gate closes |
+| LSE-Q02 disguise and form list | Local `0x501E0` reading and LSE-V12 (g), (h), (i), (l); current STL-R07a and RLI-Q02 | Supplied-form selection remains verified, but disguise bookkeeping and list production remain unresolved. Trace the disguise writer and list/count producer; the historical readers-only search is not absence proof |
+| LSE-Q03 overlay identity | Local `0x32C10` reading, LSE-V11, GDA-R13 definition fields, compatible item-event overlay references and the crushing-blow question | Supplied count/conditions and ordered requests remain supported. Neither definition-field correspondence nor another consumer identifies the counted collection or its original rows. Trace publication of the collection/count and verify named overlay cells before accepting profile-specific ids |
+| LSE-Q04 client messages | Local update request, current RLI-Q02 and unresolved STL-R14/STL-Q01 | No compatible sender/body/delivery contract establishes this message boundary. Trace the actual server update sender under a net owner; a queue request alone proves no client message |
 | LSE-Q05 observations | Original 2026-10-13 failed-hit record, 2026-10-14 static/table work and current DPO-Q02 | No valid matching gameplay capture exists. A new observation campaign is outside this migration; retain both pending procedures and all runtime flags as no |
 
 The historical LSE attempt's unread-room-getter statement is retained as a statement of that
@@ -495,7 +493,7 @@ GATED 20, COVERAGE 10, HARDEST 3. No mismatched value or missing behavioral inpu
 | COVERAGE 2: LSE-R05 other attacker type | No change: other types join the already exercised LSE-R15 path with apparent type unchanged absent disguise. LSE-V12 main and (f) show nonplayer routing and record rewrites; another fixed type adds no arithmetic or request recipe |
 | COVERAGE 3: LSE-R06 negative nonzero divisor | No change: LSE-V05 (c) shows truncating signed negative quotient and the nonpositive-add result; (a)/(d) distinguish nonzero/zero divisors. A negative divisor uses that same signed-quotient/nonpositive-amount recipe, with no additional sign branch |
 | COVERAGE 4: LSE-R10 addition overflow and null unit with nonpositive amount | Add LSE-V07 (h): positive amount 2147483647 plus current 256 wraps to -2147483393, which is below the signed cap and is requested unchanged. This distinguishes wrapped addition from widened/saturating arithmetic. No extra null-unit case: the (c)/(g) empty read/write logs now require the amount guard before any unit access, and LSE-R10 states it independently of unit identity |
-| COVERAGE 5: LSE-R11 null list or missing cap definition | No change: NRF-V25 (d) directly checks null-list/unavailable-definition reads returning 0. LSE-V07 (a)/(e)/(f) check using the returned cap, including an initially above-cap current value. A supplied zero cap follows that same signed comparison/`cap - cur` recipe; no new getter contract belongs here |
+| COVERAGE 5: LSE-R11 null list or missing cap definition | No change: RLI-V02 (d) directly checks null-list/unavailable-definition reads returning 0. LSE-V07 (a)/(e)/(f) check using the returned cap, including an initially above-cap current value. A supplied zero cap follows that same signed comparison/`cap - cur` recipe; no new getter contract belongs here |
 | COVERAGE 6: LSE-R12 null unit or monster mode 0 | No change: LSE-R12 explicitly rejects null and monster modes 0/12. LSE-V08 (a)/(b)/(f) show refused life addition, and (e) distinguishes the player/monster mode sets. Extra refused identities use the same no-write/zero-return result |
 | COVERAGE 7: LSE-R14 list without state storage and zero overlay count | No change: LSE-V11 (b) already supplies a present stat list without state storage and requires allocation. LSE-V11 (d) rejects id equal to the count; count 0/id 0 is the same bound recipe rather than another overlay behavior |
 | COVERAGE 8: LSE-R15 nonpositive form count, no active usable form or invalid gfxtype | No change: the default empty form list exercises count 0; a negative signed count also executes no iteration. LSE-V12 (i) skips an active kind-0 state and an inactive kind-2 state, then retains type; kinds other than 1/2 share the explicit no-selection branch. Cases (g)/(h)/(l) distinguish selection, order and disguise eligibility |
@@ -506,8 +504,8 @@ GATED 20, COVERAGE 10, HARDEST 3. No mismatched value or missing behavioral inpu
 | HARDEST 3: LSE-V03 to LSE-V05 hit-game versus attacker-game difficulty and mulDiv | No change: LSE-V03 (f) discriminates the two difficulty sources, LSE-V04 (b)/(c) operand order and LSE-V05 truncating/zero-divisor behavior. Inputs and exact dependency operations are explicit |
 
 A primary-reader citation correction also removed `DifficultyRecord` from the list of operations
-owned by GDF-R02. LSE-R06 locally selects the prepared row in the covered 0..2 domain, supported
-by the existing D2Common #10237 / `0x603C0` record; GDF-R02 owns row preparation/fields only.
+owned by GDA-R05. LSE-R06 locally selects the prepared row in the covered 0..2 domain, supported
+by the existing D2Common #10237 / `0x603C0` record; GDA-R05 owns row preparation/fields only.
 No out-of-domain clamp assertion or new source-reading date is added.
 
 The two new arithmetic cases follow the already stated i32 operations:
@@ -530,10 +528,10 @@ contradictory cell or an unexecutable behavioral vector.
 | DISCRIM 1: LSE-V07 did not distinguish a zero-mana guard from only the zero-life guard | Add LSE-V07 (i), `ManaAdd(A, 0)` with current mana 0x1100 above cap 0x1000: unchanged mana, return 0 and an empty actual read/write log. A `< 0` guard would write 0x1000 and return -0x100 |
 | DISCRIM 2: LSE-V11 did not reject an overlay lower bound of `id <= 0` | Add LSE-V11 (i), valid id 0 with positive count and an existing overlay list: pending condition, list-stat write request with value 0, then update request. No stored zero-entry behavior is asserted |
 | DISCRIM 3: LSE-V12 (g) used difficulty 0/divisor 1 and could pass if apparent-player forms wrongly took player divisors | Preserve (g); add independent LSE-V12 (p) with a monster in apparent player form and attacker-game Hell divisors 3/3. The record stays 640/320, mana is 102 and life 0x10CC; dividing would give 213/106, mana 33 and life 0x1044 |
-| DISCRIM 4: only monster form selection was shown, leaving the allowed input-type set undistinguished | Add LSE-V12 (q) for actual type 3 with an active kind-2 form state: apparent-player path, mana 102, life refused by actual-type eligibility, one draw and overlay 152. This rejects an over-restrictive form-type filter. No synthetic true state result or pure-read invocation requirement is introduced for type 2: omitting that local type rejection while consuming NRF-R12a's state predicate is behaviorally equivalent, because that predicate already rejects type 2 |
+| DISCRIM 4: only monster form selection was shown, leaving the allowed input-type set undistinguished | Add LSE-V12 (q) for actual type 3 with an active kind-2 form state: apparent-player path, mana 102, life refused by actual-type eligibility, one draw and overlay 152. This rejects an over-restrictive form-type filter. No synthetic true state result or pure-read invocation requirement is introduced for type 2: omitting that local type rejection while consuming RLI-R03's state predicate is behaviorally equivalent, because that predicate already rejects type 2 |
 | GATED 6 | No change: LSE-Q01 to LSE-Q05 and the difficulty-domain limit of CSA-Q06 remain explicit. Supplied values/requests do not establish producers, stored integration, messages or gameplay confirmation |
 | COVERAGE 1: LSE-R03 null or nonmonster defender gives 100; absent MonStats is separate from absent monster data | No change: supplied player defenders throughout exercise `P = 100`, and LSE-R03 explicitly shares it with null/nonmonster inputs. LSE-V03 (c) shows the unchanged-record missing-data return; the absent nested record has that same output recipe and does not need a second fixed-null fixture |
-| COVERAGE 2: other attacker types take the monster route; form checks admit only 0/1/3 | LSE-V12 (q) now covers the other-type route and allowed type-3 form selection. For excluded type 2, the owning NRF-R12a predicate already returns 0; see DISCRIM 4's equivalence disposition. No additional observable result is left unrepresented by a missing local calculation recipe |
+| COVERAGE 2: other attacker types take the monster route; form checks admit only 0/1/3 | LSE-V12 (q) now covers the other-type route and allowed type-3 form selection. For excluded type 2, the owning RLI-R03 predicate already returns 0; see DISCRIM 4's equivalence disposition. No additional observable result is left unrepresented by a missing local calculation recipe |
 | COVERAGE 3: zero mana add independently returns before stat reads | Added LSE-V07 (i), as for DISCRIM 1 |
 | COVERAGE 4: overlay id 0 is accepted with a positive count | Added LSE-V11 (i), as for DISCRIM 2 |
 | COVERAGE 5: negative life room caps a positive total below zero before returning | Add LSE-V12 (r): total 271 and room -256 become total -256, then no additive write or overlay; current life 0x2100 remains. Existing positive/zero-room cases (b)/(c) did not show an initially above-cap attacker |
@@ -591,3 +589,31 @@ is inferred.
 ## Independent review spot-check, 2026-10-15
 
 A separate reviewer re-read original D2Game disassembly (original 1.13c instruction listings, read-only), deriving each reading before comparing it with the rule text: 0xDBA40 (LSE-R02 to LSE-R06, LSE-R08, LSE-R09, LSE-R13, LSE-R15), 0xDB570 and 0xDAE70 (LSE-R10), 0xDFA90 (LSE-R12), 0xDA970 (LSE-R17), 0xDE0C0 (LSE-R16 order) and D2Common 0x390F0 (LSE-R11 life cap: stat 7, layer 0, through the selected-array getter). All matched, including the hit-game drain column versus the attacker-game divisor row, the zero-divisor skips, the signed division by 64, the draw only after both rewritten values are tested, and the monster-branch room cap without life-add gates. Seed steps for `{1,0}`, `{0,2}` and `{1,1}` were recomputed. Section 3 now names the pipeline's aliases for the drain and poison fields; no rule, vector or label changed, so the final full reader run above still applies.
+
+## Restructure (2026-10-15)
+
+De-duplication pass after the issue 442 spec review, which found that two rules restated the
+damage pipeline. Records above this one are dated and keep the rule numbers in force when they
+were written; this record maps them to the current ids.
+
+- File rename: `combat-leech-and-status-effects` became `combat-leech-and-drain` (spec, this
+  companion and the gap file). The timed status appliers moved to
+  [combat-status-application](../../specs/combat-status-application.md) on 2026-10-14, so the old
+  name no longer described the scope; the title "Leech and Drain" and prefix LSE are unchanged.
+- Old R01 (leech-related terms of the immediate total) restated DPO-R12a and was removed. Its
+  one local consequence, that the leech operation neither reads nor writes `R.total`, moved into
+  the scale-and-store rule (now LSE-R03), with its rationale (no access to `+0x4C` in `0xDBA40`).
+  LSE-V01 keeps its poison-term total (no pipeline vector has a nonzero poison term) citing
+  DPO-R12a, and its two leech-leaves-the-total cases, relettered (a) and (b). Its regular-monster
+  and hireling total cases were dropped because DPO-V30 (a) to (c) assert the same terms.
+- Old R16 (stage order) restated DPO-R14 to DPO-R18 and CSA-R01 and was removed. Section 2's
+  placement bullet now cites those owners and keeps the local consequence that the leech overlay
+  draw is the first draw of the stage. The mana-drain rule (now LSE-R15) names its placement by
+  reference. LSE-V13 is unchanged in inputs and results and now cites LSE-R15 and LSE-R08 with the
+  placement owners.
+- Remaining rules renumbered in execution order: old R02 to R15 became R01 to R14, old R17 became
+  R15. Questions, vectors and observations keep their ids. The current-state sections of this
+  companion (function references, rule rationale, table records) and the gap file use the new
+  ids; dated records do not.
+- No rule's behavior, label, value or vector result changed. Sibling references to the old file
+  name and rule ids are updated separately from the restructure id map.

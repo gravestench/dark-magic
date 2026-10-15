@@ -30,8 +30,10 @@ were not enumerated.
 
 | Candidate spec | Original source | Data tables and columns | 1.13c entry points | Status | Notes |
 |---|---|---|---|---|---|
-| [core-numeric-and-rng-foundations](core-numeric-and-rng-foundations.md) | D2Game, D2Common, Fog | named inputs in spec | see spec | written | |
-| [core-game-data-fields](core-game-data-fields.md) | D2Common, D2Game, Fog, Storm | all cited | see spec | written | |
+| [core-numeric-and-rng-foundations](core-numeric-and-rng-foundations.md) | D2Game, D2Common, Fog | named inputs in spec | see spec | written | RNG, integers, fixed point and time units. |
+| [core-record-layouts-and-ids](core-record-layouts-and-ids.md) | D2Common, D2Game | named inputs in spec | see spec | written | Split from core-numeric-and-rng-foundations (2026-10-15): records, stat reads, states and modes. |
+| [core-game-data-fields](core-game-data-fields.md) | D2Common, D2Game, Fog, Storm | all cited | see spec | written | Identities and names. |
+| [core-game-data-table-records](core-game-data-table-records.md) | D2Common, Fog, Storm | all cited | see spec | written | Split from core-game-data-fields (2026-10-15): table layouts, getters, conversions and loading. |
 | core-data-table-loading | D2Common `DATATBLS\DataTbls`, `MissileTbls`, `ItemTbls`, `MonsterTbls`, `LvlTbls`, `FieldTbls`, `TokTbls` | all tables | D2Common `0x7C8D0` (Missiles loader, label `LoadMissilesTxtTable`) | candidate | Binary table compilation, linking of string keys to row ids, expansion vs classic rows. |
 
 ## combat
@@ -40,14 +42,15 @@ were not enumerated.
 |---|---|---|---|---|---|
 | [combat-damage-pipeline-order](combat-damage-pipeline-order.md) | D2Game `UNIT\SUnitDmg` | many | `0xDE0C0`, `0xDD450`, `0xDCF20` | written | |
 | [combat-damage-mitigation](combat-damage-mitigation.md) | `UNIT\SUnitDmg` | resist/absorb stats, DifficultyLevels | `0xDB3C0`, `0xDBD00`, `0xDC0B0` | written | |
-| [combat-shield-block-and-avoidance](combat-shield-block-and-avoidance.md) | `UNIT\SUnitDmg` | block/avoid stats | `0xDB790`, `0x3EDE0` | written | |
-| [combat-leech-and-status-effects](combat-leech-and-status-effects.md) | `UNIT\SUnitDmg` | leech and drain fields, DifficultyLevels leech divisors | `0xDBA40`, `0xDB570`, `0xDA970` | written | Leech and drain only; status application is combat-status-application. |
+| [combat-hit-roll](combat-hit-roll.md) | `UNIT\SUnitDmg` | to-hit and defense stats | see spec | written | Split from combat-shield-block-and-avoidance (2026-10-15): the attack hit roll. |
+| [combat-shield-block-and-avoidance](combat-shield-block-and-avoidance.md) | `UNIT\SUnitDmg` | block/avoid stats | `0xDB790`, `0x3EDE0` | written | Block and avoidance; the hit roll is combat-hit-roll. |
+| [combat-leech-and-drain](combat-leech-and-drain.md) | `UNIT\SUnitDmg` | leech and drain fields, DifficultyLevels leech divisors | `0xDBA40`, `0xDB570`, `0xDA970` | written | Leech and drain only; status application is combat-status-application. Renamed 2026-10-15. |
 | [combat-status-application](combat-status-application.md) | `UNIT\SUnitDmg` (assert file string empty; ownership follows the caller) | stun, cold, freeze, poison, burn fields; MonStats ColdEffect/Velocity, DifficultyLevels cold/freeze divisors | `0xDE0C0` (hand-off), `0xDCC20`, `0xDC780`, `0xDDAC0`, `0xDCAB0`, `0xDC940`, `0xDB4C0` | written | |
 | [combat-crushing-blow](combat-crushing-blow.md) | `UNIT\SUnitEvent` | ItemStatCost | `0xACC30`, `0x37030` | written | |
 | [combat-open-wounds](combat-open-wounds.md) | `UNIT\SUnitEvent` | ItemStatCost | `0xAD410`, `0x8E6F0` | written | |
 | [combat-knockback](combat-knockback.md) | `UNIT\SUnitEvent`, `SUnitDmg` | MonStats2 | `0xACE60`, `0x75160` | written | |
 | [combat-hit-recovery](combat-hit-recovery.md) | `UNIT\SUnitDmg` | MonStats2 | `0xDCF20`, `0x75210` | written | |
-| [combat-pvp-damage-and-kill-credit](combat-pvp-damage-and-kill-credit.md) | `UNIT\SUnitDmg` | hostility, party | `0xDEEE0`, `0xDEA00`, `0x6F930` | written | |
+| [combat-pvp-damage-and-kill-credit](combat-pvp-damage-and-kill-credit.md) | `UNIT\SUnitDmg` | hostility, party | `0xDEEE0`, `0xDEA00`, `0x6F930` | written | Hostility declaration is player-hostility-declaration. |
 | [combat-item-event-triggers-and-procs](combat-item-event-triggers-and-procs.md) | `UNIT\SUnitEvent` | ItemStatCost itemevent1/2, itemeventfunc1/2 | dispatcher `0x37030`; callback table VA `0x6FD277A8` slots 1-31 (e.g. `0xAD910`, `0xAF2E0`, `0xAE0E0`); trigger callers `0xDE0C0` (hit), `0x76740` (kill), `0xDE6D0` (level-up) | written | Dispatcher and trigger points; only the knockback, Open Wounds and Crushing Blow slots are written. Likely splits: chance-to-cast, attacker-takes-damage (thorns), after-kill life/mana, slow/freeze target, reanimate. |
 | combat-area-damage-sweep | `UNIT\SUnitDmg` | Missiles/Skills radius columns | `0xDE380` (callers `0x76270`, `0x265E0`, `0x44300`, `0x457D0`) | candidate | Target filtering and order for area hits. |
 
@@ -65,10 +68,11 @@ were not enumerated.
 
 | Candidate spec | Original source | Data tables and columns | 1.13c entry points | Status | Notes |
 |---|---|---|---|---|---|
-| [missile-creation-and-initialization](missile-creation-and-initialization.md) | D2Game `MISSILES\Missiles`; D2Common `UNITS\Missile` | Missiles Vel, MaxVel, Accel, Range, LevRange, Skill, HitShift, Light | `0x6F930` (84 callers); D2Common `0x6A390`, `0x6A350` | written | |
+| [missile-creation-and-seeding](missile-creation-and-seeding.md) | D2Game `MISSILES\Missiles`; D2Common `UNITS\Missile` | Missiles Vel, MaxVel, Accel, Skill | `0x6F930` (84 callers); D2Common `0x6A390`, `0x6A350` | written | Creation request, allocation and seeding (renamed and split 2026-10-15). |
+| [missile-initialization-and-registry](missile-initialization-and-registry.md) | D2Game `MISSILES\Missiles`; D2Common `UNITS\Missile` | Missiles Range, LevRange, HitShift, Light | see spec | written | Split from missile-creation-and-seeding (2026-10-15): initialization, attribution and registry. |
 | [missile-movement-and-collision](missile-movement-and-collision.md) | `MISSILES`; D2Common `UNITS\Missile`, `PATH` | Missiles CollideType, Collision, CollideKill, CollideFriend, LastCollide, Pierce, NextHit, NextDelay | `0x3F320` → `0x3EDE0`; `0xAE9A0` → `0x3E3F0` | written | |
 | [missile-hit-and-damage-calculation](missile-hit-and-damage-calculation.md) | `MISSILES`; D2Common `UNITS\Missile` | Missiles SrvDmgFunc, MinDamage..EMax, LevDam*, DmgCalc1, ElemType, SrcDamage, SrcMissDmg | `0x3E510`, `0x3EDE0`; dmg table VA `0x6FD2DB68` (15 slots); D2Common `0x6A3E0`, `0x6B2B0` | written | Hit path partly cited by pvp, shield, knockback specs; damage arithmetic not written. |
-| [missile-damage-parameters](missile-damage-parameters.md) | D2Game `MISSILES`; D2Common `UNITS\Missile` | Missiles MinDamage..HitShift, SrcDamage, SrcMissDmg | `0x6F930` → `0x6F620`; D2Common `0x6BAA0`, `0x6B4A0`, `0x6A580`, `0x6A4B0`, `0x6B360`, `0x6A3E0` | written | Split from missile-hit-and-damage-calculation (MHD-R01..R12 → MDP-R01..R12). Columns are read at creation, not at hit. |
+| [missile-damage-parameters](missile-damage-parameters.md) | D2Game `MISSILES`; D2Common `UNITS\Missile` | Missiles MinDamage..HitShift, SrcDamage, SrcMissDmg | `0x6F930` → `0x6F620`; D2Common `0x6BAA0`, `0x6B4A0`, `0x6A580`, `0x6A4B0`, `0x6B360`, `0x6A3E0` | written | Split from missile-hit-and-damage-calculation; owns MDP-R01..MDP-R12, which missile-hit-and-damage-calculation consumes. Columns are read at creation, not at hit. |
 | missile-server-do-functions | `MISSILES` | Missiles SrvDoFunc, Param1-5, SrvCalc1, SubMissile1-3 | dispatch `0x3E3F0`; table VA `0x6FD2D970` (37 slots) | candidate | Split by family: periodic spawners, chains, homing, teleport. |
 | missile-server-hit-functions | `MISSILES` | Missiles SrvHitFunc, Explosion, sHitPar1-3, HitSubMissile1-4 | table VA `0x6FD2DA48` (59 slots) | candidate | Split by family: explosion, sub-missiles, chain/bounce, monster spawn. |
 | missile-stream | D2Common `UNITS\MisStream` | Missiles path length | D2Common `0x1D760`, `0x1D7C0`, `0x1D710` | candidate | Small; may fold into movement. |
@@ -94,7 +98,7 @@ D2Client cltst VA `0x6FB8E928` (53), cltdo VA `0x6FB8EA48` (96).
 | skill-mana-cost-and-deduction | `SKILLS\Skills` (D2Common, D2Game) | mana, lvlmana, minmana, manashift | D2Common `0x16F0`, `0x4FDC0`; D2Game `0x9F850` | candidate | |
 | skill-delay-and-cooldown | D2Game `SKILLS\Skills` | Skills delay; skill-delay state | `0x9F1A0` | candidate | Hireling cooldown `0xA4A10` is in the sentry spec. |
 | skill-levels-bonuses-and-charged-skills | D2Common `SKILLS\Skills` | all-skills, class and tab bonuses, charged skills | D2Common `0x4FCB0`, `0x52CA0`, `0x4EE00` | candidate | |
-| [skill-calc-expressions-and-synergies](skill-calc-expressions-and-synergies.md) | D2Common `SKILLS\Skills`, `DATATBLS` | calc columns | D2Common `0x37AF0`, `0x3AC50`, `0x51B80` | written | |
+| [skill-calc-expressions](skill-calc-expressions.md) | D2Common `SKILLS\Skills`, `DATATBLS` | calc columns | D2Common `0x37AF0`, `0x3AC50`, `0x51B80` | written | Renamed 2026-10-15; synergy damage builders are owned by skill-leveled-damage-tohit-and-elements. |
 | [skill-leveled-damage-tohit-and-elements](skill-leveled-damage-tohit-and-elements.md) | D2Common `SKILLS\Skills` | MinDam, MaxDam, MinLevDam1-5, EMin, EMax, EMinLev*, ToHit, LevToHit, HitShift | D2Common `0x1670`, `0x16B0`, `0x1730`, `0x50360`, `0x50460` | written | |
 | skill-requirements-and-point-allocation | `SKILLS\Skills` (D2Common, D2Game) | reqlevel, reqskill1-3 | D2Common `0x50610`, `0x52210`; D2Game `0x9FA00` | candidate | |
 | skill-selection-left-right | D2Game `GAME\CCmd`, `SKILLS\Skills`; D2Client `UI` | left/right skill, hotkeys | `0xA0830`; D2Client `0x3CFA0`, `0x3D080` | candidate | Server select handler not located. |
@@ -158,9 +162,11 @@ D2Client cltst VA `0x6FB8E928` (53), cltdo VA `0x6FB8EA48` (96).
 
 | Candidate spec | Original source | Data tables and columns | 1.13c entry points | Status | Notes |
 |---|---|---|---|---|---|
-| [skill-assassin-sentry-firing-and-range](skill-assassin-sentry-firing-and-range.md) | inferred `SKILLS\SkillAss`, AI | AI think | `0xA7DC0`, `0xA4A10`, `0xB1BC0` | written | |
+| [skill-assassin-sentry-firing-and-range](skill-assassin-sentry-firing-and-range.md) | inferred `SKILLS\SkillAss`, AI | AI think | `0xA7DC0`, `0xA4A10`, `0xB1BC0` | written | Think, range and firing decision. |
+| [skill-assassin-sentry-missile-launch](skill-assassin-sentry-missile-launch.md) | inferred `SKILLS\SkillAss` | Skills calc1, Missiles Vel/VelLev/Size | see spec | written | Split from skill-assassin-sentry-firing-and-range (2026-10-15): missile launch. |
 | [skill-assassin-blade-sentinel-and-fury](skill-assassin-blade-sentinel-and-fury.md) | inferred `SKILLS\SkillAss` | srvdo 44, 48 | `0x96310`, `0x95560` | written | |
-| [skill-assassin-death-sentry-corpse-damage](skill-assassin-death-sentry-corpse-damage.md) | `SKILLS\SkillNec` do 55, AI | srvdo 55 | `0xA7C20`, `0x4F4D0` | written | |
+| [skill-assassin-death-sentry-corpse-selection](skill-assassin-death-sentry-corpse-selection.md) | AI | Skills Param3/Param4, MonStats | `0xA7C20` | written | Split from skill-assassin-death-sentry-corpse-damage (2026-10-15): think and corpse selection. |
+| [skill-assassin-death-sentry-corpse-damage](skill-assassin-death-sentry-corpse-damage.md) | `SKILLS\SkillNec` do 55 | srvdo 55 | `0x4F4D0` | written | Corpse explosion. |
 | skill-assassin-martial-arts-charges-and-finishers | inferred `SKILLS\SkillAss` | srvdo 38, 42, 50, 52; srvprgfunc | `0x93340`, `0x95FE0`, `0x91B70` | candidate | |
 | skill-assassin-trap-placement | inferred `SKILLS\SkillAss` | srvdo 39-41, 43, 47 | `0x94970`, `0x92230`, `0x94B10` | candidate | |
 | skill-assassin-shadows-and-buffs | inferred `SKILLS\SkillAss` | srvdo 33, 45, 49; srvst 22-28 | `0x96280`, `0x95980`, `0x92770` | candidate | |
@@ -234,7 +240,7 @@ leads.
 | ai-hireling | `Ai\AiGeneral` | Hireling | `0x1DD40` (aux `0x16060`) | candidate | |
 | ai-necromancer-and-druid-summons | `Ai\AiThink4`, `AiGeneral` | aip* | `0x1E900`, `0xAC8E0`, `0xAB360` | candidate | |
 | ai-shadow-warrior-and-master | `Ai\AiThink4` | aip* | `0xAC410`, `0xAB580`, `0xA6B70`, `0xA5350` | candidate | |
-| (sentry and death sentry AI) | `Ai\AiThink4` | none | `0xA7DC0`, `0xA7C20` | written | In [skill-assassin-sentry-firing-and-range](skill-assassin-sentry-firing-and-range.md) and [skill-assassin-death-sentry-corpse-damage](skill-assassin-death-sentry-corpse-damage.md). |
+| (sentry and death sentry AI) | `Ai\AiThink4` | none | `0xA7DC0`, `0xA7C20` | written | In [skill-assassin-sentry-firing-and-range](skill-assassin-sentry-firing-and-range.md), [skill-assassin-sentry-missile-launch](skill-assassin-sentry-missile-launch.md) and [skill-assassin-death-sentry-corpse-selection](skill-assassin-death-sentry-corpse-selection.md). |
 
 ## game
 
@@ -305,7 +311,9 @@ leads.
 
 | Candidate spec | Original source | Data tables and columns | 1.13c entry points | Status | Notes |
 |---|---|---|---|---|---|
-| [player-party-experience-and-loot-sharing](player-party-experience-and-loot-sharing.md) | D2Game `UNIT\Party`, `PLAYER` | Experience, DifficultyLevels | `0xDEA00`, `0xDE8F0`, `0x9C270` | written | |
+| [player-party-experience-sharing](player-party-experience-sharing.md) | D2Game `UNIT\Party`, `PLAYER` | Experience, DifficultyLevels | `0xDEA00`, `0xDE8F0`, `0x9C270` | written | Renamed 2026-10-15; gold pickup sharing is player-party-gold-sharing. |
+| [player-party-gold-sharing](player-party-gold-sharing.md) | D2Game `UNIT\Party`, `PLAYER` | ItemTypes gold | see spec | written | Split from player-party-experience-sharing (2026-10-15). |
+| [player-hostility-declaration](player-hostility-declaration.md) | D2Game `UNIT\Party` | none | see spec | written | Split from combat-pvp-damage-and-kill-credit (2026-10-15). |
 | player-life-mana-stamina-regeneration | D2Game regen tick | regen stats, stamina | `0x6CEE0` (table VA `0x6FD27BBC` slot 21); `0x8DA80` | candidate | Includes per-frame poison drain; table `0x6FD27BBC` (37 handlers) unidentified. Monster regeneration is in scope too. Mana part written as player-mana-regeneration: the per-frame player tick is `0x79B10` (type-3 unit event, slot 3 of table RVA `0xFBB74`) calling life `0x77CB0`, stamina `0x77A50`, mana `0x77950`; `0x6CEE0`/`0x6A560` is the object or monster refill tick, not player regeneration. Life and stamina regeneration remain candidates. |
 | [player-mana-regeneration](player-mana-regeneration.md) | D2Game `PLAYER\PlrModes` | CharStats.ManaRegen; ItemStatCost rows 8, 9, 26, 27; States 85, 106 | `0x79B10` -> `0x77950`; D2Common ordinals 10973, 10186, 10494, 10871, 11111, 11108, 10551 | written | Draft: trigger chain runtime-confirmed, arithmetic static only. |
 | [player-stamina-drain-while-running](player-stamina-drain-while-running.md) | D2Game `PLAYER\PlrModes` | CharStats.RunDrain; Armor.speed; ItemStatCost row 154; BodyLocs row 3 | `0x79A10` -> mode table `.data` RVA `0x1079D0` slot 3 -> `0x79B90` -> `0x77BB0` | written | Draft: static only; split out of player-modes-and-transitions. |
@@ -316,7 +324,7 @@ leads.
 | player-pets-and-summon-limits | `PLAYER\PlayerPets` | PetType | `0x96FA0`, `0x97A20`, `0x964B0`, `0x21FB0`; D2Common `0x5F310` | candidate | `GAME\Targets` summon lists (`0xEFE40`) belong here too. |
 | player-hireling-lifecycle | `PLAYER\PlayerPets`, `UNIT\SUNITNPC` | Hireling, MonStats | `0xC1250`, `0xC1030`, `0x96EA0`, `0x98120`, `0xC0B90` | candidate | Hiring cost in npc; XP share written. |
 | player-trade | `PLAYER\PlrTrade` | none | `0x70FB0`, `0x71E10`, `0x73AA0`, `0xE95E0` | candidate | |
-| player-party-membership-and-hostility | `UNIT\Party` | none | `0x9BE40`, `0x9BF70`, `0x9C840`, `0xE9A10` | candidate | Check against combat-pvp-damage-and-kill-credit. |
+| player-party-membership-and-hostility | `UNIT\Party` | none | `0x9BE40`, `0x9BF70`, `0x9C840`, `0xE9A10` | candidate | Check against combat-pvp-damage-and-kill-credit; hostility declaration is written in player-hostility-declaration. |
 | player-npc-introductions | `PLAYER\PlrIntro` | none | `0x692D0`, `0x69360` | candidate | Small; may fold into npc or quest. |
 
 ## save
@@ -362,7 +370,7 @@ slot}; act-level rows at `0x10DF6C` (ids 37-40).
 | quest-record-and-save-bits | D2Common `QuestRecord` | none | D2Common `0x30970`, `0x30880`, `0x2D020` | candidate | Bit layout per slot (0-41). |
 | quest-act1-state-machines | `Quests\a1q0`-`a1q6` | Levels, SuperUniques, Objects | `0x62D90`, `0x65990`, `0x69200`; Cairn stones op 9 `0x664F0` | candidate | |
 | quest-act2-state-machines | `Quests\a2q0`-`a2q8` | same | `0xC5690`, `0xC7B40`, `0xC9F60` | candidate | a2q3 partly covered by the world-clock spec. |
-| [quest-tainted-sun-world-clock](quest-tainted-sun-world-clock.md) | a2q3, D2Common `ENVIRONMENT` | none | `0xC7480`, op 24 `0xC76B0` | written | |
+| [quest-tainted-sun](quest-tainted-sun.md) | a2q3 | none | `0xC7480`, op 24 `0xC76B0` | written | Quest stages; the world clock is drlg-world-clock (split 2026-10-15). |
 | quest-act3-state-machines | `Quests\a3q0`-`a3q7` | same | `0xE6660`, `0xE93C0`, `0xEA080` | candidate | |
 | quest-act4-state-machines | `Quests\a4q1`-`a4q3` | same | `0xB9D80`, `0xBAE40`, `0xBC5F0`, `0xBC220` | candidate | Seals and Diablo. |
 | quest-act5-state-machines | `Quests\a5q1`-`a5q6` | same | `0x5BEA0`, `0x5FC20`, `0x60080` | candidate | |
@@ -400,7 +408,8 @@ outdoor `0x43580`.
 | drlg-vertices-grid-logic | `DRLG\DrlgVer`, `DrlgGrid`, `DrlgLogic` | none | `0x1B6E0`, `0x367F0`, `0x81020` | candidate | Includes wall visibility. |
 | drlg-level-object-placement | `DRLG\DrlgRoom` | Objects, ObjGroup, Shrines | `0x41730`, `0x41070`, `0x41CA0` | candidate | |
 | drlg-animated-tiles | `DRLG\DrlgAnim` | none | not found in d2-decomp | candidate | Entry point not located. |
-| drlg-environment-day-cycle | D2Common `ENVIRONMENT\Env` | none | `0x37570`, `0x37BA0`, `0x37920` | candidate | Eclipse part is written (quest-tainted-sun-world-clock). |
+| drlg-environment-day-cycle | D2Common `ENVIRONMENT\Env` | none | `0x37570`, `0x37BA0`, `0x37920` | candidate | Eclipse part is written ([drlg-world-clock](drlg-world-clock.md)). |
+| [drlg-world-clock](drlg-world-clock.md) | D2Common `ENVIRONMENT` | none | see spec | written | Split from quest-tainted-sun (2026-10-15). |
 
 ## path
 

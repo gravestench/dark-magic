@@ -13,22 +13,26 @@ specs to the project's tracker and are the only place issue numbers appear.
 | Spec | Issues | Parent |
 |------|--------|--------|
 | [core-numeric-and-rng-foundations](core-numeric-and-rng-foundations.md) | #469; shared by all specs | #442 |
+| [core-record-layouts-and-ids](core-record-layouts-and-ids.md) | #469; shared by all specs | #442 |
 | [core-game-data-fields](core-game-data-fields.md) | #470; shared by all specs | #442 |
+| [core-game-data-table-records](core-game-data-table-records.md) | #470; shared by all specs | #442 |
 
 ### Combat (`combat-`)
 
 | Spec | Issues | Parent |
 |------|--------|--------|
+| [combat-hit-roll](combat-hit-roll.md) | #488 (spec); #381, #383 (gameplay) | #348 |
 | [combat-shield-block-and-avoidance](combat-shield-block-and-avoidance.md) | #488 (spec); #381, #383 (gameplay) | #348 |
 | [combat-damage-pipeline-order](combat-damage-pipeline-order.md) | #483 (spec); #383 (gameplay) | #348 |
 | [combat-damage-mitigation](combat-damage-mitigation.md) | #471 (spec); #383 (gameplay) | #348 |
-| [combat-leech-and-status-effects](combat-leech-and-status-effects.md) (leech and drain) | #473 (spec); #383 (gameplay) | #348 |
+| [combat-leech-and-drain](combat-leech-and-drain.md) | #473 (spec); #383 (gameplay) | #348 |
 | [combat-status-application](combat-status-application.md) | #472 (spec); #383 (gameplay) | #348 |
 | [combat-crushing-blow](combat-crushing-blow.md) | #491 (spec); #383 (gameplay) | #348 |
 | [combat-open-wounds](combat-open-wounds.md) | #492 (spec); #383 (gameplay) | #348 |
 | [combat-knockback](combat-knockback.md) | #489 (spec); #378, #379 (gameplay) | #345 |
 | [combat-hit-recovery](combat-hit-recovery.md) | #490 (spec); #383, #378, #375 (gameplay) | #348 |
 | [combat-pvp-damage-and-kill-credit](combat-pvp-damage-and-kill-credit.md) | #493 (spec); #383, #420 (gameplay) | #348 |
+| [player-hostility-declaration](player-hostility-declaration.md) | #493 (spec); #383, #420 (gameplay) | #348 |
 | [combat-item-event-triggers-and-procs](combat-item-event-triggers-and-procs.md) | #482 (spec); #383 (gameplay) | #348 |
 
 ### States (`state-`)
@@ -43,17 +47,20 @@ specs to the project's tracker and are the only place issue numbers appear.
 | Spec | Issues | Parent |
 |------|--------|--------|
 | [skill-assassin-sentry-firing-and-range](skill-assassin-sentry-firing-and-range.md) | #496 (spec); #418 (gameplay) | #408, #387 |
+| [skill-assassin-sentry-missile-launch](skill-assassin-sentry-missile-launch.md) | #496 (spec); #418 (gameplay) | #408, #387 |
 | [skill-assassin-blade-sentinel-and-fury](skill-assassin-blade-sentinel-and-fury.md) | #497 (spec); #419 (gameplay) | #408, #387 |
+| [skill-assassin-death-sentry-corpse-selection](skill-assassin-death-sentry-corpse-selection.md) | #498 (spec); #420 (gameplay) | #408, #387 |
 | [skill-assassin-death-sentry-corpse-damage](skill-assassin-death-sentry-corpse-damage.md) | #498 (spec); #420 (gameplay) | #408, #387 |
 | [skill-cast-start-and-do-dispatch](skill-cast-start-and-do-dispatch.md) | #486 (spec); #387 (gameplay) | #442 |
 | [skill-leveled-damage-tohit-and-elements](skill-leveled-damage-tohit-and-elements.md) | #487 (spec); #387 (gameplay) | #442 |
-| [skill-calc-expressions-and-synergies](skill-calc-expressions-and-synergies.md) | #485 (spec); #387 (gameplay) | #442 |
+| [skill-calc-expressions](skill-calc-expressions.md) | #485 (spec); #387 (gameplay) | #442 |
 
 ### Missiles (`missile-`)
 
 | Spec | Issues | Parent |
 |------|--------|--------|
-| [missile-creation-and-initialization](missile-creation-and-initialization.md) | #499 (spec); #387 (gameplay) | #442 |
+| [missile-creation-and-seeding](missile-creation-and-seeding.md) | #499 (spec); #387 (gameplay) | #442 |
+| [missile-initialization-and-registry](missile-initialization-and-registry.md) | #499 (spec); #387 (gameplay) | #442 |
 | [missile-movement-and-collision](missile-movement-and-collision.md) | #500 (spec); #387 (gameplay) | #442 |
 | [missile-hit-and-damage-calculation](missile-hit-and-damage-calculation.md) | #501 (spec); #383, #387 (gameplay) | #442 |
 | [missile-damage-parameters](missile-damage-parameters.md) | #502 (spec); #387 (gameplay) | #442 |
@@ -63,6 +70,12 @@ specs to the project's tracker and are the only place issue numbers appear.
 | Spec | Issues | Parent |
 |------|--------|--------|
 | [item-durability-loss](item-durability-loss.md) | #495 (spec); #383 (gameplay) | #348 |
+
+### World generation (`drlg-`)
+
+| Spec | Issues | Parent |
+|------|--------|--------|
+| [drlg-world-clock](drlg-world-clock.md) | #505 (spec); #415 (gameplay) | #346 |
 
 ### Monsters (`monster-`)
 
@@ -74,7 +87,8 @@ specs to the project's tracker and are the only place issue numbers appear.
 
 | Spec | Issues | Parent |
 |------|--------|--------|
-| [player-party-experience-and-loot-sharing](player-party-experience-and-loot-sharing.md) | #503 (spec); #373, #374 (gameplay) | #344 |
+| [player-party-experience-sharing](player-party-experience-sharing.md) | #503 (spec); #373, #374 (gameplay) | #344 |
+| [player-party-gold-sharing](player-party-gold-sharing.md) | #503 (spec); #373, #374 (gameplay) | #344 |
 | [player-mana-regeneration](player-mana-regeneration.md) | #484 (spec) | #442 |
 | [player-stamina-drain-while-running](player-stamina-drain-while-running.md) | #504 (spec); #346, #377 (related gameplay) | #346 |
 
@@ -82,12 +96,14 @@ specs to the project's tracker and are the only place issue numbers appear.
 
 | Spec | Issues | Parent |
 |------|--------|--------|
-| [quest-tainted-sun-world-clock](quest-tainted-sun-world-clock.md) | #505 (spec); #415 (gameplay) | #346 |
+| [quest-tainted-sun](quest-tainted-sun.md) | #505 (spec); #415 (gameplay) | #346 |
 
 Read [core-numeric-and-rng-foundations](core-numeric-and-rng-foundations.md) first: it defines the random
-number generator, fixed-point formats, integer rules, stat/state/mode ids and time units the
-other specs rely on, and [core-game-data-fields](core-game-data-fields.md), which defines the game-data
-columns, names, identities and bindings they consume. Original binary mappings are recorded in the
+number generator, fixed-point formats, integer rules and time units the other specs rely on;
+[core-record-layouts-and-ids](core-record-layouts-and-ids.md) defines the record layouts, stat reads and
+state/mode operations; [core-game-data-fields](core-game-data-fields.md) defines the names, identities and
+bindings they consume; and [core-game-data-table-records](core-game-data-table-records.md) defines the
+game-data columns, getters and table loading. Original binary mappings are recorded in the
 linked evidence companions. Suggested order after that: combat-damage-pipeline-order, combat-damage-mitigation,
 combat-shield-block-and-avoidance, then the rest in any order.
 

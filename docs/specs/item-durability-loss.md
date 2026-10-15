@@ -23,7 +23,7 @@ The skill consumer receives a selected weapon and evaluated `Skills.calc2`/`calc
 
 ## 3. Inputs and data
 
-Stats are signed i32 layer-0 values read through NRF-R12b/R12c. Arithmetic uses signed i32 wrapping values and truncation toward zero under NRF-R06a unless stated. Draws use NRF-R01/R02. `WriteStat` means a replacing-write request, not verified stored mutation (DUR-Q07 / NRF-Q20). Logical operation names impose no API or storage design.
+Stats are signed i32 layer-0 values read through RLI-R02a/RLI-R02b. Arithmetic uses signed i32 wrapping values and truncation toward zero under NRF-R06a unless stated. Draws use NRF-R01/R02. `WriteStat` means a replacing-write request, not verified stored mutation (DUR-Q07 / RLI-Q03). Logical operation names impose no API or storage design.
 
 | Input | Semantic source | Width / format | Meaning |
 |---|---|---|---|
@@ -51,8 +51,8 @@ Stats are signed i32 layer-0 values read through NRF-R12b/R12c. Arithmetic uses 
 | Locations 1 head, 3 tors, 4 rarm, 5 larm, 8 belt, 9 feet, 10 glov | table data: effective `data/global/excel/bodylocs.txt`, zero-based data row excluding header, Code | Code-fixed arguments; inventory correspondence DUR-Q06 |
 | Ordered (location, weight): (1, 3), (3, 5), (4, 4), (5, 4), (8, 2), (9, 2), (10, 2); count 7 | engine code / binary constant data | Fixed by original code; all eligible total 22 |
 | Armor 10, weapon 4, Expansion throwable 10; decrement 1; numerator 2500; later floor 125; cap 511 | engine code | Fixed by original code |
-| Broken marker; event 3; node kind 3; Neutral mode 1 | engine code; Neutral name NRF-R14 | Fixed original selectors; effects gated below |
-| Throwable, durability, nodurability, stackable, maxstack, `calc2`, `calc3` fields | table schema and code loader/consumer | Prepared-data inputs; GDF-R08a/SCX own calc schema/evaluation |
+| Broken marker; event 3; node kind 3; Neutral mode 1 | engine code; Neutral name RLI-R04 | Fixed original selectors; effects gated below |
+| Throwable, durability, nodurability, stackable, maxstack, `calc2`, `calc3` fields | table schema and code loader/consumer | Prepared-data inputs; GDA-R11a/SCX own calc schema/evaluation |
 | Stack fallback selector meaning | unresolved | DUR-Q01 |
 
 Named-cell evidence retains its recorded profile limits. Text-file cells do not establish prepared-record correspondence, type equivalence or gameplay execution. Synthetic fixtures supply prepared inputs explicitly.
@@ -168,7 +168,7 @@ No persistence, unit creation/destruction or wire-format contract is established
 | **DUR-Q04** | open / integration | Default type 3 binding established; scheduler lookup/insertion/removal, requested-frame normalization and due delivery remain. R11/R12 requests and supplied-event selection available |
 | **DUR-Q05** | open / outside-boundary | Fully read restore/set writers and trace death roots before asserting presence/absence of death-time loss |
 | **DUR-Q06** | open / integration | Primary hand/skill selector, repeated stack selection, inventory locations, type equivalence/throwable and prepared-record producers. Supplied consumers available |
-| **DUR-Q07** | open / integration | Actual stat propagation NRF-Q20, client delivery, owner lookup, refresh, traversal/mode and break semantics. Local requests/arithmetic available |
+| **DUR-Q07** | open / integration | Actual stat propagation RLI-Q03, client delivery, owner lookup, refresh, traversal/mode and break semantics. Local requests/arithmetic available |
 | **DUR-Q09** | open / observation | Attribute seed delta directly at durability entries with chosen item/roll, damage and get-hit-veto draws. Every local rule still needs attributable gameplay observation |
 
 Attempts and exact remaining gates are in the [gap file](../plans/gaps/item-durability-loss.md). Observation gaps block runtime-confirmation claims independently of integration gates.
@@ -309,7 +309,7 @@ Exact seeds: S1={1, 0x29A}, S57={57, 0x29A}, S12={12, 0x29A}, SX={0x12345678, 0x
 
 Partial local acceptance requires every exact local arithmetic, seed, selection, return and ordered-request assertion of DUR-V01–DUR-V13 for verified sub-ids in the Id map. Supplied effects do not establish stored durability/quantity, broken equipment, interior draws or actual timer cadence. R08b/R09b/R13c/R15 have no verified full-result acceptance. DUR-Q01/Q02/Q04/Q06/Q07 block their named integrations; Q03/Q05 are outside producers and Q09 limits gameplay confirmation. Full 1.13c reproduction additionally requires resolving applicable 1.13c gates and attributable gameplay observations. Passing supplied subsets is partial acceptance.
 
-**Depends on:** [core-numeric-and-rng-foundations](core-numeric-and-rng-foundations.md) NRF-R01/R02(seed/draw), NRF-R06a(integer arithmetic), NRF-R12b/R12c(reads), NRF-R14a/R14b(mode requests/traversal with their gates); [core-game-data-fields](core-game-data-fields.md) GDF-R08a(calc fields), GDF-R16a/R16b(type identity/schema with their limits); [combat-damage-pipeline-order](combat-damage-pipeline-order.md) DPO-R24a(placement/pre-apply hit); [skill-cast-start-and-do-dispatch](skill-cast-start-and-do-dispatch.md) SCD-R05a(start selection); [skill-calc-expressions-and-synergies](skill-calc-expressions-and-synergies.md) SCX-R11(evaluated calcs with its limits). Replacing mutation remains NRF-Q20, not a getter guarantee.
+**Depends on:** [core-numeric-and-rng-foundations](core-numeric-and-rng-foundations.md) NRF-R01/R02(seed/draw), NRF-R06a(integer arithmetic), RLI-R02a/RLI-R02b(reads), RLI-R04a/RLI-R04b(mode requests/traversal with their gates); [core-game-data-fields](core-game-data-fields.md) GDA-R11a(calc fields), GDF-R07/GDA-R14(type identity/schema with their limits); [combat-damage-pipeline-order](combat-damage-pipeline-order.md) DPO-R24a(placement/pre-apply hit); [skill-cast-start-and-do-dispatch](skill-cast-start-and-do-dispatch.md) SCD-R05a(start selection); [skill-calc-expressions](skill-calc-expressions.md) SCX-R11(evaluated calcs with its limits). Replacing mutation remains RLI-Q03, not a getter guarantee. Owners of the cited GDA, RLI ids: [core-game-data-table-records](core-game-data-table-records.md) (GDA); [core-record-layouts-and-ids](core-record-layouts-and-ids.md) (RLI).
 
 **Depended on by:** DPO-R24a consumes DUR-R05 loss requests; DPO-R24b complete break integration remains unresolved. Sibling citations add no acceptance obligation.
 
@@ -317,7 +317,7 @@ Partial local acceptance requires every exact local arithmetic, seed, selection,
 
 - [combat-shield-block-and-avoidance](combat-shield-block-and-avoidance.md): upstream hit/avoidance result.
 - [combat-hit-recovery](combat-hit-recovery.md): HRC-R06 get-hit veto can confound defender seed deltas.
-- [state-timed-state-lifecycle](state-timed-state-lifecycle.md): mutation/owner effects referred through NRF-Q20.
+- [state-timed-state-lifecycle](state-timed-state-lifecycle.md): mutation/owner effects referred through RLI-Q03.
 
 ## Appendix A. Provenance
 

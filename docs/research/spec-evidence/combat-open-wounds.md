@@ -70,7 +70,7 @@ historical pass or this migration. No vector is runtime-confirmed; no mismatch o
 | `LOD113C-D2COMMON` | `0x384F0` | D2Common 10195 (thunk `0xA7B4`) | Curse-list lookup target; body not read | R06b | 2026-10-13 locator only; body not read |
 | `LOD113C-D2COMMON` | `0x38080`, `0x380E0` | D2Common 10473 (thunk `0xA84A`), 11131 (thunk `0xA7FC`) | Read list owner id/type | R10 | 2026-10-13 reconstruction checked against original bytes |
 | `LOD113C-D2COMMON` | `0x2FE10`, `0x3C390` | D2Common 10331 (thunk `0xA478`), 10057 (thunk `0xA808`) | Unit-room lookup and room-town test | R09a | 2026-10-13 disassembly reading |
-| `LOD113C-FOG` | `0x26798` | Fog 10259 | Bit-mask data export, GDF-R18 | R06a, R08, R09b | 2026-10-13 import record; current GDF-R18 data-export resolution |
+| `LOD113C-FOG` | `0x26798` | Fog 10259 | Bit-mask data export, GDA-R16 | R06a, R08, R09b | 2026-10-13 import record; current GDA-R16 data-export resolution |
 
 The ordinal columns distinguish D2Game import-thunk RVAs from resolved D2Common functions.
 The callback table stores a pointer, rather than exporting an original callback name.
@@ -114,11 +114,11 @@ storage or API on a new implementation.
 | Owner/defender type, class, id, mode | Unit +0/+4/+0xC/+0x10 | OWD-R03/R04/R06/R08/R10/R11 |
 | Attacker seed | Unit +0x20/+0x24 | OWD-R02 |
 | Monster conditions specialA / specialB | MonsterData word +0x16 masks `0x4` / `0x8`; either passes mask `0xC` at Game `0x22A80` | OWD-R04a; producers OWD-Q01 |
-| Neutral expiry/death condition | Unit +0xC6 bit 0 | OWD-R11a; STL-R11 |
+| `aliveExclusionCondition` | Unit +0xC6 bit 0 | OWD-R11a; STL-R11 |
 | Target game / allocation tag | Unit +0x80 / +0x08 | OWD-R06/R08; allocator's first argument differs from CSA's game allocation pool |
 | Death auxiliary | Unit +0xB0 | OWD-R10 clear; wider meaning unclaimed |
 | Base stat list / active states | Unit +0x5C; list +0x58 with list flag bit 31 | OWD-R09b |
-| Own/effective stat arrays | List +0x24 / +0x48, selected by extended condition | NRF-R12b/R12c; reads do not traverse attachments |
+| Own/effective stat arrays | List +0x24 / +0x48, selected by extended condition | RLI-R02a/RLI-R02b; reads do not traverse attachments |
 | List owner/state/skill/level/expiry/callback | +0x08/+0x0C, +0x14, +0x1C, +0x20, +0x18, +0x38 | OWD-R07/R08/R10 |
 | Item list condition flags | timed `2`, curse `0x20`, exp `0x800`, aura `8` | OWD-R08 |
 | Original stat identity encoding | high 16 bits stat, low 16 bits layer; stat 135 layer 0 `0x870000` | IEP registration / OWD-R02 |
@@ -128,10 +128,10 @@ storage or API on a new implementation.
 | Frame-event chain/entry | Unit +0xDC; entry type +0, flags +2, frame +4, target +8, type +0x10, args +0x14/+0x18, bucket links +0x1C/+0x20, unit links +0x24/+0x28, override +0x2C | OWD-R09c/R13 |
 | Running/pending-removal frame event | flags bit 0 / bit 3 | OWD-R09c; removal `0x8E6F0` |
 | Game frame / queue | Game +0xA8 / +0xB8; heads +4, newest heads +0x504, immediate +0xA04, saved next +0xA18 | OWD-R13 candidate ordering |
-| State definitions/count/masks | DataTables +0xBC/+0xC4; mask k at +0xCC+4k; curse k11, exp k30, life k32 | OWD-R06/R08/R09b; GDF-R13 |
-| Monster definition eligibility | MonStats +0xC bit 8 npc; signed word +0x18 MonStatsEx; MonStats2 +4 bit 9 isAtt | OWD-R06a; GDF-R05/R06/R18 |
+| State definitions/count/masks | DataTables +0xBC/+0xC4; mask k at +0xCC+4k; curse k11, exp k30, life k32 | OWD-R06/R08/R09b; GDA-R13 |
+| Monster definition eligibility | MonStats +0xC bit 8 npc; signed word +0x18 MonStatsEx; MonStats2 +4 bit 9 isAtt | OWD-R06a; GDA-R08/GDA-R09/GDA-R16 |
 | Final damage hand-off | total +0x4C; result +4 bit 2 lethal | OWD-R12; DPO/CSA |
-| Unit life replacing write | D2Common #10887 / `0x3A740` -> `0x3A280` | OWD-R09/R11; unit effects NRF-Q20 / OWD-Q12; list writer STL-R06c is separate |
+| Unit life replacing write | D2Common #10887 / `0x3A740` -> `0x3A280` | OWD-R09/R11; unit effects RLI-Q03 / OWD-Q12; list writer STL-R06c is separate |
 | Life-percent notification | D2Game `0x7A260` | OWD-R09d, unread OWD-Q08 |
 | Owner lookup / death | D2Game `0xE03A0` / `0xDEEE0` | OWD-R10; real death remains gated; valid registered lookup uses the supplied result and the exact source record below |
 
@@ -166,7 +166,7 @@ and active-state array coverage; no valid original mask storage is inferred for 
 corrupt counts. This retains the exact six-word result for state count 185.
 
 The base-own reader #10587 / `0x38C20` calls `0x38B00`; complete binary search/minimum
-behavior consumes the checked NRF-R12b/NRF-R12c boundary and its original source records.
+behavior consumes the checked RLI-R02a/RLI-R02b boundary and its original source records.
 A targeted wrapper read confirmed the unit/id/definition/base guards and own-array path;
 no additional per-read summation occurs. #10910 / `0x39430` likewise forwards to the effective
 reader `0x38A80` after nonnull-owner callback entry; max-life #10913 / `0x390F0` forwards stat 7
@@ -213,7 +213,7 @@ checks support locators and existing request slices, not the unresolved equal-fr
 order or malformed-input domains. The old expiry-walk decoding limit is narrowed through
 STL-R04's complete traversal contract; actual free effects remain STL-R05.
 
-Fog #10259 is a data export at `0x26798`, not a function. Current GDF-R18 / NRF mask evidence
+Fog #10259 is a data export at `0x26798`, not a function. Current GDA-R16 / NRF mask evidence
 supplies the resolved original-image array identity; the data address is recorded in the table above. That lookup does not verify state-mask production.
 
 ## Named table cells
@@ -300,8 +300,8 @@ The 2026-10-13 document recorded these corrections to its 2026-10-12 predecessor
 
 Migration on 2026-10-15 reuses current NRF/IEP/DPO/CSA/STL contracts at their recorded boundaries:
 
-- Old references called existing-value reads "summed reads" and attributed writes to NRF-R12a.
-  NRF-R12b/NRF-R12c actually select already existing own/resolved arrays. NRF-Q20 retains
+- Old references called existing-value reads "summed reads" and attributed writes to RLI-R03.
+  RLI-R02a/RLI-R02b actually select already existing own/resolved arrays. RLI-Q03 retains
   the unit replacing-write propagation gap; STL-R06c owns the separate list-stat writer. Explicit fixture effects preserve old
   numeric recipes while actual storage remains OWD-Q12. Automatic item notification likewise
   remains IEP-Q01/IEP-Q03, independently of supplied IEP-R03 registration.
@@ -330,7 +330,7 @@ Migration on 2026-10-15 reuses current NRF/IEP/DPO/CSA/STL contracts at their re
 | OWD-Q09 expiry/window | Current STL traversal/callback request contracts apply; attach/free and equal-frame queue order remain unresolved | Read missing lifecycle/queue mutation slices; observe refresh/expiry |
 | OWD-Q10 death | Compatible original-unit-lookup source record dated 2026-10-14 checked Game `0xE03A0` and table `0xFB014`; `0xDEEE0` body still unread; IEP-R09a supplies notification placement only | Complete death effects and no-list/nonstandard owner-input handling within chosen ownership |
 | OWD-Q11 external player prevention | Local player life step contains no preventheal branch; wider sites not read | Player regeneration producer contract, outside local supplied step |
-| OWD-Q12 stored effects | Current unit-write NRF-Q20, list STL-R05/R06b/R06c and update NRF-Q17 explicitly preserve gaps; fixture effects provide no evidence of real propagation | Complete actual propagation/update paths |
+| OWD-Q12 stored effects | Current unit-write RLI-Q03, list STL-R05/R06b/R06c and update RLI-Q02 explicitly preserve gaps; fixture effects provide no evidence of real propagation | Complete actual propagation/update paths |
 | OWD-Q13 alternate curse branch | Compatible 2026-10-15 Common #10195 / `0x384F0` -> `0x37F40` lookup record reused for flag `0x20`; state-62 original data excludes this branch | Complete alternate caller/request verification if supporting another profile |
 | OWD-Q14 observation | Five original recipes, no game action/capture in either pass | Authorized attributable original-game observations |
 
@@ -418,7 +418,7 @@ alternate-profile gates.
 | COVERAGE: invalid class, absent MonStats, absent/invalid extended record or absent state record | No change: these explicit R06a eligibility guards all reach the same null/no-request outcome. V09(a)/(b)/(d) distinguish the existing rejection recipe and retained callback draw/return; duplicating every unavailable-record binding adds no distinct effect or arithmetic recipe |
 | COVERAGE: percent difference 4, nonpositive maximum, current at least maximum | Spec edit for difference 4 as above. V13(b) already stores maximum and then computes cur=m=1000, p128 unchanged. Nonpositive m remains R09d's explicit gated candidate branch, with no accepted notification behavior promoted; no fixture is needed to claim that incomplete operation verified |
 | COVERAGE: death tail without either selected list | Explicit gate: Q10 and the R10 execution boundary now name no-list tail entry. V14(e) retains a selected list but supplies a missing registered owner; that does not establish the no-list caller branch. No fabricated owner or successful-null fallback was added |
-| COVERAGE: expiryDeathCondition, remaining death modes, health-potion removal | Spec edit: V08(e) supplies the independent expiryDeathCondition=true guard and requires initial reschedule followed by no life/stamina/mana calls. Other stated death-mode constants share V08(b)'s early-return recipe. R11b remains asm-only with actual removal gated; no accepted removal contract is inferred from a fixture |
+| COVERAGE: aliveExclusionCondition, remaining death modes, health-potion removal | Spec edit: V08(e) supplies the independent aliveExclusionCondition=true guard and requires initial reschedule followed by no life/stamina/mana calls. Other stated death-mode constants share V08(b)'s early-return recipe. R11b remains asm-only with actual removal gated; no accepted removal contract is inferred from a fixture |
 | HARDEST: actual lifecycle/payment count | No change: Q09/STL-Q07 explicitly gate the real effects and 199-payment candidate; supplied effects do not settle them |
 | HARDEST: monster tick/death integration | No change: Q05/DPO-Q24 and Q10 explicitly preserve scheduler/update/death boundaries |
 | HARDEST: matching gameplay setup | No change: Q14 and all observation procedures remain pending, with no table-to-gameplay promotion |
@@ -471,12 +471,12 @@ every separately stated question and dependency limit.
 
 | Finding | Outcome and reason |
 |---|---|
-| DISCRIM 1: a defender-only callback null guard might pass without an absent-attacker case | No change: deleting only the attacker guard while retaining the consumed safe NRF-R12b Stat read is observably equivalent. Stat(null)=0, then chance<=0 returns 0 before drawing/requesting anything. A proposed positive chance cannot override this null getter. The rule still records its actual two-unit guard; no observable pure-read call count or fabricated null-unit stat value is added |
+| DISCRIM 1: a defender-only callback null guard might pass without an absent-attacker case | No change: deleting only the attacker guard while retaining the consumed safe RLI-R02a Stat read is observably equivalent. Stat(null)=0, then chance<=0 returns 0 before drawing/requesting anything. A proposed positive chance cannot override this null getter. The rule still records its actual two-unit guard; no observable pure-read call count or fabricated null-unit stat value is added |
 | DISCRIM 2: direct creation with absent source has no owner-fallback assertion | Added V01(i), explicitly entering R08 after eligibility and bypassing the callback. Source absent produces owner `(6,-1)`, while target, ordered creation requests, state 62/stat 74=-436/skill 0/level 1/expiry 1200 and return L are explicit. This does not contradict the callback's absent-attacker rejection |
 | DISCRIM 3: monster positive g below maximum has no life/queue discriminator | Added V13(f), life 128000 plus g 256 gives 128256 below maximum 256000. Percentage 64 is unchanged; no cancellation occurs and next tick N1 survives alongside expiry E after the running event returns |
-| DISCRIM 4: other unit types in the player-event handler could still run life/resource steps | Added V08(g), present type 2/mode 1/expiryDeathCondition false: request next event first, then no life/stamina/mana calls. It is isolated handler execution, not a claim about original type 2 dispatch |
+| DISCRIM 4: other unit types in the player-event handler could still run life/resource steps | Added V08(g), present type 2/mode 1/aliveExclusionCondition false: request next event first, then no life/stamina/mana calls. It is isolated handler execution, not a claim about original type 2 dispatch |
 | COVERAGE: absent-unit PercentUpdate fallback 128 | No change: R09d already states this gated candidate fallback. No accepted sender/delivery behavior is established by another constant-input fixture |
-| COVERAGE: state mismatch replacement | No impossible fixture: NRF-R12a's same-state lookup returns only a list with the requested state. A different-state list selected by the alternate curse-flag lookup belongs to R06b/Q13's existing gate, not the accepted noncurse refresh path. Skill mismatch and higher level remain independently exercised by V10 |
+| COVERAGE: state mismatch replacement | No impossible fixture: RLI-R03's same-state lookup returns only a list with the requested state. A different-state list selected by the alternate curse-flag lookup belongs to R06b/Q13's existing gate, not the accepted noncurse refresh path. Skill mismatch and higher level remain independently exercised by V10 |
 | COVERAGE: invalid/missing eligibility record enumeration | No change: these guards remain explicit and use the existing V09 null/no-request recipe; exhaustive unavailable-record bindings add no distinct local result |
 | HARDEST: V02 band slopes and i32 wrap | No change: exact piecewise arithmetic and the independently computed extreme-level case already distinguish them |
 | HARDEST: V04 sequential raw life/strict percent threshold and gated 199 window | No change: first/14th/19th/25th values are explicit; actual 199-payment integration remains gated |

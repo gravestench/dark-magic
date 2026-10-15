@@ -29,8 +29,8 @@ loaded DLL or archive identities beyond the manifest's recorded limits.
 
 | Artifact | Function RVA | Export ordinal | Analyst description | Rules | Method / boundary |
 |---|---|---|---|---|---|
-| `LOD113C-D2GAME` | `0xACE60` | none | Item chance callback | KNB-R01, KNB-R10a | Disassembly, 2026-10-11/12; complete local body reread 2026-10-15; stat lookup consumes NRF-R12b |
-| `LOD113C-D2GAME` | `0x3AE10` | none | Missile damage setup | KNB-R02a, KNB-R02b, KNB-R10b | Reused 2026-10-11/12 chance/order slice; SBA-R20 and MHD-R26 own surrounding missile integration; DPO-R22 owns owner monster multiplication |
+| `LOD113C-D2GAME` | `0xACE60` | none | Item chance callback | KNB-R01, KNB-R10a | Disassembly, 2026-10-11/12; complete local body reread 2026-10-15; stat lookup consumes RLI-R02a |
+| `LOD113C-D2GAME` | `0x3AE10` | none | Missile damage setup | KNB-R02a, KNB-R02b, KNB-R10b | Reused 2026-10-11/12 chance/order slice; SBA-R11 and MHD-R12 own surrounding missile integration; DPO-R22 owns owner monster multiplication |
 | `LOD113C-D2GAME` | `0xDCF20` | none | Reaction dispatcher | KNB-R03a, KNB-R03b, KNB-R04, KNB-R05a, KNB-R06a, KNB-R06b, KNB-R10d | Disassembly entry through selection read 2026-10-15; HRC-R04a/HRC-R05/HRC-R06 consumed for shared reaction contracts |
 | `LOD113C-D2GAME` | `0x771D0` | none | Base-78 GH conversion | KNB-R06c | Full disassembly reread 2026-10-15; state test via resolved import |
 | `LOD113C-D2GAME` | `0x75160` | none | Monster mode-13 start | KNB-R06d, KNB-R07a | Full disassembly reread 2026-10-15; planner/cleanup/mode callees explicit boundary effects |
@@ -43,18 +43,18 @@ loaded DLL or archive identities beyond the manifest's recorded limits.
 | `LOD113C-D2COMMON` | `0x2FE10` | 10331 | Unit room getter | KNB-R03b | Full disassembly 2026-10-15; dynamic path room or null, static path room for kinds 2/4/5 |
 | `LOD113C-D2COMMON` | `0x3C390` | 10057 | Room-to-level predicate wrapper | KNB-R03b | Full disassembly 2026-10-15; null room returns false, room chain supplies level to 0x2D320 |
 | `LOD113C-D2COMMON` | `0x2D320` | none | Fixed town-level predicate | KNB-R03b | Disassembly plus hash-checked original branch/byte table 2026-10-15 |
-| `LOD113C-D2COMMON` | `0x33CD0` | 10494 | State getter | KNB-R02b, KNB-R05a, KNB-R06c | Resolved import, consumes NRF-R12a's verified state predicate |
+| `LOD113C-D2COMMON` | `0x33CD0` | 10494 | State getter | KNB-R02b, KNB-R05a, KNB-R06c | Resolved import, consumes RLI-R03's verified state predicate |
 | `LOD113C-D2COMMON` | `0x35040` | 10336 | Set reference unit | KNB-R06d; KNB-Q07 | Import resolved; reference-unit semantics reused from compatible prior reading |
 | `LOD113C-D2COMMON` | `0x34F80` | 10647 | Set path type | KNB-R06d | Import resolved; compatible prior setter reading |
 | `LOD113C-D2COMMON` | `0x34880` | 10527 | Store distance byte | KNB-R07a | Import resolved; compatible prior setter reading |
-| `LOD113C-D2COMMON` | `0x33920` | 11090 | Mode write | KNB-R06d | Resolved import; NRF-R14a owns mode/animation effects |
-| `LOD113C-D2COMMON` | `0x34510` | 10945 | State-on/off request routing | KNB-R05a; KNB-Q11 | Compatible NRF-R12a/STL-R07 coverage reused with 2026-10-12/14 dates; full body checked 2026-10-15; disguise/update integration retains owning gaps |
-| `LOD113C-D2COMMON` | `0x38730`, `0x665C0` | none | State membership write and update marking | KNB-R05a; KNB-Q11 | Compatible STL-R07/STL-R07a/NRF-R12a state primitive records, 2026-10-12/14; 2026-10-15 body readings do not verify unread disguise or room-queue effects |
-| `LOD113C-D2COMMON` | `0x39430` | 10910 | Current stat getter | KNB-R01 | C availability checked; full disassembly read 2026-10-15; callback's guarded non-null owner maps to NRF-R12b/NRF-R12c selected-array/minimum leaf through 0x38A80 |
+| `LOD113C-D2COMMON` | `0x33920` | 11090 | Mode write | KNB-R06d | Resolved import; RLI-R04a owns mode/animation effects |
+| `LOD113C-D2COMMON` | `0x34510` | 10945 | State-on/off request routing | KNB-R05a; KNB-Q11 | Compatible RLI-R03/STL-R07 coverage reused with 2026-10-12/14 dates; full body checked 2026-10-15; disguise/update integration retains owning gaps |
+| `LOD113C-D2COMMON` | `0x38730`, `0x665C0` | none | State membership write and update marking | KNB-R05a; KNB-Q11 | Compatible STL-R07/STL-R07a/RLI-R03 state primitive records, 2026-10-12/14; 2026-10-15 body readings do not verify unread disguise or room-queue effects |
+| `LOD113C-D2COMMON` | `0x39430` | 10910 | Current stat getter | KNB-R01 | C availability checked; full disassembly read 2026-10-15; callback's guarded non-null owner maps to RLI-R02a/RLI-R02b selected-array/minimum leaf through 0x38A80 |
 | `LOD113C-D2GAME` | `0xDA750` | none | Mode entry preparation | KNB-R06d; KNB-Q06 | C availability checked; full 96-byte disassembly and fingerprinted original-image decode 2026-10-15 establish caller and linked-record processing, not timer identity; full effects remain Q06 |
 | `LOD113C-D2GAME` | `0x01180` | none | Bounded draw | KNB-R02a | Reused reading and NRF-R02 contract |
 | `LOD113C-D2GAME` | `0x013B0`, `0x01560`, `0x01320`, `0x018A0` | none | Monster record, mode and base lookup helpers | KNB-R06a, KNB-R06c, KNB-R07a | Reused compatible 2026-10-11/12 lookup coverage; no new subtype contract inferred |
-| `LOD113C-D2COMMON` | `0x7C8D0`, `0x56C10`, `0x73330` | none | Missile, size and item-event field loaders | KNB-R01, KNB-R02a, KNB-R10c | Reused 2026-10-11/12 loader descriptors through GDF-R06/GDF-R07/GDF-R09; text-to-compiled correspondence not implied |
+| `LOD113C-D2COMMON` | `0x7C8D0`, `0x56C10`, `0x73330` | none | Missile, size and item-event field loaders | KNB-R01, KNB-R02a, KNB-R10c | Reused 2026-10-11/12 loader descriptors through GDA-R09/GDA-R10/GDA-R12; text-to-compiled correspondence not implied |
 | `LOD113C-D2COMMON` | `0x33110`, `0x34D40` | 10819; see HRC/MMF | Knockback rate and path-speed write | KNB-Q06, KNB-Q07 | HRC-R14 and MMF-R03 dependency evidence; not a new knockback speed derivation |
 
 ### Root chains and semantic mapping
@@ -69,7 +69,7 @@ byte bit 8. The stat identity argument is not proof that code fixes stat 81.
 Missile root: D2Game `0x3AE10` presets hit, tests target state, sets GH/soft flags and performs
 the `KnockBack` byte comparison. Its later calls reach defender block/avoidance, owner
 multiplier `0x770E0`, direct application `0xDE0C0` only if hit remains set, then direct reaction
-`0xDCF20` regardless of that hit bit. See SBA-R20, MHD-R26 and DPO-R22 for those stage
+`0xDCF20` regardless of that hit bit. See SBA-R11, MHD-R12 and DPO-R22 for those stage
 contracts. DPO-R26 instead owns queued-path reaction placement. Original
 `Missiles.KnockBack` field offset is `0xAE`.
 
@@ -108,14 +108,14 @@ targeted progress rather than treating the older unanswered question as complete
 
 The previous `0x968E` citation was an assembly label, not a module RVA. Actual D2Game thunk
 RVA `0xA68E` resolves to D2Common #10494 `0x33CD0`, establishing the state getter already
-verified under NRF-R12a. State-54 missile/reaction gates can therefore use a static-code label.
+verified under RLI-R03. State-54 missile/reaction gates can therefore use a static-code label.
 Related thunks: `0xA5FE` -> #10336 `0x35040` reference unit; `0xAAFC` -> #10647 `0x34F80`
 path type; `0xAD24` -> #10527 `0x34880` distance; `0xAAF0` -> #10334 `0x36230` planner;
 `0xA4A2` -> #11090 `0x33920` mode; `0xA3CA` -> #10945 `0x34510` SetState routing;
 `0xA802` -> #10910 `0x39430` stat getter. The lethal state-54 caller pushes 92 and 1, not a
-proven ordinary death invocation. Compatible NRF-R12a and STL-R07 identify the request as
+proven ordinary death invocation. Compatible RLI-R03 and STL-R07 identify the request as
 SetState(target,92,1), meaning state 92 on. Only disguise bookkeeping and update-queue
-integration remain KNB-Q11 through STL-R07a/STL-Q07 and NRF-Q17.
+integration remain KNB-Q11 through STL-R07a/STL-Q07 and RLI-Q02.
 
 ### Compatible state-92 ownership reuse
 
@@ -123,7 +123,7 @@ The public [state lifecycle record](state-timed-state-lifecycle.md#function-refe
 already covers D2Common #10945 `0x34510` -> `0x38730` state-bit routing and `0x665C0`
 update marking, with state-write reading dated 2026-10-12 and original-image byte-tail
 checks dated 2026-10-14. The [foundations contract](../../specs/core-numeric-and-rng-foundations.md)
-NRF-R12a and [state lifecycle contract](../../specs/state-timed-state-lifecycle.md)
+RLI-R03 and [state lifecycle contract](../../specs/state-timed-state-lifecycle.md)
 STL-R07/STL-R07a own the operation. Those compatible original-artifact records are reused
 at their actual dates; a 2026-10-15 C-availability check followed by complete disassembly
 readings of all three bodies confirms the caller mapping without establishing additional
@@ -132,7 +132,7 @@ disguise-helper or room-queue effects.
 The current local assertion is the ordered SetState request, using the owner's guards and
 membership contract. It is not ordinary death-mode execution. The previous broad local
 question that treated the whole state operation as unread is closed for identity, routing
-and membership; KNB-Q11 now tracks only the owning contracts' STL-Q07 disguise and NRF-Q17
+and membership; KNB-Q11 now tracks only the owning contracts' STL-Q07 disguise and RLI-Q02
 update-queue integration limits. V12 retains a supplied request boundary rather than
 duplicating the state primitive's fixtures or claiming an observed membership change.
 
@@ -143,7 +143,7 @@ disassembly was read after checking reconstruction availability.
 It dereferences its unit argument, so the callback's prior non-null owner guard matters.
 It returns zero for a null stat list or rejected signed stat bounds, zero-extends the layer
 to u16, forms the original lookup identity as `(stat << 16) | layer`, and calls `0x38A80`.
-That selected-array/minimum leaf consumes NRF-R12b/NRF-R12c. This does not claim a call to
+That selected-array/minimum leaf consumes RLI-R02a/RLI-R02b. This does not claim a call to
 the separate ordinary unit wrapper at `0x38B70`, whose null-unit behavior is not this
 import's own guard. KNB-R01's supplied current stat and callback guard results are unchanged;
 the source-to-shared-leaf mapping is now explicit.
@@ -207,7 +207,7 @@ as the [pipeline named-cell record](combat-damage-pipeline-order.md#effective-fi
 No gameplay action, hook change or table mutation was performed. Code fixes the requested
 numeric id 92; this named cell identifies its text name. Neither that name nor the request
 proves a scheduled delay, a timer, or ordinary death-mode execution. The remaining state
-integration gates are STL-Q07 disguise bookkeeping and NRF-Q17 update-queue effects.
+integration gates are STL-Q07 disguise bookkeeping and RLI-Q02 update-queue effects.
 
 ## Corrections and affected assertions
 
@@ -218,7 +218,7 @@ their execution assertions are now limited to what the evidence establishes.
 
 | Discrepancy | Evidence and correction | Affected current assertions / remaining limits |
 |---|---|---|
-| State-test import identity inferred from a label | Resolved actual thunk/import to #10494 `0x33CD0`, matching NRF-R12a | KNB-R02b and KNB-R05a local gates verified; only state-operation disguise/update integration remains Q11 |
+| State-test import identity inferred from a label | Resolved actual thunk/import to #10494 `0x33CD0`, matching RLI-R03 | KNB-R02b and KNB-R05a local gates verified; only state-operation disguise/update integration remains Q11 |
 | Town set and wrapper unresolved | Complete predicate/table and getter/wrapper reading above | KNB-R03b and V27 close supplied valid-room/record town gate |
 | All source coordinates described as 16-bit | `0x67390` reads static source dwords, dynamic words | KNB-R08/V29 preserve full static coordinates; V23 numbers unaffected |
 | Zero clip described as no waypoint/zero completed displacement | Generator leaves count unchanged on identical endpoint and writes plan rather than actual position | KNB-R09a/V13/V30 expose count and stored requested point; full blocked outcome Q07 |
@@ -226,16 +226,16 @@ their execution assertions are now limited to what the evidence establishes.
 | Mode changes/clipping described as consuming no RNG | Local direct draws absent; HRC-R15 reports conditional elemental draws in monster mode dispatch | KNB-R10a limits assertion to direct operations; complete event draw count Q06 |
 | Both kinds described as death-first | HRC-R04a and `0xDCF20` player prefix put avoidance/block before death | KNB-R04/KNB-R06b/V28 use actual kind-specific priority |
 | GH veto implied after both item/missile rolls for every hit | GH-veto call exists only when selection reaches GH; item timing still lacks compiled binding | KNB-R10d/V25 conditional; Q02 retained |
-| State-54 lethal helper called death without its consumer read | Resolved #10945 `0x34510`, then reused compatible NRF-R12a/STL-R07 state-on routing and membership records | KNB-R05a/V12 SetState(92,1) request; Q11 only disguise/update integration, not primitive identity or membership |
+| State-54 lethal helper called death without its consumer read | Resolved #10945 `0x34510`, then reused compatible RLI-R03/STL-R07 state-on routing and membership records | KNB-R05a/V12 SetState(92,1) request; Q11 only disguise/update integration, not primitive identity or membership |
 | Complete subtype equivalence inferred from no local branch | Local kind dispatch established, subtype records/producers not traced | KNB-R03a verified locally; Q08 outside-boundary |
 | Early vectors gave rates or predicates only | Fixed seeds, exact outcomes, call logs and endpoint fixtures added | V01–V26 retain numeric facts; V27–V34 discriminate corrections and result-distinct branches; not observations |
 | Mode-start helper described as event cleanup | Full 0xDA750 reading establishes linked-entry processing without timer identity | KNB-R06d/V13 name the neutral preparation request; complete effects remain Q06 |
 | Zero-byte fixture described as a decoded blank | Archive blank decoding was not proved by this supplied-stage check | V07 now supplies compiled byte 0 directly; the zero-byte behavior and outputs are unchanged |
-| Missile direct reaction cited through queued placement | MHD-R26 explicitly owns 0x770E0, hit-conditional 0xDE0C0 and subsequent unconditional 0xDCF20; DPO-R22 owns the owner multiplier | KNB-R10b/KNB-R10d and trigger/dependency citations now distinguish missile direct placement from DPO-R26 queued placement; no DPO behavior changed |
+| Missile direct reaction cited through queued placement | MHD-R12 explicitly owns 0x770E0, hit-conditional 0xDE0C0 and subsequent unconditional 0xDCF20; DPO-R22 owns the owner multiplier | KNB-R10b/KNB-R10d and trigger/dependency citations now distinguish missile direct placement from DPO-R26 queued placement; no DPO behavior changed |
 
 Q03 block/stun is answered by HRC-R04a/HRC-R05: monster KB beats block/GH, player block
-preempts KB, stun is consulted only in GH branch. Base identity/name uses GDF-R17; state
-identity uses GDF-R12. Coordinate scale reuses NRF-R10; completed measurement remains Q04.
+preempts KB, stun is consulted only in GH branch. Base identity/name uses GDF-R08; state
+identity uses GDF-R03. Coordinate scale reuses NRF-R10; completed measurement remains Q04.
 The mode-start refusal Q06 is locally answered but its caller consequences remain open.
 The client-conflict search never covered the full client; its old absence claim is replaced
 by outside-boundary Q10. Collision inspection found insufficient verified interior coverage;
@@ -388,13 +388,13 @@ compiled timing, dependent bookkeeping or gameplay confirmation.
 
 | Reader gap | Outcome |
 |---|---|
-| KNB-R10b cited queued DPO-R08d/DPO-R26 for missile multiplication/direct reaction | Corrected to MHD-R26 for the actual missile path and DPO-R22 for owner multiplication. Queued DPO-R26 remains only where that path is named; trigger, R10d and dependency references agree |
+| KNB-R10b cited queued DPO-R08d/DPO-R26 for missile multiplication/direct reaction | Corrected to MHD-R12 for the actual missile path and DPO-R22 for owner multiplication. Queued DPO-R26 remains only where that path is named; trigger, R10d and dependency references agree |
 | Section 5 omitted R03b/V27 continuation/stop result | Added the town-gate continuation/stop effect to the outputs table |
 
 | Reader discrimination finding | Outcome |
 |---|---|
 | V06's absorbing zero seed cannot detect an omitted RNG step | Retained case a and added b with seed `{1,15}`, new `{0x6AC690D4,0}`, remainder 0 and result 8 |
-| V13 did not distinguish forwarding a mode-setter return | Added legitimate already-mode-13 case c using NRF-R14a's actual equal-mode branch: update request, supplied-model modeChanged write, setter return 0, handler return 1. The update operation logs only and engine update integration stays NRF-Q17 |
+| V13 did not distinguish forwarding a mode-setter return | Added legitimate already-mode-13 case c using RLI-R04a's actual equal-mode branch: update request, supplied-model modeChanged write, setter return 0, handler return 1. The update operation logs only and engine update integration stays RLI-Q02 |
 | V21 only rejected omission of the mGH guard | Retained a and added b with mGH true/mKB false, requiring the same refusal and no-write result |
 | V27 did not reject trusting a permission bit without a source record | Added i with a monster whose record lookup supplies no valid row despite a detached true permission flag; continuation false. Source/record presence is explicit in section 3. Added j for absent source, also false |
 
@@ -416,11 +416,11 @@ this bound explicitly while retaining every arithmetic result.
 |---|---|
 | KNB-R08 / V34 widths, wrapping and division | No change to arithmetic or existing fixtures; retained exact wrapping cases and clarified why no division fault recipe exists |
 | KNB-R06a/KNB-R06c/KNB-R06b / V32 fallback and conversion | No change: existing a/b/c results distinguish retained flags, re-conversion order and invalid lookup |
-| KNB-R05a / V12 NRF/STL state-92 boundaries | No change: V12 remains a supplied SetState request; NRF-R12a/STL-R07 own membership, STL-Q07/NRF-Q17 retain their precise integration gates |
+| KNB-R05a / V12 NRF/STL state-92 boundaries | No change: V12 remains a supplied SetState request; RLI-R03/STL-R07 own membership, STL-Q07/RLI-Q02 retain their precise integration gates |
 
 The dependency/source-presence clarifications and new subcases required fresh **full pass 4**,
 not a delta check. The main contract remains 36 vector families. Changed material is the
-MHD-R26/DPO-R22 versus queued-DPO-R26 dependency ownership; section-3 source-record and
+MHD-R12/DPO-R22 versus queued-DPO-R26 dependency ownership; section-3 source-record and
 modeChanged inputs; section-5 town continuation and supplied-mode-model boundary; R08's
 numeric-domain explanation; V06b, V13c, V21b and V27i/j. No gate is promoted and no gameplay,
 implementation or original-source work is included. The subsequent review records follow.

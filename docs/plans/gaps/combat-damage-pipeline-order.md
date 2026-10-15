@@ -40,12 +40,12 @@ Old spec status: "Values in those files are implemented assumptions unless secti
 | # | Rule (new number) | Repo file/function or doc | Current repo behavior | Original (1.13c) behavior | Original status |
 |---|---|---|---|---|---|
 | 1 | Whole pipeline R1-R19 | `internal/content/d2legacy/lua/d2legacy/policy/damage.lua` (+ `mitigation.lua`); stage map in `docs/research/COMBAT_DAMAGE_AND_DEATH.md` | "Basic combat transaction and ordered damage calculation"; values are implemented assumptions | Nine-stage order in the spec (hit result, record build, scale, event/strip, mitigation, total, apply, status, events) | verified (stages 1-3, 5-7), asm-only (4, 8, 9) |
-| 2 | R15 leech | `policy/leech.lua` | Own leech implementation (see combat-leech-and-status-effects gap file) | Leech uses the clamped, mitigated `[+8]` | verified |
+| 2 | R15 leech | `policy/leech.lua` | Own leech implementation (see combat-leech-and-drain gap file) | Leech uses the clamped, mitigated `[+8]` | verified |
 | 3 | Vector format | "proposed canonical transaction trace" (stats hash, RNG before/after, hit result, raw bundle, conversion, mitigation, absorb/heal, state applications, final deltas, events) | Proposed, used as the vector format | n/a | n/a |
 | 4 | R18 mana burn, player/hireling attacker | `leech.lua` ("player-path quirk already noted in `leech.lua`") | Repo already notes that the defender loses mana equal to the 64-scaled leech percent | `[+0x3c]` is still the percent scaled by 64 at burn time; monster-attacker leech rewrites `[+0x38]/[+0x3c]` down by 64 | verified |
 | 5 | R17 life subtract | Lua damage path (`policy/damage.lua`): "Lua truncates player damage to whole HP (`floor(total/256)*256`) and stores whole life" | Whole-HP player damage and whole-HP life storage | Raw 8.8 life; kill when remainder `< 0x100`; any fractional-leaving hit differs | verified |
 | 6 | R3 crit/deadly | `COMBAT_DAMAGE_AND_DEATH.md` order (weapon, passive, deadly) | Agrees on order | Adds: single exclusive doubling, one draw per source with chance > 0, weapon source only when parameter 5 is 0 | verified |
-| 7 | Leech and poison contradictions | combat-leech-and-status-effects (items 1-6 of the original list are in combat-damage-mitigation) | see those gap files | n/a | n/a |
+| 7 | Leech and poison contradictions | combat-leech-and-drain (items 1-6 of the original list are in combat-damage-mitigation) | see those gap files | n/a | n/a |
 | 8 | Process | Issue #383 update (ready = stage order, R17 lethal rule, crit exclusivity, mitigation arithmetic; uncertain = scale `P` values, poison double role, Crushing Blow, Open Wounds, 1.14d); parent #348 | Tracker items, removed from spec | n/a | n/a |
 
 Dark Magic files compared (old provenance): `policy/damage.lua`, `policy/mitigation.lua`, `docs/research/COMBAT_DAMAGE_AND_DEATH.md`.

@@ -45,15 +45,16 @@ IEP-Q01 and IEP-Q03.
 | Requested event | Dispatch caller | i32 | Compared with entry u8 event without narrowing request |
 | Entry | Owner's ordered event collection | Event u8; kind, owner identity, callback values/results 32-bit | Kind is item, skill or one-shot |
 | Stat identity | Stat id and layer | Each u16 | Distinct layers register separately |
-| Stat definition | `ItemStatCost.itemevent1/2`, `itemeventfunc1/2`, `fCallback` | Events/selectors signed i16; callback flag boolean | Definition fields supplied through GDF-R09 |
-| Totals | Old/new total; callback's current owner stat | Signed i32 | Existing-value reads consume NRF-R12b/NRF-R12c |
+| Stat definition | `ItemStatCost.itemevent1/2`, `itemeventfunc1/2`, `fCallback` | Events/selectors signed i16; callback flag boolean | Definition fields supplied through GDA-R12 |
+| Totals | Old/new total; callback's current owner stat | Signed i32 | Existing-value reads consume RLI-R02a/RLI-R02b |
 | Resources | Stats 6 `hitpoints`, 8 `mana`; effective maximum life/mana | Signed i32 raw 8.8 | Current and supplied effective maxima |
-| Damage record | Shared logical damage record, NRF-R16 | Signed i32 components/total, named conditions | Same record visible to successive callbacks |
+| Damage record | Shared logical damage record, RLI-R01 | Signed i32 components/total, named conditions | Same record visible to successive callbacks |
 | Retaliation eligibility | Other's `retaliationEligible` | Boolean | Neutral condition; producer meaning IEP-Q02 |
-| Demon eligibility | Victim demon classification, SBA-R02g | Boolean | Selector 18 only |
+| Demon eligibility | Victim demon classification, HIT-R02g | Boolean | Selector 18 only |
 | Reanimation eligibility | Monster victim; `reanimationExcluded`; owner chain/player id | Boolean, units and identity | Registration slice IEP-R13b only |
 | Seed | Event owner's seed | `{lo,hi}` u32 pair | Direct reanimation chance draw |
-| State request environment | NRF-R12a state-definition count and target state storage | i32 count; optional logical base list/storage | Consumed state-request routing; actual update bookkeeping remains gated |
+| State request environment | RLI-R03 state-definition count and target state storage | i32 count; optional logical base list/storage | Consumed state-request routing; actual update bookkeeping remains gated |
+| Overlay request environment | LSE-R13 inputs: supplied `overlayCount`, owner's stat list and attached-list chain | i32 count; LSE section 3 list fields | Consumed overlay list search/creation and ordered requests; stored effects IEP-Q09; original count identity LSE-Q03 |
 
 | Mapping / constant | Origin | Binding |
 |---|---|---|
@@ -62,8 +63,8 @@ IEP-Q01 and IEP-Q03.
 | Event identities/names | Table data | `data/global/excel/events.txt`, zero-based rows excluding header; code fixes dispatched numbers separately |
 | Skill event selectors | Table data | `data/global/excel/skills.txt`, `auraevent1..3`, `auraeventfunc1..3`, `passiveevent`, `passiveeventfunc`; exact skill bindings outside effect contract |
 | One-shot event 13 | Engine code | Fixed code identity; absence of table row remains catalog evidence gate |
-| State 172 `restinpeace` | Engine code use; table name | Code-fixed state selection; name correspondence consumes GDF-R12 |
-| Overlay requests 151, 152 | Engine code | Fixed callback request ids; execution IEP-Q09 |
+| State 172 `restinpeace` | Engine code use; table name | Code-fixed state selection; name correspondence consumes GDF-R03 |
+| Overlay requests 151, 152 | Engine code | Fixed callback request ids; operation LSE-R13, stored effects IEP-Q09 |
 | Resource conversion 256, percentage divisor 100 | Engine code | Fixed arithmetic; NRF-R08a/NRF-R05 |
 
 Supplying a stat definition or entry does not establish the original-profile table binding.
@@ -139,12 +140,12 @@ draws nothing and shares the same mutable record across calls and with its calle
 guards own eligibility of absent other/record inputs. New head entries do not restart the walk.
 
 **IEP-R08 Generic callback inputs** [verified in 1.13c code (static)]. The generic callbacks
-specified here read the current owner stat at the entry's stat identity using NRF-R12b/NRF-R12c.
+specified here read the current owner stat at the entry's stat identity using RLI-R02a/RLI-R02b.
 Their failed guards return zero without direct draw or effect. IEP-R14 through IEP-R18 define
 the exact guards; unread callbacks receive no inferred guard/draw contract.
 Effective maximum mana selects stat 9 and maximum life selects stat 7 from the owner's
-existing stat collection through NRF-R12b/NRF-R12c. An absent owner/list or a definition count
-not exceeding the selected id supplies zero. Selector 18 consumes SBA-R02g's demon predicate.
+existing stat collection through RLI-R02a/RLI-R02b. An absent owner/list or a definition count
+not exceeding the selected id supplies zero. Selector 18 consumes HIT-R02g's demon predicate.
 
 **IEP-R09a Combat and death dispatch sites** [verified in 1.13c code (static)].
 
@@ -234,31 +235,32 @@ IEP-Q04; record construction and ordered requests remain verified.
 owner, present record, positive total, positive owner value `v`, and mana below effective
 maximum. Total is post-mitigation but before the final life-loss clamp, so overkill counts.
 Compute `new = wrap32(mana + mulDiv(v,total,100))` with NRF-R05 operand order. Floor signed
-nonpositive result at zero, then cap at maximum mana. Request replacing stat 8, then overlay
-152, return 1. Failed guards return zero. No direct draw; integration is IEP-Q09/IEP-Q10.
+nonpositive result at zero, then cap at maximum mana. Request replacing stat 8, then call
+LSE-R13's overlay operation with `(owner, id=152)`, then return 1. Failed guards return zero.
+No direct draw. LSE-R13 supplies the count guard, first matching overlay-list selection or
+creation, pending-condition write, stat-178 request and update request; IEP-Q09 gates their
+stored effects and LSE-Q03 the original count identity. Write integration is IEP-Q10.
 
 **IEP-R16 Mana after kill, selector 17** [verified in 1.13c code (static)]. Require present
 owner/victim, player owner, nonzero `v` and mana below maximum. Compute
 `new = wrap32(mana + wrap32(v * 256))`, floor nonpositive result at zero, cap at maximum,
-request replacing stat 8, then overlay 152, return 1. Negative values qualify. Failed guards
-return zero. No direct draw; integration is IEP-Q09/IEP-Q10.
+request replacing stat 8, then LSE-R13's overlay operation with `(owner, id=152)` as in
+IEP-R15, return 1. Negative values qualify. Failed guards return zero. No direct draw;
+integration is IEP-Q09/IEP-Q10.
 
 **IEP-R17 Life after kill, selectors 28 and 18** [verified in 1.13c code (static)]. Require
 present owner/victim; selector 18 additionally requires demon eligibility. Any owner type
 qualifies. Require nonzero `v` and life below maximum. Compute
 `new = wrap32(life + wrap32(v * 256))`, floor nonpositive result at zero, cap at maximum,
-request replacing stat 6, then overlay 151, return 1. Failed guards return zero. No direct
+request replacing stat 6, then LSE-R13's overlay operation with `(owner, id=151)` as in
+IEP-R15, return 1. Failed guards return zero. No direct
 draw. A negative accepted value lowers life without callback-owned death processing.
 Integration is IEP-Q09/IEP-Q10.
 
 **IEP-R18 Rest in Peace, selector 29** [verified in 1.13c code (static)]. With present owner
 and victim, request state 172 `restinpeace` enabled on victim, return 1; otherwise return zero.
-Do not reread the proc stat. NRF-R12a owns state routing and its update integration gate.
+Do not reread the proc stat. RLI-R03 owns state routing and its update integration gate.
 What the state prevents is outside this rule. No direct draw.
-
-**IEP-R19 Overlay execution** [unresolved]. Resource callbacks request overlay 151 for life
-or 152 for mana. The request's stored stat 178 `unit_dooverlay` and visible/update effects
-remain IEP-Q09. Ordered callback requests do not establish those effects.
 
 ### Id map
 
@@ -284,8 +286,7 @@ remain IEP-Q09. Ordered callback requests do not establish those effects.
 | IEP-R15 | Damage-to-mana requests | verified in 1.13c code (static) | IEP-Q09/IEP-Q10: stored effects | IEP-V06 |
 | IEP-R16 | Mana-after-kill requests | verified in 1.13c code (static) | IEP-Q09/IEP-Q10: stored effects | IEP-V07 |
 | IEP-R17 | Life-after-kill requests | verified in 1.13c code (static) | IEP-Q09/IEP-Q10: stored effects | IEP-V07 |
-| IEP-R18 | Rest-in-Peace request | verified in 1.13c code (static) | NRF-Q17: update bookkeeping only | IEP-V13 |
-| IEP-R19 | Overlay execution | unresolved | IEP-Q09: full helper effects | none |
+| IEP-R18 | Rest-in-Peace request | verified in 1.13c code (static) | RLI-Q02: update bookkeeping only | IEP-V13 |
 
 ## 5. Outputs and side effects
 
@@ -296,9 +297,8 @@ remain IEP-Q09. Ordered callback requests do not establish those effects.
 | Dispatch requests on named owner/other pairs | IEP-R09a, IEP-R09b, IEP-R10, IEP-R11 |
 | Owner seed advance; victim one-shot entry | IEP-R13b |
 | Retaliation record; ordered apply/reaction requests | IEP-R14 |
-| Replacing resource-stat then overlay requests | IEP-R15 through IEP-R17 |
-| Victim state-enable request; consumed NRF-R12a active-bit and update-marking requests | IEP-R18 |
-| Stored overlay/update effects, gated | IEP-R19 |
+| Replacing resource-stat request, then consumed LSE-R13 overlay list/pending/stat-178/update requests (stored effects gated by IEP-Q09) | IEP-R15 through IEP-R17 |
+| Victim state-enable request; consumed RLI-R03 active-bit and update-marking requests | IEP-R18 |
 
 No save-format or direct network-message write is specified here. Downstream damage, state
 and message owners retain their contracts.
@@ -324,8 +324,8 @@ wraps signed 32-bit intermediates before the stated signed clamps; no saturation
 | **IEP-Q05** | unresolved / behavior | Eligibility of two level-change roots; supplied dispatch remains verified |
 | **IEP-Q06** | open / outside-boundary | Unread callback effects and exact skill bindings; none locally for dispatcher/table |
 | **IEP-Q08** | unresolved / behavior | Narrow original-profile records for complete item/event catalog and absent bindings |
-| **IEP-Q09** | unresolved / integration | Overlay helper's complete callee effects; callback requests remain verified |
-| **IEP-Q10** | unresolved / integration | Replacing-write effects; supplied values/requests remain verified; write integration also NRF-Q20 |
+| **IEP-Q09** | unresolved / integration | Stored overlay attach/list writes (STL-R06b/STL-R06c), update effects (RLI-Q02) and propagation, as LSE-Q01; LSE-R13 establishes local search/creation and ordered requests, and callback requests remain verified |
+| **IEP-Q10** | unresolved / integration | Replacing-write effects; supplied values/requests remain verified; write integration also RLI-Q03 |
 | **IEP-Q11** | pending / observation | Matching 1.13c gameplay observations; none performed |
 
 Attempts and closure criteria: [gap file](../plans/gaps/combat-item-event-triggers-and-procs.md).
@@ -335,9 +335,10 @@ Attempts and closure criteria: [gap file](../plans/gaps/combat-item-event-trigge
 ### 8.1 Executable vectors
 
 Resources are raw 8.8, ordinary integers i32. Fixtures supply valid definitions and resolved
-current/max resource values; existing stat reads consume NRF-R12b/NRF-R12c. Replacing-stat,
-overlay, apply, reaction and state operations log ordered requests without executing gated
-dependencies. Where life loss is asserted its supplied apply outcome is explicit. Entry
+current/max resource values; existing stat reads consume RLI-R02a/RLI-R02b. Replacing-stat,
+overlay (LSE-R13, logged as `overlay<id>`), apply, reaction and state operations log ordered
+requests without executing gated dependencies; LSE-V11 discriminates the overlay operation's
+own search/allocation/ordered requests. Where life loss is asserted its supplied apply outcome is explicit. Entry
 mutation persists within one vector. Cases start fresh unless their inputs state otherwise.
 Fixture callbacks log all seven inputs and return the stated result.
 
@@ -499,21 +500,21 @@ Fixture callbacks log all seven inputs and return the stated result.
   - runtime_observed: no.
 
 - **IEP-V13** Rest-in-Peace request (IEP-R18; boundary: supplied-input stage)
-  - Inputs: present player U and monster T, selector 29, stat value unspecified/unread; supplied state-definition count 173, T has a base list with state storage. Execute NRF-R12a state-call routing; its active-bit writer and update marker log requests without executing stored-state/update-bookkeeping effects.
+  - Inputs: present player U and monster T, selector 29, stat value unspecified/unread; supplied state-definition count 173, T has a base list with state storage. Execute RLI-R03 state-call routing; its active-bit writer and update marker log requests without executing stored-state/update-bookkeeping effects.
   - Seeds: no draw.
   - Draws: none.
-  - Trace: unit guards pass; callback requests state 172 enabled. Since 172 < 173, NRF-R12a routes the active-bit request then unconditionally requests update marking.
+  - Trace: unit guards pass; callback requests state 172 enabled. Since 172 < 173, RLI-R03 routes the active-bit request then unconditionally requests update marking.
   - Outputs: callback requests `enable state172 on T`; consumed routing emits ordered `[active-bit(T,172,1),MarkForUpdate(T)]`; callback return 1, no stat read. No stored-state or update-queue result is asserted.
   - (a) Inputs: absent victim. Outputs: no requests, return 0.
   - (b) Inputs: absent owner. Outputs: no requests, return 0.
-  - Discriminates: positive-stat check or state on owner fails. Consumed state-routing controls for absent base storage and invalid state identity belong to NRF-V33(c)/(d)/(k); this callback's selected identity and request do not change those shared rules.
+  - Discriminates: positive-stat check or state on owner fails. Consumed state-routing controls for absent base storage and invalid state identity belong to RLI-V05(c)/(d)/(k); this callback's selected identity and request do not change those shared rules.
   - runtime_observed: no.
 
 - **IEP-V14** Effective maximum selection (IEP-R08; boundary: supplied-input stage)
   - Inputs: player U with existing own-stat collection, no resolved-stat selection or minimum replacement; stat 7/layer 0 = 32000, stat 9/layer 0 = 25600, definition count 359, valid definitions for 7 and 9.
   - Seeds: no draw.
   - Draws: none.
-  - Trace: 359 exceeds each selected id; NRF-R12b/NRF-R12c read the corresponding existing values.
+  - Trace: 359 exceeds each selected id; RLI-R02a/RLI-R02b read the corresponding existing values.
   - Outputs: maximum life 32000, maximum mana 25600.
   - (a) Inputs: fresh case definition count 9. Outputs: maximum life 32000, maximum mana 0.
   - (b) Inputs: owner has no stat list. Outputs: both maxima 0.
@@ -543,15 +544,17 @@ IEP-Q05 level roots, IEP-Q08 data bindings, IEP-Q09/IEP-Q10 resource/overlay int
 relied-on reaction/state effects. IEP-Q11 limits runtime-confirmation claims only. Outside
 effect families are not prerequisites to reproducing the supplied-callback dispatcher.
 
-**Depends on:** NRF-R01/NRF-R02 seed/draw; NRF-R05 percentage arithmetic; NRF-R08a resource
-units; NRF-R12a state routing; NRF-R12b/NRF-R12c existing stat reads; GDF-R09 definition fields
-and GDF-R12 state names. [Damage pipeline](combat-damage-pipeline-order.md),
+**Depends on:** NRF-R01/NRF-R02 seed/draw; NRF-R05 percentage arithmetic; NRF-R08a resource Owners of the cited HIT, GDA, RLI ids: [combat-hit-roll](combat-hit-roll.md) (HIT); [core-game-data-table-records](core-game-data-table-records.md) (GDA); [core-record-layouts-and-ids](core-record-layouts-and-ids.md) (RLI).
+units; RLI-R03 state routing; RLI-R02a/RLI-R02b existing stat reads; GDA-R12 definition fields
+and GDF-R03 state names. [Damage pipeline](combat-damage-pipeline-order.md),
 DPO-R08c/DPO-R09/DPO-R13 through DPO-R19/DPO-R23/DPO-R29, owns stages, damage writes and
 downstream draw order. [Mitigation](combat-damage-mitigation.md) owns retaliation reduction
 and resistance. [Open Wounds](combat-open-wounds.md), OWD-R10, owns regeneration-death context.
-Replacing-write effects retain NRF-Q20; update bookkeeping retains NRF-Q17.
-[Shield block and avoidance](combat-shield-block-and-avoidance.md), SBA-R02g, supplies the
+Replacing-write effects retain RLI-Q03; update bookkeeping retains RLI-Q02.
+[Shield block and avoidance](combat-shield-block-and-avoidance.md), HIT-R02g, supplies the
 demon predicate for selector 18.
+[Leech and drain](combat-leech-and-drain.md), LSE-R13, owns the overlay
+operation; its stored effects retain IEP-Q09 and its count identity LSE-Q03.
 
 **Depended on by:** damage-pipeline event traversal; Crushing Blow, Open Wounds and knockback
 registration/ordering; foundations' callback-owned draw discussion. Reverse references are
@@ -564,6 +567,7 @@ not automatic delivery prerequisites.
 - [combat-knockback](combat-knockback.md): selector 7.
 - [combat-damage-pipeline-order](combat-damage-pipeline-order.md): damage/event order.
 - [combat-damage-mitigation](combat-damage-mitigation.md): retaliation mitigation.
+- [combat-leech-and-drain](combat-leech-and-drain.md): overlay operation.
 - [core-numeric-and-rng-foundations](core-numeric-and-rng-foundations.md): shared primitives.
 - [core-game-data-fields](core-game-data-fields.md): fields and names.
 

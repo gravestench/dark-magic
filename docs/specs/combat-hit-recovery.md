@@ -17,11 +17,11 @@ This contract covers get-hit requests, reaction selection, damage/state veto, pl
 
 ## 2. Trigger and ownership
 
-D2Game's server combat-result consumer runs once per reaction call after damage application (DPO-R26). Melee and missile resolution supply flags through SBA-R13/SBA-R14/SBA-R20. The consumer orders reactions and invokes player/monster mode handling; D2Common owns shared stat/state/mode operations and animation rates. The monster mode table selects separate GH start, tick and end handlers. Exact server completion and client prediction remain HRC-Q02/HRC-Q05. No message identity or presentation timing is established. Full original-binary chains are in the companion.
+D2Game's server combat-result consumer runs once per reaction call after damage application (DPO-R26). Melee and missile resolution supply flags through SBA-R05/SBA-R06/SBA-R11. The consumer orders reactions and invokes player/monster mode handling; D2Common owns shared stat/state/mode operations and animation rates. The monster mode table selects separate GH start, tick and end handlers. Exact server completion and client prediction remain HRC-Q02/HRC-Q05. No message identity or presentation timing is established. Full original-binary chains are in the companion.
 
 ## 3. Inputs and data
 
-Use NRF-R01/NRF-R02 for seed/draw, NRF-R06a/NRF-R06b/NRF-R07 for arithmetic, NRF-R12a for states and NRF-R12b/NRF-R12c for selected-array/minimum stat reads. Unqualified integer arithmetic is wrapping i32; signed division truncates toward zero. An explicitly unsigned product is reinterpreted as u32 before division. Own-list reads are named separately. A seed is `{lo,hi}` of u32 words.
+Use NRF-R01/NRF-R02 for seed/draw, NRF-R06a/NRF-R06b/NRF-R07 for arithmetic, RLI-R03 for states and RLI-R02a/RLI-R02b for selected-array/minimum stat reads. Unqualified integer arithmetic is wrapping i32; signed division truncates toward zero. An explicitly unsigned product is reinterpreted as u32 before division. Own-list reads are named separately. A seed is `{lo,hi}` of u32 words.
 
 | Input | Semantic source | Width / format | Meaning |
 |---|---|---|---|
@@ -30,27 +30,27 @@ Use NRF-R01/NRF-R02 for seed/draw, NRF-R06a/NRF-R06b/NRF-R07 for arithmetic, NRF
 | hitClass k; synthesis suppression | NRF damage-field contract | i32; u8 | Entire class retained; neutral nonzero suppression skips synthesis |
 | element cursor | Shared selector state | u8 | Cyclic component start; increment wraps 256 |
 | defender/source, room, level | Logical associations | Nullable units/room; i32 level | Source record/permission in town gate |
-| kind, mode, class, base | GDF-R05/GDF-R14/GDF-R15/GDF-R17 | i32; BaseId i16 | Player 0, monster 1; dead guards and exceptions |
+| kind, mode, class, base | GDA-R08/GDF-R05/GDF-R06/GDF-R08 | i32; BaseId i16 | Player 0, monster 1; dead guards and exceptions |
 | requestedMode, context | Request supplied to the local player decision | i32 values | requestedMode is distinct from the defender's current mode; zero requested mode or zero context selects the stated early allowance |
-| availability | MonStats2.mGH/mKB, mode 6; GDF-R06 | Boolean | Monster gates and fallback |
-| town permission | Source MonStats.inTown; GDF-R18 | Boolean | Permission in fixed level set |
-| missile selectors | Missiles.GetHit/SoftHit/KnockBack/HitClass; GDF-R07 | Booleans, u8 chance/class | Request/rewrite and initial class |
-| supplied block/avoidance code | SBA-R14 block/avoidance-stage result | i32 semantic result code | Low five bits determine whether HRC-R01c rewrites before the final SBA result mapping; distinct from R |
+| availability | MonStats2.mGH/mKB, mode 6; GDA-R09 | Boolean | Monster gates and fallback |
+| town permission | Source MonStats.inTown; GDA-R16 | Boolean | Permission in fixed level set |
+| missile selectors | Missiles.GetHit/SoftHit/KnockBack/HitClass; GDA-R10 | Booleans, u8 chance/class | Request/rewrite and initial class |
+| supplied block/avoidance code | SBA-R06 block/avoidance-stage result | i32 semantic result code | Low five bits determine whether HRC-R01c rewrites before the final SBA result mapping; distinct from R |
 | M | Layer 0 stat 7 maxhp | i32 raw 8.8 | Selected/minimum max life |
 | FHR, FBR, last block | Layer 0 stats 99 item_fastergethitrate, 102 item_fasterblockrate, 95 lastblockframe | i32 | Rates and cooldown |
 | concentration value | State 42 list's own stat 164 skill_concentration | i32 | Roll threshold; missing list 0 |
 | health sync value | Layer 0 stat 352 last_sent_hp_pct | i32 | Plain-hit monster comparison |
 | states / stun list | 1 freeze, 15 concentrate, 21 stunned, 42 concentration, 54 uninterruptable, 65 dodge, 66 avoid, 68 evade, 92 death_delay, 101 holyshield | Active predicates / matching stun list / requests | State 92 name only; death/timer semantics require separate evidence |
-| skill context | Current/passed skill; Skills.interrupt/srvdofunc; GDF-R08 | Optional identities, boolean, u16 function index | Player decision |
+| skill context | Current/passed skill; Skills.interrupt/srvdofunc; GDA-R11 | Optional identities, boolean, u16 function index | Player decision |
 | frame | Game frame | i32 | Cooldown subtraction |
 | animation | Effective kind/mode, base rate B, count, accumulator, total, condition | i32; stored rate i16 | Actual selected inputs/remap gated |
-| monster KB base | Supplied signed record word | i16 widened | Loader-column identity GDF-Q01 |
+| monster KB base | Supplied signed record word | i16 widened | Loader-column identity GDA-Q05 |
 | dependency operations | State/mode/update/event/preparation | Ordered requests | Effects and gates in section 9 |
 
 | Mapping / constant | Origin | Binding |
 |---|---|---|
 | Stat/state names above | Effective ItemStatCost.txt ID/Stat and States.txt id/state; [named-cell record](../research/spec-evidence/combat-hit-recovery.md#named-table-cells) | Names from data; numeric consumers fixed in code |
-| Modes, missile/monster/skill selectors | GDF-R06/GDF-R07/GDF-R08/GDF-R14/GDF-R15/GDF-R18 | Loader-defined fields consumed by engine handlers |
+| Modes, missile/monster/skill selectors | GDA-R09/GDA-R10/GDA-R11/GDF-R05/GDF-R06/GDA-R16 | Loader-defined fields consumed by engine handlers |
 | Divisors, masks, 256 floor, cooldown 15, block bases, player KB 213, path speed 4096 | Engine code | Fixed by original code |
 | Diminishing A120, FHR index 1/FBR index 3 | Engine table, NRF-R07 | Fixed table selection |
 | Animation B/count/start/remap | Animation data and state selection | Actual GH record unresolved, HRC-Q04 |
@@ -61,9 +61,9 @@ Named text cells alone are data-verified; compiled runtime correspondence and cu
 
 **HRC-R01** Request production stages.
 
-- **HRC-R01a** Melee request [verified in 1.13c code (static)]. Consume SBA-R13's post-block/avoid result: retained hit 1 and state 54 absent ORs GH 4. Otherwise preserve R. No direct draw in this OR stage; preceding resolution keeps SBA's draws.
-- **HRC-R01b** Missile request [verified in 1.13c code (static)]. Consume SBA-R20: OR hit 1. Within the state-54-absent branch, if GetHit is true OR 4; otherwise, if SoftHit is true OR 16384. State 54 present skips both additions and missile KB chance; existing bits persist. KB production is KNB-R02a/KNB-R02b, not a complete-hit zero-draw claim.
-- **HRC-R01c** Missile rewrite [verified in 1.13c code (static)]. Consume SBA-R14: a supplied block/avoid code with any bits 0..4, GetHit false and KnockBack 0 clears hit 1, ORs soft 16384 and discards those code bits before final mapping. Other R bits persist. No direct draw here.
+- **HRC-R01a** Melee request [verified in 1.13c code (static)]. Consume SBA-R05's post-block/avoid result: retained hit 1 and state 54 absent ORs GH 4. Otherwise preserve R. No direct draw in this OR stage; preceding resolution keeps SBA's draws.
+- **HRC-R01b** Missile request [verified in 1.13c code (static)]. Consume SBA-R11: OR hit 1. Within the state-54-absent branch, if GetHit is true OR 4; otherwise, if SoftHit is true OR 16384. State 54 present skips both additions and missile KB chance; existing bits persist. KB production is KNB-R02a/KNB-R02b, not a complete-hit zero-draw claim.
+- **HRC-R01c** Missile rewrite [verified in 1.13c code (static)]. Consume SBA-R06: a supplied block/avoid code with any bits 0..4, GetHit false and KnockBack 0 clears hit 1, ORs soft 16384 and discards those code bits before final mapping. Other R bits persist. No direct draw here.
 - **HRC-R01d** Other producers [unresolved]. Additional GH-request producers remain HRC-Q03, outside the supplied-R consumer.
 
 **HRC-R02** Entry eligibility.
@@ -73,7 +73,7 @@ Named text cells alone are data-verified; compiled runtime correspondence and cu
 
 **HRC-R03** Protected reaction.
 
-- **HRC-R03a** State 54 [verified in 1.13c code (static)]. After town and connected-hit class processing, active 54 bypasses ordinary dispatch. Lethal 2 requests `SetState(defender,92,1)` through NRF-R12a/STL-R07; otherwise no state request. No GH/KB/block/avoidance mode request follows. No direct draw. Routing/membership is known; disguise/update execution retains HRC-Q10. Ordinary death-mode handling is not asserted.
+- **HRC-R03a** State 54 [verified in 1.13c code (static)]. After town and connected-hit class processing, active 54 bypasses ordinary dispatch. Lethal 2 requests `SetState(defender,92,1)` through RLI-R03/STL-R07; otherwise no state request. No GH/KB/block/avoidance mode request follows. No direct draw. Routing/membership is known; disguise/update execution retains HRC-Q10. Ordinary death-mode handling is not asserted.
 - **HRC-R03b** Monster wrapper guard [unresolved]. A second state 54 test invokes assertion/failure and additional handling in the monster mode wrapper. Complete semantics are HRC-Q06; no silent-refusal default is supplied.
 
 **HRC-R04** Priority.
@@ -81,7 +81,7 @@ Named text cells alone are data-verified; compiled runtime correspondence and cu
 - **HRC-R04a** Selector [verified in 1.13c code (static)]. Live monster: first consume KNB-R06a unavailable-KB fallback (replace 8 with 4, retain other flags), then KNB-R06c's valid base 78 non-frozen GH-to-KB conversion. Select one terminal branch: lethal > KB > block 16 > GH > soft > plain. Monster block selects reaction synchronization when soft present, class 243/333/705, or mode 6 unavailable; otherwise mode 6. Player: avoidance 128, 256, 512 in that order, then block 16/32768, lethal, KB, GH, soft. Encountering an avoidance flag owns that branch even if its state/skill checks refuse; no fallthrough. Priority draws nothing directly; selected local rules execute normally. External terminal effects retain their gates.
 - **HRC-R04b** Avoidance effects [unresolved]. States 65/66/68 and skill data control player avoidance requests. Exact skill-derived inputs/eligibility/start effects are HRC-Q06.
 
-**HRC-R05** Stun/freeze [verified in 1.13c code (static)]. At selected GH, a matching state-21 list found through NRF-R12a bypasses HRC-R06 and requests GH. Otherwise execute HRC-R06; veto selects HRC-R08. Thus a matching stun list with active freeze skips the freeze veto here. Active state 21 alone does not supply that list. No direct draw beyond executed local/dependency operations.
+**HRC-R05** Stun/freeze [verified in 1.13c code (static)]. At selected GH, a matching state-21 list found through RLI-R03 bypasses HRC-R06 and requests GH. Otherwise execute HRC-R06; veto selects HRC-R08. Thus a matching stun list with active freeze skips the freeze veto here. Active state 21 alone does not supply that list. No direct draw beyond executed local/dependency operations.
 
 **HRC-R06** Damage veto [verified in 1.13c code (static)]. Return veto/allow without changing mode. In order: state 1 vetoes; nonzero poison==total vetoes; signed total<256 vetoes. Read selected/minimum M stat 7. Entire i32 k selects divisor d:5=>64; 4/8=>32; 2/6/10/11=>8; else 16. Compute signed truncating `T1=M/d,T2=M/(d/2),T4=M/(d/4)`. Total<T1 vetoes without draw. Total<T2 draws defender RandMask(2), zero vetoes immediately. Total<T4 draws defender RandMask(4), zero vetoes. Finally monster without mGH vetoes; others allow. Each draw steps NRF-R01 then masks the new low word per NRF-R02. With d=16, ordinary positive M, the derived pass fractions before monster availability are 0 below M/16, 3/8 through below M/8, 3/4 through below M/4, then 1. A failing first draw skips the second. Negative/zero M uses the same comparisons, without a life floor.
 
@@ -94,7 +94,7 @@ Named text cells alone are data-verified; compiled runtime correspondence and cu
 
 **HRC-R09** Monster GH.
 
-- **HRC-R09a** Start [verified in 1.13c code (static)]. At supplied start-handler entry, missing unit/mode 0/mode 12 returns 1 without change; missing mGH returns 0. Otherwise request entry preparation, then mode 3 through NRF-R14a, including its verified mode and modeChanged writes, then return 1. Actual animation preparation/reset inputs and wrapper integration retain NRF-Q17/HRC-Q06. No direct draw in this start decision; complete event draws are not asserted. GH table start/tick/end identities are established.
+- **HRC-R09a** Start [verified in 1.13c code (static)]. At supplied start-handler entry, missing unit/mode 0/mode 12 returns 1 without change; missing mGH returns 0. Otherwise request entry preparation, then mode 3 through RLI-R04a, including its verified mode and modeChanged writes, then return 1. Actual animation preparation/reset inputs and wrapper integration retain NRF-Q07/HRC-Q06. No direct draw in this start decision; complete event draws are not asserted. GH table start/tick/end identities are established.
 - **HRC-R09b** Completion [unresolved]. Selected tick traverses an optional associated chain and conditionally calls a helper; no local animation-end predicate. Shared end handler branches by class. Complete server GH completion is HRC-Q02.
 
 **HRC-R10** Player GH.
@@ -119,7 +119,7 @@ Named text cells alone are data-verified; compiled runtime correspondence and cu
 
 **HRC-R14** Block/KB rates [verified in 1.13c code (static)]. Effective player mode 9/monster mode 6 obtains D through NRF-R07 index 3, A=120, stat 102 FBR: D=0 when FBR=0, otherwise `D=trunc(wrap32(120*FBR)/wrap32(120+FBR))`. Base 100 if kind 0/1/3, stateCount>101, state 101 active; else 50. Form `p=wrap32((base+D)*B)`, reinterpret p as u32 and compute `q=floor(p/100)` through NRF-R06b; zero becomes 1, cap 32767. KB player mode 19/monster mode 13 instead uses base mode rate, unmodified by FHR/FBR/other_animrate: signed<=0 stores 0, positive caps 32767. Player base fixed 213; monster supplied signed word. KB then sets path speed 4096 through NRF-R08b, with its speed/target/reset effects. No direct draws in rate/speed stage; no full-event draw claim.
 
-**HRC-R15** Mode-change elemental processing [unresolved]. Requested monster mode 3 skips the wrapper's elemental helper. Other modes can reach it; reached slot draws consume NRF-R04b (chance 1..99 Rand 100, accepted type 10 Rand 5+1). Upstream eligibility, byte regions, additional helper effects and complete event draws remain HRC-Q06/NRF-Q11. GH skipping this helper does not prove a full zero-draw mode event.
+**HRC-R15** Mode-change elemental processing [unresolved]. Requested monster mode 3 skips the wrapper's elemental helper. Other modes can reach it; reached slot draws consume NRF-R04b (chance 1..99 Rand 100, accepted type 10 Rand 5+1). Upstream eligibility, byte regions, additional helper effects and complete event draws remain HRC-Q06/NRF-Q05. GH skipping this helper does not prove a full zero-draw mode event.
 
 ### Id map
 
@@ -140,7 +140,7 @@ Named text cells alone are data-verified; compiled runtime correspondence and cu
 | HRC-R07a | Class synthesis | verified in 1.13c code (static) | none supplied record | HRC-V16 |
 | HRC-R07b | Melee class producer | unresolved | HRC-Q03 upstream only | none |
 | HRC-R08 | Soft/plain updates | unresolved | HRC-Q06 full effects | none |
-| HRC-R09a | Monster start | verified in 1.13c code (static) | HRC-Q06/NRF-Q17 reset/wrapper | HRC-V13 |
+| HRC-R09a | Monster start | verified in 1.13c code (static) | HRC-Q06/NRF-Q07 reset/wrapper | HRC-V13 |
 | HRC-R09b | Completion | unresolved | HRC-Q02 end chain | none |
 | HRC-R10a | Local player decision | verified in 1.13c code (static) | HRC-Q06 neutral/outer/start only | HRC-V14, HRC-V18 |
 | HRC-R10b | Interrupt draw | verified in 1.13c code (static) | none locally | HRC-V14 |
@@ -152,8 +152,8 @@ Named text cells alone are data-verified; compiled runtime correspondence and cu
 | HRC-R13b | Data/breakpoints | unresolved | HRC-Q04 selected record | none |
 | HRC-R13c | Server driver | unresolved | HRC-Q02 caller/order | none |
 | HRC-R13d | Animation primitives | verified in 1.13c code (static) | none isolated; HRC-Q02 GH integration | HRC-V19 |
-| HRC-R14 | Block/KB rate | verified in 1.13c code (static) | HRC-Q04 inputs/GDF-Q01 field identity; HRC-Q06 full mode only | HRC-V15 |
-| HRC-R15 | Mode-event draw integration | unresolved | HRC-Q06/NRF-Q11 | none |
+| HRC-R14 | Block/KB rate | verified in 1.13c code (static) | HRC-Q04 inputs/GDA-Q05 field identity; HRC-Q06 full mode only | HRC-V15 |
+| HRC-R15 | Mode-event draw integration | unresolved | HRC-Q06/NRF-Q05 | none |
 
 ## 5. Outputs and side effects
 
@@ -169,7 +169,7 @@ Named text cells alone are data-verified; compiled runtime correspondence and cu
 | State 92 on, routed membership/changed membership, update request | HRC-R03a; HRC-Q10 gates disguise/update execution |
 | Selected terminal branch and reaction/neutral requests | HRC-R04a/HRC-R05/HRC-R09a/HRC-R10a; HRC-R04b/HRC-R08/HRC-R10c full effects gated |
 | Defender seed updates | HRC-R06/HRC-R10b |
-| Monster mode 3/modeChanged via NRF-R14a | HRC-R09a; reset integration gated |
+| Monster mode 3/modeChanged via RLI-R04a | HRC-R09a; reset integration gated |
 | Mode 9 request, then stat-95 write request carrying frame | HRC-R11; persisted stat-write effect HRC-Q06 |
 | Animation rate | HRC-R12a/HRC-R14 |
 | Speed/targetSpeed4096, resetMarker 15 when speed changed | HRC-R14/NRF-R08b |
@@ -192,7 +192,7 @@ The read local slices add no separate difficulty, PvP, boss/champion or hireling
 | **HRC-Q04** | open / integration | Complete remap, selected GH record B/count/start and compiled correspondence; not supplied-input rates |
 | **HRC-Q05** | open / outside-boundary | Client prediction/presentation owner and relation to server; none locally |
 | **HRC-Q06** | open / behavior and integration | Wrapper/validator, avoidance skill inputs, soft/plain helpers, player entry, persisted block-stamp write and elemental helper; blocks full effects/event draws, not supplied requests/local arithmetic |
-| **HRC-Q10** | open / integration | STL-Q07 disguise and NRF-Q17 update queue for state 92; not NRF/STL routing/membership |
+| **HRC-Q10** | open / integration | STL-Q07 disguise and RLI-Q02 update queue for state 92; not NRF/STL routing/membership |
 | **HRC-Q11** | pending / observation | Matching gameplay cases for every verified behavioral rule, including HRC-O01–HRC-O06 |
 
 Attempts: [Open evidence gaps](../plans/gaps/combat-hit-recovery.md#open-evidence-gaps). No other-version equivalence is asserted.
@@ -201,7 +201,7 @@ Attempts: [Open evidence gaps](../plans/gaps/combat-hit-recovery.md#open-evidenc
 
 ### 8.1 Executable vectors
 
-Every case resets independently. Defaults: non-null live player mode 1, no active states or matching state lists, R=5, k=13, suppression 1, cursor 0, total 8000, components 0, M=25600, mGH/mKB/mode 6 true, valid room level 2, source absent, no current/passed skill, valid skill definition whenever a current skill is supplied, class/base 100 with valid records, context 1, requestedMode 4 in local player-decision fixtures independently of the current mode supplied by the case, FHR/FBR/stat 95=0, stateCount 200, state storage present, expiryFlag false, no mode-bound lists, state 92 off/unchanged, modeChanged false. Stats use real NRF-R12b/NRF-R12c selected/minimum reads with valid definitions and no minimum adjustment; unspecified values 0. Rates supply effective kind/mode/B. No draw means seed unchanged. External terminal mode/death/update/event/preparation operations log calls and have no supplied writes/draws. The stat-95 writer is an explicit supplied operation: it logs its request and stores the requested value in the fixture. That supplied stored value verifies no original writer interior; HRC-R11 verifies only request arguments/order. For V03/V11 a supplied monster wrapper dispatches the local HRC-R09a start, with no additional wrapper writes/draws; it is not a no-effect replacement of that local start. SetState executes NRF-R12a/STL-R07 routing/membership while disguise/update execution logs only. Mode write logs its request, executes NRF-R14a including its update request and local mode/modeChanged writes, then logs animation preparation. No mode-bound list is eligible for removal. Actual update/reset effects remain gated. Local HRC calls execute their rules, not no-effect substitutes. Logs are ordered. Completed gated effects are not verified by these supplied operations.
+Every case resets independently. Defaults: non-null live player mode 1, no active states or matching state lists, R=5, k=13, suppression 1, cursor 0, total 8000, components 0, M=25600, mGH/mKB/mode 6 true, valid room level 2, source absent, no current/passed skill, valid skill definition whenever a current skill is supplied, class/base 100 with valid records, context 1, requestedMode 4 in local player-decision fixtures independently of the current mode supplied by the case, FHR/FBR/stat 95=0, stateCount 200, state storage present, expiryFlag false, no mode-bound lists, state 92 off/unchanged, modeChanged false. Stats use real RLI-R02a/RLI-R02b selected/minimum reads with valid definitions and no minimum adjustment; unspecified values 0. Rates supply effective kind/mode/B. No draw means seed unchanged. External terminal mode/death/update/event/preparation operations log calls and have no supplied writes/draws. The stat-95 writer is an explicit supplied operation: it logs its request and stores the requested value in the fixture. That supplied stored value verifies no original writer interior; HRC-R11 verifies only request arguments/order. For V03/V11 a supplied monster wrapper dispatches the local HRC-R09a start, with no additional wrapper writes/draws; it is not a no-effect replacement of that local start. SetState executes RLI-R03/STL-R07 routing/membership while disguise/update execution logs only. Mode write logs its request, executes RLI-R04a including its update request and local mode/modeChanged writes, then logs animation preparation. No mode-bound list is eligible for removal. Actual update/reset effects remain gated. Local HRC calls execute their rules, not no-effect substitutes. Logs are ordered. Completed gated effects are not verified by these supplied operations.
 
 - **HRC-V01** Veto bands (HRC-R06; boundary: isolated rule)
   - Inputs: independent totals 255, 1599, 1600, 3200, 6400; other defaults.
@@ -323,7 +323,7 @@ Every case resets independently. Defaults: non-null live player mode 1, no activ
   - Inputs: monster; (a) mode 1, mGH true; (b) mode 0; (c) mode 1, mGH false; (d) missing unit; prior modeChanged false.
   - Seeds: no draw.
   - Draws: none directly; supplied preparation adds none.
-  - Trace: guards before entry preparation and NRF-R14a mode write.
+  - Trace: guards before entry preparation and RLI-R04a mode write.
   - Outputs: a return 1, mode 3, modeChanged true, log [entryPreparation, mode 3, updateRequest, animationPreparation]; b return 1, mode 0, modeChanged false, no calls; c return 0, mode 1, modeChanged false, no calls; d return 1, no calls. Full wrapper draws unasserted.
   - Discriminates: missing mGH failure 0 differs from dead no-op success 1.
   - runtime_observed: no
@@ -475,7 +475,7 @@ All pending; each procedure records its controlled setup and measured scope.
 
 Partial static acceptance is all verified assertions of HRC-V01–HRC-V22 against named rules/supplied boundaries: exact values, logs, draws, seeds and writes. Probability estimates alone cannot pass seeded cases. Gated terminal effects are excluded from partial acceptance. Full reproduction requires HRC-Q02/HRC-Q04/HRC-Q06/HRC-Q10, applicable producer integration, and matching gameplay for every verified rule, HRC-Q11. Arithmetic alone does not establish duration/cancellation.
 
-**Depends on:** NRF-R01/NRF-R02 seed/draw, NRF-R06a/NRF-R06b arithmetic, NRF-R07 diminishing, NRF-R08b speed, NRF-R12a state routing, NRF-R12b/NRF-R12c selected/minimum and own-list stats, NRF-R14a mode writes with NRF-Q17 limits; GDF-R05/GDF-R06/GDF-R07/GDF-R08/GDF-R11/GDF-R12/GDF-R14/GDF-R15/GDF-R17/GDF-R18 names/schema; SBA-R13/SBA-R14/SBA-R20 production; KNB-R03b town, KNB-R06a/KNB-R06c conversion; DPO-R26 reaction ordering; STL-R07 membership, STL-R07a/STL-Q07 disguise. [MMF](state-movement-modifiers-and-freeze.md) MMF-R06f owns shared per-mode precedence; HRC owns these three rate branches. [Skill dispatch](skill-cast-start-and-do-dispatch.md) SCD-R01/SCD-Q01/SCD-Q10 distinguishes requested entry preparation from its effects; no timed-event removal is inferred for HRC entry preparation.
+**Depends on:** NRF-R01/NRF-R02 seed/draw, NRF-R06a/NRF-R06b arithmetic, NRF-R07 diminishing, NRF-R08b speed, RLI-R03 state routing, RLI-R02a/RLI-R02b selected/minimum and own-list stats, RLI-R04a mode writes with NRF-Q07/RLI-Q02 limits; GDA-R08/GDA-R09/GDA-R10/GDA-R11/GDF-R02/GDF-R03/GDF-R05/GDF-R06/GDF-R08/GDF-R09/GDA-R16 names/schema; SBA-R05/SBA-R06/SBA-R11 production; KNB-R03b town, KNB-R06a/KNB-R06c conversion; DPO-R26 reaction ordering; STL-R07 membership, STL-R07a/STL-Q07 disguise. [MMF](state-movement-modifiers-and-freeze.md) MMF-R06f owns shared per-mode precedence; HRC owns these three rate branches. [Skill dispatch](skill-cast-start-and-do-dispatch.md) SCD-R01/SCD-Q01/SCD-Q10 distinguishes requested entry preparation from its effects; no timed-event removal is inferred for HRC entry preparation. Owners of the cited GDA, RLI ids: [core-game-data-table-records](core-game-data-table-records.md) (GDA); [core-record-layouts-and-ids](core-record-layouts-and-ids.md) (RLI).
 
 **Depended on by:** KNB reaction/stun, SBA flag consumer, DPO reaction stage, MMF rate references. Reverse references are not automatic prerequisites for supplied local arithmetic.
 

@@ -29,16 +29,16 @@ These table entries and the computing output writers, rather than function label
 | LOD113C-D2COMMON | `0x51FF0`, #10297 | Physical maximum | R01b/R03 through R07; instructions 2026-10-12; complete original-image entry/return decoding 2026-10-15 |
 | LOD113C-D2COMMON | `0x31B90`, #10641; `0x1FB80`, #10051 | Weapon and source-classification producers | Q02; supplied-result consumer anchors; targeted instructions 2026-10-15 identify further inventory/item dependencies, not a complete production contract |
 | LOD113C-D2COMMON | `0x38ED0`, `0x38F60`, internal | Item source endpoint wrappers | R04b; instructions 2026-10-15, guards and selected-array stat 23/24 reads |
-| LOD113C-D2COMMON | `0x38B70`, #10973; `0x38A80`, internal | Ordinary/selected-list stat reads | R04b/R10/R13; consumed NRF-R12b/NRF-R12c, whose original evidence owns leaf search/minimum behavior |
+| LOD113C-D2COMMON | `0x38B70`, #10973; `0x38A80`, internal | Ordinary/selected-list stat reads | R04b/R10/R13; consumed RLI-R02a/RLI-R02b, whose original evidence owns leaf search/minimum behavior |
 | LOD113C-D2COMMON | `0x4F930`, internal | Kick producer | R07/Q08; caller references from 2026-10-12, targeted listing 2026-10-15; producer arithmetic remains outside boundary |
 | LOD113C-D2COMMON | `0x50460`, #10121; `0x50360`, #11091 | Elemental minimum/maximum | R01a/R08/R09/R10; instructions 2026-10-12; caller/order checks 2026-10-15 |
-| LOD113C-D2COMMON | `0x4F870`, internal | Elemental mastery amount | R10; SCX-R31's original instruction/map corroboration 2026-10-15 and shared NRF getter semantics |
+| LOD113C-D2COMMON | `0x4F870`, internal | Elemental mastery amount | R10; original instruction/map corroboration 2026-10-15 (see [absorbed expression-spec records](#records-absorbed-from-the-expression-spec-2026-10-15)) and shared NRF getter semantics |
 | LOD113C-D2COMMON | `0x4E900`, #10510 | Elemental duration | R01a/R11; instructions 2026-10-12; three signed bands, no shift, calculation result addition |
 | LOD113C-D2COMMON | `0x4EA50`, #10653 | Skill to-hit value | R01a/R12; instructions 2026-10-12 and 2026-10-15; linear fallback or unchanged evaluator result |
 | LOD113C-D2COMMON | `0x51BF0`, #10786 | Skill calculation front end | R05/R19; byte-checked reconstruction 2026-10-12; SCX-R11 owns shared pool/context contract |
 | LOD113C-D2COMMON | `0x9270`, internal; `0x50B60`, internal | Evaluator and parameter callback | R09/R11/R12/R19; boundary crossing consumes the named SCX contracts/gates |
 | LOD113C-D2COMMON | `0x11E0`, internal | Argument-ordered percentage primitive | R05/R09/R10/R11; byte-checked reconstruction 2026-10-12; consumes NRF-R05 |
-| LOD113C-D2COMMON | `0x61EC0`, internal | Skills descriptor loader | Input field identity; 2026-10-12 original descriptor/string reading, consumed GDF-R08 |
+| LOD113C-D2COMMON | `0x61EC0`, internal | Skills descriptor loader | Input field identity; 2026-10-12 original descriptor/string reading, consumed GDA-R11 |
 | LOD113C-D2GAME | `0x9F1A0`, internal | Physical fill | R14; instructions 2026-10-12 and 2026-10-15; min/max requests, source condition zero, range draw, additive physical write |
 | LOD113C-D2GAME | `0x9F210`, internal | Elemental fill | R15; instructions 2026-10-12 and 2026-10-15; duration/min/max requests, range draw, router, unchanged d return |
 | LOD113C-D2GAME | `0x9EFE0`, internal | Router/random element | R16/R17; instructions/table read 2026-10-12; encoded jump corroborated against original image 2026-10-15 |
@@ -89,7 +89,7 @@ For physical damage the source selection precedes the band/base addition, percen
 
 Physical maximum's hash-checked original instructions at `0x51FF0` through `0x5203E` establish signed lookup rejection, return 2 at `0x52016`, and maximum Kick selection zero at `0x52036`. Physical minimum's established instructions return 1 and use selection 1. Both return directly from the Kick call before ordinary source/synergy/shift. The targeted `0x4F930` listing identifies stat-dependent player/non-player branches; their complete arithmetic is not made part of this contract. R07 verifies only the caller's dispatch/unchanged return using supplied results.
 
-Elemental `0x50460`/`0x50360` shift first, evaluate synergy when allowed, and only then call `0x4F870` and add its return. The minimum tests signed shifted damage against 0x100 and first minimum increment against zero before evaluation; maximum omits that test. SCX's [mastery and shared-getter reconciliation](skill-calc-expressions-and-synergies.md#shared-getter-reconciliation-2026-10-15) corroborates the selector table at `0x4F91C`, target table at `0x4F908`, ordinary reads of 329/330/332 and cold's direct `0x38A80` stat-331 read. That record and NRF's same-fingerprint getter evidence settle the leaf interpretation; no unresolved blanket mastery gate remains.
+Elemental `0x50460`/`0x50360` shift first, evaluate synergy when allowed, and only then call `0x4F870` and add its return. The minimum tests signed shifted damage against 0x100 and first minimum increment against zero before evaluation; maximum omits that test. SCX's [mastery and shared-getter reconciliation](skill-calc-expressions.md#shared-getter-reconciliation-2026-10-15) corroborates the selector table at `0x4F91C`, target table at `0x4F908`, ordinary reads of 329/330/332 and cold's direct `0x38A80` stat-331 read. That record and NRF's same-fingerprint getter evidence settle the leaf interpretation; no unresolved blanket mastery gate remains.
 
 Routing uses an unsigned comparison of `EType-1` with 11 and an indirect jump through D2Game `0x9F0E4`. The 2026-10-12 image read established the table and writes; original-image decoding on 2026-10-15 corroborated the encoded dispatch instruction and targets. Random type 10 advances the supplied unit seed with the foundation LCG and uses the original image table at D2Game RVA `0xFB970` (preferred VA `0x6FD1B970`), choices `{1,2,4,5}`. The fill preserves d across routing and returns it, including when type 9 uses d+length in the record.
 
@@ -104,7 +104,7 @@ The migration retains all thirteen original vector numerical outcomes and origin
 - The 2026-10-12 R01b unresolved label concerned the encoded maximum prologue. The 2026-10-15 same-fingerprint original-image decode resolves that uncertainty; return 2 and maximum Kick selection 0 are unchanged.
 - The earlier R10 cold wording said “base stat list.” SCX's original wrapper/map decoding and NRF's leaf contract show a selected-array read, including minimum adjustment. This corrects a potential own-array interpretation. V14 separates own value 10 from selected value 30, producing mastery amount 300 rather than 100. Existing numerical vectors did not exercise cold mastery and keep their outcomes. R10 becomes statically verified through this exact dependency boundary.
 - Earlier R04b wording identified the item's “own stat,” without proving storage-array behavior; the newly read item wrappers call the same selected-array leaf. R04b's supplied-result selection is now verified, while Q02 retains the unverified equipment producers. No equipment mechanics are inferred from labels.
-- Earlier R07 was asm-only because the Kick producer was unread. Its caller bypass/argument/return behavior is now separately verified with supplied Kick results, while Q08 explicitly retains actual producer integration outside scope. This narrower verification does not close SCX-Q07's broader physical/Kick production gap.
+- Earlier R07 was asm-only because the Kick producer was unread. Its caller bypass/argument/return behavior is now separately verified with supplied Kick results, while Q08 explicitly retains actual producer integration outside scope. This narrower verification does not close the broader physical-source/Kick production gaps, now Q02/Q08 (which absorbed the expression spec's equivalent question in the 2026-10-15 restructure).
 - Earlier R13 had an unread forwarding path inside melee resolution. Targeted 2026-10-15 reading establishes the unchanged argument route, so the hand-off becomes verified. SBA continues to own whether that path executes and its result.
 - Q04 now consumes the written SCX contract, including calculation RNG and precise unresolved producer gates. A local range draw is not the complete endpoint-dependent draw count. V01 through V13 use the same no-calculation-draw inputs as before; V15 additionally distinguishes interleaving.
 - The 2026-10-15 text reads supply the previously absent stat names and named element-code rows. They do not establish compiled selector-index correspondence, so Q07 remains narrow and open. No static rule is promoted by a text read.
@@ -134,6 +134,56 @@ Both requests used offset 0 and length 0 (whole effective file). The complete re
 
 These cell claims are **verified in 1.13c data** within the reported effective profile and stated correspondence limits. ItemStatCost full effective-file SHA-256 is `ee7fa82b48e0c4f27a566334b2da13cf1c83f5c4c0439552084a231cb5938375`; ElemTypes full effective-file SHA-256 is `91addf64ff87abb19dcceba77f6da6ed84e9e4194d30eeb1d69d36edd55cdc15`. No table or full row is reproduced. Other stat names and Skills descriptors consume GDF's existing data/loader evidence with its own dates and limits.
 
+## Records absorbed from the expression spec (2026-10-15)
+
+The 2026-10-15 restructure removed the damage-builder rules from the expression spec because they
+duplicated this contract (see [Restructure record](#restructure-2026-10-15)). Its dated
+original-source records for those builders moved here unchanged apart from ids. They are
+independent readings of the same functions listed under [Dispatch and functions](#dispatch-and-functions);
+where both records exist, each keeps its own date and boundary.
+
+| Artifact | Function RVA / export | Analyst description and supported rules | Method, date, boundary |
+|---|---|---|---|
+| LOD113C-D2COMMON | 0x4DDB0 | five-band level helper, SLD-R02 | Original disassembly, 2026-10-12; each signed level branch and summed result |
+| LOD113C-D2COMMON | 0x50460 export #10121; 0x50360 | elemental min/max, SLD-R08 through SLD-R10 | Original disassembly, 2026-10-12; shift before synergy, minimum-only gate, optional mastery after synergy |
+| LOD113C-D2COMMON | 0x4F870; selector map 0x4F91C; targets 0x4F908 | mastery selection, SLD-R10 | Original disassembly, 2026-10-12; instruction/map corroboration against matching image 2026-10-15; cold wrapper reconciled with the shared stat-read contract |
+| LOD113C-D2COMMON | 0x11E0 | argument-ordered percent primitive, SLD-R05/SLD-R09/SLD-R10/SLD-R11 | 2026-10-12 reading agrees with consumed NRF-R05; current contract uses that shared rule |
+| LOD113C-D2COMMON | 0x52100; 0x51FF0 export #10297 | physical min/max, SLD-R01a/SLD-R01b, SLD-R03 through SLD-R07 | Instructions, 2026-10-12; source-share/synergy/shift sequence; source and Kick leaf integration remain gated |
+| LOD113C-D2COMMON | 0x4F930; 0x31B90; 0x1FB80; 0x38ED0; 0x38F60 | Kick and weapon/item source dependencies | Prior caller references, 2026-10-12; no complete result proof recorded, SLD-Q02/SLD-Q08 |
+| LOD113C-D2COMMON | 0x4E900 | elemental duration, SLD-R11 | Instructions, 2026-10-12; three level bands, base, synergy and return |
+
+| Semantic term | Original evidence representation |
+|---|---|
+| fixed mastery selection | table at RVA 0x4F91C indexed by EType-1; jump targets at 0x4F908; unsupported entries select zero return |
+| cold source | unit list +0x5C; definition count +0xBD4 >331; definition index 331; identity encoded as 0x14B0000; direct call 0x38A80 |
+| ordinary mastery source | 329/330/332 at layer 0 through 0x38B70; percentage tail jump0x11E0 |
+| physical source selection condition | 0x1FB80(unit,unit inventory association) returns 2; meaning/complete dependency remains open |
+
+Targeted finding 4 of the expression companion (2026-10-15), with ids in current numbering:
+
+4. The mastery mapping in the earlier SCX reading agrees with the mapping in
+   SLD-R10. At the time of that earlier comparison, SLD's decoding/integration
+   limits remained unresolved; its current R10 reuses the compatible SCX/NRF evidence.
+   New original-image inspection of 0x4F870 corroborates instruction and
+   table bytes, including the cold-specific direct 0x38A80 call and ordinary
+   0x38B70 calls for other selected elements. This settles the decoding ambiguity. The compatible NRF evidence identifies the exact leaf at 0x38A80 as the selected-array/minimum operation and 0x38B00 as the own-array/minimum operation. The cold wrapper therefore consumes RLI-R02a/RLI-R02b directly. It does not force the base/own array. No gameplay result was collected.
+
+The [shared getter reconciliation](skill-calc-expressions.md#shared-getter-reconciliation-2026-10-15)
+record stays in the expression companion because it also covers that spec's stat-function qualifiers.
+
+### Elemental synergy observation procedure
+
+For SLD-O02 (pending), the expression spec's procedure adds: use a matching vanilla Expansion 1.13c Sorceress with a learned
+elemental skill and a related damage-synergy skill, in Normal difficulty, standing
+in town with stable equipment and no temporary buffs. Record character/skill
+levels, learned synergy levels, relevant mastery stats, selected Skills fields,
+and the caller's mastery flag before changing a synergy point. Measure raw min/max
+returns at D2Common 0x50460/0x50360 for the same skill context before and after a
+controlled synergy increase. Calculate each expectation from the recorded fields,
+using SLD-R09/SLD-R10. The tooltip alone cannot establish raw rounding. Exact
+character setup and expected numbers must be pinned before this becomes a
+reproducible observation vector; no fabricated record is supplied here.
+
 ## Remaining source boundaries and searches
 
 The 2026-10-12 search used dispatch-root anchors at the skill table and fill cross-references; output anchors at router record writes; data anchors for Skills columns and record stride; column-name strings and loader cross-references; and decompile/listing aids for encoded instructions. No runtime search was completed. No claim is labeled “not found.”
@@ -150,7 +200,7 @@ SLD-O01: single player Normal; use any class with a physical-damage skill whose 
 
 ### Synergy observation
 
-SLD-O02: single player Normal, a controlled character/eligible nearby target, and a measured skill record using both physical and elemental synergy calculations. Record the exact computed percentages and source inputs; choose a percentage/base combination where shifting before versus after percentage division differs. Compare raw endpoint results at D2Common `0x52100`/`0x51FF0` and `0x50460`/`0x50360`, then compare with R05/R09. Record every expression draw before attributing later seed steps. A suitable exact row/fixture has not yet been established.
+SLD-O02: single player Normal, a controlled character/eligible nearby target, and a measured skill record using both physical and elemental synergy calculations. Record the exact computed percentages and source inputs; choose a percentage/base combination where shifting before versus after percentage division differs. Compare raw endpoint results at D2Common `0x52100`/`0x51FF0` and `0x50460`/`0x50360`, then compare with R05/R09. Record every expression draw before attributing later seed steps. A suitable exact row/fixture has not yet been established. An elemental-only variant is in the [elemental synergy observation procedure](#elemental-synergy-observation-procedure).
 
 ### Random element observation
 
@@ -221,7 +271,7 @@ Triage was checked against the original D2Game/D2Common instructions on 2026-10-
 | GUESS 3 replacement width | Spec edit: R18 whole-field replacement with a signed nonzero test (dword load/test/store); V13 cases `0x1234` and -5 |
 | GUESS 4 read timing/source | Spec edit: R18 says the read happens after the elemental fill, from the same selected record, and is not a logged request |
 | GUESS 5 duration condition | Spec edit: R11/R15 and the section 3 row say all three requests pass 1 and duration ignores it; V11/V15 request logs |
-| GUESS 6, GUESS 7, GAP 2 array selection | Spec edit: R04b/R10 define the selection as NRF-R12b's unit-read array choice on the given list (never the own-array list read) plus NRF-R12c, and replace the "item wrappers" wording |
+| GUESS 6, GUESS 7, GAP 2 array selection | Spec edit: R04b/R10 define the selection as RLI-R02a's unit-read array choice on the given list (never the own-array list read) plus RLI-R02b, and replace the "item wrappers" wording |
 | GAP 1 inventory association | Spec edit: section 3 row "caster inventory reference" |
 | GAP 3 mastery condition | Spec edit: section 3 row; unit presence is already in the stat-input row |
 | GAP 4 section 5 omissions | Spec edit: request row adds source-stat, mastery-stat and stat-325 reads; the R18 row adds the stage result. `skillHitClassValue` is a record-field read under R18 |
@@ -315,18 +365,18 @@ These are vector additions/clarifications only; rule text is unchanged, so the n
 
 Delta check of the run-5 edits to V04, V09, V10, V13, V14 and V17. Counts: MISMATCH 0, GUESS 1, GAP 3, DISCRIM 5, GATED 9, COVERAGE 6 groups, HARDEST 3. Every case was recomputed without a difference. The reader marked the V04, V09, V10, V13 and V17 findings resolved and V14 partially resolved (own-array rejection shown only for stat 329).
 
-Triage reread D2Common `0x50460` on 2026-10-15: after the lookup and `L > 0` tests, the synergy block tests only the reference, the minimum gate and the pool/bounds before evaluating with context `(unit,skill,L)`; the unit is tested only in the later mastery block (condition, then unit). D2Game `0x92CF0`/`0x93340` return 0 on failed lookup before the record clear. NRF-R12b already states the `id >= statDefinitionCount` rejection for the ordinary getter.
+Triage reread D2Common `0x50460` on 2026-10-15: after the lookup and `L > 0` tests, the synergy block tests only the reference, the minimum gate and the pool/bounds before evaluating with context `(unit,skill,L)`; the unit is tested only in the later mastery block (condition, then unit). D2Game `0x92CF0`/`0x93340` return 0 on failed lookup before the record clear. RLI-R02a already states the `id >= statDefinitionCount` rejection for the ordinary getter.
 
 | Entry | Outcome |
 |---|---|
 | GUESS V14 which array holds mapped values | Spec edit: V14 defaults state `usesResolvedStats` true, given values are resolved values (own 0), definition count 359 |
 | GAP V14 no operation applies R10 to a supplied e | Spec edit: damage-input cases execute as an elemental maximum with EMax = damage input, HitShift 0, empty synergy, mastery condition 1; the return is input plus amount |
-| GAP V17/V14 stat log meaning | Spec edit: the section 8.1 preamble says stat log entries trace the real NRF-R12b/R12c getter and are not supplied operations |
+| GAP V17/V14 stat log meaning | Spec edit: the section 8.1 preamble says stat log entries trace the real RLI-R02a/RLI-R02b getter and are not supplied operations |
 | GAP V14 absent unit with synergy | Spec edit after the asm check: the absent-unit case still makes its evaluation; R09 has no unit condition |
 | DISCRIM V04 round-half-up | Spec edit: SrcDam 64/x 11 gives `0x1C00` (half-up gives `0x1D00`) |
 | DISCRIM V04 unwrapped product | Spec edit: SrcDam 255/x `0x808081` gives `0x1800` (64-bit product gives `0x1700`) |
 | DISCRIM V14 own-array for 330/332 | Spec edit: EType 1, 2 and 5 array cases each add 300 |
-| DISCRIM V14 stat 332 count bound | Spec edit: count 332 adds 0, count 333 adds 300 (NRF-R12b bound) |
+| DISCRIM V14 stat 332 count bound | Spec edit: count 332 adds 0, count 333 adds 300 (RLI-R02a bound) |
 | DISCRIM V13 failed lookup clears record | Spec edit after the asm check: stale `0x55` record unchanged on failed lookup |
 | COVERAGE (advisory) | No change: each branch follows a stated rule or NRF recipe; the additions above cover the R04a, R10 and R18 items that change a result |
 | HARDEST V14, V13, V17 | Addressed by the clarifications above |
@@ -342,10 +392,10 @@ Delta check of the run-6 edits to V04, V13, V14 and the section 8.1 preamble. Co
 | GUESS V04 origin of x in new cases | Spec edit: the independent cases state x is the supplied R04b selected endpoint (caster stat 21, absent weapon) |
 | GUESS V14 definitions at overridden counts | Spec edit: every definition below the count is present |
 | GAP V13 stage failed lookup only for identity >= count | Spec edit: identity -1 and absent record at identity 0 added; the `0x92CF0`/`0x93340` readings recorded under run 3 and run 6 show the signed-negative, count and null-record tests all return 0 before the clear |
-| GAP reader read SCX-R31 by grep only | No change: a limit of the reader's check; R10 restates the amount and SCX-R31 owns it |
+| GAP reader read the expression spec's mastery rule by grep only | No change: a limit of the reader's check; R10 restated the amount that the expression spec then owned (R10 owns it since the 2026-10-15 restructure) |
 | DISCRIM V13 partial lookup rejection | Spec edit: as the GAP above |
-| DISCRIM V14 bounds for 329/330 | Spec edit: count 329/330 for stat 329 and 330/331 for stat 330 (NRF-R12b `id >= statDefinitionCount`) |
-| COVERAGE (7 advisory) | No change: fMin adjustment, own-array lists, absent lists/entries and multi-field routing follow NRF-R12b/R12c and R16 recipes already discriminated elsewhere; duration ignores mastery by R11 |
+| DISCRIM V14 bounds for 329/330 | Spec edit: count 329/330 for stat 329 and 330/331 for stat 330 (RLI-R02a `id >= statDefinitionCount`) |
+| COVERAGE (7 advisory) | No change: fMin adjustment, own-array lists, absent lists/entries and multi-field routing follow RLI-R02a/RLI-R02b and RLI-R01 recipes already discriminated elsewhere; duration ignores mastery by R11 |
 | HARDEST V14, V13, V04 | No further change: the cases are now explicit |
 
 Vector additions only; rule text unchanged. The next run is a delta check of V04, V13 and V14.
@@ -361,9 +411,25 @@ Delta check of the run-7 edits to V04, V13 and V14. Counts: MISMATCH 0, GUESS 2,
 | GAP V04 gate cases lack an output | Spec edit (derivable value the reader computed): output `0x1700` with x 10 available |
 | GAP V13 unreached hand-off stub / hit-class value | Spec edit (wording): neither is reached on failed lookup |
 | GAP V13 identity of the stale storage | Spec edit (wording): the storage a successful stage would clear |
-| COVERAGE (7 advisory) | No change: each branch follows R04a, NRF-R12b/R12c or R18 recipes already discriminated elsewhere; the eligibility branch is outside the contract |
+| COVERAGE (7 advisory) | No change: each branch follows R04a, RLI-R02a/RLI-R02b or NRF-R13 recipes already discriminated elsewhere; the eligibility branch is outside the contract |
 | HARDEST V04, V14, V13 | No change: all cases are explicit and recomputed |
 
 The post-run-8 edits state values and readings that the run-8 reader itself computed or assumed, so they change no output or assertion and introduce no new behavior; no fresh reader checked their wording, because this task's cap of four reader runs (runs 5 to 8) was reached.
 
 **Outcome: the blind-implementer pass is complete at the supplied-input/static boundary.** Runs 1 to 4 were full reviews and runs 5 to 8 delta checks; no rule text changed after run 4. The final applicable run returned MISMATCH 0 and DISCRIM 0, and its GUESS and GAP entries are resolved by the edits above. Producer, integration and observation gaps (Q02, Q04 to Q10) remain; header status stays draft. No human approval is inferred.
+
+### Restructure (2026-10-15)
+
+The approved review split the former expressions-and-synergies spec, now
+[skill-calc-expressions](../../specs/skill-calc-expressions.md). Its five-band progression,
+elemental and physical damage builders, mastery and duration rules restated SLD-R01a through
+SLD-R11 and were removed there; this spec owns them without renumbering any SLD id. Their unique
+vector cases were folded into existing vectors as independent cases: increments `[1,2,3,4,5]` in
+V01; the same-input physical/elemental rounding pair and the negative-source maximum case in V03
+and V05; the zero-percent two-evaluation case in V06; and the `[10,5,2]` duration cases in V07.
+The expression spec's mastery vector was already covered by V14. Its physical source/Kick question
+merged into Q02 and Q08 (server caller flags into Q05), and its elemental-synergy observation
+into O02. R10 now states the mastery amount itself; R19, Q04, the dependencies and Related specs
+cite the renamed expression spec. No rule behavior, label, value or existing vector result changed.
+The folded cases were hand-checked against R02 through R11 and the NRF-R05/NRF-R06a contracts;
+no source reading, gameplay observation or fresh reader pass was performed for this restructure.

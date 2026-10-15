@@ -50,10 +50,10 @@ Effective file hashes, physical archive attribution and complete overrides remai
 | LOD113C-D2GAME | 0xACBA0 | none | Mana after kill | IEP-R08, IEP-R16 | 2026-10-12 disassembly; player/nonzero guard, raw conversion/clamp and ordered requests |
 | LOD113C-D2GAME | 0xACB10, 0xACA70 | none | Life after kill; demon-only variant | IEP-R08, IEP-R17 | 2026-10-12 disassembly; demon request in second callback, nonzero guard and resource requests |
 | LOD113C-D2GAME | 0xAC910 | none | Rest-in-Peace state request | IEP-R18 | 2026-10-12 disassembly; non-null guards and fixed state request; no stat read |
-| LOD113C-D2COMMON | 0x34510 | 10945 | State-enable routing | IEP-R18 | Consumed NRF-R12a and timed-state bookkeeping contracts retain their integration gates |
+| LOD113C-D2COMMON | 0x34510 | 10945 | State-enable routing | IEP-R18 | Consumed RLI-R03 and timed-state bookkeeping contracts retain their integration gates |
 | LOD113C-D2GAME | 0xAF210 | none | Reanimation registration slice | IEP-R13b | 2026-10-12 reading; 2026-10-14 full 208-byte disassembly; positive value guard before direct draw, player chain, entry creation |
 | LOD113C-D2GAME | 0x21260, 0xE03A0 | none | Owner lookup and unit lookup boundary | IEP-R13b | 2026-10-14 disassembly and original-image corroboration, 48/112 bytes; valid game/type/id lookup; table 0xFB014, 20 bytes |
-| LOD113C-D2COMMON | 0x32C10 | 10689 | Overlay request execution | IEP-R19 | 2026-10-14 full 144-byte disassembly; five local helpers unresolved; no promotion |
+| LOD113C-D2COMMON | 0x32C10 | 10689 | Overlay operation | IEP-R15 through IEP-R17 via LSE-R13 | 2026-10-14 full 144-byte disassembly; local helpers consumed from LSE-R13 (dated 2026-10-14) on 2026-10-15; stored attach/list-write/update effects remain IEP-Q09 |
 | LOD113C-D2GAME | 0x14D0 | none | Signed mulDiv entry | IEP-R15 | Consumed NRF-R05; callback operand order preserved |
 | LOD113C-FOG | 0x1CCC0 | 10046 | Storage release forwarder | IEP-R05, IEP-R07 | 2026-10-13 disassembly; downstream allocator internals outside list behavior |
 
@@ -64,14 +64,14 @@ Export identity proves navigation, not complete getter/write/classification effe
 
 | Semantic operation | D2Game thunk RVA | D2Common ordinal | Target RVA | Contract / limit |
 |---|---|---|---|---|
-| Read existing stat | 0xA802 | 10910 | 0x39430 | NRF-R12b/NRF-R12c |
-| Read existing unit stat | 0xA42A | 10973 | 0x38B70 | NRF-R12b/NRF-R12c; this getter does not establish replacing-write effects |
+| Read existing stat | 0xA802 | 10910 | 0x39430 | RLI-R02a/RLI-R02b |
+| Read existing unit stat | 0xA42A | 10973 | 0x38B70 | RLI-R02a/RLI-R02b; this getter does not establish replacing-write effects |
 | Resource stat operation | 0xA472 | 10887 | 0x3A740 | Same integration limit; callback callsite retained |
-| Effective maximum life | 0xA3A0 | 10913 | 0x390F0 | Targeted 2026-10-14 read; selects stat 7, consumes NRF-R12b/NRF-R12c at 0x38A80 |
-| Effective maximum mana | 0xA4EA | 10186 | 0x390A0 | Targeted 2026-10-14 read; selects stat 9, consumes NRF-R12b/NRF-R12c at 0x38A80 |
-| Demon eligibility | 0xA814 | 10255 | 0x1A610 | Targeted 2026-10-14 read; consumes compatible SBA-R02g predicate contract |
-| Overlay request | 0xA83E | 10689 | 0x32C10 | IEP-R19/IEP-Q09 |
-| State enable | 0xA3CA | 10945 | 0x34510 | NRF-R12a; update integration retained |
+| Effective maximum life | 0xA3A0 | 10913 | 0x390F0 | Targeted 2026-10-14 read; selects stat 7, consumes RLI-R02a/RLI-R02b at 0x38A80 |
+| Effective maximum mana | 0xA4EA | 10186 | 0x390A0 | Targeted 2026-10-14 read; selects stat 9, consumes RLI-R02a/RLI-R02b at 0x38A80 |
+| Demon eligibility | 0xA814 | 10255 | 0x1A610 | Targeted 2026-10-14 read; consumes compatible HIT-R02g predicate contract |
+| Overlay request | 0xA83E | 10689 | 0x32C10 | LSE-R13 operation; stored effects IEP-Q09 |
+| State enable | 0xA3CA | 10945 | 0x34510 | RLI-R03; update integration retained |
 | Base list creation | 0xADAE | 11166 | 0x3AF00 | Callback/context attachment; notification integration IEP-Q01/IEP-Q03 |
 
 ### Callback address catalog
@@ -118,7 +118,7 @@ removal 0x37110. Skill paths 0x28290/0x428F0 also reach 0x9E290; 0x4F970 reads t
 | Callback values, callback | Entry +0x0C/+0x10, +0x14 | IEP-R07 |
 | Previous/next | Entry +0x18/+0x1C | IEP-R01/IEP-R05/IEP-R07 |
 | Stat identity | Packed `(statId << 16) \| layer` | IEP-R03/IEP-R08; packing is evidence only |
-| Stat event fields | ItemStatCost +0x48/+0x4A events, +0x4C/+0x4E selectors; stride 0x144; callback flag bit 11 of +4 | IEP-R03/IEP-R04; GDF-R09 owns logical fields |
+| Stat event fields | ItemStatCost +0x48/+0x4A events, +0x4C/+0x4E selectors; stride 0x144; callback flag bit 11 of +4 | IEP-R03/IEP-R04; GDA-R12 owns logical fields |
 | Skill event fields | +0x84/+0x86/+0x88 events; +0x8A/+0x8C/+0x8E selectors; passive +0xB8/+0xBA; owner identity +0x80 | IEP-R06 |
 | Retaliation eligibility | Other Unit +0xC4 mask 4 | IEP-R14; producer meaning IEP-Q02 |
 | Suppress item events | Damage result mask 0x20 | IEP-R11/IEP-R14 |
@@ -198,10 +198,10 @@ callee boundary, not a verified stored overlay effect. IEP-R19 becomes unresolve
 **Resource/classification integration.** New export resolution and reads locate maximum
 mana/life at Common 0x390A0/0x390F0 (stat 9/7) through 0x38A80. Demon classifier 0x1A610
 checks monster and class bounds, then a MonStats masked flag. These readings identify consumers
-and local scope. Compatible NRF-R12b/NRF-R12c evidence owns 0x38A80 and SBA-R02g owns the
+and local scope. Compatible RLI-R02a/RLI-R02b evidence owns 0x38A80 and HIT-R02g owns the
 same demon predicate/name correspondence. Those contracts close maximum-getter and demon
 classification reading gaps; IEP-V14 exercises distinct maximum stat selection. Replacing
-stat-write production remains IEP-Q10/NRF-Q20. No supplied-input arithmetic result changed.
+stat-write production remains IEP-Q10/RLI-Q03. No supplied-input arithmetic result changed.
 
 ## Observation procedures
 
@@ -255,7 +255,7 @@ separately unresolved. The code selector catalog is static; complete data/role b
 recovered and gated. Neutral eligibility/reaction names preserve known tests without guessing
 their wider meaning. Callback arithmetic/ordered requests are static at supplied-input
 boundaries, with stored-write/overlay integration explicitly gated. Maximum getters consume
-the established stat-reader contract and demon classification consumes SBA-R02g.
+the established stat-reader contract and demon classification consumes HIT-R02g.
 
 Checks before rewriting: spec linter reported 18 errors and 15 warnings, chiefly private
 provenance and earlier layout. A revised lint returned zero errors and one method-wording
@@ -312,7 +312,7 @@ gates on verified assertions. All arithmetic matched and no ambiguous decision w
 | Finding | Outcome |
 |---|---|
 | GAP: IEP-V11 lacks attacker eligibility and clear result input for build event 3 | Spec edit: V11 names player attacker A, monster D and the shared record's suppression condition false at the build/apply/death sites, with DPO-R23's exact reached-site eligibility. R09a's table now states the player/hireling-attacker qualification explicitly |
-| GAP: IEP-V13 omits NRF-R12a's unconditional update request | Spec edit: V13 supplies state count 173 and target state storage, executes NRF-R12a routing, and logs ordered active-bit then MarkForUpdate requests. It distinguishes the callback's state request, dependency routing, and unexecuted stored/update effects. Section 3 names the consumed environment and section 5 includes the requests |
+| GAP: IEP-V13 omits RLI-R03's unconditional update request | Spec edit: V13 supplies state count 173 and target state storage, executes RLI-R03 routing, and logs ordered active-bit then MarkForUpdate requests. It distinguishes the callback's state request, dependency routing, and unexecuted stored/update effects. Section 3 names the consumed environment and section 5 includes the requests |
 | COVERAGE: IEP-R03 negative new total | Spec edit: V02(e) supplies -5 and requires registration; this rejects a positive-only registration gate |
 | COVERAGE: IEP-R05/IEP-R06 kind-scoped skill removal | Spec edit: V10(a) gives skill/item entries the same supplied owner identity; removing skill kind retains and dispatches only the item entry |
 | COVERAGE: IEP-R14 minimum positive value | Spec edit: V05(d) supplies value 1, producing physical 256 and the ordered requests; this separates the positive boundary from 0/-1 guard cases and the existing value-10 sample |
@@ -344,7 +344,7 @@ evidence labels, execution boundaries and gates remain unchanged.
 | COVERAGE: build event 3 ineligible | Spec edit: V11(h) separately supplies an ordinary non-hireling monster and a player with suppressed result; both produce no build event 3 |
 | COVERAGE: death result suppression set | Covered by V11(g), which isolates the death tail and cannot pass merely by skipping earlier apply dispatches |
 | COVERAGE: event 6 item suppression set while missile-attacker suppression is clear | Spec edit: V11(i) supplies that combination and requires neither event 6 nor 2. DPO-V31 independently owns the other flagged-apply combinations, but its current cases keep result suppression clear and therefore do not replace this control |
-| COVERAGE: state count invalid or base storage absent | No new local case: NRF-R12a owns the shared routing; NRF-V33(c) covers absent base list, (d)/(k) invalid identity. V13 now explicitly cites those controls. R18's callback selection/non-null request and unconditional return 1 do not introduce a new routing branch |
+| COVERAGE: state count invalid or base storage absent | No new local case: RLI-R03 owns the shared routing; RLI-V05(c) covers absent base list, (d)/(k) invalid identity. V13 now explicitly cites those controls. R18's callback selection/non-null request and unconditional return 1 do not introduce a new routing branch |
 | COVERAGE: regeneration tick without death | Spec edit: V11(j) supplies an alive regeneration outcome with positive life and requires no death notifications; existing V11(d)/(e) retain present/missing-killer death cases |
 | HARDEST: IEP-V08 traversal | No change: successor reload, shared-record mutation, insertion and final dispatcher result are already specified and discriminated |
 | HARDEST: IEP-V11 stage ownership | No rule/boundary change: fixtures explicitly supply reached dependency outcomes and execute only the named decisions. Added controls distinguish build, apply and death decisions without claiming full upstream execution |
@@ -393,3 +393,17 @@ Corrections were reference-only: the 0x370E0 description now names the first cal
 value rather than the callback pointer, and section 5 / this function table cite the split
 sub-ids IEP-R09a/IEP-R09b/IEP-R13a. No rule, vector, label or gate changed, so no new
 blind-implementer run is required by these edits.
+
+### Restructure (2026-10-15)
+
+De-duplication only; no split. The unresolved overlay-execution rule (formerly the last rule, 19) restated
+the overlay operation that the leech/status spec owns and verifies as LSE-R13 (compatible
+2026-10-14 reading of D2Common 0x32C10 and its local search/allocation helpers). It is removed.
+IEP-R15, IEP-R16 and IEP-R17 now call LSE-R13's overlay operation with ids 152, 152 and 151
+after the replacing resource-stat request, as Crushing Blow's CBL-R08 does with id 147. The
+IEP-specific consequences stay local: the fixed ids, the order after the resource request, and
+the unconditional callback return 1. IEP-Q09 now gates only the stored attach/list-write/update
+effects (STL-R06b/STL-R06c/RLI-Q02, as LSE-Q01); the original overlay-count identity is
+LSE-Q03. The old rule had no vector; IEP-V06/IEP-V07 keep their `overlay<id>` request
+assertions and LSE-V11 discriminates the consumed operation. No other rule, label, value or
+vector result changed, and no other id was renumbered.

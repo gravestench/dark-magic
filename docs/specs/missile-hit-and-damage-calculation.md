@@ -21,7 +21,7 @@ D2Game's server missile step calls this operation for a contacted unit, expiry, 
 
 ## 3. Inputs and data
 
-Integer additions, subtractions, products and shifts wrap at 32 bits unless an operation explicitly widens them. Numeric mask 1, 2 or 4 means testing `(value AND mask)!=0`; these numbers are mask values, not bit indices. Signed division truncates toward zero. Damage uses raw 8.8 quantities; lengths are signed frame counts. `Stat(unit,id)` is layer 0 through NRF-R12b/NRF-R12c, with existing ordered arrays and definitions supplied. Names consume GDF-R11a/GDF-R12 and the companion's [named cells](../research/spec-evidence/missile-hit-and-damage-calculation.md#named-table-cells).
+Integer additions, subtractions, products and shifts wrap at 32 bits unless an operation explicitly widens them. Numeric mask 1, 2 or 4 means testing `(value AND mask)!=0`; these numbers are mask values, not bit indices. Signed division truncates toward zero. Damage uses raw 8.8 quantities; lengths are signed frame counts. `Stat(unit,id)` is layer 0 through RLI-R02a/RLI-R02b, with existing ordered arrays and definitions supplied. Names consume GDF-R02/GDF-R03 and the companion's [named cells](../research/spec-evidence/missile-hit-and-damage-calculation.md#named-table-cells).
 
 | Input | Semantic source | Width / format | Meaning |
 |---|---|---|---|
@@ -49,81 +49,60 @@ Integer additions, subtractions, products and shifts wrap at 32 bits unless an o
 |---|---|---|
 | Handler table counts 71/31, null slots, result masks 1/2/4, contact-type selection, stat/state consumer ids, flags and floor -90 | Engine code | Fixed by original code; handlers selected by definition data |
 | Named stats/states and prepared definition columns | Table data | Names from named cells / GDF descriptors; prepared values supplied |
-| Poison-count division and type-relation matrix consumer | Engine code | Fixed consumer operations; matrix producer correspondence remains MHD-Q15 |
+| Poison-count division and type-relation matrix consumer | Engine code | Fixed consumer operations; matrix producer correspondence remains MHD-Q06 |
 
 ## 4. Rules (execution order)
 
-### Creation-parameter references
-
-- **MHD-R01**: see [MDP-R01](missile-damage-parameters.md).
-- **MHD-R01a**: see [MDP-R01a](missile-damage-parameters.md).
-- **MHD-R01b**: see [MDP-R01b](missile-damage-parameters.md).
-- **MHD-R02**: see [MDP-R02](missile-damage-parameters.md).
-- **MHD-R03**: see [MDP-R03](missile-damage-parameters.md).
-- **MHD-R04**: see [MDP-R04](missile-damage-parameters.md).
-- **MHD-R05**: see [MDP-R05](missile-damage-parameters.md).
-- **MHD-R06**: see [MDP-R06](missile-damage-parameters.md).
-- **MHD-R07**: see [MDP-R07](missile-damage-parameters.md).
-- **MHD-R08**: see [MDP-R08](missile-damage-parameters.md).
-- **MHD-R09**: see [MDP-R09](missile-damage-parameters.md).
-- **MHD-R10**: see [MDP-R10](missile-damage-parameters.md).
-- **MHD-R11**: see [MDP-R11](missile-damage-parameters.md).
-- **MHD-R12**: see [MDP-R12](missile-damage-parameters.md).
-
 ### Contact
 
-**MHD-R13** Entry and creator.
+**MHD-R01** Entry and creator.
 
-- **MHD-R13a** Entry [verified in 1.13c code (static)]. Resolve the supplied missile class's definition using GDF's bounds contract. An absent missile or invalid class yields no definition, followed by an unguarded definition read: this is a fault, not a graceful return. Initialize `hitResult=0` when Explosion is set, otherwise 2; initialize `stopMask=3`. Owner starts absent and is looked up only when the owner-reference-valid condition is set. No direct draw.
-- **MHD-R13b** Registered creator lookup [verified in 1.13c code (static)]. With a present game and owner kind 0..4, select that kind's registered chain using `ownerId AND 127`; kind 5 selects its separate chain. Follow in order until the first id match, else return absent. No ownership recursion or kind recheck on matched entries. Invalid kind faults on the selected chain read; missing game is fatal. Chain population/lifecycle is MHD-Q14; supplied chains verify lookup independently. No direct draw.
+- **MHD-R01a** Entry [verified in 1.13c code (static)]. Resolve the supplied missile class's definition using GDF's bounds contract. An absent missile or invalid class yields no definition, followed by an unguarded definition read: this is a fault, not a graceful return. Initialize `hitResult=0` when Explosion is set, otherwise 2; initialize `stopMask=3`. Owner starts absent and is looked up only when the owner-reference-valid condition is set. No direct draw.
+- **MHD-R01b** Registered creator lookup [verified in 1.13c code (static)]. With a present game and owner kind 0..4, select that kind's registered chain using `ownerId AND 127`; kind 5 selects its separate chain. Follow in order until the first id match, else return absent. No ownership recursion or kind recheck on matched entries. Invalid kind faults on the selected chain read; missing game is fatal. Chain population/lifecycle is MHD-Q05; supplied chains verify lookup independently. No direct draw.
 
-**MHD-R14** Contact return [verified in 1.13c code (static)]. Return 1 means continue; return 2 requests removal by a caller that consumes the result. Early target rejection, callback result mask 4, ordinary nonstopping success and pierce-suppressed stopping all return 1. The miss branch returns 2 unless its invoked hit callback returns mask 4. The normal final branch returns 2 only after `(hitResult mask 1 OR force!=0) AND stopMask mask 1`; the footprint request can be skipped for an absent room without changing that return. Movement owns whether a particular caller propagates or overrides this result.
+**MHD-R02** Contact return [verified in 1.13c code (static)]. Return 1 means continue; return 2 requests removal by a caller that consumes the result. Early target rejection, callback result mask 4, ordinary nonstopping success and pierce-suppressed stopping all return 1. The miss branch returns 2 unless its invoked hit callback returns mask 4. The normal final branch returns 2 only after `(hitResult mask 1 OR force!=0) AND stopMask mask 1`; the footprint request can be skipped for an absent room without changing that return. Movement owns whether a particular caller propagates or overrides this result.
 
-**MHD-R15** Target gates, only with a present target, in this order.
+**MHD-R03** Target gates, only with a present target, in this order.
 
-- **MHD-R15a** Cooldown [verified in 1.13c code (static)]. Nonzero NextHit and active state 86 return 1 immediately.
-- **MHD-R15b** Last collision [verified in 1.13c code (static)]. For a missile of kind 3 with a valid definition, LastCollide set and associated missile data present, equal saved target kind/id returns 1. Otherwise, under those same storage guards, save the target kind/id before later filters. The isolated setter with absent target changes saved id to -1 and retains saved kind. No direct draw.
-- **MHD-R15c** Kind filter [verified in 1.13c code (static)]. Contact selection 0 refuses every target; 1 accepts kind 0 only; 2 accepts kind 1 only; every other u32 value accepts all kinds. Refusal returns 1 after the last-collision write. Creation's producer is MCI's contract, not a local inferred mode conversion.
-- **MHD-R15d** Relation [verified in 1.13c code (static)]. With a creator, consume PVP-R05a/PVP-R07's hostility predicate. A false result with CollideFriend=0 returns 1; a nonzero CollideFriend passes. With no creator, skip hostility. PVP's actual relation/tier production gates remain dependency integration gates.
+- **MHD-R03a** Cooldown [verified in 1.13c code (static)]. Nonzero NextHit and active state 86 return 1 immediately.
+- **MHD-R03b** Last collision [verified in 1.13c code (static)]. For a missile of kind 3 with a valid definition, LastCollide set and associated missile data present, equal saved target kind/id returns 1. Otherwise, under those same storage guards, save the target kind/id before later filters. The isolated setter with absent target changes saved id to -1 and retains saved kind. No direct draw.
+- **MHD-R03c** Kind filter [verified in 1.13c code (static)]. Contact selection 0 refuses every target; 1 accepts kind 0 only; 2 accepts kind 1 only; every other u32 value accepts all kinds. Refusal returns 1 after the last-collision write. Creation's producer is MCI's contract, not a local inferred mode conversion.
+- **MHD-R03d** Relation [verified in 1.13c code (static)]. With a creator, consume PVP-R05a/PVP-R07's hostility predicate. A false result with CollideFriend=0 returns 1; a nonzero CollideFriend passes. With no creator, skip hostility. PVP's actual relation/tier production gates remain dependency integration gates.
 
-**MHD-R16** Pierce decision [verified in 1.13c code (static)]. Require creator, target and Pierce. Read owner stat 166 first; read 156 only when that result is zero. If either is nonzero, read missile stat 328: nonzero `n` requests replacement `(328,layer 0,wrap32(n-1))` and sets stopMask=2; zero leaves stopMask=3. Negative n is nonzero. This local decision makes no draw. Actual counter persistence remains MHD-Q16; supplied mutable writer fixtures can establish subsequent reads.
+**MHD-R04** Pierce decision [verified in 1.13c code (static)]. Require creator, target and Pierce. Read owner stat 166 first; read 156 only when that result is zero. If either is nonzero, read missile stat 328: nonzero `n` requests replacement `(328,layer 0,wrap32(n-1))` and sets stopMask=2; zero leaves stopMask=3. Negative n is nonzero. This local decision makes no draw. Actual counter persistence remains MHD-Q07; supplied mutable writer fixtures can establish subsequent reads.
 
-**MHD-R17** Definition stopping [verified in 1.13c code (static)]. Nonzero CollideKill ORs mask 1 into hitResult before to-hit and hit callbacks. A later hit callback replaces the complete hitResult, so it can clear this bit. No direct draw.
+**MHD-R05** Definition stopping [verified in 1.13c code (static)]. Nonzero CollideKill ORs mask 1 into hitResult before to-hit and hit callbacks. A later hit callback replaces the complete hitResult, so it can clear this bit. No direct draw.
 
-**MHD-R18** Hit/miss branch [verified in 1.13c code (static)]. With a target and nonzero ToHit, read missile stat 19 and request SBA-R01 through SBA-R08's hit roll with attacker=creator, defender=target, bonus=that stat and isMissile=1. An absent attacker or target returns miss before any hit-roll draw. With a nonzero hit result continue normally. On miss, request R20's cooldown then event 0 even independently of stopMask; only nonzero AlwaysExplode enables the valid-index hit callback. Test only `(callbackResult AND 4)!=0`: true returns 1, otherwise return 2. No fill, damage callback, direct hand-off or footprint request occurs on this miss path. Hit-roll hooks and draws belong to SBA.
+**MHD-R06** Hit/miss branch [verified in 1.13c code (static)]. With a target and nonzero ToHit, read missile stat 19 and request HIT-R01 through HIT-R08's hit roll with attacker=creator, defender=target, bonus=that stat and isMissile=1. An absent attacker or target returns miss before any hit-roll draw. With a nonzero hit result continue normally. On miss, request R08's cooldown then event 0 even independently of stopMask; only nonzero AlwaysExplode enables the valid-index hit callback. Test only `(callbackResult AND 4)!=0`: true returns 1, otherwise return 2. No fill, damage callback, direct hand-off or footprint request occurs on this miss path. Hit-roll hooks and draws belong to SBA.
 
-**MHD-R19** No target [verified in 1.13c code (static)]. Without a target, nonzero force or AlwaysExplode reaches the normal side-effect/callback stage. Otherwise skip directly to R24. No target means no fill or damage hand-off regardless of hitResult mask 2.
+**MHD-R07** No target [verified in 1.13c code (static)]. Without a target, nonzero force or AlwaysExplode reaches the normal side-effect/callback stage. Otherwise skip directly to R13. No target means no fill or damage hand-off regardless of hitResult mask 2.
 
-**MHD-R20** Cooldown and contact event [verified in 1.13c code (static)]. On the normal path, stopMask mask 2 enables these ordered operations; R18 also invokes them on a miss. First request cooldown only when NextHit is nonzero and target is present. Its requested expiry is `wrap32`(missile-associated game.frame+u8 NextDelay). Allocate a type-2 list with target owner kind/id and that expiry under STL-R06a. Allocation failure ends cooldown preparation before any scheduling/tag/attachment/state request; it does not stop the caller's following event dispatch. On success: schedule target event type 12 at requested expiry (STL-R01 may store a later frame); set list state 86; install callback that requests state 86 off; request full attachment; request active state 86 on. Then dispatch event 0 on the target with other=missile and absent damage record, under IEP-R07, ignoring its final result. Absent target has no event list. Actual attach, expiry/removal and update effects remain MHD-Q17. No direct draw in request placement; callbacks own theirs.
+**MHD-R08** Cooldown and contact event [verified in 1.13c code (static)]. On the normal path, stopMask mask 2 enables these ordered operations; R06 also invokes them on a miss. First request cooldown only when NextHit is nonzero and target is present. Its requested expiry is `wrap32`(missile-associated game.frame+u8 NextDelay). Allocate a type-2 list with target owner kind/id and that expiry under STL-R06a. Allocation failure ends cooldown preparation before any scheduling/tag/attachment/state request; it does not stop the caller's following event dispatch. On success: schedule target event type 12 at requested expiry (STL-R01 may store a later frame); set list state 86; install callback that requests state 86 off; request full attachment; request active state 86 on. Then dispatch event 0 on the target with other=missile and absent damage record, under IEP-R07, ignoring its final result. Absent target has no event list. Actual attach, expiry/removal and update effects remain MHD-Q08. No direct draw in request placement; callbacks own theirs.
 
-**MHD-R21** Hit callback selection.
+**MHD-R09** Hit callback selection.
 
-- **MHD-R21a** Result use [verified in 1.13c code (static)]. Only signed index `0<h<71` is eligible. On the normal path, invoke after R20 and replace complete hitResult by the returned i32. Mask 4 returns 1 immediately; otherwise mask 2 permits R25 with a target, and mask 1 participates in R24. On a miss only R18's mask-4 test applies. No direct draw outside the callback.
-- **MHD-R21b** Table/null slots [verified in 1.13c code (static)]. Invoke the selected operation with game, missile and nullable target. Slot 0 and slots 30,34,41,42,46,49,60..70 are null; index 0 is skipped, eligible null slots attempt a null call and fault. There is no null fallback. Actual row-to-slot bindings and individual callback bodies remain MHD-Q09's outside-boundary questions.
+- **MHD-R09a** Result use [verified in 1.13c code (static)]. Only signed index `0<h<71` is eligible. On the normal path, invoke after R08 and replace complete hitResult by the returned i32. Mask 4 returns 1 immediately; otherwise mask 2 permits R11 with a target, and mask 1 participates in R13. On a miss only R06's mask-4 test applies. No direct draw outside the callback.
+- **MHD-R09b** Table/null slots [verified in 1.13c code (static)]. Invoke the selected operation with game, missile and nullable target. Slot 0 and slots 30,34,41,42,46,49,60..70 are null; index 0 is skipped, eligible null slots attempt a null call and fault. There is no null fallback. Actual row-to-slot bindings and individual callback bodies remain MHD-Q01's outside-boundary questions.
 
-**MHD-R22** Separate no-target callback/removal [verified in 1.13c code (static)]. At this separate entry, when doCall is nonzero, fetch the definition and invoke eligible hit callback with target absent, using R21b's table. Ignore the entire callback result, including mask 4. Then request removal unconditionally. With doCall=0, skip even definition access and request removal. With doCall nonzero and missing/invalid definition, fault before removal. Real caller reachability is MHD-Q10; supplied entry assertions stand independently of that question.
+**MHD-R10** Fill the hit-time damage record.
 
-**MHD-R23** Fill the hit-time damage record.
+- **MHD-R10a** Reset/physical [verified in 1.13c code (static)]. Zero every semantic field of the record. Read missile max stat 22; nonpositive gives physical 0. Otherwise read min stat 21; nonpositive gives 0. With both positive, swap if min>max, then physical=`wrap32`(min+NRF-R02 Rand(missile,`wrap32`(max-min))). Equal endpoints do not draw.
+- **MHD-R10b** Six elemental rolls [verified in 1.13c code (static)]. In order fire(48,49,329), magic(52,53,357), lightning(50,51,330), cold(54,55,331), poison(57,58,332), burn(316,317,329), where each tuple is (min stat,max stat,pct stat). Each roller first reads max, then min, returning 0 without a draw if either read is nonpositive; swap the original endpoints if needed. If pct!=0, independently add NRF-R05 mulDiv(pct,endpoint,100) to each endpoint, with that argument order and 32-bit wrap. Do not swap or guard again. Return `wrap32`(min+Rand(missile,`wrap32`(max-min))). A nonpositive wrapped range skips the draw; adjusted values need not be positive or lie within the original range.
+- **MHD-R10c** Placement [verified in 1.13c code (static)]. Store physical before calling the fire roller; fire precedes magic, then lightning, cold, poison and burn. Each active positive range advances the same missile seed once. These seven ranges contribute 0..7 draws to this fill; this is not the whole contact/callback budget.
+- **MHD-R10d** Nonrandom fields [verified in 1.13c code (static)]. Copy coldLength=stat 56 and poisonLength=stat 59; when stat 326>1 divide poisonLength by it, signed. Copy manaBurn=stat 62, lifeLeech=stat 60, staminaBurn=stat 64, burnLength=stat 315, stunLength=stat 66. No draw.
+- **MHD-R10e** Physical target adjustment [verified in 1.13c code (static)]. With target present start pct=stat 25, add stat 121 for a valid demon definition, then stat 122 for either undead definition bit. For a valid monster definition with positive signed monster-type index, enumerate up to 128 stat 180 entries from the missile's resolvedStats array only when its list exists and usesResolvedStats is true; otherwise enumerate none. Copy matching stat entries in stored order without RLI-R02b's minimum adjustment. For each layer and index both strictly between 0 and supplied typeCount with relation(targetTypeIndex,entryLayer) true, add its value with 32-bit wrap. This is a relation test, not numeric layer equality. Floor final signed pct at -90. Let prod=`wrap32`(physical*pct); add trunc(prod/100) to physical, wrapping. This uses the wrapped product, not NRF-R05's large-operand branches. Without a target skip the entire adjustment. The relation-matrix producer is MHD-Q06; supplied matrix/entries are independently executable.
+- **MHD-R10f** Critical/bypass [verified in 1.13c code (static)]. Nonzero stat 141 doubles physical with a wrapping shift and ORs resultFlags critical 8192, without a new chance roll. Nonzero stats 103/104/106 OR flags 256/512/1024 respectively. Creation-time critical selection is MDP-R08, not an additional hit-time draw.
 
-- **MHD-R23a** Reset/physical [verified in 1.13c code (static)]. Zero every semantic field of the record. Read missile max stat 22; nonpositive gives physical 0. Otherwise read min stat 21; nonpositive gives 0. With both positive, swap if min>max, then physical=`wrap32`(min+NRF-R02 Rand(missile,`wrap32`(max-min))). Equal endpoints do not draw.
-- **MHD-R23b** Six elemental rolls [verified in 1.13c code (static)]. In order fire(48,49,329), magic(52,53,357), lightning(50,51,330), cold(54,55,331), poison(57,58,332), burn(316,317,329), where each tuple is (min stat,max stat,pct stat). Each roller first reads max, then min, returning 0 without a draw if either read is nonpositive; swap the original endpoints if needed. If pct!=0, independently add NRF-R05 mulDiv(pct,endpoint,100) to each endpoint, with that argument order and 32-bit wrap. Do not swap or guard again. Return `wrap32`(min+Rand(missile,`wrap32`(max-min))). A nonpositive wrapped range skips the draw; adjusted values need not be positive or lie within the original range.
-- **MHD-R23f** Placement [verified in 1.13c code (static)]. Store physical before calling the fire roller; fire precedes magic, then lightning, cold, poison and burn. Each active positive range advances the same missile seed once. These seven ranges contribute 0..7 draws to this fill; this is not the whole contact/callback budget.
-- **MHD-R23c** Nonrandom fields [verified in 1.13c code (static)]. Copy coldLength=stat 56 and poisonLength=stat 59; when stat 326>1 divide poisonLength by it, signed. Copy manaBurn=stat 62, lifeLeech=stat 60, staminaBurn=stat 64, burnLength=stat 315, stunLength=stat 66. No draw.
-- **MHD-R23d** Physical target adjustment [verified in 1.13c code (static)]. With target present start pct=stat 25, add stat 121 for a valid demon definition, then stat 122 for either undead definition bit. For a valid monster definition with positive signed monster-type index, enumerate up to 128 stat 180 entries from the missile's resolvedStats array only when its list exists and usesResolvedStats is true; otherwise enumerate none. Copy matching stat entries in stored order without NRF-R12c's minimum adjustment. For each layer and index both strictly between 0 and supplied typeCount with relation(targetTypeIndex,entryLayer) true, add its value with 32-bit wrap. This is a relation test, not numeric layer equality. Floor final signed pct at -90. Let prod=`wrap32`(physical*pct); add trunc(prod/100) to physical, wrapping. This uses the wrapped product, not NRF-R05's large-operand branches. Without a target skip the entire adjustment. The relation-matrix producer is MHD-Q15; supplied matrix/entries are independently executable.
-- **MHD-R23e** Critical/bypass [verified in 1.13c code (static)]. Nonzero stat 141 doubles physical with a wrapping shift and ORs resultFlags critical 8192, without a new chance roll. Nonzero stats 103/104/106 OR flags 256/512/1024 respectively. Creation-time critical selection is MDP-R08, not an additional hit-time draw.
+**MHD-R11** Damage callback and hand-off.
 
-**MHD-R24** Final stop decision [verified in 1.13c code (static)]. On the normal path, if neither hitResult mask 1 nor nonzero force, return 1. If stopMask mask 1 is clear, return 1. Otherwise, with a room request footprint-clear(room,x,y,Size,mask 64); with no room skip that request. Return 2 in both cases. The request's map writes remain MHD-Q11. This stage does not itself remove the missile.
+- **MHD-R11a** Ordering [verified in 1.13c code (static)]. On the normal path with target and hitResult mask 2: R10 fill, optional R11b damage callback, then R12 direct apply and R11c armor stage. Callback record mutations persist. Ignore its return value. Then R13 decides the final contact return.
+- **MHD-R11b** Damage selection [verified in 1.13c code (static)]. Only signed `0<d<31` invokes callback(game,missile,target,shared record). Slots 0 and 15..30 are null: 0 is skipped, eligible null slots fault before hand-off. Invalid indices skip. Callback bodies are supplied under MHD-Q01, not invented defaults.
+- **MHD-R11c** Armor-write request [verified in 1.13c code (static)]. After R12 returns, including its no-owner early return, only a present monster target outside hireling classes 271,338,359,560,561 continues. Nonzero missile stat 120 computes a=`wrap32`(Stat(target,31)+stat 120), then floors signed a<0 to 0 and requests replacement of target stat 31/layer 0 by a. No local draw. Actual persistence/propagation is MHD-Q07.
 
-**MHD-R25** Damage callback and hand-off.
+**MHD-R12** Direct apply [verified in 1.13c code (static)]. Require present missile kind 3, valid owner reference, found creator and valid definition; otherwise return without changing the incoming record or invoking apply/results. After success:
 
-- **MHD-R25a** Ordering [verified in 1.13c code (static)]. On the normal path with target and hitResult mask 2: R23 fill, optional R25c damage callback, then R26 direct apply and R25b armor stage. Callback record mutations persist. Ignore its return value. Then R24 decides the final contact return.
-- **MHD-R25c** Damage selection [verified in 1.13c code (static)]. Only signed `0<d<31` invokes callback(game,missile,target,shared record). Slots 0 and 15..30 are null: 0 is skipped, eligible null slots fault before hand-off. Invalid indices skip. Callback bodies are supplied under MHD-Q09, not invented defaults.
-- **MHD-R25b** Armor-write request [verified in 1.13c code (static)]. After R26 returns, including its no-owner early return, only a present monster target outside hireling classes 271,338,359,560,561 continues. Nonzero missile stat 120 computes a=`wrap32`(Stat(target,31)+stat 120), then floors signed a<0 to 0 and requests replacement of target stat 31/layer 0 by a. No local draw. Actual persistence/propagation is MHD-Q16.
-
-**MHD-R26** Direct apply [verified in 1.13c code (static)]. Require present missile kind 3, valid owner reference, found creator and valid definition; otherwise return without changing the incoming record or invoking apply/results. After success:
-
-1. OR hit 1, then consume HRC-R01b/SBA-R20 and KNB-R02a/KNB-R02b's state 54/get-hit/soft-hit/missile-knockback preparation.
-2. Request SBA's defender block/avoidance with attacker=creator, defender=target, blockEnable=(physical!=0), missile argument 1 and game expansion passed unchanged; consume HRC-R01c/SBA-R14's rewrite and result mapping.
+1. OR hit 1, then consume HRC-R01b/SBA-R11 and KNB-R02a/KNB-R02b's state 54/get-hit/soft-hit/missile-knockback preparation.
+2. Request SBA's defender block/avoidance with attacker=creator, defender=target, blockEnable=(physical!=0), missile argument 1 and game expansion passed unchanged; consume HRC-R01c/SBA-R06's rewrite and result mapping.
 3. Set hitClass=u8 HitClass OR (old hitClass AND 240); if the resulting low byte has any of 240, set reservedCondition=1, otherwise retain that field.
 4. Request DPO-R22's monster-double operation with attacker=creator and defender=target; it can mutate this same record and draw from the creator.
 5. Source flags A/B OR flags 32/128 respectively. Set reductionScale=missile stat 327.
@@ -131,51 +110,55 @@ Integer additions, subtractions, products and shifts wrap at 32 bits unless an o
 
 This establishes ordered calls and shared-record mutations under supplied operations, not actual life loss, status persistence, reaction completion or full owner registry integration. Downstream operations can change flags, fields and seeds; test them under their owners' gates.
 
+**MHD-R13** Final stop decision [verified in 1.13c code (static)]. On the normal path, if neither hitResult mask 1 nor nonzero force, return 1. If stopMask mask 1 is clear, return 1. Otherwise, with a room request footprint-clear(room,x,y,Size,mask 64); with no room skip that request. Return 2 in both cases. The request's map writes remain MHD-Q03. This stage does not itself remove the missile.
+
+**MHD-R14** Separate no-target callback/removal [verified in 1.13c code (static)]. At this separate entry, when doCall is nonzero, fetch the definition and invoke eligible hit callback with target absent, using R09b's table. Ignore the entire callback result, including mask 4. Then request removal unconditionally. With doCall=0, skip even definition access and request removal. With doCall nonzero and missing/invalid definition, fault before removal. Real caller reachability is MHD-Q02; supplied entry assertions stand independently of that question.
+
 ### Id map
 
 | Id | Summary | Status label | Gates | Vectors |
 |---|---|---|---|---|
-| MHD-R13a | Entry and initial result | verified in 1.13c code (static) | none | MHD-V08, MHD-V12 |
-| MHD-R13b | Creator lookup | verified in 1.13c code (static) | MHD-Q14 registry production only | MHD-V23 |
-| MHD-R14 | Continue/removal return | verified in 1.13c code (static) | none | MHD-V08, MHD-V10, MHD-V11, MHD-V20 |
-| MHD-R15a | NextHit exclusion | verified in 1.13c code (static) | none | MHD-V09, MHD-V13 |
-| MHD-R15b | Last target read/write | verified in 1.13c code (static) | none | MHD-V09 |
-| MHD-R15c | Kind filter | verified in 1.13c code (static) | none | MHD-V23 |
-| MHD-R15d | Hostility consumption | verified in 1.13c code (static) | PVP relation/tier producer integration only | MHD-V09 |
-| MHD-R16 | Pierce decision/write request | verified in 1.13c code (static) | MHD-Q16 actual stat persistence only | MHD-V10 |
-| MHD-R17 | CollideKill result bit | verified in 1.13c code (static) | none | MHD-V10, MHD-V20 |
-| MHD-R18 | Hit/miss branch | verified in 1.13c code (static) | SBA producer/hook integration only | MHD-V11 |
-| MHD-R19 | No-target routing | verified in 1.13c code (static) | none | MHD-V08, MHD-V12 |
-| MHD-R20 | Cooldown/event requests | verified in 1.13c code (static) | MHD-Q17 actual attach/expiry/update effects only | MHD-V11, MHD-V13 |
-| MHD-R21a | Hit callback gate/result | verified in 1.13c code (static) | MHD-Q09 actual callback bodies only | MHD-V12, MHD-V20 |
-| MHD-R21b | Hit table/null call | verified in 1.13c code (static) | MHD-Q09 actual row bindings only | MHD-V20 |
-| MHD-R22 | Separate no-target remove entry | verified in 1.13c code (static) | MHD-Q10 real callers only | MHD-V22 |
-| MHD-R23a | Zero record/physical | verified in 1.13c code (static) | none | MHD-V19 |
-| MHD-R23b | Element rolls | verified in 1.13c code (static) | none | MHD-V14, MHD-V19 |
-| MHD-R23f | Seven-slot draw order | verified in 1.13c code (static) | none | MHD-V14, MHD-V19 |
-| MHD-R23c | Copies/division | verified in 1.13c code (static) | none | MHD-V15 |
-| MHD-R23d | Physical target percent | verified in 1.13c code (static) | MHD-Q15 matrix producer only | MHD-V19 |
-| MHD-R23e | Critical/bypass | verified in 1.13c code (static) | none | MHD-V19 |
-| MHD-R24 | Final stop/request | verified in 1.13c code (static) | MHD-Q11 actual map clearing only | MHD-V08, MHD-V10, MHD-V20 |
-| MHD-R25a | Fill/callback/apply order | verified in 1.13c code (static) | dependency effects only | MHD-V16, MHD-V21 |
-| MHD-R25c | Damage table/null call | verified in 1.13c code (static) | MHD-Q09 actual callback bodies only | MHD-V16 |
-| MHD-R25b | Armor request | verified in 1.13c code (static) | MHD-Q16 actual persistence only | MHD-V17, MHD-V18 |
-| MHD-R26 | Direct apply order | verified in 1.13c code (static) | MHD-Q14 creator registry; downstream dependency effects only | MHD-V18, MHD-V21 |
+| MHD-R01a | Entry and initial result | verified in 1.13c code (static) | none | MHD-V01, MHD-V05 |
+| MHD-R01b | Creator lookup | verified in 1.13c code (static) | MHD-Q05 registry production only | MHD-V16 |
+| MHD-R02 | Continue/removal return | verified in 1.13c code (static) | none | MHD-V01, MHD-V03, MHD-V04, MHD-V13 |
+| MHD-R03a | NextHit exclusion | verified in 1.13c code (static) | none | MHD-V02, MHD-V06 |
+| MHD-R03b | Last target read/write | verified in 1.13c code (static) | none | MHD-V02 |
+| MHD-R03c | Kind filter | verified in 1.13c code (static) | none | MHD-V16 |
+| MHD-R03d | Hostility consumption | verified in 1.13c code (static) | PVP relation/tier producer integration only | MHD-V02 |
+| MHD-R04 | Pierce decision/write request | verified in 1.13c code (static) | MHD-Q07 actual stat persistence only | MHD-V03 |
+| MHD-R05 | CollideKill result bit | verified in 1.13c code (static) | none | MHD-V03, MHD-V13 |
+| MHD-R06 | Hit/miss branch | verified in 1.13c code (static) | SBA producer/hook integration only | MHD-V04 |
+| MHD-R07 | No-target routing | verified in 1.13c code (static) | none | MHD-V01, MHD-V05 |
+| MHD-R08 | Cooldown/event requests | verified in 1.13c code (static) | MHD-Q08 actual attach/expiry/update effects only | MHD-V04, MHD-V06 |
+| MHD-R09a | Hit callback gate/result | verified in 1.13c code (static) | MHD-Q01 actual callback bodies only | MHD-V05, MHD-V13 |
+| MHD-R09b | Hit table/null call | verified in 1.13c code (static) | MHD-Q01 actual row bindings only | MHD-V13 |
+| MHD-R10a | Zero record/physical | verified in 1.13c code (static) | none | MHD-V12 |
+| MHD-R10b | Element rolls | verified in 1.13c code (static) | none | MHD-V07, MHD-V12 |
+| MHD-R10c | Seven-slot draw order | verified in 1.13c code (static) | none | MHD-V07, MHD-V12 |
+| MHD-R10d | Copies/division | verified in 1.13c code (static) | none | MHD-V08 |
+| MHD-R10e | Physical target percent | verified in 1.13c code (static) | MHD-Q06 matrix producer only | MHD-V12 |
+| MHD-R10f | Critical/bypass | verified in 1.13c code (static) | none | MHD-V12 |
+| MHD-R11a | Fill/callback/apply order | verified in 1.13c code (static) | dependency effects only | MHD-V09, MHD-V14 |
+| MHD-R11b | Damage table/null call | verified in 1.13c code (static) | MHD-Q01 actual callback bodies only | MHD-V09 |
+| MHD-R11c | Armor request | verified in 1.13c code (static) | MHD-Q07 actual persistence only | MHD-V10, MHD-V11 |
+| MHD-R12 | Direct apply order | verified in 1.13c code (static) | MHD-Q05 creator registry; downstream dependency effects only | MHD-V11, MHD-V14 |
+| MHD-R13 | Final stop/request | verified in 1.13c code (static) | MHD-Q03 actual map clearing only | MHD-V01, MHD-V03, MHD-V13 |
+| MHD-R14 | Separate no-target remove entry | verified in 1.13c code (static) | MHD-Q02 real callers only | MHD-V15 |
 
 ## 5. Outputs and side effects
 
 | Output / request | Rule |
 |---|---|
-| Contact continue 1/removal 2, or fault | MHD-R13/MHD-R14/MHD-R21/MHD-R24/MHD-R25c |
-| Saved last-target kind/id | MHD-R15b |
-| Pierce stat 328 replacement request | MHD-R16 |
-| Cooldown allocation; event 12, list state/callback, full attachment, active state requests; event 0 dispatch | MHD-R20 |
-| Hit/damage callback invocation and supplied mutations | MHD-R21/MHD-R22/MHD-R25 |
-| Zeroed and filled DamageRecord; physical/elements/lengths/drains/critical/bypass | MHD-R23 |
-| Missile seed updates from fill and knockback; creator/target dependency seed updates | MHD-R23/MHD-R26 |
-| Footprint-clear and separate removal requests | MHD-R24/MHD-R22 |
-| Armor stat 31 replacement request | MHD-R25b |
-| Prepared resultFlags, hitClass, reservedCondition, flags and reductionScale; process/results requests | MHD-R26 |
+| Contact continue 1/removal 2, or fault | MHD-R01/MHD-R02/MHD-R09/MHD-R11b/MHD-R13 |
+| Saved last-target kind/id | MHD-R03b |
+| Pierce stat 328 replacement request | MHD-R04 |
+| Cooldown allocation; event 12, list state/callback, full attachment, active state requests; event 0 dispatch | MHD-R08 |
+| Hit/damage callback invocation and supplied mutations | MHD-R09/MHD-R11/MHD-R14 |
+| Zeroed and filled DamageRecord; physical/elements/lengths/drains/critical/bypass | MHD-R10 |
+| Missile seed updates from fill and knockback; creator/target dependency seed updates | MHD-R10/MHD-R12 |
+| Footprint-clear and separate removal requests | MHD-R13/MHD-R14 |
+| Armor stat 31 replacement request | MHD-R11c |
+| Prepared resultFlags, hitClass, reservedCondition, flags and reductionScale; process/results requests | MHD-R12 |
 
 Actual list/stat/map/registry lifecycle effects retain the named integration gates. Combat messages, resource writes and credited death belong to DPO/PVP/CSA/HRC.
 
@@ -187,20 +170,14 @@ A missing creator bypasses the contact hostility gate, disables pierce, makes To
 
 | Id | Status | Evidence that would settle it |
 |---|---|---|
-| **MHD-Q02** | reference | See [missile-damage-parameters](missile-damage-parameters.md) MDP-R06 for the Holy bypass mapping. |
-| **MHD-Q03** | reference | See [missile-damage-parameters](missile-damage-parameters.md) MDP-Q02. |
-| **MHD-Q04** | reference | See [missile-damage-parameters](missile-damage-parameters.md) MDP-R04 for builder selection. |
-| **MHD-Q05** | reference | See [missile-damage-parameters](missile-damage-parameters.md) MDP-Q04. |
-| **MHD-Q06** | reference | See [missile-damage-parameters](missile-damage-parameters.md) MDP-R10 for elemental routing. |
-| **MHD-Q07** | reference | See [missile-damage-parameters](missile-damage-parameters.md) MDP-Q06. |
-| **MHD-Q09** | outside-boundary | Named data rows selecting null slots and complete hit/damage callback bodies. Full table image proves which slots are null, not which prepared rows reach them. No local gate on supplied callback dispatch. |
-| **MHD-Q10** | outside-boundary | Establish actual callers of the separate no-target callback/removal entry; its supplied-entry sequence is verified. |
-| **MHD-Q11** | integration | Complete footprint shape/room map writes behind the clear request; no gate on its arguments/order or return 2. |
-| **MHD-Q13** | observation | Reproduce every verified behavioral rule's applicable assertions on an owned 1.13c game, including O01..O04; no gameplay observation occurred for this contract. |
-| **MHD-Q14** | outside-boundary | Full registered-unit creation/removal/chain lifecycle; no gate on supplied-chain lookup or supplied creator consumers. |
-| **MHD-Q15** | outside-boundary | Establish original prepared monster-type relation matrix and entries' producer correspondence; no gate on supplied relation/count physical arithmetic. |
-| **MHD-Q16** | integration | Complete replacing-stat lifecycle propagation for pierce and armor writes under NRF-Q20/STL-R06c. Request arithmetic is verified. |
-| **MHD-Q17** | integration | Complete cooldown list attachment, due-list freeing/callback and active/update propagation under STL-R05/STL-R06b/STL-R07. Ordered requests are verified. |
+| **MHD-Q01** | outside-boundary | Named data rows selecting null slots and complete hit/damage callback bodies. Full table image proves which slots are null, not which prepared rows reach them. No local gate on supplied callback dispatch. |
+| **MHD-Q02** | outside-boundary | Establish actual callers of the separate no-target callback/removal entry; its supplied-entry sequence is verified. |
+| **MHD-Q03** | integration | Complete footprint shape/room map writes behind the clear request; no gate on its arguments/order or return 2. |
+| **MHD-Q04** | observation | Reproduce every verified behavioral rule's applicable assertions on an owned 1.13c game, including O01..O04; no gameplay observation occurred for this contract. |
+| **MHD-Q05** | outside-boundary | Full registered-unit creation/removal/chain lifecycle; no gate on supplied-chain lookup or supplied creator consumers. |
+| **MHD-Q06** | outside-boundary | Establish original prepared monster-type relation matrix and entries' producer correspondence; no gate on supplied relation/count physical arithmetic. |
+| **MHD-Q07** | integration | Complete replacing-stat lifecycle propagation for pierce and armor writes under RLI-Q03/STL-R06c. Request arithmetic is verified. |
+| **MHD-Q08** | integration | Complete cooldown list attachment, due-list freeing/callback and active/update propagation under STL-R05/STL-R06b/STL-R07. Ordered requests are verified. |
 
 ## 8. Test vectors
 
@@ -208,14 +185,7 @@ A missing creator bypasses the contact hostility gate, disables pierce, makes To
 
 Defaults apply independently to each case: missile kind 3, valid supplied definition/class 0/count 1, associated missile data, owner-reference clear, absent target, no saved last target, contact selection 3, no flags or callback selectors, all stats absent/zero except listed overrides, force 0, no room, frame 1000. A present target is monster kind 1/id 7/class 5 unless overridden. Supplied stat reads return the named values under NRF's existing-array contract (definitions valid, no minimum clamp). Supplied writer logs and persists replacements within a case; actual writer integration is gated. Allocator success supplies an empty list; failure supplies absent. Supplied operations log their arguments and explicit mutations persist; output sequences assert ordered subsequences unless marked complete; ordinary definition lookup and stat/state reads are not logged unless named; all unspecified dependency operations return 0 without mutations/draws. An explicitly supplied hit result or block code is a stage input, not a random result. Unspecified seeds are unchanged; “no draw” counts only the stated stage and its supplied operations. Every vector has runtime_observed:no.
 
-- **MHD-V01**: see [MDP-V01](missile-damage-parameters.md).
-- **MHD-V02**: see [MDP-V02](missile-damage-parameters.md).
-- **MHD-V03**: see [MDP-V03](missile-damage-parameters.md).
-- **MHD-V04**: see [MDP-V04](missile-damage-parameters.md).
-- **MHD-V05**: see [MDP-V05](missile-damage-parameters.md).
-- **MHD-V06**: see [MDP-V06](missile-damage-parameters.md).
-- **MHD-V07**: see [MDP-V07](missile-damage-parameters.md).
-- **MHD-V08** No target/no stop (MHD-R13a/MHD-R14/MHD-R19/MHD-R24; boundary: supplied-input stage)
+- **MHD-V01** No target/no stop (MHD-R01a/MHD-R02/MHD-R07/MHD-R13; boundary: supplied-input stage)
   - (a)
     - Inputs: defaults: no target, force 0, Explosion=0, AlwaysExplode=0, CollideKill=0.
     - Seeds: no draw.
@@ -237,7 +207,7 @@ Defaults apply independently to each case: missile kind 3, valid supplied defini
   - Discriminates: final 1 rejects returning 2 merely because contact ran.
   - runtime_observed: no
 
-- **MHD-V09** Ordered exclusions (MHD-R15a/MHD-R15b/MHD-R15d; boundary: supplied-input stage)
+- **MHD-V02** Ordered exclusions (MHD-R03a/MHD-R03b/MHD-R03d; boundary: supplied-input stage)
   - (a)
     - Inputs: target monster id 7, NextHit=1, active 86=true, LastCollide=1, saved kind 0/id 9.
     - Seeds: no draw.
@@ -271,7 +241,7 @@ Defaults apply independently to each case: missile kind 3, valid supplied defini
   - Discriminates: case c rejects rolling back or postponing the saved-target write until relation acceptance; case d retains kind while clearing id, and e rejects ignoring CollideFriend.
   - runtime_observed: no
 
-- **MHD-V10** Pierce and final return (MHD-R16/MHD-R17/MHD-R24/MHD-R14; boundary: supplied-input stage)
+- **MHD-V03** Pierce and final return (MHD-R04/MHD-R05/MHD-R13/MHD-R02; boundary: supplied-input stage)
   - (a)
     - Inputs: target monster id 7; creator C present, supplied hostility true; owner 166=1; Pierce=1, CollideKill=1; missile 328=2; no callbacks, ToHit=0; room R,x=4,y=5,Size=2. Supplied writer persists; direct apply supplied as no-op for this contact-routing boundary.
     - Seeds: no draw.
@@ -293,7 +263,7 @@ Defaults apply independently to each case: missile kind 3, valid supplied defini
   - Discriminates: case a's final 1 rejects unconditional 2 after damage and rejects clearing the footprint before pierce suppression; c rejects testing counter>0 instead of counter!=0 and skipping the item-pierce fallback.
   - runtime_observed: no
 
-- **MHD-V11** Miss routing and absent attacker (MHD-R18/MHD-R20/MHD-R14; boundary: supplied-input stage)
+- **MHD-V04** Miss routing and absent attacker (MHD-R06/MHD-R08/MHD-R02; boundary: supplied-input stage)
   - (a)
     - Inputs: target monster id 7; owner absent; ToHit=1, missile 19=50; NextHit=1, NextDelay=10; allocator failure; event 0 supplied returns 99; AlwaysExplode=0, CollideKill=1.
     - Seeds: no draw.
@@ -315,7 +285,7 @@ Defaults apply independently to each case: missile kind 3, valid supplied defini
   - Discriminates: callback 4 changes the final result to 1; allocation failure still reaches event 0; no-owner hit roll does not borrow the missile seed.
   - runtime_observed: no
 
-- **MHD-V12** No-target force and selector bounds (MHD-R13a/MHD-R19/MHD-R21a; boundary: supplied-input stage)
+- **MHD-V05** No-target force and selector bounds (MHD-R01a/MHD-R07/MHD-R09a; boundary: supplied-input stage)
   - (a)
     - Inputs: target absent, force 1, hit selector 0, room absent, Explosion=0.
     - Seeds: no draw.
@@ -337,7 +307,7 @@ Defaults apply independently to each case: missile kind 3, valid supplied defini
   - Discriminates: force 1 reaches stop even with result 0; selector 71 is skipped rather than invoked; case c reaches the hit callback via AlwaysExplode with no target or cooldown allocation.
   - runtime_observed: no
 
-- **MHD-V13** Cooldown request ordering (MHD-R20/MHD-R15a; boundary: supplied-input stage)
+- **MHD-V06** Cooldown request ordering (MHD-R08/MHD-R03a; boundary: supplied-input stage)
   - (a)
     - Inputs: target monster id 7, NextHit=1, NextDelay=10, frame 1000; allocator succeeds with empty list L; supplied attachment/state operations persist membership 86; event 0 logs and returns 4; hit selector 1 callback observes membership 86 then returns 0.
     - Seeds: no draw.
@@ -348,7 +318,7 @@ Defaults apply independently to each case: missile kind 3, valid supplied defini
     - Inputs: fresh contact at frame 1005, target 7 with active 86=true, NextHit=1, NextDelay=10; existing supplied list expiry 1010.
     - Seeds: no draw.
     - Draws: none.
-    - Trace: R15a rejects before allocation/event.
+    - Trace: R03a rejects before allocation/event.
     - Outputs: return 1; no new request; supplied expiry/membership unchanged.
   - (c)
     - Inputs: cooldown stage only, target monster id 7, NextHit=1, NextDelay=0, frame 1000, successful empty list L.
@@ -359,7 +329,7 @@ Defaults apply independently to each case: missile kind 3, valid supplied defini
   - Discriminates: callback sees already requested state 86; list expiry 1000 differs from scheduler 1001 for zero delay. Actual expiry freeing is gated.
   - runtime_observed: no
 
-- **MHD-V14** Magic/cold seed order (MHD-R23b/MHD-R23f; boundary: isolated rule)
+- **MHD-V07** Magic/cold seed order (MHD-R10b/MHD-R10c; boundary: isolated rule)
   - (a)
     - Inputs: fill only; target absent; stats 52=256,53=512,54=100,55=300; all other pairs/masteries zero.
     - Seeds: missile {1,0x29A}.
@@ -375,7 +345,7 @@ Defaults apply independently to each case: missile kind 3, valid supplied defini
   - Discriminates: magic 735 rejects scaling the already rolled 351; ordered seed outputs reject cold-first evaluation.
   - runtime_observed: no
 
-- **MHD-V15** Poison divide/copies (MHD-R23c; boundary: isolated rule)
+- **MHD-V08** Poison divide/copies (MHD-R10d; boundary: isolated rule)
   - (a)
     - Inputs: fill only, stats 59=200,326=3,56=12,60=20,62=30,64=40,315=50,66=60.
     - Seeds: no draw.
@@ -397,7 +367,7 @@ Defaults apply independently to each case: missile kind 3, valid supplied defini
   - Discriminates: case c rejects floor division producing -4.
   - runtime_observed: no
 
-- **MHD-V16** Damage callback bounds and mutable record (MHD-R25a/MHD-R25c; boundary: supplied-input stage starting at damage fill after contact callbacks)
+- **MHD-V09** Damage callback bounds and mutable record (MHD-R11a/MHD-R11b; boundary: supplied-input stage starting at damage fill after contact callbacks)
   - (a)
     - Inputs: target monster 7, damage selector 0, physical pair 21=22=100; supplied direct hand-off logs record and changes nothing.
     - Seeds: no draw.
@@ -425,7 +395,7 @@ Defaults apply independently to each case: missile kind 3, valid supplied defini
   - Discriminates: case d rejects testing damage callback return 4 as abort and rejects passing a stale record copy; case b rejects null fallback.
   - runtime_observed: no
 
-- **MHD-V17** Armor request (MHD-R25b; boundary: supplied-input stage)
+- **MHD-V10** Armor request (MHD-R11c; boundary: supplied-input stage)
   - (a)
     - Inputs: armor stage after direct apply; target monster class 5, stat 31=100; missile 120=-30; supplied writer persists.
     - Seeds: no draw.
@@ -453,7 +423,7 @@ Defaults apply independently to each case: missile kind 3, valid supplied defini
   - Discriminates: case b rejects negative armor persistence; case c rejects applying to hirelings. Persisted effects outside the supplied writer are gated.
   - runtime_observed: no
 
-- **MHD-V18** Missing owner after fill (MHD-R26/MHD-R25b; boundary: supplied-input stage)
+- **MHD-V11** Missing owner after fill (MHD-R12/MHD-R11c; boundary: supplied-input stage)
   - Inputs: contact target monster class 5,armor 100; owner reference valid, registered chain empty at contact and direct apply; ToHit=0,damage selector 0; stats 21=22=100,120=-30,KnockBack=100; supplied stat writer persists.
   - Seeds: no draw.
   - Draws: none.
@@ -462,7 +432,7 @@ Defaults apply independently to each case: missile kind 3, valid supplied defini
   - Discriminates: armor request after no-owner apply rejects returning from the entire hand-off on owner loss. No whole-path immunity beyond these calls is implied.
   - runtime_observed: no
 
-- **MHD-V19** Fill boundaries, relation and critical (MHD-R23a/MHD-R23b/MHD-R23c/MHD-R23d/MHD-R23e/MHD-R23f; boundary: supplied-input stage)
+- **MHD-V12** Fill boundaries, relation and critical (MHD-R10a/MHD-R10b/MHD-R10d/MHD-R10e/MHD-R10f/MHD-R10c; boundary: supplied-input stage)
   - (a)
     - Inputs: fill only, target absent, every pair 21/22,48/49,52/53,50/51,54/55,57/58,316/317=1/101; incoming record all semantic fields 99; masteries/other stats 0.
     - Seeds: missile {1,0}.
@@ -520,7 +490,7 @@ Defaults apply independently to each case: missile kind 3, valid supplied defini
   - Discriminates: case a rejects element reordering and missed zeroing; b rejects equality matching, floor-before-bonus and new critical RNG; c rejects post-percent swapping; d rejects using widened product or NRF-R05's large-value branch; e/f reject omitted endpoint swap/min guards; g/h/i distinguish strict type bounds, the 128-entry cap and resolved-list eligibility.
   - runtime_observed: no
 
-- **MHD-V20** Hit result replacement/final dispatcher result (MHD-R14/MHD-R17/MHD-R21/MHD-R24; boundary: supplied-input stage)
+- **MHD-V13** Hit result replacement/final dispatcher result (MHD-R02/MHD-R05/MHD-R09/MHD-R13; boundary: supplied-input stage)
   - (a)
     - Inputs: target 7,CollideKill=1,hit selector 1; supplied hit callback returns 2; direct hand-off no-op; room R,x=4,y=5,Size=2.
     - Seeds: no draw.
@@ -548,7 +518,7 @@ Defaults apply independently to each case: missile kind 3, valid supplied defini
   - Discriminates: a rejects ORing returned 2 into initial 3; c rejects force overriding callback abort; d rejects null-as-no-handler.
   - runtime_observed: no
 
-- **MHD-V21** Shared direct-apply ordering (MHD-R25a/MHD-R26; boundary: supplied-input stage)
+- **MHD-V14** Shared direct-apply ordering (MHD-R11a/MHD-R12; boundary: supplied-input stage)
   - (a)
     - Inputs: direct apply only, owner reference valid/creator C found; target 7 state 54=false; definition GetHit=1,KnockBack=0,HitClass=3; incoming physical 100,resultFlags=8192,hitClass=32,reservedCondition=0,flags 0; source A/B=true; missile 327=7. Supplied block/avoid operation logs preset flags and returns 0; double logs record, sets physical 200; combat process logs then clears hit; result consumer logs without further mutation.
     - Seeds: no draw.
@@ -564,7 +534,7 @@ Defaults apply independently to each case: missile kind 3, valid supplied defini
   - Discriminates: a rejects results skipped after process clears hit or stale record copies; b rejects ORing block 16 after the soft rewrite and rejects clearing reservedCondition when class has no high-nibble bit.
   - runtime_observed: no
 
-- **MHD-V22** Separate no-target entry (MHD-R22; boundary: supplied-input stage)
+- **MHD-V15** Separate no-target entry (MHD-R14; boundary: supplied-input stage)
   - (a)
     - Inputs: valid missile definition,doCall=1,hit selector 1; supplied callback logs absent target and returns 4; removal logs request.
     - Seeds: no draw.
@@ -586,7 +556,7 @@ Defaults apply independently to each case: missile kind 3, valid supplied defini
   - Discriminates: actual final removal request rejects applying normal contact mask 4 semantics to this entry.
   - runtime_observed: no
 
-- **MHD-V23** Creator chain/filter (MHD-R13b/MHD-R15c; boundary: supplied-input stage)
+- **MHD-V16** Creator chain/filter (MHD-R01b/MHD-R03c; boundary: supplied-input stage)
   - (a)
     - Inputs: lookup only, game present,owner kind 1,id 130; selected bucket 2 chain[(id 2,A),(id 130,B),(id 130,C)].
     - Seeds: no draw.
@@ -636,24 +606,23 @@ Defaults apply independently to each case: missile kind 3, valid supplied defini
 
 No matching gameplay observation is recorded. Procedures and eligibility limits are in the [companion](../research/spec-evidence/missile-hit-and-damage-calculation.md#observation-procedures).
 
-- **MHD-O01** Measure the missile seed and filled damage for known positive ranged elements; expect physical/fire/magic/lightning/cold/poison/burn order and one step per positive wrapped range, under MHD-R23.
-- **MHD-O02** Follow a Pierce missile through aligned monsters; expect a stat 328 decrement request per eligible nonzero counter and continue 1 while stopMask=2, under MHD-R16/MHD-R24.
-- **MHD-O03** Observe a missile with nonzero stat 120 against an ordinary monster and a hireling; expect the ordinary monster's floored armor-write request and no such request for the latter, under MHD-R25b.
-- **MHD-O04** Remove a missile's creator during flight; expect no direct damage/results through MHD-R26 when lookup is absent. Armor requests and independent callback effects remain separate.
-- **MHD-O05**: see [MDP-O01](missile-damage-parameters.md).
+- **MHD-O01** Measure the missile seed and filled damage for known positive ranged elements; expect physical/fire/magic/lightning/cold/poison/burn order and one step per positive wrapped range, under MHD-R10.
+- **MHD-O02** Follow a Pierce missile through aligned monsters; expect a stat 328 decrement request per eligible nonzero counter and continue 1 while stopMask=2, under MHD-R04/MHD-R13.
+- **MHD-O03** Observe a missile with nonzero stat 120 against an ordinary monster and a hireling; expect the ordinary monster's floored armor-write request and no such request for the latter, under MHD-R11c.
+- **MHD-O04** Remove a missile's creator during flight; expect no direct damage/results through MHD-R12 when lookup is absent. Armor requests and independent callback effects remain separate.
 
 ## 9. Acceptance and dependencies
 
-Partial supplied-input acceptance requires MHD-V08..MHD-V23's verified assertions, covering MHD-R13..MHD-R26 and their labeled sub-rules. Fault assertions need a controlled semantic failure fixture, not a real invalid pointer. Supplied callbacks and persistent fixture writers verify local argument/order/return contracts only. No vector closes actual registry production, relation-matrix production, callback bodies/row bindings, footprint writes, stat propagation or cooldown expiry gates. Full reproduction additionally needs those owners' integrated evidence and matching applicable observations under MHD-Q13; a partial pass does not establish complete parity.
+Partial supplied-input acceptance requires MHD-V01..MHD-V16's verified assertions, covering MHD-R01..MHD-R14 and their labeled sub-rules. Fault assertions need a controlled semantic failure fixture, not a real invalid pointer. Supplied callbacks and persistent fixture writers verify local argument/order/return contracts only. No vector closes actual registry production, relation-matrix production, callback bodies/row bindings, footprint writes, stat propagation or cooldown expiry gates. Full reproduction additionally needs those owners' integrated evidence and matching applicable observations under MHD-Q04; a partial pass does not establish complete parity.
 
-**Depends on:** NRF-R01/R02/R05/R06a/R08a/R12a/R12b/R12c for RNG, wrapping/rounding, units and existing stat/state reads; GDF-R07/GDF-R11a/GDF-R12 for prepared missile fields and names; MDP-R08/MDP-R12 for creation critical and stored damage stats; MCI's owner/contact/pierce initialization contracts; PVP-R05a/PVP-R07 for supplied hostility/owner roles; SBA-R01 through SBA-R08/SBA-R14/SBA-R20 for hit and defender checks; KNB-R02a/KNB-R02b and HRC-R01b/HRC-R01c for reaction preparation; IEP-R07 for contact-event dispatch; STL-R01/STL-R06a/STL-R06b/STL-R07 for cooldown requests and their gates; DPO-R08d/DPO-R13/DPO-R22 and HRC's result consumer for direct process/results. Their integration gates remain in force.
+**Depends on:** NRF-R01/NRF-R02/NRF-R05/NRF-R06a/NRF-R08a/RLI-R03/RLI-R02a/RLI-R02b for RNG, wrapping/rounding, units and existing stat/state reads; GDA-R10/GDF-R02/GDF-R03 for prepared missile fields and names; MDP-R08/MDP-R12 for creation critical and stored damage stats; MCI's owner/contact/pierce initialization contracts; PVP-R05a/PVP-R07 for supplied hostility/owner roles; HIT-R01 through HIT-R08/SBA-R06/SBA-R11 for hit and defender checks; KNB-R02a/KNB-R02b and HRC-R01b/HRC-R01c for reaction preparation; IEP-R07 for contact-event dispatch; STL-R01/STL-R06a/STL-R06b/STL-R07 for cooldown requests and their gates; DPO-R08d/DPO-R13/DPO-R22 and HRC's result consumer for direct process/results. Their integration gates remain in force. Owners of the cited HIT, GDA, RLI ids: [combat-hit-roll](combat-hit-roll.md) (HIT); [core-game-data-table-records](core-game-data-table-records.md) (GDA); [core-record-layouts-and-ids](core-record-layouts-and-ids.md) (RLI).
 
 **Depended on by:** missile-movement-and-collision for contact return and no-target requests; Blade Sentinel/Fury for shared filling/cooldown; combat-knockback and combat-hit-recovery for incoming missile result preparation. DPO's separate queued reaction placement is not this spec's direct-contact execution.
 
 ## 10. Related specs
 
 - [missile-damage-parameters](missile-damage-parameters.md): creation-time damage values.
-- [missile-creation-and-initialization](missile-creation-and-initialization.md): creator/contact/counter initialization.
+- [missile-creation-and-seeding](missile-creation-and-seeding.md) and [missile-initialization-and-registry](missile-initialization-and-registry.md): creator/contact/counter initialization.
 - [missile-movement-and-collision](missile-movement-and-collision.md): contact trigger and caller return handling.
 - [skill-assassin-blade-sentinel-and-fury](skill-assassin-blade-sentinel-and-fury.md): shared base fill and cooldown.
 - [combat-damage-pipeline-order](combat-damage-pipeline-order.md): process/apply and monster double.

@@ -29,23 +29,23 @@ D2Common supplies stat/state reads and list/stat mutation. The mana operation it
 | unit, type, class identity, mode | Optional unit; i32 identities | Original type 0 player, 1 monster; player death modes 0/17, monster death modes 0/12 |
 | tickSuppressed | Boolean | Engine condition tested before type/mode; wider removal lifecycle PMR-Q09 |
 | frame, event arguments | i32 frame; two 32-bit values | Successor copies both arguments and uses wrapping frame+1 |
-| current mana | Stat 8 mana, layer 0; i32 8.8 | NRF-R12b/c getter result |
+| current mana | Stat 8 mana, layer 0; i32 8.8 | RLI-R02a/RLI-R02b getter result |
 | maximum mana | Stat 9 maxmana, layer 0; i32 8.8 | Guarded getter in PMR-R03 |
 | flat recovery | Stat 26 manarecovery, layer 0; i32 raw units/frame | Added after class/percent recovery, even under suppression |
 | percent recovery | Stat 27 manarecoverybonus, layer 0; i32 percent | Added to 100 with 32-bit wrap |
-| stat storage/definitions | NRF-R12b/c inputs | Existing own/resolved arrays, owner, count and selected ItemStatCost definitions; construction outside boundary |
-| normal recovery suppression | State 85 nomanaregen | NRF-R12a presence result |
-| potion list | State 106 manapot; attached logical lists | NRF-R12a primary-before-secondary lookup |
+| stat storage/definitions | RLI-R02a/RLI-R02b inputs | Existing own/resolved arrays, owner, count and selected ItemStatCost definitions; construction outside boundary |
+| normal recovery suppression | State 85 nomanaregen | RLI-R03 presence result |
+| potion list | State 106 manapot; attached logical lists | RLI-R03 primary-before-secondary lookup |
 | class collection/count | CharStats; signed count | Class identity selects a supplied available record |
-| ManaRegen | CharStats ManaRegen; u8 seconds | GDF-R03a prepared field; zero selects engine fallback |
+| ManaRegen | CharStats ManaRegen; u8 seconds | GDA-R06a prepared field; zero selects engine fallback |
 | life/stamina operations | Supplied operations | Log order; life result controls later calls; internals outside boundary |
 | schedule, detach, free, add-stat operations | Supplied operations | Request contracts are separate from integrated stored effects |
 
 | Mapping / constant | Origin | Binding |
 |---|---|---|
-| Stats 8, 9, 26, 27 | data/global/excel/itemstatcost.txt, Stat and explicit ID; GDF-R11 | Fixed original caller identities; definition values loaded from data |
-| States 85/106 | data/global/excel/states.txt, state and explicit id; GDF-R12 | Fixed original suppression/potion lookup identities |
-| Classes and ManaRegen | data/global/excel/charstats.txt, class/ManaRegen; GDF-R03a/b | Class index selects data; Expansion separator excluded |
+| Stats 8, 9, 26, 27 | data/global/excel/itemstatcost.txt, Stat and explicit ID; GDF-R02 | Fixed original caller identities; definition values loaded from data |
+| States 85/106 | data/global/excel/states.txt, state and explicit id; GDF-R03 | Fixed original suppression/potion lookup identities |
+| Classes and ManaRegen | data/global/excel/charstats.txt, class/ManaRegen; GDA-R06a/GDF-R01 | Class index selects data; Expansion separator excluded |
 | Event 3, death modes, factor 25, fallback 7500 | Engine code | Fixed by original code; custom binding is a separate capability |
 
 Named original-profile values used by vectors: CharStats.ManaRegen (Sorceress)=120 and CharStats.ManaRegen (Amazon)=120. [Table records](../research/spec-evidence/player-mana-regeneration.md#table-evidence) distinguish recorded original-profile support from a current effective-file reread and its limits.
@@ -77,7 +77,7 @@ after successor request:
 
 This owns request order. Supplied life/stamina effects do not verify those producers. Natural monster entry to this player handler is PMR-Q05.
 
-**PMR-R03** Read mana inputs [verified in 1.13c code (static)]. Null ManaTick unit returns without a read. Otherwise read current mana, guarded maximum mana, then state 85. Stat reads consume NRF-R12b/c, including conditional minimum replacement. The maximum getter returns 0 for null unit/list, definition count<=9 or absent selected definition; otherwise it reads stat 9 with the same reader. No independent maximum clamp occurs here.
+**PMR-R03** Read mana inputs [verified in 1.13c code (static)]. Null ManaTick unit returns without a read. Otherwise read current mana, guarded maximum mana, then state 85. Stat reads consume RLI-R02a/RLI-R02b, including conditional minimum replacement. The maximum getter returns 0 for null unit/list, definition count<=9 or absent selected definition; otherwise it reads stat 9 with the same reader. No independent maximum clamp occurs here.
 
 **PMR-R04** Class recovery [verified in 1.13c code (static)]. State 85 active gives base=0 and skips class selection and percent read. Otherwise:
 
@@ -97,7 +97,7 @@ Operand order is percent factor first/class base second. Early return skips flat
 
 **PMR-R05** Flat recovery [verified in 1.13c code (static)]. Read stat 26 and set regen=i32(base+flatRecovery). This still applies under state 85; negative results can request a drain.
 
-**PMR-R06a** Full-mana cleanup requests [verified in 1.13c code (static)]. When maximumMana<=currentMana and regen>0, lookup the state 106 list through NRF-R12a. If L exists request Detach(unit, L), then Free(L). Continue clamping with the current/maximum values captured in PMR-R03. Otherwise skip lookup or cleanup as appropriate.
+**PMR-R06a** Full-mana cleanup requests [verified in 1.13c code (static)]. When maximumMana<=currentMana and regen>0, lookup the state 106 list through RLI-R03. If L exists request Detach(unit, L), then Free(L). Continue clamping with the current/maximum values captured in PMR-R03. Otherwise skip lookup or cleanup as appropriate.
 
 **PMR-R06b** Cleanup effects [unresolved]. Actual contribution removal, callbacks, list lifetime and state 106 membership require the owning lifecycle effects. STL-R05 and PMR-Q03 gate these, independently of verified request condition/order.
 
@@ -331,14 +331,14 @@ Dependencies log ordered requests. A synthetic AddStat also adds the requested d
 
 Verified supplied-input acceptance: PMR-R01a, PMR-R02a/b, PMR-R03, PMR-R04, PMR-R05, PMR-R06a, PMR-R07a and their executable assertions in PMR-V01..PMR-V16. Synthetic balances/cleanup effects do not establish integrated parity. PMR-R01b, PMR-R06b and PMR-R07b require explicit gates resolved for full reproduction. PMR-O01..PMR-O03 define remaining observation scope.
 
-Consumed contracts: NRF-R01/R05/R08a/R09a arithmetic, units and frames; NRF-R12a/b/c state/list/stat reads; GDF-R03a/b, GDF-R11, GDF-R12, GDF-R14/GDF-R15 identities/fields; STL-R01/STL-R02 timer operations and STL-R05 lifecycle effects with their gates. Life/stamina internals are supplied at the handler boundary.
+Consumed contracts: NRF-R01/R05/R08a/R09a arithmetic, units and frames; RLI-R03/RLI-R02a/RLI-R02b state/list/stat reads; GDA-R06a/GDF-R01, GDF-R02, GDF-R03, GDF-R05/GDF-R06 identities/fields; STL-R01/STL-R02 timer operations and STL-R05 lifecycle effects with their gates. Life/stamina internals are supplied at the handler boundary. Owners of the cited GDA, RLI ids: [core-game-data-table-records](core-game-data-table-records.md) (GDA); [core-record-layouts-and-ids](core-record-layouts-and-ids.md) (RLI).
 
 Reverse consumers: regeneration, consumables and mana-spending behaviors can consume the tick. Shared caller relationships do not alone impose plan prerequisites.
 
 ## 10. Related specs
 
 - [Numeric and RNG foundations](core-numeric-and-rng-foundations.md), [Game-data fields](core-game-data-fields.md), [Timed-state lifecycle](state-timed-state-lifecycle.md): consumed contracts.
-- [Running stamina drain](player-stamina-drain-while-running.md), [Leech and drain](combat-leech-and-status-effects.md), [Status application](combat-status-application.md): related resource behaviors.
+- [Running stamina drain](player-stamina-drain-while-running.md), [Leech and drain](combat-leech-and-drain.md), [Status application](combat-status-application.md): related resource behaviors.
 - [Coverage](coverage.md): frame/event queues, life/stamina regeneration, consumables and mana-spending candidates.
 
 ## Appendix A. Provenance

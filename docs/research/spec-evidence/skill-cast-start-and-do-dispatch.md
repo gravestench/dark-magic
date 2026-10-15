@@ -15,7 +15,7 @@ On 2026-10-15 missing paths were checked against available byte-matching coverag
 
 | Artifact | RVA / export | Analyst description | Rules | Method, date and established boundary |
 |---|---|---|---|---|
-| LOD113C-D2GAME | 0x78550; mode table RVA 0xFA3F8 | Mode dispatcher | SCD-R01/SCD-R02 | Original table/decompile reading 2026-10-12; mode-table linkage to entry handlers. Mode setting consumes NRF-R14a; other preparation effects remain gated |
+| LOD113C-D2GAME | 0x78550; mode table RVA 0xFA3F8 | Mode dispatcher | SCD-R01/SCD-R02 | Original table/decompile reading 2026-10-12; mode-table linkage to entry handlers. Mode setting consumes RLI-R04a; other preparation effects remain gated |
 | LOD113C-D2GAME | 0x787C0, 0x78840 | Unit-target/point-target skill mode entry | SCD-R01 | Instruction reading 2026-10-12; complete plain-instruction caller recheck 2026-10-15 corrects route-specific target/entry/mode order and fatal-target boundary; latch/validator behavior retained |
 | LOD113C-D2GAME | 0xDA750 | Entry-preparation request target | SCD-R01/SCD-Q10 | Located from both entry calls and instructions inspected 2026-10-15; encoded helper spans, imported operations and actual effects remain unverified. No cleanup meaning is adopted from the analyst label |
 | LOD113C-D2GAME | 0xA0830 | Start validator | SCD-R02 | Instructions 2026-10-12, decision-span image corroboration 2026-10-15: current skill, target check, level/charge override, identity, party/town gates, start and player-reset branch |
@@ -62,7 +62,7 @@ Original 2026-10-12 import resolution used the D2Game import slots and correspon
 | Calculation front end | 10786 | 0x51BF0 | SCD-R08/SCD-R11; SCX-R11 supplies its separate contract |
 | Room / town test | 10331 / 10057 | 0x2FE10 / 0x3C390 | SCD-R03/SCD-R06 |
 | Line test | 10479 | 0x4F160 | SCD-R04; actual execution SCD-Q10 |
-| Mode set | 11090 | 0x33920 | SCD-R01, NRF-R14a |
+| Mode set | 11090 | 0x33920 | SCD-R01, RLI-R04a |
 | Store frame-event argument | 10542 | 0x2F0C0 | SCD-R09a |
 | Set target point | 10286 | 0x349D0 | SCD-R01; imported target resolved 2026-10-15 and valid-input branch read through byte-equivalent C reconstruction |
 | Set selected target unit | 11129 | 0x30E80 | SCD-R01; imported target resolved 2026-10-15 and valid-input branch read through byte-equivalent C reconstruction |
@@ -82,7 +82,7 @@ The behavioral contract uses logical fields; these original layouts only permit 
 | Base level/charge marker/count | node +0x28/+0x34/+0x38 | SCD-R02 |
 | Do-handled latch | Unit +0xC4 bit 6 | SCD-R01/SCD-R07/SCD-R09 |
 | Sequence-event value | Unit +0x38 bits 8–31 | SCD-R08/SCD-R09a |
-| Completion condition | Unit +0xC6 bit 0 | SCD-R09a |
+| `aliveExclusionCondition` | Unit +0xC6 bit 0 | SCD-R09a |
 | Game frame/pending events | Game +0xA8 / Unit +0xDC | SCD-R11 |
 | Start/action/progression selectors | Skills +0x2C/+0x2E/+0x30..0x34 | SCD-R05a/SCD-R06/SCD-R14b |
 | Animation/missile/period | Skills +0x10/+0x46/+0x128 | SCD-R07/SCD-R08/SCD-R11 |
@@ -113,7 +113,7 @@ SCD-Q06: 0x9EC80 checks positive charged count, otherwise derives a mana compari
 
 SCD-Q09: 0xA1E80 has distinct carried-id -1 and positive skill branches, current-skill/state/stat-list checks and event-removal paths. 0x91B70 has progression charge-state selection and seed operations around direct action-table calls, while 0x9E8E0 selects an active-state callback. Reading their local table calls does not verify all progression/aura eligibility. These remain asm-only with exact gates rather than overclaiming repeat gameplay. The scheduler's separate repeat-kind input is now stated and discriminated by SCD-V15; the ordinary-kind outputs in SCD-V05 are unchanged.
 
-SCD-Q10: 0xA1880/0xA28F0 can return 0 before 0x6F930 when target coordinates cannot resolve, and can perform optional quantity eligibility checks. **Correction:** a valid srvmissile branch sets latch/result=1 even when the request builder returns 0. SCD-V13 now separates that verified decision from actual creation. SCD-V10 retains game seed {1,0x29A} → {0x6AC6935F,0}, with successful creation-seeding entry and no later draws explicitly supplied. NRF-R17a verifies seeding rather than the complete creator; the [missile creation contract](../../specs/missile-creation-and-initialization.md) owns core request validation/creation and retains its own gates. SCD-V09 supplies a creator result rather than claiming real creation has no seed draw.
+SCD-Q10: 0xA1880/0xA28F0 can return 0 before 0x6F930 when target coordinates cannot resolve, and can perform optional quantity eligibility checks. **Correction:** a valid srvmissile branch sets latch/result=1 even when the request builder returns 0. SCD-V13 now separates that verified decision from actual creation. SCD-V10 retains game seed {1,0x29A} → {0x6AC6935F,0}, with successful creation-seeding entry and no later draws explicitly supplied. NRF-R12a verifies seeding rather than the complete creator; the [missile creation contract](../../specs/missile-creation-and-seeding.md) owns core request validation/creation and retains its own gates. SCD-V09 supplies a creator result rather than claiming real creation has no seed draw.
 
 The mana helper 0x9F850 distinguishes current charged skill from ordinary deduction; quantity helper 0xA1790 inspects weapons/items and delegates quantity updates; delay 0x9FF70 interacts with state/stat-list/event operations. None is established by the dispatcher's request alone. Local call timing and argument lists remain verified with supplied operations; actual resource writes and complete draw sequences stay open. Preparation/reset/event-storage calls likewise require contracts rather than silently treated no-ops.
 
@@ -167,7 +167,7 @@ The fresh full reader used the behavioral spec and its cited dependency contract
 | COVERAGE: SCD-R11 negative/overflowing frame arithmetic | Spec edit: V15(b) gives frame -10 → numerator -3 → quotient 0 → due 1; V15(c) gives frame 2147483647 → wrapped numerator -2147483642 → quotient -268435455 → due -2147483639. Actual event storage with unusual due frames remains SCD-Q10 |
 | COVERAGE: SCD-R13 failed creator without seed step | Spec edit: V13 supplies a failed, draw-free creator and explicitly asserts unchanged game seed {1,0x29A}. This discriminates direct dispatcher draws without asserting complete creator eligibility/draw behavior; that integration remains gated |
 | COVERAGE: SCD-R14a in-range null/index 0 | No change: V16 distinguishes direct invocation from the full dispatcher and tests the no-call outcome at invalid index 191. The known null slot 0 uses the same no-callback/no-effect outcome; exhaustive table-slot fixtures are advisory |
-| COVERAGE: repeated SCD-R05a/SCD-R11 start/record bounds | No change beyond V17(d)/(e): start-index rejection is now discriminated. Record bounds are explicit and use GDF-R08a; repeating the same invalid-record/no-scheduling outcome does not establish a new mechanism |
+| COVERAGE: repeated SCD-R05a/SCD-R11 start/record bounds | No change beyond V17(d)/(e): start-index rejection is now discriminated. Record bounds are explicit and use GDA-R11a; repeating the same invalid-record/no-scheduling outcome does not establish a new mechanism |
 
 ### Existing gate outcomes
 
@@ -213,7 +213,7 @@ The second fresh full reader recomputed all 18 vector identities/cases using the
 | COVERAGE: SCD-R06 missing/nonpositive owned skill and town reset | No change: R06 explicitly orders lookup/level/town decisions; V12(f) discriminates fallback lookup and V18(b) other-kind bypass. Zero/no-action and clear-skill/player-reset recipes are already represented by V12 and V06; actual level/room producers remain SCD-Q10 |
 | COVERAGE: SCD-R07 target point sourced from a unit target | No change: dispatcher consumes a supplied resolved point, whose displacement/extrapolation/failure results are discriminated by V13. Actual unit-target-to-point resolution is the SCD-Q10 dependency, not a new local coordinate formula |
 | COVERAGE: SCD-R10 no executable vector | No change: asm-only actual caller eligibility is already gated by SCD-Q04; no guessed executable fixture added |
-| COVERAGE: SCD-R11 invalid skill identity/record | No change: explicit zero/no-evaluation/no-replacement result consumes GDF-R08a record validity; V05(d) already discriminates the no-scheduling recipe. No duplicate record-bound fixtures added |
+| COVERAGE: SCD-R11 invalid skill identity/record | No change: explicit zero/no-evaluation/no-replacement result consumes GDA-R11a record validity; V05(d) already discriminates the no-scheduling recipe. No duplicate record-bound fixtures added |
 | COVERAGE: SCD-R14a in-range null slot | No change: known original slot 0 is null; its no-call/no-effect result is the same result recipe in V16(b). Populated call versus full dispatch is distinguished by V16(a) |
 | COVERAGE: SCD-R14b no executable vector | No change: progression/active-state eligibility remains asm-only under SCD-Q09; no guessed vector added |
 | COVERAGE: SCD-R15 no executable vector | No change: networking/range/mode execution remains asm-only under SCD-Q02/SCD-Q07; no guessed vector added |
@@ -322,7 +322,7 @@ The fourth fresh full reader recomputed all 18 vector families and cases. It ret
 
 | Finding | Outcome |
 |---|---|
-| MISMATCH: V09(a) claimed a created missile with no seed step | Spec edit: its declared successful creation-seeding entry now consumes NRF-R17a, with initial game seed {1,666}, one game step to {0x6AC6935F,0}, and supplied missile seed {0x6AC6935F,666}. No later initialization draws are supplied. The prior draw-free creator fixture did not exercise the cited successful-seeding contract. Mana 2560, mode 10, one missile, latch true and action counts remain unchanged. The exact producer-entry eligibility and full initialization remain Q10; this is not a gameplay observation |
+| MISMATCH: V09(a) claimed a created missile with no seed step | Spec edit: its declared successful creation-seeding entry now consumes NRF-R12a, with initial game seed {1,666}, one game step to {0x6AC6935F,0}, and supplied missile seed {0x6AC6935F,666}. No later initialization draws are supplied. The prior draw-free creator fixture did not exercise the cited successful-seeding contract. Mana 2560, mode 10, one missile, latch true and action counts remain unchanged. The exact producer-entry eligibility and full initialization remain Q10; this is not a gameplay observation |
 | GAP: section 5 omitted return outputs | Spec edit: the output inventory now names start/action/validator, frame-handler and scheduler returns and their owning rules. Those returns were already explicit in the rules and vectors; no new return behavior is inferred |
 | GATED: Q01–Q07 and Q09–Q12 | No change: retain each existing question and its exact blocked producer/integration/observation boundary in the gap file |
 | GATED: R09c/R10/R14b/R15 | No change: retain the documented animation, caller, progression/state and command boundaries |
@@ -350,7 +350,7 @@ The fourth fresh full reader recomputed all 18 vector families and cases. It ret
 | R06 with V08/V12/V18 control/ownership/unit kinds | No change: ordered rules and exact callback/resource logs already separate these decisions; actual producers retain named gates |
 | R09a/R09b with V14 exceptional route and ignored zero | No change: V14 executes the local null-slot action dispatcher and requires scheduling after its computed zero result; no same-spec no-effect substitute remains |
 
-Root self-review recomputed the one creation step from game {1,666}: low=0x6AC690C5+666=0x6AC6935F, high=0; NRF-R17a initializes missile {low,666}. Cases V09(b–d) create no missile and make no seed step. Section 5 now inventories the existing numeric returns. No rule behavior, label or gate was promoted by this correction; the added fixture seed assertion still requires the fresh full review recorded next.
+Root self-review recomputed the one creation step from game {1,666}: low=0x6AC690C5+666=0x6AC6935F, high=0; NRF-R12a initializes missile {low,666}. Cases V09(b–d) create no missile and make no seed step. Section 5 now inventories the existing numeric returns. No rule behavior, label or gate was promoted by this correction; the added fixture seed assertion still requires the fresh full review recorded next.
 
 ## Full blind-implementer reader 5 and triage
 
@@ -593,15 +593,15 @@ These rule clarifications and new vector cases require fresh full reader 10, the
 | Finding | Outcome |
 |---|---|
 | GUESS: V06(a) exact log omits clear current skill (V06(c)/V17(b) log it) | Open: add the clear request to V06(a)'s exact log |
-| GUESS: equal-mode mode change in V09 | No change: the supplied mode-setting operation logs and persists the requested mode; NRF-R14a owns setter internals |
+| GUESS: equal-mode mode change in V09 | No change: the supplied mode-setting operation logs and persists the requested mode; RLI-R04a owns setter internals |
 | GUESS: frame-finished predicate supplied or computed | No change: R09a names it a supplied predicate; its internal tests are SCD-Q01/SCD-Q10 |
 | GUESS: low-24-bit narrowing zero- or sign-extended | Open: state unsigned low 24 bits and add a bit-23 case after checking the D2Common #10542 store |
 | GUESS: action-dispatch tuple field order | Open (wording): name the tuple as (id, level, consume, forced, itemTarget) |
 | GUESS: delay/perdelay request with an empty expression reference | Open (wording): the dispatcher always issues the front-end request (0xA1CA8 and 0x9F406 call it unconditionally); SCX-R11 then decides evaluation internally. State that vectors log the front-end request |
 | GUESS: "differs from unit" comparison | Open (wording): the validator compares unit object identity (0xA0830); say so |
-| GAP: Skills/Missiles columns cited to GDF-R07/GDF-R08a not listed there | Open, owned by core-game-data-fields: its schema rows need those columns, or this spec must cite the owning rule |
-| GAP: perdelay/delay pool in SCX | Open, owned by skill-calc-expressions-and-synergies |
-| GAP: reset force=1 not in NRF-R14a | Open: name the force argument's meaning or cite the owning mode-setting contract |
+| GAP: Skills/Missiles columns cited to GDA-R10/GDA-R11a not listed there | Open, owned by core-game-data-fields: its schema rows need those columns, or this spec must cite the owning rule |
+| GAP: perdelay/delay pool in SCX | Open, owned by skill-calc-expressions |
+| GAP: reset force=1 not in RLI-R04a | Open: name the force argument's meaning or cite the owning mode-setting contract |
 | GAP: unspecified arguments for activation, predicates, completion, collision, creator | No change: supplied decisions or requests whose actual contracts are SCD-Q01/SCD-Q06/SCD-Q10 and the missile-creation contract |
 | GAP: no unit id in defaults | No change: "the unit itself" is object identity (see GUESS above) |
 | GAP: V02 start path | Open (wording): state direct start |
@@ -626,9 +626,9 @@ Lint after recording: 0 errors.
 | GUESS: action-dispatch tuple order | Spec edit (wording): preamble names (id, level, consume, forced, itemTarget) |
 | GUESS: delay/perdelay request with empty reference | Spec edit (wording): 0xA19A0 and 0x9F3B0 call #10786 unconditionally on the stated paths; #10786 is D2Common 0x51BF0, the SCX-R11 skill-pool front end per the expression companion. Section 3 states the request and that an empty reference yields 0 inside SCX-R11. This also settles the reader-10 SCX pool GAP |
 | GUESS: "differs from unit" | Spec edit (wording): the validator compares the target pointer with the unit pointer (`cmp eax, esi`); R02 says object identity |
-| GAP: columns cited to GDF-R07/GDF-R08a that those rules do not list | New open question SCD-Q13 (outside-boundary, owner core-game-data-fields). The instructions settle this spec's consumer read widths (srvmissile signed 16-bit at Skills +0x46, anim u8 +0x10, lineofsight u8 +0x18F, perdelay/delay 32-bit references +0x128/+0x190, Missiles Param2/sHitPar1 32-bit +0x3C/+0x4C) but not the loader schema, which this spec may not edit. Section 3 now cites GDF-R08a/GDF-R13 only for columns they list. No local rule or vector is gated |
+| GAP: columns cited to GDA-R10/GDA-R11a that those rules do not list | New open question SCD-Q13 (outside-boundary, owner core-game-data-fields). The instructions settle this spec's consumer read widths (srvmissile signed 16-bit at Skills +0x46, anim u8 +0x10, lineofsight u8 +0x18F, perdelay/delay 32-bit references +0x128/+0x190, Missiles Param2/sHitPar1 32-bit +0x3C/+0x4C) but not the loader schema, which this spec may not edit. Section 3 now cites GDA-R11a/GDA-R13 only for columns they list. No local rule or vector is gated |
 | GAP: perdelay/delay pool in SCX | Resolved with the front-end wording above |
-| GAP: reset force=1 not in NRF-R14a | Spec edit: the reset is a call to D2Game 0x78550 with (game,unit,skill=none,mode 5,0,0,force 1). In 0x78550 a nonzero last argument skips the call to 0x77FA0, a mode-change acceptance check, before the mode handler runs; the earlier 0x78340 check runs regardless. R02 now names the force control by that effect; actual mode-change execution stays SCD-Q10. No meaning is adopted from the 0x77FA0 label |
+| GAP: reset force=1 not in RLI-R04a | Spec edit: the reset is a call to D2Game 0x78550 with (game,unit,skill=none,mode 5,0,0,force 1). In 0x78550 a nonzero last argument skips the call to 0x77FA0, a mode-change acceptance check, before the mode handler runs; the earlier 0x78340 check runs regardless. R02 now names the force control by that effect; actual mode-change execution stays SCD-Q10. No meaning is adopted from the 0x77FA0 label |
 | GAP: V02 start path | Spec edit (wording): direct start dispatch with force=0 |
 | GAP: fatal outcome and creator-observed latch missing from section 5 | Spec edit: two section 5 rows added |
 | DISCRIM: marker -1 with charges 0 | Spec edit: V12(s). #10537 returns 0 without writing outputs when the node marker is -1, so the charges test is skipped (0xA0894..0xA08C7 span) |
@@ -668,7 +668,7 @@ The R02 force wording, the 24-bit format and the section 3 ownership citations c
 | GUESS: R09b two level requests | Spec edit (wording): R09b's request is separate from R06's |
 | GUESS: V13(c) i32 position | No change: section 3 gives i32 position requests and V13 already limits extreme values to the supplied arithmetic boundary; producers SCD-Q10 |
 | GUESS: V12(k)/(m) object identity | Spec edit: default player id 1 and V12(v) |
-| GUESS: R02 absent record for in-range id | Spec edit (wording): GDF-R08a gives every in-range identity a record; TargetAlly/InTown are read only after the identity check |
+| GUESS: R02 absent record for in-range id | Spec edit (wording): GDA-R11a gives every in-range identity a record; TargetAlly/InTown are read only after the identity check |
 | GUESS: R01 pending-event removal scope | No change: supplied log-only request, SCD-Q10 |
 | GAP: unspecified dependency argument lists, activation level | No change: supplied decisions/requests; actual contracts SCD-Q01/SCD-Q06/SCD-Q10 and missile creation |
 | GAP: pending-event removal/mode-state reset scope | No change: SCD-Q10 |
@@ -704,17 +704,17 @@ R03/R06/R11 wording and the added cases change stated behavior and acceptance as
 |---|---|
 | GUESS: V06 "town room" | Spec edit: defined as a present room whose town test returns true |
 | GUESS: node holding A/B | Spec edit: section 3 says current skill node (both 0xA19A0 and 0x79170 read the current skill's flags) |
-| GUESS: seeder source | No change: NRF-R17a owns seeding; V09/V10 state the game-seed step |
+| GUESS: seeder source | No change: NRF-R12a owns seeding; V09/V10 state the game-seed step |
 | GUESS: completion owner | No change: R09a already says return 2 makes the dispatcher request completion; vectors include it in the frame stage |
 | GUESS: find owned skill inputs | Spec edit: section 3 operations row |
 | GUESS: entry mode request versus reset | Spec edit: R02 says they are different operations (#11090 versus the 0x78550 mode-change dispatcher) |
-| GUESS: action record presence | Spec edit: R06 cites GDF-R08a |
+| GUESS: action record presence | Spec edit: R06 cites GDA-R11a |
 | GUESS: R09b level argument | Spec edit: V14(k) logs level(current node,bonus=true) by the frame action (push 1 before the 0xA2060 level call) |
 | GAP: activation/creator/collision/town/find/predicate/completion arguments and returns | Spec edit: section 3 operations row names the asserted inputs and results; remaining arguments stay SCD-Q06/SCD-Q10 and the missile-creation contract |
 | GAP: missile record input | Spec edit: in the operations row |
 | GAP: pending-event removal scope | No change: SCD-Q10 |
 | GAP: collision extra arguments | No change beyond the operations row: SCD-Q10 |
-| GAP: NRF-R14a versus reset | Spec edit: as GUESS above |
+| GAP: RLI-R04a versus reset | Spec edit: as GUESS above |
 | GAP: request returns | Spec edit: defaults give 0 and say no rule consults them; V13(m) |
 | GAP: malformed reads | No change: SCD-Q05 |
 | GAP: other modes/kinds in R09a | No change: R09a has no mode or kind branch; actual roots SCD-Q04 |
@@ -773,7 +773,7 @@ Added cases and section 3 statements require another full run.
 | GUESS: R01 mode filter | No change: R01 is reached through the mode table for the listed modes and makes no local mode test |
 | GUESS: R09a mode filter, once per event | No change: R09a has no mode test and runs once per delivered event |
 | GAP: request argument lists, creator inputs, event-operation signatures | No change: section 3 operations row and rules give the asserted inputs; the rest are SCD-Q01/SCD-Q06/SCD-Q10 and the missile-creation contract |
-| GAP: "an in-range identity has a record, GDF-R08a" in R02/R06 | **Open.** GDF-V06 supplies an in-range absent record, so the citation overstates GDF-R08a. The validator and action dispatcher test the identity range and then a computed record address that is nonzero whenever the table exists (0xA0830 and 0xA19A0 `add; je`). Needs a wording correction in R02/R06 (range test only; record presence for an in-range identity is not separately tested) and a fresh reader |
+| GAP: "an in-range identity has a record, GDA-R11a" in R02/R06 | **Open.** GDA-V14 supplies an in-range absent record, so the citation overstates GDA-R11a. The validator and action dispatcher test the identity range and then a computed record address that is nonzero whenever the table exists (0xA0830 and 0xA19A0 `add; je`). Needs a wording correction in R02/R06 (range test only; record presence for an in-range identity is not separately tested) and a fresh reader |
 | GAP: mana cost/quantity fixture values, target-refresh per-case effects, fatal harness form, malformed start read, absent-room town default, unit-kind grouping, sequence-event storage | No change: declared fixtures, R01 fatal outcome, SCD-Q05, V06(d)/(e) state the absent-room results, section 3 unit-kind row and event row |
 | GAP: SCD-Q13 schema | No change: declared outside-boundary question |
 | DISCRIM: mana positional argument order | No change: arguments are named semantic values; positional order is a calling convention (same outcome as reader 8) |

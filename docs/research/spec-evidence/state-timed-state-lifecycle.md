@@ -18,8 +18,8 @@ newly asserted by this migration.
 The boundary review found that complete free/attach/stat propagation was not established by
 the earlier caller-level readings. STL-R05, STL-R06b and STL-R06c therefore remain gated in
 the current contract; ordered traversal requests do not establish their stored effects.
-The foundations contract's NRF-Q17/NRF-Q20 and status application's integration gaps agree
-with this distinction. Compatible lookup/state guards are reused from NRF-R12a rather than
+The foundations contract's RLI-Q02/RLI-Q03 and status application's integration gaps agree
+with this distinction. Compatible lookup/state guards are reused from RLI-R03 rather than
 reconstructed from an incomplete lifecycle summary.
 
 ## Function references
@@ -34,12 +34,12 @@ reconstructed from an incomplete lifecycle summary.
 | LOD113C-D2COMMON | 0x38100 | 11013 | Allocate initialized effect list | STL-R06a | 2026-10-12 reconstruction checked against original bytes |
 | LOD113C-D2COMMON | 0x38060, 0x37D70 | 10785, 10911 | State/callback setters | STL-R06a | 2026-10-12 reconstruction checked against original bytes |
 | LOD113C-D2COMMON | 0x38020, 0x38380, 0x38000 | 10161, 11043, 10412 | Expiry setters/getter | STL-R06a | 2026-10-12 reconstruction checked against original bytes; positive expiry adds timed, zero/negative does not clear |
-| LOD113C-D2COMMON | 0x38520, 0x37F80 | 10871 | State-list lookup | STL-R06a | 2026-10-12 reading; exact guards/range behavior consumed from NRF-R12a |
+| LOD113C-D2COMMON | 0x38520, 0x37F80 | 10871 | State-list lookup | STL-R06a | 2026-10-12 reading; exact guards/range behavior consumed from RLI-R03 |
 | LOD113C-D2COMMON | 0x3A7D0 | 10807 | Attach list | STL-R06b | 2026-10-12 decompiler lead; 2026-10-14 disassembly inspected; multiple propagation and extended-list branches remain gated |
 | LOD113C-D2COMMON | 0x3A280 | 10261 | Replace list stat | STL-R06c | 2026-10-14 full disassembly: entry search/insert/remove helpers, delta propagation and special send-list handling still need complete contracts |
 | LOD113C-D2COMMON | 0x34510, 0x38730 | 10945 | Set active/changed state | STL-R07, STL-R07a | 2026-10-12 bit-write reading; 2026-10-14 original-image decode checks byte-only tail; disguise helper still open |
-| LOD113C-D2COMMON | 0x34450 | 11039 | Force changed-state membership | STL-R08 | 2026-10-14 full disassembly, no undecoded behavioral bytes; update mark crosses to NRF-Q17 |
-| LOD113C-D2COMMON | 0x665C0 | none | Mark unit for update | STL-R07, STL-R08 | Call identified; room queue effects remain NRF-Q17, not established by bit writes |
+| LOD113C-D2COMMON | 0x34450 | 11039 | Force changed-state membership | STL-R08 | 2026-10-14 full disassembly, no undecoded behavioral bytes; update mark crosses to RLI-Q02 |
+| LOD113C-D2COMMON | 0x665C0 | none | Mark unit for update | STL-R07, STL-R08 | Call identified; room queue effects remain RLI-Q02, not established by bit writes |
 | LOD113C-D2GAME | 0xDC780, 0xDDAC0, 0xDCC20, 0xDCAB0, 0xDC940 | none | Cold/freeze/stun/poison/burn appliers | STL-R09 | Compatible 2026-10-12 and cited CSA/MMF policy records; not new applier verification |
 | LOD113C-D2GAME | 0x29240 | none | Timed skill-state application | STL-R10a | 2026-10-12 disassembly, ordered calls; supplied dependency boundary |
 | LOD113C-D2COMMON | 0x51BF0, 0x52AE0, 0x33110 | 10786, 10418, 10819 | Expression front end, passive refresh, animation refresh | STL-R10a, STL-R11 | SCX-R11 supplies expression result; complete refresh effects remain integration gaps |
@@ -90,7 +90,7 @@ than that retained record; isolated traversal/request fixtures do not establish 
 Original internal encodings are investigation metadata, not required storage layouts:
 list flags value 2 means timed, value 4 mode-bound,0x2000 secondary,0x40000000 filtered apply,
 and 0x80000000 extended/state-storage. Death exemption tests mask 0x181. Unit byte+0xC6
-bit 0 is the neutral expiryDeathCondition; unit+0xC8 bit 3 is the disguise condition. State
+bit 0 is the neutral aliveExclusionCondition; unit+0xC8 bit 3 is the disguise condition. State
 storage's active half precedes the changed half by ceil(stateCount/32) words. The unit's
 primary/secondary list heads are extended-list+0x3C/+0x40; auxiliary effect is unit+0xA4.
 
@@ -202,7 +202,7 @@ claimed for changed gates or acceptance. Open evidence is in the [gap file](../.
 
 ### Completed original-image partition check, 2026-10-14
 
-D2Common+0x34150 was independently decoded from the hash-matched original image for all 384 bytes. Entry guards, player/monster/boss mask selection, changed-before-active writes and all exits were read. Its only behavioral callee is update marking+0x665C0, consumed through NRF-Q17. STL-R13b is now verified for supplied masks; STL-V14 discriminates the three selections and changed-bit preservation. Definition-to-mask production remains STL-R12b, so this adds no archive/compiled-table claim. The disguise+0x38730 check decoded 288/288 bytes but its remaining-mask helper is still unread; only decoding uncertainty closed there.
+D2Common+0x34150 was independently decoded from the hash-matched original image for all 384 bytes. Entry guards, player/monster/boss mask selection, changed-before-active writes and all exits were read. Its only behavioral callee is update marking+0x665C0, consumed through RLI-Q02. STL-R13b is now verified for supplied masks; STL-V14 discriminates the three selections and changed-bit preservation. Definition-to-mask production remains STL-R12b, so this adds no archive/compiled-table claim. The disguise+0x38730 check decoded 288/288 bytes but its remaining-mask helper is still unread; only decoding uncertainty closed there.
 
 The old death observation's unconditional expectation of no later state-off message is not an accepted assertion: sync eligibility and clearing remain STL-Q01. Current STL-O02 records only the supported callback/partition boundary and names that integration gate.
 
@@ -219,7 +219,7 @@ Checks run: `check_spec.py state-timed-state-lifecycle` (initial 124 errors/1 wa
 
 Reported counts: MISMATCH 1, GUESS 0, GAP 0, DISCRIM 1, COVERAGE 15, HARDEST 3, GATED 47. The report's COVERAGE list enumerates 16 grouped bullets despite its reported count of 15; both are preserved here without inventing an extra finding. GATED is reader data: supplied-input fixtures remain verified at their named boundaries, and only the spec's explicit per-assertion gates apply.
 
-MISMATCH: STL-V07(c) described a cold application with no draw. CSA-R05/CSA-R06 and MMF-R14a require the defender shatter draw when an actual positive-length cold application reaches that path, including refresh. Fixed by making the case an isolated strict-extension comparison with supplied expiry values 1200/1050, exact false comparison and selected expiry 1200. Full cold invocation/draw coverage remains CSA-V08. Skill cases (a)/(b) remain supplied timed-skill applications; no dependency draw was erased from an actual cold invocation.
+MISMATCH: STL-V07(c) described a cold application with no draw. CSA-R05/CSA-R06 and CSA-R06 require the defender shatter draw when an actual positive-length cold application reaches that path, including refresh. Fixed by making the case an isolated strict-extension comparison with supplied expiry values 1200/1050, exact false comparison and selected expiry 1200. Full cold invocation/draw coverage remains CSA-V08. Skill cases (a)/(b) remain supplied timed-skill applications; no dependency draw was erased from an actual cold invocation.
 
 DISCRIM: STL-V01(a) stored frame 1001 but did not exclude an additional synchronous call at frame 1000. Fixed with an initially empty handler log and exact outputs: one queued event at 1001 and zero handler invocations immediately after scheduling at 1000.
 
@@ -229,7 +229,7 @@ DISCRIM: STL-V01(a) stored frame 1001 but did not exclude an additional synchron
 | R02 override, missile handler, other nonmatching events | Added V16(a)/(b) for distinct handler selection. No change for exact-frame mismatch: V02 already discriminates equal-slot nonmatching frame, and the equality test is independent of handler identity |
 | R03 item expiry and non-12 monster bypass | Added V16(c) item routing. No change for non-12 bypass: the listed bypass fact does not add those handlers' bodies to timed-state acceptance; type-12 routing is V02/V16 |
 | R04 missing unit/base/storage and extended due list | Added V17(a)-(c) guards. No change for retained extended-list nontermination: Q05 leaves its producer outside-boundary; V03/V11 already discriminate mandatory current-head reload, and no finite termination assertion is added |
-| R06a null operations, primary/secondary lookup, initialization | Added V17(d) null setters/getter. No change for lookup: NRF-V33(a) discriminates primary before secondary. V05 already asserts all remaining semantic initialization fields zero/empty |
+| R06a null operations, primary/secondary lookup, initialization | Added V17(d) null setters/getter. No change for lookup: RLI-V05(a) discriminates primary before secondary. V05 already asserts all remaining semantic initialization fields zero/empty |
 | R07 off, negative identity, disguise | Added off and negative-identity steps to V06. No change for disguise: R07a/Q07 remains explicit and no stored disguise value is guessed |
 | R08 invalid identity, missing unit/storage | Added V17(e)-(i) refusal cases; V12 retains valid forced-write/update behavior |
 | R09 freeze/stun/poison/burn policies | No change: these are consumed applier policies, discriminated by CSA-V11 (freeze), CSA-V05/CSA-V07 (stun) and CSA-V12/CSA-V13/CSA-V14 (poison/burn). Duplicating complete appliers here would duplicate ownership |
@@ -253,9 +253,9 @@ Fresh reader recomputed all V01–V19: MISMATCH 0, GUESS 0, GAP 0, DISCRIM 0, CO
 | Immediate frame -1 | No change: the same routing advisory was triaged in pass 1; immediate queue ordering remains R02a/Q07, and V01 covers ordinary timed-state scheduling. No new missing behavioral decision was reported |
 | Monster bypass types 3/4/5/8 | No change: R03 states the bypass; these other handlers' bodies are outside timed-state acceptance. V02/V16 cover the owned type-12 routing |
 | Secondary exclusion / due state-storage lists | No change: R04 explicitly traverses primary lists and documents retained-list nontermination; pass-1 triage preserves Q05's producer limit and head-restart assertions rather than invent a terminating fixture |
-| State setting without storage | No change: consumed NRF-R12a and NRF-V33(c) specify the no-storage write/update requests; duplicating the owning primitive is unnecessary |
+| State setting without storage | No change: consumed RLI-R03 and RLI-V05(c) specify the no-storage write/update requests; duplicating the owning primitive is unnecessary |
 | Attach, disguise, skill slots, mask producer | No change: existing R06b/R07a/R10b/R12b and Q07 retain their gates; no integrated output is inferred |
-| Cold removal callback | No change: consumed MMF-R13c owns its distinct sequence; this pass does not duplicate that dependency's callback implementation |
+| Cold removal callback | No change: consumed CSA-R13 owns its distinct sequence; this pass does not duplicate that dependency's callback implementation |
 | Death traversal with state storage | No change: the retained-list/head-restart limitation and producer boundary are explicit, as triaged in pass 1; no complete lifecycle result is claimed by supplied fixtures |
 | Message/client/transition/auxiliary lifetime | No change: Q01/Q02/Q03/Q07 retain these integration/behavior limits; no fixture claims those full paths |
 
@@ -271,7 +271,7 @@ These are vector and rule-text changes, so the completed reader review no longer
 
 ### Targeted readings for review-pass triage, 2026-10-15
 
-Before any behavioral edit from the reader passes below, the original 1.13c disassembly was read directly (listing of the hash-matched images). D2Game+0x75350 (monster death): a present auxiliary effect (unit+0xA4) is released, cleared and followed by one further call before the type test; only then is the monster-definition pointer loaded for unit type 1 with unit data, else null, and its flags word read. A non-monster with an auxiliary effect therefore requests auxiliary removal and then faults; a null unit skips the auxiliary step and faults. Its boss argument to #10627 is the result of a call taking the unit's class-bounds-checked MonStats record and the unit. D2Common+0x3AD60 (non-staying traversal): null unit, missing base or base without the state-storage sign bit returns; per list, owner type 4, then flags mask 0x181, then #11061(unit, list state) retain and continue at the saved successor; otherwise free unless the list's sign bit is set, then reload the head in both cases. D2Common+0x34150: a nonzero boss selector is tested first and selects the boss mask (DataTables+0x108) for any unit; otherwise type 0 selects +0x100 and every other unit +0x104; word count is (stateCount+31)/32 signed. D2Game+0x8E9A0 (missile) and +0x8EBC0 (monster): an override is invoked when present instead of the no-override handler (missile single handler +0x3E3F0; monster gate +0x769A0); the fired record is released after the call. D2Common+0x38020 and +0x38380: null list ignored; positive expiry ORs timed; any value is stored. D2Common+0x33AB0: returns mask word floor(s/32) AND the bit-table entry for s mod 32; type 1 selects +0x104, every other unit including null +0x100. D2Common+0x3ADD0: signed `jg` expiry comparison; the countdown decrement is stored before its `jg 0` test. D2Game+0x9F7A0: the expiryDeathCondition byte is tested before the unit type; player dead modes 0/17, monster 0/12, other types dead; pet request only for type 0. D2Game+0x29240: skill identity signed 0..count-1 and record presence, then aurastate signed 0..stateCount-1, then duration evaluation, then lookup; attach result ignored; pet request for a non-null type 0 target regardless of caster. No value was taken from memory or from a reader report.
+Before any behavioral edit from the reader passes below, the original 1.13c disassembly was read directly (listing of the hash-matched images). D2Game+0x75350 (monster death): a present auxiliary effect (unit+0xA4) is released, cleared and followed by one further call before the type test; only then is the monster-definition pointer loaded for unit type 1 with unit data, else null, and its flags word read. A non-monster with an auxiliary effect therefore requests auxiliary removal and then faults; a null unit skips the auxiliary step and faults. Its boss argument to #10627 is the result of a call taking the unit's class-bounds-checked MonStats record and the unit. D2Common+0x3AD60 (non-staying traversal): null unit, missing base or base without the state-storage sign bit returns; per list, owner type 4, then flags mask 0x181, then #11061(unit, list state) retain and continue at the saved successor; otherwise free unless the list's sign bit is set, then reload the head in both cases. D2Common+0x34150: a nonzero boss selector is tested first and selects the boss mask (DataTables+0x108) for any unit; otherwise type 0 selects +0x100 and every other unit +0x104; word count is (stateCount+31)/32 signed. D2Game+0x8E9A0 (missile) and +0x8EBC0 (monster): an override is invoked when present instead of the no-override handler (missile single handler +0x3E3F0; monster gate +0x769A0); the fired record is released after the call. D2Common+0x38020 and +0x38380: null list ignored; positive expiry ORs timed; any value is stored. D2Common+0x33AB0: returns mask word floor(s/32) AND the bit-table entry for s mod 32; type 1 selects +0x104, every other unit including null +0x100. D2Common+0x3ADD0: signed `jg` expiry comparison; the countdown decrement is stored before its `jg 0` test. D2Game+0x9F7A0: the aliveExclusionCondition byte is tested before the unit type; player dead modes 0/17, monster 0/12, other types dead; pet request only for type 0. D2Game+0x29240: skill identity signed 0..count-1 and record presence, then aurastate signed 0..stateCount-1, then duration evaluation, then lookup; attach result ignored; pet request for a non-null type 0 target regardless of caster. No value was taken from memory or from a reader report.
 
 ### Full blind-reader pass 3, 2026-10-15
 
@@ -284,7 +284,7 @@ Counts: MISMATCH 0, GUESS 11, GAP 13, DISCRIM 11, GATED 35, COVERAGE 24, HARDEST
 | GUESS R13a hasStateStorage restart | Spec edit after reading +0x3AD60: free skipped, head restart in both cases, loop gated STL-Q05 |
 | GUESS R13a non-monster with auxiliary | Spec edit after reading +0x75350: auxiliary removal then fault; V19(d) added |
 | GUESS R13a monster without data | Spec edit: monster death completes only for a monster with loaded monster data |
-| GUESS R13a boss source | Spec edit: boss condition of the monster's MonStats record (GDF-R05a), supplied by vectors |
+| GUESS R13a boss source | Spec edit: boss condition of the monster's MonStats record (GDA-R08a), supplied by vectors |
 | GUESS R13b word count | Spec edit: ceil(stateCount/32) words, state s is bit s mod 32 of word floor(s/32) |
 | GUESS R13b player with boss selector | Spec edit after reading +0x34150: boss selector tested first for any unit; V14(h) added |
 | GUESS R02 missile override | Spec edit after reading +0x8E9A0: override wins in every group; V16(d)/(e) added |
@@ -335,7 +335,7 @@ Counts: MISMATCH 0, GUESS 7, GAP 7, DISCRIM 15, GATED 33, COVERAGE 22, HARDEST 3
 | GUESS R04 countdown store | Spec edit after reading +0x3ADD0: decrement stored whether or not due |
 | GAP V03 C expiry | No change in this pass: R04 states untimed lists are never due (made explicit in pass 5) |
 | GAP SCX-R11 versus SCX-R24 | No change: SCX-R11 is the front end supplying (unit, skill, level); SCX-R24 is column referencing inside expressions |
-| GAP expiryDeathCondition naming | Spec edit: section 3 states it is CSA's aliveExclusionCondition |
+| GAP death-condition naming | Spec edit: section 3 states it is CSA's aliveExclusionCondition (the shared name since 2026-10-15) |
 | GAP visit logs not in section 5 | Spec edit: visit-order output row |
 | GAP R12a states at or above 32 | Spec edit: V15(g)/(h) |
 | GAP V04 frame | No change in this pass (edited in pass 5) |

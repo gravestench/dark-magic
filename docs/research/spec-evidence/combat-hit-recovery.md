@@ -28,8 +28,8 @@ performed for this regeneration. Fresh table reads establish narrow text-cell ev
 
 | Artifact | Function RVA / ordinal | Analyst description and root | Rules / actual coverage |
 |---|---|---|---|
-| LOD113C-D2GAME | 0xDE5A0 | Melee resolution reaches result OR after block/avoid mapping | R01a; retained 2026-10-11 reading, consumed SBA-R13 |
-| LOD113C-D2GAME | 0x3AE10 | Missile contact/owner/record stage, result preparation then block/avoidance | R01b/R01c; 2026-10-12 reading; request/rewrite slice re-read 2026-10-15, no C view checked against original bytes; SBA-R14/SBA-R20 carry producer gates |
+| LOD113C-D2GAME | 0xDE5A0 | Melee resolution reaches result OR after block/avoid mapping | R01a; retained 2026-10-11 reading, consumed SBA-R05 |
+| LOD113C-D2GAME | 0x3AE10 | Missile contact/owner/record stage, result preparation then block/avoidance | R01b/R01c; 2026-10-12 reading; request/rewrite slice re-read 2026-10-15, no C view checked against original bytes; SBA-R06/SBA-R11 carry producer gates |
 | LOD113C-D2GAME | 0xDCF20 | Combat-result consumer, reached after applied damage | R02–R05/R07/R08/R11; retained 2026-10-11/12 reads; entry through protected dispatch and complete player cooldown/GH/soft tail re-read 2026-10-15 |
 | LOD113C-D2GAME | 0xDB910 | Veto invoked by monster/player GH branch in 0xDCF20 | R05/R06; complete 304-byte body read 2026-10-15, agreeing with retained audit; no C view checked against original bytes |
 | LOD113C-D2GAME | 0x1450, 0x1180 | Mask/modulus draw helpers called with defender seed | R06/R10b; NRF-R01/NRF-R02 and retained 2026-10-12 seed-owner audit |
@@ -37,14 +37,14 @@ performed for this regeneration. Fresh table reads establish narrow text-cell ev
 | LOD113C-D2GAME | 0xDA660 | Called from hit-class synthesis guard in 0xDCF20 | R07a; entire 112-byte listing and matching original-image instruction decode, 2026-10-15; no callees |
 | LOD113C-D2COMMON | 0x6A050 / #10677 | Missile class getter called in 0x3AE10 | R07a initial missile class; complete 80-byte body re-read 2026-10-15, no C view checked against original bytes; u8 load, missile/type/class/record guards |
 | LOD113C-D2GAME | 0x771D0, 0x75070, 0x75E10 | Monster flag conversion, parameter build and mode wrapper | R04/R09/R15; retained 2026-10-11/12 reading; 0x75E10 entry through mode-3 skip re-read 2026-10-15, complete wrapper not claimed |
-| LOD113C-D2GAME | 0x75210 | GH start selected by monster mode table | R09a; retained reading and complete 80-byte start re-read 2026-10-15 after availability check (no C view checked against original bytes); entry preparation precedes NRF-R14a mode write; reset/wrapper effects gated |
+| LOD113C-D2GAME | 0x75210 | GH start selected by monster mode table | R09a; retained reading and complete 80-byte start re-read 2026-10-15 after availability check (no C view checked against original bytes); entry preparation precedes RLI-R04a mode write; reset/wrapper effects gated |
 | LOD113C-D2GAME | 0x75320 | GH tick selected by mode table | R09b; complete short entry through return read from original image 2026-10-15; no separate source listing; calls 0xAE6F0, unread |
 | LOD113C-D2GAME | 0x76BF0 | Shared monster mode end handler | R09b; source located; entry/class-selection slice assessed 2026-10-15; complete class/callback effects remain open |
 | LOD113C-D2GAME | 0x78550 → 0x78340, 0x77FA0 | Player mode wrapper, validator and local action decision | R10; retained 2026-10-12 reading; 0x78340/0x77FA0 complete listings read 2026-10-15; unresolved byte tables/validator helpers prevent full wrapper claim |
-| LOD113C-D2GAME | 0x1420 | Current-skill definition getter used by 0x77FA0 | R10a; 2026-10-12 trace establishes Skills stride 0x23C and srvdofunc field; GDF-R08 |
+| LOD113C-D2GAME | 0x1420 | Current-skill definition getter used by 0x77FA0 | R10a; 2026-10-12 trace establishes Skills stride 0x23C and srvdofunc field; GDA-R11 |
 | LOD113C-D2GAME | 0x78150 → 0xDA750 | Player GH entry and neutral entry preparation | R10c; complete listings read 2026-10-15; full 96-byte 0xDA750 original-image decode checked; other entry helpers unread |
 | LOD113C-D2COMMON | 0x33110 / #10819 | Per-mode rate dispatcher reached from animation preparation | R12a/R14; retained 2026-10-12 GH/block/KB branch reading and original engine-table check; no C view checked against original bytes at 2026-10-15 availability assessment |
-| LOD113C-D2COMMON | 0x323E0 | Diminishing reader called by rate dispatcher | R12a/R14; complete body re-read 2026-10-15, no C view checked against original bytes; selected-array leaf 0x38A80, consumed NRF-R07/NRF-R12b/NRF-R12c |
+| LOD113C-D2COMMON | 0x323E0 | Diminishing reader called by rate dispatcher | R12a/R14; complete body re-read 2026-10-15, no C view checked against original bytes; selected-array leaf 0x38A80, consumed NRF-R07/RLI-R02a/RLI-R02b |
 | LOD113C-D2COMMON | 0x2EFC0, 0x2EF90, 0x2F010, 0x2FB10 | GH/block/KB predicates and base-mode rate | R12/R14; compatible retained branch readings; no newly inferred per-class record |
 | LOD113C-D2COMMON | 0x501E0 | Ordered transformation-driven effective type/mode selection | R12b; complete listing assessed 2026-10-15, no C view checked against original bytes; helper/table chain incomplete, no GH remap promotion |
 | LOD113C-D2COMMON | 0x335F0 / #10595 | Animation preparation following mode write | R13a; complete 816-byte listing read 2026-10-15; remap/helpers/byte region incomplete, actual GH initialization gated |
@@ -60,7 +60,7 @@ damage-pipeline and missile chains already recorded by their owners. Queued path
 frame-event table 0x1079D0 -> 0x79170 -> do entry 0xA2060 -> do dispatch 0xA19A0 -> do
 table slot 1, basic attack 0xA2C40 -> queued completion 0xDDDE0 -> enqueue 0xDAB90; the
 queue consumer 0xDED30 calls reaction 0xDCF20 after apply 0xDE0C0. Missile direct path
-(MHD-R26, SBA chain B): missile step 0x3F320 -> contact 0x3EDE0 -> damage fill/hand-off
+(MHD-R12, SBA chain B): missile step 0x3F320 -> contact 0x3EDE0 -> damage fill/hand-off
 0x3A4E0/0x3AFF0 -> apply 0x3AE10, whose tail calls 0xDCF20 unconditionally. The two final
 call edges (0xDED30 -> 0xDCF20 and 0x3AE10 -> 0xDCF20) were re-checked in the original
 disassembly during the 2026-10-15 specification review; upstream links reuse the owners'
@@ -73,23 +73,23 @@ Their owned contracts are the dependency authority; a resolved address alone doe
 
 | D2Common export | Resolved RVA | Semantic operation / rules |
 |---|---|---|
-| #10494 | 0x33CD0 | State predicate; NRF-R12a, HRC-R01/R03/R06 |
-| #10871 | 0x38520 | State-list lookup; NRF-R12a, HRC-R05/R10 |
+| #10494 | 0x33CD0 | State predicate; RLI-R03, HRC-R01/R03/R06 |
+| #10871 | 0x38520 | State-list lookup; RLI-R03, HRC-R05/R10 |
 | #10913 | 0x390F0 | Fixed stat-7 selected/minimum wrapper, HRC-R06 |
-| #10945 | 0x34510 | SetState routing, NRF-R12a/STL-R07, HRC-R03a |
-| #11090 | 0x33920 | Mode write, NRF-R14a, HRC-R09a/R10c |
+| #10945 | 0x34510 | SetState routing, RLI-R03/STL-R07, HRC-R03a |
+| #11090 | 0x33920 | Mode write, RLI-R04a, HRC-R09a/R10c |
 | #11103 | 0x303E0 | Current-skill clearing, HRC-R10c |
 | #10677 | 0x6A050 | Guarded missile class byte, HRC-R07a |
 | #10819 | 0x33110 | Animation rate dispatcher, HRC-R12a/R14 |
 | #10595 | 0x335F0 | Animation preparation, HRC-R13a |
 | #10426 | 0x2EF30 | End predicate, HRC-R13d |
 | #10331 → #10057 | 0x2FE10 → 0x3C390 → 0x2D320 | Room/level/town chain, KNB-R03b, HRC-R02b |
-| #10158 | 0x665C0 | Update marking request; full integration NRF-Q17, HRC-R08/Q10 |
+| #10158 | 0x665C0 | Update marking request; full integration RLI-Q02, HRC-R08/Q10 |
 
 The max-life wrapper 0x390F0 was checked for C view checked against original bytes (none), then read fully on
 2026-10-15: null unit/list, unavailable definition count<=7 or missing definition yields 0;
 otherwise fixed stat 7 uses 0x38A80. It is not an aggregate-array read. The selected/minimum
-leaf semantics are NRF-R12b/NRF-R12c; 0x38B70 is not the called leaf here.
+leaf semantics are RLI-R02a/RLI-R02b; 0x38B70 is not the called leaf here.
 
 ### Original field map
 
@@ -111,7 +111,7 @@ with matching original files; it does not prescribe a new storage layout.
 | Game+0xA8 | Current frame |
 | MonsterData+0x54 | Reaction synchronization code (full observable effect remains gated) |
 | MonStats2+0xF0 bit 3/bit 13; MonStats+2 signed word | mGH/mKB; BaseId |
-| MonStats+0x36 signed word | Monster KB base rate; loader column unresolved GDF-Q01 |
+| MonStats+0x36 signed word | Monster KB base rate; loader column unresolved GDA-Q05 |
 | Missiles+4 bits 6/7, +0xAE byte, +0x94 byte | GetHit/SoftHit, KB chance, initial HitClass |
 
 The divisor jump table at D2Game RVA 0xDBA04 (preferred VA 0x6FCFBA04) was read in the
@@ -136,12 +136,12 @@ walking/running mode, then invokes path-speed setter 0x34D40 (NRF-R08b) with 409
 
 | Discrepancy in prior text | Original evidence and corrected claim | Remaining boundary |
 |---|---|---|
-| Stun bypass described as an active-state test | 2026-10-15 reaction-branch reading confirms Common #10871 / 0x38520 FindStateList(21), not active-bit testing; NRF-R12a/STL distinguish list presence from membership | R05/V03 now require a matching stun list; state 21 alone does not bypass veto |
-| Protected lethal branch called an ordinary death operation with id 92 | 2026-10-15 import resolution/reading identifies D2Common #10945/0x34510, request state 92, value 1; current NRF-R12a and STL-R07 own routing/membership | State 92 text name death_delay does not establish death/timer semantics; STL-Q07 disguise/NRF-Q17 update execution still open |
+| Stun bypass described as an active-state test | 2026-10-15 reaction-branch reading confirms Common #10871 / 0x38520 FindStateList(21), not active-bit testing; RLI-R03/STL distinguish list presence from membership | R05/V03 now require a matching stun list; state 21 alone does not bypass veto |
+| Protected lethal branch called an ordinary death operation with id 92 | 2026-10-15 import resolution/reading identifies D2Common #10945/0x34510, request state 92, value 1; current RLI-R03 and STL-R07 own routing/membership | State 92 text name death_delay does not establish death/timer semantics; STL-Q07 disguise/RLI-Q02 update execution still open |
 | Class described as a word and helper retaining only low nibble | 0xDCF20 entry re-read 2026-10-15 uses dword+0x60 and byte suppression; 0xDA660 retains entire source unless 0=>13; matches current NRF/DPO i32 contract | Existing small numeric results unchanged; V16 adds high-bit preservation |
 | Element rotation was insufficiently verified | Full 112-byte helper and hash-matched image decode plus 64-byte repeated pair table at Game RVA 0xFB050 read 2026-10-15 | Helper algorithm closed at supplied-record boundary; no RNG, shared byte cursor increments; upstream producer remains separate |
 | Town set unresolved | Compatible KNB-R03b proof reuses complete Common #10331/0x2FE10→#10057/0x3C390→0x2D320 and checked table; exact {1, 40, 75, 103, 109} | Source/room records supplied; no client claim |
-| Missile rewrite left asm-only | Current SBA-R14 already verifies same request/rewrite stage; 0x3AE10 exact slice re-read 2026-10-15 agrees | Upstream owner/contact/block producers retain SBA gates |
+| Missile rewrite left asm-only | Current SBA-R06 already verifies same request/rewrite stage; 0x3AE10 exact slice re-read 2026-10-15 agrees | Upstream owner/contact/block producers retain SBA gates |
 | Player decision treated missing current skill as idle/walking; exception treated as skill ids | Full 0x77FA0 read 2026-10-15 agrees with current-skill fast allow, matching passed skill and srvdofunc 67/76; guard/roll order isolated |0x78340 validator byte tables and outer entry/helper effects unresolved; no global action-state equivalence |
 | Player GH preparation said to remove all timed events | Full 0xDA750 image decode shows matching-unit linked-record removal/free; node semantics not established | Neutral entry-preparation request only; current-skill write is separate; actual cancellation/timer integration open |
 | Block numeric predicate was conflated with completed animation | Complete cooldown branch re-read 2026-10-15 establishes strict signed delta>trunc(FBR/8)+15, soft early return, mode request then unconditional stat-95 write request carrying current frame | Actual mode start and persisted writer effect remain gated; V06f supplies returned 0 to distinguish request order; fixture persistence is explicitly supplied |
@@ -339,7 +339,7 @@ triage without equating its row count to the reader's count.
 | R13d null end-predicate input | Added V19h: fatal failure with no numeric return or writes; rejects a fabricated boolean default. |
 | R14 block-base fallback | No change: V15a versus V15c supplies the 50/100 base contrast; the other fallback conditions select the same base-50 recipe. |
 | R14 nonpositive/capped KB | Added V15g: supplied signed monster base 0 stores rate 0 and still sets speed/targetSpeed 4096/resetMarker 15. The declared monster source is i16, so it cannot exceed 32767; player source is fixed 213. No fabricated greater-than-32767 KB fixture was added. |
-| R15 non-GH draws | No change: full event draws remain gated; reached direct slot draws are owned by NRF-R04b, with eligibility/additional effects under NRF-Q11/HRC-Q06. |
+| R15 non-GH draws | No change: full event draws remain gated; reached direct slot draws are owned by NRF-R04b, with eligibility/additional effects under NRF-Q05/HRC-Q06. |
 
 | HARDEST entry | Outcome |
 |---|---|
@@ -372,7 +372,7 @@ the counting error.
 
 | Blocking finding | Outcome |
 |---|---|
-| GAP 1: supplied block/avoidance code absent from input inventory | Added section 3's distinct semantic i32 result code supplied by the SBA-R14 stage, including its low-five-bit use in R01c. |
+| GAP 1: supplied block/avoidance code absent from input inventory | Added section 3's distinct semantic i32 result code supplied by the SBA-R06 stage, including its low-five-bit use in R01c. |
 | GAP 2: local decisions/returns absent from output inventory | Added section 5's guard continue/stop, protected-branch stop, R06 veto/allow, R09a return 0/1, R10a allow/refuse and fatal outcomes; clarified terminal selection and the remaining rewrite code. These inventory entries refer to the existing rules and do not invent terminal effects. |
 | DISCRIM 1: V20 could accept an erroneous SoftHit-false requirement | Added V20d with SoftHit true, GetHit false, KB 0, code 1 and R=9: result 16392/code 0 with no draw. |
 
@@ -422,7 +422,7 @@ triage without treating the number of table rows as a revised reader count.
 
 | Reported coverage area | Outcome |
 |---|---|
-| R01b prior flags | No change: retained-bit behavior is explicit and owned by SBA-R20, with SBA-V26 case (e) already discriminating it. |
+| R01b prior flags | No change: retained-bit behavior is explicit and owned by SBA-R11, with SBA-V15 case (e) already discriminating it. |
 | Null/other-kind guards | No change: the relevant stop-without-reaction recipe is in V11a; V13d separately exercises the missing-unit start return. Explicit guard meanings remain in their own rules. |
 | Soft/plain effects | No change: complete effects remain R08/HRC-Q06 rather than an invented supplied default. |
 | Fallback/base conversion | No change: KNB-V32 discriminates the owned conversion recipes consumed before HRC priority. |

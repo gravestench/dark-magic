@@ -34,9 +34,9 @@ embedded bytes were corroborated against the original image as described below.
 | LOD113C-D2GAME | `0x3EDE0` | Contact/end caller | MMC-R03/MMC-R11..MMC-R16 | Full listing and 832-byte original decode 2026-10-15; type/pierce/roll/event/handler/finish branches traced; delegated interiors excluded |
 | LOD113C-D2GAME | `0x3AA20`, `0x3AD70`, `0x3ADD0`, `0x3AD30`, `0x39510` | Shared/type-specific search filters | MMC-R08/MMC-R10 | Full listings 2026-10-15; accept/reject returns, shared-filter bypass and no last-collision write |
 | LOD113C-D2GAME | `0x38FB0` | Contact type gate | MMC-R11 | Listing plus complete 64-byte original image/jump-table check 2026-10-15 |
-| LOD113C-D2GAME | `0x38F40`, `0x6F660` | Pierce use/creation | MMC-R12 | Full listings 2026-10-15; current owner stats, own-base input, local seed and layer-0 request; source creation call MCI-R26a |
+| LOD113C-D2GAME | `0x38F40`, `0x6F660` | Pierce use/creation | MMC-R12 | Full listings 2026-10-15; current owner stats, own-base input, local seed and layer-0 request; source creation call MIR-R15a |
 | LOD113C-D2GAME | `0x3E590`, `0x38E60` | Cooldown caller/expiry callback identity | MMC-R16 | Full 224-byte caller listing 2026-10-15; callback body/attachment integration not established |
-| LOD113C-D2GAME | `0x8E9A0`, `0x8E680`, `0x6F8A0` | Callback-free walker/creation event | MMC-Q03 | Walker directed read 2026-10-15 plus MCI-R12b; registration association does not establish recurring order |
+| LOD113C-D2GAME | `0x8E9A0`, `0x8E680`, `0x6F8A0` | Callback-free walker/creation event | MMC-Q03 | Walker directed read 2026-10-15 plus MIR-R01b; registration association does not establish recurring order |
 | LOD113C-D2GAME | `0xE20A0` | Removal request target | MMC-R01/MMC-Q04 | Direct caller target retained from 2026-10-12; complete destruction bookkeeping unread |
 | LOD113C-D2COMMON | `0xCEB0` | Velocity ramp/step arithmetic | MMC-R04a | Compatible current NRF-R11a contract; 2026-10-12 read and later NRF evidence retain their dates |
 | LOD113C-D2COMMON | `0xE230` / 10342; `0xD8E0` | Shared path step/advance | MMC-R05a/MMC-Q04 | Directed full listings 2026-10-15 expose reset/update/position/room callees; complete integrated path output not established |
@@ -50,10 +50,10 @@ embedded bytes were corroborated against the original image as described below.
 | LOD113C-D2COMMON | `0x6A270` / 10737; `0x6A6D0` / 10970; `0x6A030` / 10130 | Remaining read/clamped write/activation read | MMC-R06/MMC-R07 | Remaining byte-checked reconstruction and setter listing 2026-10-15; activation compatible 2026-10-12 record |
 | LOD113C-D2COMMON | `0x6A130` / 10227; `0x6A1B0` / 10024 | Last-collision compare/write | MMC-R10/MMC-R11 | Full listings 2026-10-15; valid missile/row/flag/metadata guards; direct identity writes |
 | LOD113C-D2COMMON | `0x35BA0` / 11009 | Stationary collision cache | MMC-R07 | Full listing 2026-10-15; speed-zero query with mask 32767 and word store; actual query integration open |
-| LOD113C-D2COMMON | `0x35640` / 11056; `0x348B0` / 11164; `0x4BE10` / 10232 | Footprint/mask stores and removal request | MMC-R07/MMC-R08/MMC-R15 | Creation caller/current MCI-R16; available reconstruction for first; final caller listing. Nested map shapes remain gated |
+| LOD113C-D2COMMON | `0x35640` / 11056; `0x348B0` / 11164; `0x4BE10` / 10232 | Footprint/mask stores and removal request | MMC-R07/MMC-R08/MMC-R15 | Creation caller/current MIR-R05; available reconstruction for first; final caller listing. Nested map shapes remain gated |
 | LOD113C-D2COMMON | `0x2FE10` / 10331; `0x3C390` / 10057; `0x2D320` | Room/town classification | MMC-R01 | Compatible current MCI/PVP records, actual lookup/null/town boundaries retained |
-| LOD113C-D2COMMON | `0x391F0` / 10830; `0x38B70` / 10973; `0x39430` / 10910; `0x38C20` / 10587; `0x3A740` / 10887 | Tier/stat reads and replacing request | MMC-R08/MMC-R12 | Current PVP-R05a/NRF-R12b/c/MCI-R26a; reader is not writer proof; NRF-Q20 remains |
-| LOD113C-D2COMMON | `0x7C8D0` | Missiles loader descriptors | Inputs | Compatible GDF-R07/MCI descriptor records; text cells do not establish all compiled records |
+| LOD113C-D2COMMON | `0x391F0` / 10830; `0x38B70` / 10973; `0x39430` / 10910; `0x38C20` / 10587; `0x3A740` / 10887 | Tier/stat reads and replacing request | MMC-R08/MMC-R12 | Current PVP-R05a/RLI-R02a/c/MIR-R15a; reader is not writer proof; RLI-Q03 remains |
+| LOD113C-D2COMMON | `0x7C8D0` | Missiles loader descriptors | Inputs | Compatible GDA-R10/MCI descriptor records; text cells do not establish all compiled records |
 
 ### Dispatch tables and original byte checks
 
@@ -108,8 +108,9 @@ room-list and map creation remain integrations.
    `0x7F490` supports the unusual conditional upper-bound comparisons above. MMC-R09b/V07
    replace that unsupported geometric simplification.
 4. The earlier stat-setter label implied established stored counts. Current NRF/STL contracts
-   expose replacing/propagation gaps: MMC-R12a/b establish arithmetic and layer-0 requests;
-   MMC-R12c/Q07 keep storage gated. Local seed remainder sequence remains exactly 66,18,35,30.
+   expose replacing/propagation gaps: MMC-R12a establishes decrement arithmetic and the layer-0
+   request; MMC-R12b/Q06 keep storage gated. Creation count is MIR-R15a's; the zero-seed local
+   remainder sequence in MMC-V09(d) remains exactly 66,18,35,30.
 5. Earlier cooldown prose omitted allocation failure and implied established expiry. The
    `0x3E590` null-result branch precedes schedule/list-state/callback/attach/state operations;
    success requests those in order. MMC-R16/V11 cover requests; actual attach/expiry remains open.
@@ -163,14 +164,17 @@ shown by callers; presence of these names in text does not define arithmetic or 
 | Question | Attempt/result on 2026-10-15 |
 |---|---|
 | MMC-Q01 | Reused MCI allocation/planner records; read `0x36030` type-3 branch,`0x34F80` and original table entry 4=`0x60000`,closing initial two writes. Directed `0x36230`/`0x35780` leaves later planner/retention integration open |
-| MMC-Q02 | Reused MCI own-base 328 writer assessment and stat-reader contract; verified local pierce helper. Missile decrement is not an owner seed producer; no universal threshold inferred |
-| MMC-Q03 | Reused MCI event association; read `0x8E9A0` walker and no-callback dispatch. Recurring production/requeue/order not established; partial root search does not prove absence |
-| MMC-Q04 | Read path-step/advance/normalizer/trace/CheckMove; checked query/size/room accessors and original bytes/tables. Nested query/map/position/reset/destruction paths remain incomplete,so actual effects gated |
-| MMC-Q05 | Compared numeric masks and creation footprint request with current GDF/MCI; no complete terrain/player/monster writer chain. Keep numerical descriptions |
-| MMC-Q06 | Assessed prior evidence:no matching gameplay records. Migration excludes gameplay; recipes below remain pending |
-| MMC-Q07 | Checked NRF stat reader and current STL replacing-write record; `0x3A740` is a request boundary,not complete stored propagation |
-| MMC-Q08 | Checked current SBA/IEP/MHD ownership and direct contact calls/results; per-handler interiors not read by this slice |
-| MMC-Q09 | Full cooldown caller read; allocation failure/success order settled. STL attachment/removal/expiry remains unresolved |
+| MMC-Q02 | Reused MCI event association; read `0x8E9A0` walker and no-callback dispatch. Recurring production/requeue/order not established; partial root search does not prove absence |
+| MMC-Q03 | Read path-step/advance/normalizer/trace/CheckMove; checked query/size/room accessors and original bytes/tables. Nested query/map/position/reset/destruction paths remain incomplete,so actual effects gated |
+| MMC-Q04 | Compared numeric masks and creation footprint request with current GDF/MCI; no complete terrain/player/monster writer chain. Keep numerical descriptions |
+| MMC-Q05 | Assessed prior evidence:no matching gameplay records. Migration excludes gameplay; recipes below remain pending |
+| MMC-Q06 | Checked NRF stat reader and current STL replacing-write record; `0x3A740` is a request boundary,not complete stored propagation |
+| MMC-Q07 | Checked current SBA/IEP/MHD ownership and direct contact calls/results; per-handler interiors not read by this slice |
+| MMC-Q08 | Full cooldown caller read; allocation failure/success order settled. STL attachment/removal/expiry remains unresolved |
+
+The 2026-10-15 owner own-base 328 assessment (MCI own-base writer assessment and stat-reader
+contract reused; missile decrement is not an owner seed producer; no universal threshold
+inferred) now belongs to MIR-Q07; see the restructure record below.
 
 ## Observation procedures
 
@@ -180,7 +184,8 @@ Use a Normal Amazon able to fire ordinary arrows with Pierce,recording class/cha
 levels,gear and actual chance contributions. Stand in a safe Blood Moor area; fire separated
 shots for chance 60,70 and zero control using natural available setups. At creation record source
 own-base 328 and selected 156/166,then local seed/draws/count-write request in Game `0x6F660`;
-read actual missile 328 afterward. Compare full seed pairs and count against MMC-V09. At later
+read actual missile 328 afterward. Compare full seed pairs and count against MIR-V13 and
+MMC-V09(d). At later
 contacts record current owner stats,missile count,decrement requests and final dispatcher result.
 Repeated identical counts do not prove the owner seed producer; a readback discrepancy calls
 for write/attachment investigation. No memory writes are part of this procedure.
@@ -225,7 +230,7 @@ is not treated as review of this contract.
 
 Root source review requested clearer mask-versus-bit-index terminology and an explicit
 pathFootprintSize input distinct from Missiles.Size. Those clarifications and the delegation
-of the already consumed creation-pierce calculation to MCI-R26a/MCI-R26b leave all exact vector
+of the already consumed creation-pierce calculation to MIR-R15a/MIR-R15b leave all exact vector
 inputs,draws,outputs and gates unchanged.
 
 ### Blind-reader FULL1 and triage
@@ -241,15 +246,15 @@ not execution against a game or implementation. The resulting edits require a fr
 | GAP: V07 selected candidate/filter calls absent from outputs | Edit: section 5 inventories search result and ordered filter invocations |
 | COVERAGE: R01 nonpositive do/null room | Edit: V01(h/i) cover do 0/-1 and absent containing-room result; no Town gate for null room |
 | COVERAGE: R02 other forwarded result | Edit: V01(i) supplies result 3 and asserts no rewrite/removal |
-| COVERAGE: R04b diagonal | No change: dependency-owned NRF-R11b/NRF-V29 covers both cited direction entries; MMC supplies direction and tests caller scale/outer gate |
+| COVERAGE: R04b diagonal | No change: dependency-owned NRF-R11b/NRF-V15 covers both cited direction entries; MMC supplies direction and tests caller scale/outer gate |
 | COVERAGE: R05a transition true | Edit: V03(d) logs the transition request before lifetime; actual transition remains gated |
 | COVERAGE: R05b Y normalization/ordinary blocking/recording off/normal arrival | Edit: V03(e/f) distinguish all four local branches with exact cells,count,bits,endpoints and logs |
 | COVERAGE: R06 nonexpiry/positive clamp | No additional case: V04's first two retained updates already assert nonexpiry; valid signed-i16 remaining cannot exceed 32767,so decrement cannot exceed 32766. Generic setter upper clamp is dependency-owned MCI/NRF evidence |
 | COVERAGE: R07/R08 other masks,high-only bits,path absent | Edit: V05(f/g) exercise masks 132/388/260/389 and absent path at the collision-stage boundary. No high-only-u16 input is invented; low16 bit word is the semantic input and original upper-register contents are not a behavioral value |
 | COVERAGE: R09a/b empty cells,multiple rooms,exhaustion,other geometry | Edit: V07(f/g) add filter rejection/next room/exhaustion and remaining four geometry pairs. Existing V05(d) supplies empty cells; no second empty-list matrix |
-| COVERAGE: R10/R11 individual eligibility,other type gates,hostility,metadata | Edit: V08(e/f) separate each false eligibility condition and absent metadata; V09 supplies passing hostility explicitly. MHD-V23 owns complete direct type/creator cases; MHD-V09 covers early contact gates. MMC-V08 already distinguishes search/contact rejection and write order,so no complete contact matrix copied |
-| COVERAGE: R12 creation types/chance components,negative count,missing owner/Pierce | Edit: V09(d/e) test negative count,item-stat fallback and missing owner/Pierce; V09(b/c) explicitly supply linked direct owner,present targets and passing hostility. MCI-V12 owns creation types/chance/local-seed cases; MHD-V10 owns other contact pierce decisions. Those duplicate matrices are not expanded locally |
-| COVERAGE: R14/R15/R16 other hand-off/cooldown combinations | Edit: V10(g) distinguishes force-end without room; V11(d) distinguishes zero requested delay. MHD-V13/MHD-V20/MHD-V23 own the broader cooldown/callback/creator combinations; their integrations remain gated |
+| COVERAGE: R10/R11 individual eligibility,other type gates,hostility,metadata | Edit: V08(e/f) separate each false eligibility condition and absent metadata; V09 supplies passing hostility explicitly. MHD-V16 owns complete direct type/creator cases; MHD-V02 covers early contact gates. MMC-V08 already distinguishes search/contact rejection and write order,so no complete contact matrix copied |
+| COVERAGE: R12 creation types/chance components,negative count,missing owner/Pierce | Edit: V09(d/e) test negative count,item-stat fallback and missing owner/Pierce; V09(b/c) explicitly supply linked direct owner,present targets and passing hostility. MIR-V13 owns creation types/chance/local-seed cases; MHD-V03 owns other contact pierce decisions. Those duplicate matrices are not expanded locally |
+| COVERAGE: R14/R15/R16 other hand-off/cooldown combinations | Edit: V10(g) distinguishes force-end without room; V11(d) distinguishes zero requested delay. MHD-V06/MHD-V13/MHD-V16 own the broader cooldown/callback/creator combinations; their integrations remain gated |
 | HARDEST: V03 trace | Edit: Y-normalization/record-off/ordinary-blocking fixtures supplement existing exact endpoint/cap trace |
 | HARDEST: V07 geometry/order | Edit: next-room/filter-exhaustion and remaining geometry fixtures make candidate traversal explicit |
 | HARDEST: V10 callback/final result | No change: V06(a) already asserts final Remove despite callback abort; V10(e) asserts full action replacement and ignored damage return; supplied dependencies remain explicit |
@@ -267,3 +272,17 @@ The fresh reader independently recalculated 90 scenarios across all eleven execu
 All six HARDEST entries receive no change: V03 separately states the full endpoint, normalized increments, blocked-cell output and ten-cell cap; V05 orders the collision gates; V07 supplies literal room tests, candidate order and geometry; V08 separates search acceptance, contact refusal and last-collision mutation; V09 supplies all four full seed pairs and strict chance comparison; V10 asserts complete callback-result replacement and the final dispatcher result. These assertions were independently recalculated without a mismatch or missing choice. The nine question IDs retain their existing assertion-level limits; no producer, persistence, delegated effect or observation is promoted.
 
 Root review read all FULL1 revisions, including both inventory additions, footprint-size default, explicit sequential-pierce owner/targets and every added scenario. The final main contract is unchanged by this triage. Independent document review is complete, with maintainer approval pending. Draft status and the exact integration/observation gates remain. This review ran no implementation tests or original-game gameplay.
+
+### Restructure (2026-10-15)
+
+De-duplication approved by the maintainer after the issue 442 specification review. The former
+creation-pierce rule restated MIR-R15a/MIR-R15b and is removed; MMC-R12 now consumes the
+creation count by reference (MIR-V13 exercises it) and keeps only the contact decrement
+(MMC-R12a) and replacing integration (MMC-R12b). The former owner own-base 328 producer question
+is removed in favor of MIR-Q07; the remaining questions renumber to MMC-Q01..Q08. MMC-V09 now
+covers the decrement/storage boundary. Its creation-stage assertions that MIR-V13 already holds
+(chance 0 skip, negative chance one failed draw) were dropped; the assertions MIR-V13 lacks (zero
+own-base seed sequence 66,18,35,30 with full seed pairs and the equal-chance stop at 66/67) are
+kept as case MMC-V09(d), which cites MIR-R15a. No rule behavior, label, value or vector result
+changed. Review records above predate this restructure and keep their original ids; the phase-A
+id map relates them to current ids. Lint after the change is recorded in the restructure report.

@@ -12,7 +12,7 @@ Original spec/evidence/gap files were archived privately and compared byte-for-b
 
 Damage fields map to original byte offsets: flags 00, result 04(u16), physical 08, physicalPercent0C, fire 10, burnMagnitude 14, burnLength 18, lightning1C, magic 20, cold 24, poisonMagnitude 28, poisonLength2C, coldLength 30, freezeLength 34, lifeDrain 38, manaDrain3C, staminaDrain 40, stunLength 44, absorbHeal 48, total4C, flatReductionScale 54, hitClass 60, markCondition 64(u8), conversionType 65(u8), conversionPercent 68, overlayId6C. Record size is0x70. These encodings are investigation details, not a required layout.
 
-Queue nodes are0x88 bytes: game 00, attacker type/id 04/08, defender type/id 0C/10, damage 14, next 84; unit queue headAC. Unit type/class/id/mode 00/04/0C/10, monster data 14, seed 20/24, path2C, stat list 5C, inventory 60, game 80, event list 90, last attacker +0x9C/+0xA0, invalid-condition byte +0xC6 mask 1, last-attacker-presenceC8 mask 0x20000, pending eventsDC. Path target 58, room1C; game difficulty6D, Expansion 70, frame +0xA8. Monster-data 16 mask 8 is the neutral special-stun condition; its producer remains DPO-Q28. Public vectors use semantic values, while the privately archived originals preserve raw encodings.
+Queue nodes are0x88 bytes: game 00, attacker type/id 04/08, defender type/id 0C/10, damage 14, next 84; unit queue headAC. Unit type/class/id/mode 00/04/0C/10, monster data 14, seed 20/24, path2C, stat list 5C, inventory 60, game 80, event list 90, last attacker +0x9C/+0xA0, `aliveExclusionCondition` byte +0xC6 mask 1, last-attacker-presenceC8 mask 0x20000, pending eventsDC. Path target 58, room1C; game difficulty6D, Expansion 70, frame +0xA8. Monster-data 16 mask 8 is the neutral special-stun condition; its producer remains DPO-Q28. Public vectors use semantic values, while the privately archived originals preserve raw encodings.
 
 ## Dispatch and output anchors
 
@@ -159,7 +159,7 @@ The table identifies original module-relative functions, resolved import ordinal
 | `LOD113C-D2COMMON` | 0x33D10 | 10866 (thunk 0xAE7A) | `ExchangeNestedField0xA8_0x14` (analyst label) | Q19 | disassembly reading; recorded 2026-10-13; `D2Common.dll RVA 0x33D10` |
 | `LOD113C-D2COMMON` | 0x390F0 | 10913 (thunk 0xA3A0) | `GetDataTablePropertyStat` (reads stat 7) (analyst label) | R16 | disassembly reading; recorded 2026-10-13; `D2Common.dll RVA 0x390F0` |
 | `LOD113C-D2COMMON` | 0x39430, 0x38B70, 0x38A80 | 10910 (thunk 0xA802), 10973 (thunk 0xA42A) | `GetMissileRecordField54` (wrong), `GetUnitBaseStat`, `STATS_GetStatValue` (analyst label) | every `Stat` read | disassembly reading; recorded 2026-10-13; `D2Common.dll RVA 0x39430`, `RVA 0x38B70`, `RVA 0x38A80` |
-| `LOD113C-D2COMMON` | 0x33CD0, 0x37DB0 | 10494 (thunk 0xA68E) | (state test and its bit test; GDF-R11) (analyst label) | every `HasState` | disassembly reading; recorded 2026-10-13; `D2Common.dll RVA 0x33CD0`, `RVA 0x37DB0` |
+| `LOD113C-D2COMMON` | 0x33CD0, 0x37DB0 | 10494 (thunk 0xA68E) | (state test and its bit test; GDF-R04) (analyst label) | every `HasState` | disassembly reading; recorded 2026-10-13; `D2Common.dll RVA 0x33CD0`, `RVA 0x37DB0` |
 | `LOD113C-D2COMMON` | 0x3A740 | 10887 (thunk 0xA472) | `MultiplyValuesBy5` (wrong: SetStat) (analyst label) | R16, R17, R18, R31a | disassembly reading; recorded 2026-10-13; `D2Common.dll RVA 0x3A740` |
 | `LOD113C-D2COMMON` | 0x32C10 | 10689 (thunk 0xA83E) | `AllocateUnitPath` (wrong: overlay stat) (analyst label) | R22, R32b | disassembly reading; recorded 2026-10-13; `D2Common.dll RVA 0x32C10` |
 | `LOD113C-D2COMMON` | 0x4F640 | 10804 (thunk 0xA80E) | `CleanupStatListModChain` (wrong) (analyst label) | R02b, R03b | disassembly reading; recorded 2026-10-13; `D2Common.dll RVA 0x4F640` (unread) |
@@ -234,7 +234,7 @@ Priorities: the lethal boundary (DPO-O01), the single doubling (DPO-O02), the ma
 
 - **DPO-O01** **lethal boundary (DPO-R12a, DPO-R17).** Measure: the defender's stat 6 (`hitpoints`, raw) immediately before and after one hit, and the `total` of the applied record. Expected: `after = before - total` when that is `>= 0x100`, else 0, with no dependence on the predicted-lethal bit. Procedure: a level-1 character of any class in Act I (Blood Moor) attacks a monster with the basic melee attack (the character is the attacker on the player basic-attack path of section 2; the monster is the defender, so monster frame-event roots gated by DPO-Q20 are not needed); read the monster's stat 6 on the server unit the frame before the hit and the frame after, and the record's `total` at the entry of the apply (resource/status apply, supplied apply record); repeat until a hit lands with `before - total` in each of the ranges `>= 0x100`, `1..0xFF` (death) and `<= 0` (death). The build-side pre-flag is read as bit 0x2 of `result` at the same entry.
 - **DPO-O02** **crit draws and single doubling (DPO-R03a).** Measure: the attacker's seed `seed` before and after the build (damage builder entry and return) and `physical` with result bit 0x2000 at return. Expected: the number of seed steps equals 1 (physical) + one per crit source with chance `> 0` up to and including the first success + element draws + 1; `physical` is doubled at most once. Procedure: an Amazon with `passive_critical_strike` (stat 0x151) from Critical Strike at a known chance and a weapon with no other crit source, attacking Fallen with a basic attack in the Blood Moor; repeat for configurations (0x151 only), (0x8D only, from an item with `item_deadlystrike`), (both); count steps per hit.
-- **DPO-O03** **player mana leech burns the defender (DPO-R18).** Measure: the monster defender's stat 8 (`mana`) before and after one hit by a player with mana leech `M` percent and no `manaDrain` roll (player attackers never roll it). Expected in Normal (`ManaStealDivisor = 1`, GDF-R02): a decrease of `(M << 6)` raw units when the leech ran, for example `M = 5` → 320 raw (1.25 mana), set to 0 if that leaves less than 0x100. Procedure: any class wearing one item with `manadrainmindam` (stat 0x3E) = 5 and no other leech, hitting a monster that has mana (a Fallen Shaman); read the Shaman's stat 8 on the server unit before and after.
+- **DPO-O03** **player mana leech burns the defender (DPO-R18).** Measure: the monster defender's stat 8 (`mana`) before and after one hit by a player with mana leech `M` percent and no `manaDrain` roll (player attackers never roll it). Expected in Normal (`ManaStealDivisor = 1`, GDA-R05): a decrease of `(M << 6)` raw units when the leech ran, for example `M = 5` → 320 raw (1.25 mana), set to 0 if that leaves less than 0x100. Procedure: any class wearing one item with `manadrainmindam` (stat 0x3E) = 5 and no other leech, hitting a monster that has mana (a Fallen Shaman); read the Shaman's stat 8 on the server unit before and after.
 
 
 ## Targeted original-image recheck (2026-10-14)
@@ -265,7 +265,7 @@ Baseline `check_spec.py combat-damage-pipeline-order`:367 errors, 51 warnings. A
 
 The self-review made execution boundaries explicit without changing retained numeric expectations: V01 ends at final death-flag processing, before deferred/post-apply work; V10 ends at the gate/apply-event prefix, before clamp. The earlier V10 statement that later stages change nothing was too broad with unnamed life defaulting to zero: R19b would set lethal. Its verified assertion is the gate prefix, not final life/death. V10's no-events assertion names apply events, not internal event 11 of its supplied scaling operation. Full-path acceptance remains gated and these are partial stage vectors. Shared omitted-state/registration/Crit/inventory/qualification defaults are now explicit so no extra dependency draw is silently assumed. A fresh reader must evaluate these clarified boundaries.
 
-Final dependency reconciliation removes dependency references absent from the current numeric-foundation contract and uses current NRF-R01/R02/R05/R06a/R08a/R12a/R12b contracts. Current DPO parent ids replace historical subpart references for R31/R32. No original arithmetic or retained expected vector value changes.
+Final dependency reconciliation removes dependency references absent from the current numeric-foundation contract and uses current NRF-R01/NRF-R02/NRF-R05/NRF-R06a/NRF-R08a/RLI-R03/RLI-R02a contracts. Current DPO parent ids replace historical subpart references for R31/R32. No original arithmetic or retained expected vector value changes.
 
 Final mechanical run (2026-10-14): `python .agents/skills/spec-writing/tools/check_spec.py combat-damage-pipeline-order` returned 0 errors and 0 warnings. Source verification and documentation lint ran; no implementation tests or gameplay observations ran. Fresh full blind-reader review remains pending.
 
@@ -287,12 +287,12 @@ The advisory coverage triage below distinguishes a missing result from repeated 
 | DPO-R05 mana/stamina skip flags and remaining classes | no change | V06 exercises the generic roll, skip, prior-double-count, player and nonzero-hireling paths. Other drain bindings and classifier values 2/3/4 use those same result recipes;no exhaustive binding claim is made. |
 | DPO-R06a mastery/prior poison | no change | V07 exercises the positive/raw poison path;rangeRoll's mastery and prior operations are exercised in V24/V06. Nonzero parameter values introduce no new control branch;poison units remain explicit. |
 | DPO-R07 unlisted conversion types | spec edit | V08 adds fixed type 11 fire/burn-length and type 12 cold/freeze-length cases. Type2 is covered by V08 random selection, type 3 by V20;reserved/out-of-range no-add cases have the same result as V08 type 7. |
-| DPO-R08a negative/zero scale | no change | V09 already asserts negative cold unchanged and has zero default fields;PVP-V12 also records zero/negative supplied-value results. |
-| DPO-R08c/d remaining entry profiles | no change | PVP-V09 records unflagged unchanged, flagged once, unscaled local profiles and direct-then-flagged twice. V27 covers the queued profile;the direct-then-unflagged route uses the already covered one-run shared stage plus unflagged preservation. Upstream caller integration remains gated. |
+| DPO-R08a negative/zero scale | no change | V09 already asserts negative cold unchanged and has zero default fields;PVP-V11 also records zero/negative supplied-value results. |
+| DPO-R08c/d remaining entry profiles | no change | PVP-V08 records unflagged unchanged, flagged once, unscaled local profiles and direct-then-flagged twice. V27 covers the queued profile;the direct-then-unflagged route uses the already covered one-run shared stage plus unflagged preservation. Upstream caller integration remains gated. |
 | DPO-R09 callback mutations | no change | Mutation/traversal belongs to IEP-R07 and IEP-V08;DPO-V26 asserts this caller's position and shared-record arguments. Callback-specific execution/draws remain DPO-Q11. |
 | DPO-R12a regular-monster/hireling totals | spec edit | New V30 separates stored total from prediction for regular monster, hireling and player, with exact totals, result flags and queued record. |
 | DPO-R13a no match/other apply gates | no change | V10 covers accepted/rejected prefix, result-bit clearing, town rejection, dead return and failed reach;V29 covers matched queue consumption. Remaining predicates select documented no-effect/return families already exercised;predicate acquisition is gated by Q23/Q30. |
-| DPO-R16 negative absorb/state/dead | no change | V12 covers the no-write/return 0 family through a direct dead case and positive/capped healing. Other rejection predicates lead to that same result;state meaning consumes LSE-R12. |
+| DPO-R16 negative absorb/state/dead | no change | V12 covers the no-write/return 0 family through a direct dead case and positive/capped healing. Other rejection predicates lead to that same result;state meaning consumes LSE-R11. |
 | DPO-R18 negative drains | no change | Same nonpositive guard branch as the zero-term case in V13;no resource write or extra draw is a new result family. Positive/floored outcomes are already explicit. |
 | DPO-R19c regeneration scheduling | no change | Gated scheduler/update integration DPO-Q24;no verified deferred-effect assertion is added. |
 | DPO-R21b negative/wrapping burn | spec edit | V23 adds prior-4, ratio 128 producing x=-196, zero added term, and unchanged magnitude-4. This distinguishes clamping from a negative quotient. Wrapping is an unconditional numeric primitive, not an extra burn branch;the existing product/add order is retained. |
@@ -326,7 +326,7 @@ The reader-listed GATED entries are DPO-Q01, Q02, Q04, Q06, Q07, Q11, Q12, Q13, 
 | DPO-R11 null defender | no change | Null and non-monster defenders share the flag-1024 branch. V28 case 5 supplies the non-monster branch with bypass 1 and all twelve logged calls. Null introduces no new result recipe within the supplied mitigation-dispatch boundary. |
 | DPO-R12a nonphysical fields and wrapping total | no change | V01/V30 distinguish stored total, predicted sum and strict comparison. The remaining named damage fields contribute to the same unconditional wrapping sum. Wrapping is owned by NRF-R06a; there is no additional local control branch or different sum recipe. This does not claim exhaustive field-binding coverage. |
 | DPO-R13a invalid/dead/unkillable defender; no matching queue entry | no change | V10 case 6 covers unchanged early return before last-attacker write; the other defender rejections have that same effect. No-match also returns without effect; V29 covers the effectful match path. Predicate acquisition/queue integration retain Q23/Q30. No new result family requires another vector. |
-| DPO-R16 nonpositive absorb/state 92 | no change | V12's direct dead case asserts return 0 with no write, the same result as these guards; positive and capped healing results are also exercised. State 92's meaning belongs to LSE-R12. |
+| DPO-R16 nonpositive absorb/state 92 | no change | V12's direct dead case asserts return 0 with no write, the same result as these guards; positive and capped healing results are also exercised. State 92's meaning belongs to LSE-R11. |
 | DPO-R18 negative drain | no change | V13's zero manaDrain exercises the nonpositive guard: unchanged resource and no draw. Negative values use this same branch; positive fractional and negative-remainder outcomes already have exact assertions. |
 | DPO-R19a zero-length applier calls | spec edit | V25 adds an independent all-zero-term case with the exact five-call zero-argument log, no resource writes and no draw. It rejects omitting caller dispatch merely because a supplied applier receives zero; CSA owns the early returns inside those appliers. |
 | DPO-R22 doubling lightning/cold/magic | no change | V16 covers successful six-field doubling with nonzero physical/fire/poison, equality failure, marker/overlay alternatives and unchanged drains/lengths. The other three fields use the same unconditional shift in that success branch; no additional result recipe is introduced. |
@@ -384,7 +384,7 @@ ItemStatCost rows were selected by explicit decimal `ID`; the selected zero-base
 | 332 | `passive_pois_mastery` |
 | 350 | `modifierlist_skill` |
 
-ItemTypes has no explicit ID column in this record. These zero-based file data-row indices exclude the header; the existing loader/name convention is consumed separately from GDF-R16.
+ItemTypes has no explicit ID column in this record. These zero-based file data-row indices exclude the header; the existing loader/name convention is consumed separately from GDF-R07.
 
 | File data-row index | Raw ItemType cell | Raw Code cell |
 |---|---|---|
@@ -412,14 +412,14 @@ unchanged. This resolves the wording ambiguity without supplying a new default.
 | R05 other skip flags / drain fields / classifier values | No change: V06 covers roll, skip, prior double-count, player/hireling and unsupported-type results. Remaining fixed bindings repeat those result recipes |
 | R07 fixed 2/3 and reserved 6/8/9 | No change: V08's random type 2 and V20's type 3 execute the same selected handlers; type 7 already covers subtract-with-no-add used by the reserved types |
 | R08a remaining scale fields | No change: V09 covers enabled positive, nonpositive, disabled length, large-value and P=100 branches. Other fields repeat the table bindings |
-| R08c/d other entry profiles | No change: PVP-V09 covers direct/flagged and local entry profiles; V27 covers queued placement. Upstream integration remains explicitly gated |
+| R08c/d other entry profiles | No change: PVP-V08 covers direct/flagged and local entry profiles; V27 covers queued placement. Upstream integration remains explicitly gated |
 | R09 event 11 with P=100 | No change: V27 explicitly supplies P=100 and requires defender event 11 on eligible hits |
 | R11 demon / null / non-monster variants | No change: V28 covers classified and non-monster bypass results and both loop lengths. Remaining fixed predicates use those same bypass/result recipes |
 | R12a wrapping sum / ineligible enqueue | No change: wrapping is the shared NRF arithmetic; V03/V27 already require the missed basic attack to build/enqueue and reach queue completion without scaling/prediction |
 | R13a no-match / apply rejection / late mode test | Added V29(a) at the isolated post-event tail: a still-hit player now in mode 0 must retain the queue and request neither reflection, reaction nor removal. Other no-effect/rejection families remain covered by V10/V29 and their predicate integration remains gated |
 | R14/R15 negative/in-range physical | No change: V11 case 2 already supplies physical below life and asserts it reaches leech unchanged. Signed min is the same operation for negative input; leech interiors remain LSE-owned |
 | R16 state 92 / invalid/dead no-op | No change: V12's direct dead case covers return 0 with no write; the other guards select that same result, and LSE owns state meaning |
-| R18 divisor quirk | No change: LSE-R17 owns the term rewrite and its divisor; this stage consumes the resulting current term. V13 discriminates this consumer's raw subtraction/threshold |
+| R18 divisor quirk | No change: LSE-R15 owns the term rewrite and its divisor; this stage consumes the resulting current term. V13 discriminates this consumer's raw subtraction/threshold |
 | R22 missing class / absent defender | No change: V16 covers no-double/no-draw and marker/overlay branches. Missing records use the stated no-double guard; absent defender skips the same optional marker/overlay requests without adding a new arithmetic recipe |
 | R23 callback mutation/draws | No change: IEP-R07/V08 own mutation/traversal; callback-specific interiors retain Q11 |
 | R24a Expansion throwable / other weights / qualifications | No change: V17 covers thresholds 4/10, Classic no-draw, cyclic weighted choice and qualification-controlled third draw. Other fixed item/location bindings repeat these recipes |
@@ -479,7 +479,7 @@ Seed arithmetic for S1/S5 steps 1-5 and every draw value quoted by DPO-V02, V04 
 
 **Correction 3 (DPO-R08b, DPO-Q01).** Original discrepancy: DPO-R08b restated the scale selector as asm-only with eligibility open, while sibling PVP-R02a holds the same selector as verified static with its predicates read. DPO-R08b now consumes PVP-R02a, and DPO-Q01 is narrowed to PVP-R02b's scale-condition producer. No P value changed.
 
-**Wording fixes.** DPO-R06b states that the poison-count division applies to the accumulated length (0xDD450 divides the stored sum). DPO-R15 cites LSE-R02/R04/R06/R09/R10/R13/R15 for the leech effects it consumes, and states the draw condition of LSE-R13. Section 3 garbled source cells and the unexplained asterisk were repaired; section 6 no longer cites the removed sub-id R31c.
+**Wording fixes.** DPO-R06b states that the poison-count division applies to the accumulated length (0xDD450 divides the stored sum). DPO-R15 cites LSE-R01/LSE-R03/LSE-R05/LSE-R08/LSE-R09/LSE-R12/LSE-R14 for the leech effects it consumes, and states the draw condition of LSE-R12. Section 3 garbled source cells and the unexplained asterisk were repaired; section 6 no longer cites the removed sub-id R31c.
 
 These corrections change rule behavior (Correction 1) and add a vector case, so a fresh full blind-implementer pass is required for the resulting contract; delta pass 4 above no longer covers it.
 
@@ -504,7 +504,7 @@ Source checks made by the spec writer for the behavioral edits below (original D
 | GAP calling-convention leakage in conventions/V02 | Spec edit: replaced with supplied weapon mastery percent and weapon crit chance; V02 says weapon mode 0 |
 | GAP V16 defender seed / overlay argument | Spec edit: defender seed S5 asserted unchanged; overlay argument stated in R22 |
 | GAP V12 absorb return not in section 5 | Spec edit: section 5 row for the ignored absorb-heal return value |
-| GAP R15 omits LSE-R03 return | Spec edit: R15 cites LSE-R03's monster-defender return; Depends on lists the consumed LSE ids |
+| GAP R15 omits LSE-R02 return | Spec edit: R15 cites LSE-R02's monster-defender return; Depends on lists the consumed LSE ids |
 | GAP V19/R28a ColdEffect/shatter | No change: shatter comparison and ColdEffect values are CSA-owned (CSA-R05/R06, CSA-V09..V11); V19 asserts only the draw count of this placement |
 | DISCRIM V01 mask | Vector: case (f) T 2561 |
 | DISCRIM V02 source order | Vector: case E (10,50,0) |
@@ -555,14 +555,14 @@ Source checks by the spec writer for this pass (original D2Game 1.13c disassembl
 | GUESS R13a gate 7 both forms | Spec edit: "only with result 32 clear and hit set (for both forms)" |
 | GUESS R22 OR vs assign | Spec edit: OR 0x10; V16 hitClass 0x01 variant. The Crit compare is already stated as unsigned byte |
 | GUESS R16 invalid/dead predicate | No change: R16 already cites DPO-R13a gate 4's predicate |
-| GUESS R01a vs SBA block flag | No change: SBA-R13 maps code 1 to 16 and its block flag to the hit clear that R01a's mask-16 step performs |
+| GUESS R01a vs SBA block flag | No change: SBA-R05 maps code 1 to 16 and its block flag to the hit clear that R01a's mask-16 step performs |
 | GUESS V24 stat-read log scope | Spec edit: the log covers only the elemental stage's reads |
 | GUESS V25 mana/stamina order | Spec edit: resource writes are logged in the same call log, mana first as asserted |
 | GUESS V28 undead and demon | No change: R11 states each predicate; no case requires both |
 | GUESS R08c/d profile per caller | No change: caller-to-profile integration is DPO-Q19/Q20 |
 | GAP mitigation writes not in section 5 | Spec edit: section 5 row naming DMI-owned per-entry writes consumed by DPO-R16 |
 | GAP death handling | Spec edit: section 5 states death here is the result flag, with no death-mode or kill-credit write before events 10/9 |
-| GAP result mask 512 | Spec edit: section 3 names mask 512 and its outside-path producer (SBA-R14) |
+| GAP result mask 512 | Spec edit: section 3 names mask 512 and its outside-path producer (SBA-R06) |
 | GAP packed encodings | No change: section 3 already defines the numeric masks as logical controls retained for exact vectors without imposing a layout |
 | GAP hit-class/mark/overlay producers | No change: gated by DPO-Q18/Q21 |
 | GAP weapon mode input | Spec edit: section 3 build-argument row (weaponMode 0 on the basic attack; other values skip only the weapon crit source) |
@@ -582,7 +582,7 @@ Source checks by the spec writer for this pass (original D2Game 1.13c disassembl
 | DISCRIM V05 elements with scaleAlways | Vector: V05 case 6 |
 | DISCRIM V06 drains with scale | Vector: V06 case 11 |
 | DISCRIM V06 player term scaled/assigned | Vector: V06 case 12 |
-| DISCRIM V06 hireling classes / player flags | Vector: V06 case 13 for flags; hireling class list is GDF-R17's mapping |
+| DISCRIM V06 hireling classes / player flags | Vector: V06 case 13 for flags; hireling class list is GDF-R08's mapping |
 | DISCRIM V07 poison ratio | Vector: V07 case 5 |
 | DISCRIM V08 selected after subtraction | Spec edit: claim removed (selection order is not observable); Discriminates restated |
 | DISCRIM V08 type-10 seed owner | Vector: defender seed S5 unchanged asserted |
@@ -698,9 +698,9 @@ Remaining to finish the blind-implementer pass: apply the open proposed outcomes
 
 ## Pass-8 proposed outcomes applied, 2026-10-15
 
-Every pass-8 entry marked open above was applied as proposed, after a fresh read-only check of the original D2Game 1.13c disassembly: hit result 0xDE5A0 (zero to-hit return leaves hit clear and skips avoidance); build 0xDD450 (ratio 0 becomes 128 at entry; build marker 32 ORed at entry; monster skip flags 4/8/16; three independent bypass tests; poison length test reads the stored scaled magnitude; burn product wraps before the `max(0, x)` test); monster double 0x770E0 (unsigned byte compare); apply 0xDE0C0 (gate order hostility/room, town, killable, invalid/dead; no dispatcher return is tested); absorb heal 0xDB570 (state 92 refusal; cap read through the life-cap getter LSE-R11 describes); burns 0xDA970/0xDA930 (nonpositive drains return before any write); durability 0xDEBA0/0x12EE0 (W 0 takes no draw; Expansion throwable threshold 10); cold applier 0xDC780 (the E != 0 draw steps the defender); queue consumer 0xDED30 (first match from the head copied whole as 0x1C dwords; attacker mode-0 return before apply retains the queue) and removal 0xDA6D0 (every matching entry unlinked).
+Every pass-8 entry marked open above was applied as proposed, after a fresh read-only check of the original D2Game 1.13c disassembly: hit result 0xDE5A0 (zero to-hit return leaves hit clear and skips avoidance); build 0xDD450 (ratio 0 becomes 128 at entry; build marker 32 ORed at entry; monster skip flags 4/8/16; three independent bypass tests; poison length test reads the stored scaled magnitude; burn product wraps before the `max(0, x)` test); monster double 0x770E0 (unsigned byte compare); apply 0xDE0C0 (gate order hostility/room, town, killable, invalid/dead; no dispatcher return is tested); absorb heal 0xDB570 (state 92 refusal; cap read through the life-cap getter LSE-R10 describes); burns 0xDA970/0xDA930 (nonpositive drains return before any write); durability 0xDEBA0/0x12EE0 (W 0 takes no draw; Expansion throwable threshold 10); cold applier 0xDC780 (the E != 0 draw steps the defender); queue consumer 0xDED30 (first match from the head copied whole as 0x1C dwords; attacker mode-0 return before apply retains the queue) and removal 0xDA6D0 (every matching entry unlinked).
 
-Spec edits: DPO-R01a (to-hit return), R05 (independent bypass tests), R06b (scaled magnitude test), R11 (DMI-R04 class tests), R13a (head-most match, whole-record copy, removal of every match), R16 (LSE-R10/R11/R12 cap read), section 3 queue-entry and stat 7 rows, section 5 queue row, Depends on (DMI-R04, LSE-R11). Vectors: V03 to-hit 0; V06 cases 15-18; V07 case 6; V08 type 10 at percent 0; V10 case 13; V12 (e); V13 negative drains; V16 Crit 200; V17 (a5), (b3); V19 monster E -20; V23 ratio-0 and wrap cases; V27 (e); V28 case 10; V29 (b), (c). Rule text changed, so the next reader run is full.
+Spec edits: DPO-R01a (to-hit return), R05 (independent bypass tests), R06b (scaled magnitude test), R11 (DMI-R04 class tests), R13a (head-most match, whole-record copy, removal of every match), R16 (LSE-R09/LSE-R10/LSE-R11 cap read), section 3 queue-entry and stat 7 rows, section 5 queue row, Depends on (DMI-R04, LSE-R10). Vectors: V03 to-hit 0; V06 cases 15-18; V07 case 6; V08 type 10 at percent 0; V10 case 13; V12 (e); V13 negative drains; V16 Crit 200; V17 (a5), (b3); V19 monster E -20; V23 ratio-0 and wrap cases; V27 (e); V28 case 10; V29 (b), (c). Rule text changed, so the next reader run is full.
 
 ## Fresh full blind-implementer pass 9, 2026-10-15
 
@@ -719,7 +719,7 @@ Source checks for this triage (original D2Game 1.13c disassembly, read-only, 202
 | GUESS R05/R22 MonStats row | Spec edit: drains read no row; valid row is class in [0, count) |
 | GAP build marker 32 producer | Spec edit: DPO-R02a states the entry OR on hit and miss |
 | GAP DPO-R31 inputs in defaults | Spec edit: conventions state class flags clear, no damage_vs_montype, weapon not Blunt |
-| GAP companion armorclass record | Spec edit: asterisk removed; the name consumes GDF-R11 |
+| GAP companion armorclass record | Spec edit: asterisk removed; the name consumes GDF-R02 |
 | GAP gates 1/2 null units, missing attacker row | Spec edit for the missing MonStats row (fails town gate); null-unit hostility/room behavior stays DPO-Q30 |
 | GAP V17 unqualified and monster/monster inputs | Vector: explicit seeds and outputs |
 | GAP DPO-R19c update in V01/V27 | Vector: V01 states the update is a supplied no-effect operation; V27 already does |
@@ -750,7 +750,7 @@ Source checks for this triage (original D2Game 1.13c disassembly, read-only, 202
 
 | Entry | Outcome |
 |---|---|
-| GUESS NRF-R12c adjustment on stats 6/7/8/10 | Spec edit: vector conventions supply definitions for which NRF-R12c returns stored values |
+| GUESS RLI-R02b adjustment on stats 6/7/8/10 | Spec edit: vector conventions supply definitions for which RLI-R02b returns stored values |
 | GUESS R28a monster with state 54 | Spec edit: R28a defers to CSA-R07's routing, naming the state-54 return |
 | GUESS R02b unarmed order | No change: R02b is asm-only, gated by DPO-Q27 |
 | GUESS physical-supplied scope | Spec edit: DPO-R02a states every other build stage still runs |
@@ -794,7 +794,7 @@ Source checks for this triage (original D2Game 1.13c disassembly, read-only, 202
 | GAP V29(a)/V12 seams | No change: stated isolated stage boundaries |
 | GAP packed masks | No change: section 3 retains them as logical controls for exact vectors |
 | GAP return contracts to callers | No change: caller use is DPO-Q19/Q20 |
-| GAP block/avoid arguments | No change: SBA-R13 owns them; reach arguments DPO-R01b/Q23 |
+| GAP block/avoid arguments | No change: SBA-R05 owns them; reach arguments DPO-R01b/Q23 |
 | GAP registration values | No change: IEP-R07/IEP-V08 own pass-through |
 | GAP monster data/Crit producer | No change: MonStats inputs in section 3 consume GDF |
 | DISCRIM V17 threshold equality | Vector: (a6) roll 4, (a7) roll 10 |

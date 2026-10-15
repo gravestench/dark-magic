@@ -1,6 +1,6 @@
-# Evidence: Skill Calc Expressions and Synergies
+# Evidence: Skill Calc Expressions
 
-Spec: [Skill Calc Expressions and Synergies](../../specs/skill-calc-expressions-and-synergies.md)
+Spec: [Skill Calc Expressions](../../specs/skill-calc-expressions.md)
 
 ## Source identity and evidence reuse
 
@@ -42,29 +42,22 @@ does not acquire verification through its caller's verified arithmetic.
 | LOD113C-D2COMMON | data RVA 0x99E24, count at 0x99E5C | seven skill bindings, SCX-R13 | Original data/instruction reading, 2026-10-12; binding entries mapped to functions below |
 | LOD113C-D2COMMON | 0x4F0D0, 0x4F0C0 | min/max, SCX-R14 | Original disassembly, 2026-10-12; signed compare to return |
 | LOD113C-D2COMMON | 0x50CB0 -> 0x1180 | skill random range, SCX-R15 | Original disassembly, 2026-10-12; range checks, seed selection, draw/reduction and return; numeric primitive NRF-R01/NRF-R02 |
-| LOD113C-D2COMMON | 0x51AF0 -> 0x4E480, 0x4FCB0, 0x51070 | skill(), SCX-R16a/SCX-R16b | Instructions, 2026-10-12; lookup and bonus request, conditional addition, clamp, parameter request; lookup/bonus candidates reread 2026-10-15, full dependencies remain SCX-Q09 |
+| LOD113C-D2COMMON | 0x51AF0 -> 0x4E480, 0x4FCB0, 0x51070 | skill(), SCX-R16a/SCX-R16b | Instructions, 2026-10-12; lookup and bonus request, conditional addition, clamp, parameter request; lookup/bonus candidates reread 2026-10-15, full dependencies remain SCX-Q07 |
 | LOD113C-D2COMMON | 0x50C90 -> 0x6A790, export #10347 | miss(), SCX-R17 | Original disassembly, 2026-10-12; null context and exact forwarded request/return |
 | LOD113C-D2COMMON | 0x50C30 -> 0x31EA0, 0x38C20, 0x39430, 0x38B70 | stat(), SCX-R18a/SCX-R18b | Original disassembly, 2026-10-12; full routing instruction read 2026-10-15 |
 | LOD113C-D2COMMON | 0x38C20 export #10587 -> 0x38B00 | qualifier-one stat read | Instructions, 2026-10-15; unit/id/list guards, layer-zero identity formation, own-array leaf candidate |
 | LOD113C-D2COMMON | 0x39430 export #10910 -> 0x38A80 | qualifier-two stat read | Instructions, 2026-10-15; selected-array leaf candidate; byte-run corroboration/dependency reconciliation remains explicit |
-| LOD113C-D2COMMON | 0x38B70 export #10973 | ordinary stat read | Consumed NRF-R12b/NRF-R12c, whose own evidence record establishes array/minimum semantics; no fresh promotion here |
+| LOD113C-D2COMMON | 0x38B70 export #10973 | ordinary stat read | Consumed RLI-R02a/RLI-R02b, whose own evidence record establishes array/minimum semantics; no fresh promotion here |
 | LOD113C-D2COMMON | 0x51AB0 -> 0x51070 twice | sklvl(), SCX-R19 | Instructions, 2026-10-12; ordered requests and unchanged second return |
 | LOD113C-D2COMMON | 0x1550 through 0x1730 | raw/linear parameter helpers, SCX-R21 | Instructions, 2026-10-12; nonpositive guard and wrapped progression |
 | LOD113C-D2COMMON | 0x4DC30; callers 0x4E680,0x4E630,0x4E5E0 | diminishing helper/guards, SCX-R22 | Instructions, 2026-10-12; signed divisions, upper clamp; fourth pair's unguarded call |
 | LOD113C-D2COMMON | 0x51070 | mana, nested calculation, damage/level/missile selector dispatch, SCX-R23 through SCX-R27 | Instructions, 2026-10-12; corresponding result contracts/gates in spec |
 | LOD113C-D2COMMON | 0x4EA50 -> 0x9270 | to-hit selector result, SCX-R25b | Instructions, 2026-10-15; guard, empty-reference fallback, direct evaluator return |
 | LOD113C-D2COMMON | 0x4E7A0 -> 0x9270 | passive selector first match, SCX-R28 | Instructions, 2026-10-15; first of five slots, fixed pairs, aligned calc and unchanged return |
-| LOD113C-D2COMMON | 0x4DDB0 | five-band level helper, SCX-R29 | Original disassembly, 2026-10-12; each signed level branch and summed result |
-| LOD113C-D2COMMON | 0x50460 export #10121; 0x50360 | elemental min/max, SCX-R30 | Original disassembly, 2026-10-12; shift before synergy, minimum-only gate, optional mastery after synergy |
-| LOD113C-D2COMMON | 0x4F870; selector map 0x4F91C; targets 0x4F908 | mastery selection, SCX-R31 | Original disassembly, 2026-10-12; instruction/map corroboration against matching image 2026-10-15; cold wrapper reconciled with the shared stat-read contract |
-| LOD113C-D2COMMON | 0x11E0 | argument-ordered percent primitive | 2026-10-12 reading agrees with consumed NRF-R05; current contract uses that shared rule |
-| LOD113C-D2COMMON | 0x52100; 0x51FF0 export #10297 | physical min/max, SCX-R32a/SCX-R32b | Instructions, 2026-10-12; source-share/synergy/shift sequence; source and Kick leaf integration remain gated |
-| LOD113C-D2COMMON | 0x4F930; 0x31B90; 0x1FB80; 0x38ED0; 0x38F60 | Kick and weapon/item source dependencies | Prior caller references, 2026-10-12; no complete result proof recorded, SCX-Q07 |
-| LOD113C-D2COMMON | 0x4E900 | elemental duration, SCX-R33 | Instructions, 2026-10-12; three level bands, base, synergy and return |
-| LOD113C-D2COMMON | 0x6B2B0 -> 0x9270; callback 0x6B160 -> 0x6A790 | missile front end, SCX-R34a/SCX-R34b | Original disassembly, 2026-10-12; type/fallback/pool/context path; complete resolver remains separate |
-| LOD113C-D2COMMON | 0x69DB0,0x69DA0,0x6B140,0x6B430; bindings data RVA 0x99C30, count 0x99C50 | missile functions, SCX-R34a | Original disassembly/data, 2026-10-12; missile seed and owner skill request distinguished |
-| LOD113C-D2COMMON | 0x6A790 -> 0x6B360,0x6A3E0,0x69DC0,0x6A580,0x6A4B0 | missile resolver/result candidates | Targeted instructions, 2026-10-15; dispatch and first three helpers inspected, remaining helpers/byte-run paths and field bindings leave SCX-Q05 open |
-| LOD113C-D2COMMON | 0x23CE0 -> 0x9270, callback 0x21FF0; bindings data RVA 0x9D354,count 0x9D374 | additional family, SCX-R35a/SCX-R35b | Byte-checked source reconstructions, 2026-10-15; complete pool check, two-value context, callback return zero; function bindings/owner unresolved |
+| LOD113C-D2COMMON | 0x6B2B0 -> 0x9270; callback 0x6B160 -> 0x6A790 | missile front end, SCX-R29a/SCX-R29b | Original disassembly, 2026-10-12; type/fallback/pool/context path; complete resolver remains separate |
+| LOD113C-D2COMMON | 0x69DB0,0x69DA0,0x6B140,0x6B430; bindings data RVA 0x99C30, count 0x99C50 | missile functions, SCX-R29a | Original disassembly/data, 2026-10-12; missile seed and owner skill request distinguished |
+| LOD113C-D2COMMON | 0x6A790 -> 0x6B360,0x6A3E0,0x69DC0,0x6A580,0x6A4B0 | missile resolver/result candidates | Targeted instructions, 2026-10-15; dispatch and first three helpers inspected, remaining helpers/byte-run paths and field bindings leave SCX-Q04 open |
+| LOD113C-D2COMMON | 0x23CE0 -> 0x9270, callback 0x21FF0; bindings data RVA 0x9D354,count 0x9D374 | additional family, SCX-R30a/SCX-R30b | Byte-checked source reconstructions, 2026-10-15; complete pool check, two-value context, callback return zero; function bindings/owner unresolved |
 | LOD113C-D2COMMON | 0x60920, cap pointer data RVA 0xA0B50 | cap producer candidate, SCX-Q03 | Byte-checked source reconstruction, 2026-10-15; Experience loader stores the record pointer; Amazon-to-first-dword binding corroborated against original code/string bytes; compiled-record correspondence remains unresolved |
 
 The expression dispatch root is the selected family front end, not a periodic
@@ -108,10 +101,6 @@ These are navigation details, not required storage or API designs.
 | selected entry candidate | 0x4E480 walks original skill entries; filters disabled marker +0x3C; own marker influences preference; a complete shared entry-selection contract is still missing |
 | to-hit base, per-level increment, optional calc | SkillsRecord +0x198,+0x19C,+0x1A0 correspond to ToHit, LevToHit, ToHitCalc; original instructions0x654A2..0x6551C and strings0x8AE18/0x907BC/0x907B0 corroborated 2026-10-15 |
 | passive identities and aligned calculation | five signed words starting +0x98; aligned i32 references starting +0xA4 |
-| fixed mastery selection | table at RVA 0x4F91C indexed by EType-1; jump targets at 0x4F908; unsupported entries select zero return |
-| cold source | unit list +0x5C; definition count +0xBD4 >331; definition index 331; identity encoded as 0x14B0000; direct call 0x38A80 |
-| ordinary mastery source | 329/330/332 at layer 0 through 0x38B70; percentage tail jump0x11E0 |
-| physical source selection condition | 0x1FB80(unit,unit inventory association) returns 2; meaning/complete dependency remains open |
 | skill cap value | first dword through pointer RVA 0xA0B50, written by 0x60920; not an immutable binary literal |
 | unit seed | original unit seed fields beginning +0x20; semantic ownership is specified independently |
 
@@ -138,18 +127,12 @@ they do not reproduce a game-data row or claim a fresh archive read.
    stage; SCX-R18b retains the special to-hit result integration gap. The same leaf mapping closes qualifier-one/two source semantics: own-array for qualifier one, selected-array for qualifier two. Targeted
    leaf reads found own-array 0x38B00 and selected-array 0x38A80; the shared NRF
    contract is the authority for already verified ordinary getters.
-4. The mastery mapping in the earlier SCX reading agrees with the mapping in
-   SLD-R10. At the time of that earlier comparison, SLD's decoding/integration
-   limits remained unresolved; its current R10 reuses the compatible SCX/NRF evidence.
-   New original-image inspection of 0x4F870 corroborates instruction and
-   table bytes, including the cold-specific direct 0x38A80 call and ordinary
-   0x38B70 calls for other selected elements. This settles the decoding ambiguity. The compatible NRF evidence identifies the exact leaf at 0x38A80 as the selected-array/minimum operation and 0x38B00 as the own-array/minimum operation. The cold wrapper therefore consumes NRF-R12b/NRF-R12c directly. It does not force the base/own array. No gameplay result was collected.
-5. SCX-R35's pool check and parameter callback now have complete matched-source
-   readings at 0x23CE0/0x21FF0. SCX-R35a verifies those operations. The four function
-   results and pool owner remain SCX-R35b's behavior gap.
+5. SCX-R30's pool check and parameter callback now have complete matched-source
+   readings at 0x23CE0/0x21FF0. SCX-R30a verifies those operations. The four function
+   results and pool owner remain SCX-R30b's behavior gap.
 6. Cap pointer search found writer 0x60920 and the Experience loader; the pointer
    identifies loaded data rather than a static cap constant. Original image instructions and strings separately establish Amazon at first-record offset 0; a narrow original-loader text read supplies MaxLvl/Amazon99. Loaded compiled-record correspondence is still not inferred from the text read.
-7. SCX-R16/SCX-R26 and SCX-R32 formerly mixed caller arithmetic with incomplete
+7. SCX-R16/SCX-R26 and the physical damage builder (now SLD-R03 through SLD-R07) formerly mixed caller arithmetic with incomplete
    entry/bonus/source/Kick dependencies. Supplied-input assertions are preserved;
    their integration gates are separate. All 23 original numeric examples and
    seeds remain in the expanded executable vectors; added cases distinguish
@@ -157,7 +140,7 @@ they do not reproduce a game-data row or claim a fresh archive read.
 
 ## Remaining evidence assessment
 
-The [gap file](../../plans/gaps/skill-calc-expressions-and-synergies.md) records
+The [gap file](../../plans/gaps/skill-calc-expressions.md) records
 every remaining question and attempted slice. Compiler inspection newly reached
 the append/fold paths but did not resolve owned parser/encoding helpers or every
 byte-run decode; a recovered assertion is not promoted. Missile inspection reached
@@ -167,26 +150,13 @@ contract open. Cap/name gaps concern producer/identity questions; they do not bl
 supplied-value arithmetic. No full search ladder is claimed and no function is
 labeled absent merely because it was missing from an earlier inventory.
 
-No gameplay campaign was performed during regeneration. SCX-Q12 therefore remains
+No gameplay campaign was performed during regeneration. SCX-Q09 therefore remains
 an observation gap for every static behavioral rule. All executable vectors are
 hand-derived from the contracts and declare `runtime_observed: no`.
 
-## Elemental observation
-
-SCX-O01 is pending. Use a matching vanilla Expansion 1.13c Sorceress with a learned
-elemental skill and a related damage-synergy skill, in Normal difficulty, standing
-in town with stable equipment and no temporary buffs. Record character/skill
-levels, learned synergy levels, relevant mastery stats, selected Skills fields,
-and the caller's mastery flag before changing a synergy point. Measure raw min/max
-returns at D2Common 0x50460/0x50360 for the same skill context before and after a
-controlled synergy increase. Calculate each expectation from the recorded fields,
-using SCX-R30/SCX-R31. The tooltip alone cannot establish raw rounding. Exact
-character setup and expected numbers must be pinned before this becomes a
-reproducible observation vector; no fabricated record is supplied here.
-
 ## Expression observation
 
-SCX-O02 is pending. On the same identified vanilla profile, select one known
+SCX-O01 is pending. On an identified vanilla Expansion 1.13c profile, select one known
 constant calculation cell and one parameterized cell whose effective table value
 has first been established. In a matching original process, inspect the selected
 compiled pool reference and complete expression bytes before requesting the
@@ -219,12 +189,12 @@ The numeric-foundations companion's stat-reader records identify original D2Comm
 0x38A80 and 0x38B00 with the same fingerprint and inputs. Their recorded complete
 entry-to-return evidence establishes selected-array and own-array reads respectively,
 including the same conditional minimum adjustment. Reusing that compatible evidence
-closes the leaf uncertainty for SCX-R18a's qualifiers and SCX-R31's cold path; no
+closes the leaf uncertainty for SCX-R18a's qualifiers and SLD-R10's cold path; no
 repeated byte-run decoding is required solely to relabel the shared contract.
 The 2026-10-12 SCX cold wording said only "directly from the unit stat list";
 the SLD-R10 lead called it "base stat list". Original wrapper 0x4F870 calls the
 selected-array leaf, so a forced-own-array interpretation would be incorrect.
-SCX-V36 discriminates the source using different supplied own/resolved values.
+SCX-V31 discriminates the source using different supplied own/resolved values.
 The special to-hit producer remains SCX-Q02, since it includes additional arithmetic,
 player eligibility, and class-record data beyond the common getter.
 
@@ -265,7 +235,7 @@ followed by count 4. A targeted direct-reference search for front end 0x23CE0 fo
 no direct caller in the inspected shared-module instruction records; that is not
 an absence proof because indirect dispatch remains possible. These targets narrow
 the next reading but do not establish the pool's owner or the functions' results.
-SCX-R35b/SCX-Q06 remain unresolved.
+SCX-R30b/SCX-Q05 remain unresolved.
 
 ### First full blind-reader triage (2026-10-15)
 
@@ -278,7 +248,7 @@ it supplies no new original-source reading or gameplay observation, and changes
 no rule label, producer default, or gate.
 
 DISCRIM outcome: SCX-V11 originally checked only binding indexes 0 and 1 and an
-invalid index. Direct-operation vectors SCX-V13/SCX-V14/SCX-V26/SCX-V27/SCX-V28
+invalid index. Direct-operation vectors SCX-V13/SCX-V14/SCX-V21/SCX-V22/SCX-V23
 could still pass with wrong indexes 2 through 6. New SCX-V11(d–h) executes function
 tokens for each of those indexes, asserting the selected semantic operation,
 three forwarded argument slots, context, and distinct final evaluator result.
@@ -290,38 +260,38 @@ skill-entry, missile-resolver, or stat-result production.
 | SCX-R03/SCX-R04: four-byte operands | SCX-V09(d) adds a signed four-byte parameter selector and exact call log. No literal change: SCX-V01(c) already executes a four-byte literal with result 256. |
 | SCX-R05: `>=`, `==`, `!=` | SCX-V10(e–g) adds true and false results for all three opcodes. |
 | SCX-R06/SCX-R08: multiply and INT_MIN negate wrap | SCX-V03(b) adds 65536 squared wrapping to zero; SCX-V08(d) adds INT_MIN negation retaining INT_MIN. |
-| SCX-R10: arity one | SCX-V25(d) asserts argument slots (2,0,0), one call, and evaluator return 200. |
+| SCX-R10: arity one | SCX-V20(d) asserts argument slots (2,0,0), one call, and evaluator return 200. |
 | SCX-R11: nonpositive compiler length and absent pool | SCX-V12(f–g) asserts the sentinel/no append at supplied lengths 0 and -1 and zero/no evaluation with an absent pool. Compiler output production remains SCX-Q01. |
 | SCX-R15: null context, overflowing range, absent seed owner | SCX-V13(e–h) asserts null-context zero, wrapped-length no draw, absent-unit no-draw success, and the draw-needed fault. No arbitrary seed is supplied for an absent unit. |
 | SCX-R16a/SCX-R26: non-own entry, clamps, missing unit | SCX-V14(d–g) adds omitted bonus, lower/upper clamps, and absent-unit forwarding/level-selector assertions. Entry/bonus/cap producers remain gated. |
-| SCX-R18a/SCX-R19: missing context/unit, negative id, null nested unit | SCX-V27(e) adds routing guards; SCX-V28(b–c) distinguishes absent context from a present context containing a null unit. The latter still forwards both requests. |
+| SCX-R18a/SCX-R19: missing context/unit, negative id, null nested unit | SCX-V22(e) adds routing guards; SCX-V23(b–c) distinguishes absent context from a present context containing a null unit. The latter still forwards both requests. |
 | SCX-R21/SCX-R23: other linear pairs, nonpositive mana level | SCX-V17(d) adds zero/negative-level mana guards. No other-pair cases: SCX-R21 explicitly binds each pair to the same progression; SCX-V15 already distinguishes progression from raw/level selection. Repeated field bindings are not an exhaustive discriminator claim. |
-| SCX-R25b: invalid skill and nonpositive level | SCX-V32(c) adds zero/no evaluation for invalid identity and levels 0 and -1. |
-| SCX-R28: no passive match and nonpositive level | SCX-V33(b–c) adds zero/no evaluation for no matching slot and for levels 0 and -1 despite matching slots. |
-| SCX-R30: minimum gate enabled only by first increment | SCX-V20(b) keeps the shifted minimum at 256 and changes only EMinLev1 to 1 at level 1; one synergy evaluation and result 384 distinguish the increment arm of the gate. |
-| SCX-R31: lightning, cold selector 12, selector 5 | No change: the explicit fixed table sends 2 to ordinary stat 330, 12 to the same cold stat/path as 4, and 5 to ordinary stat 332. SCX-V21 exercises ordinary-source arithmetic and unsupported-selector rejection; SCX-V36 exercises cold selected-array routing. These remaining table bindings introduce no additional result-changing control or arithmetic branch, and neither vector claims exhaustive selector coverage. |
-| SCX-R32a: nonzero source share and maximum endpoint | SCX-V22(b) supplies a negative source, asserting truncation toward zero and source inclusion before synergy/shift, with distinct minimum 2304 and maximum 4864. Actual source production remains SCX-Q07. |
-| SCX-R33: first two duration bands | SCX-V23(c) adds levels 8,9,16 and results 120,125,160, covering both bands and their transition. |
-| SCX-R34a: type rejection and owner-skill binding | SCX-V34(b–c) adds wrong-type rejection and bytecode index 3 selecting owner skill/level with supplied entry/bonus/cap. No complete resolver result is added: SCX-Q05/SCX-Q09 still gate their producers. |
-| SCX-R35a: absent pool and invalid reference | SCX-V35(b) adds absent-pool, exclusive-upper-bound, and empty-sentinel rejection with no evaluation. |
+| SCX-R25b: invalid skill and nonpositive level | SCX-V27(c) adds zero/no evaluation for invalid identity and levels 0 and -1. |
+| SCX-R28: no passive match and nonpositive level | SCX-V28(b–c) adds zero/no evaluation for no matching slot and for levels 0 and -1 despite matching slots. |
+| SLD-R09: minimum gate enabled only by first increment | SLD-V06(b) keeps the shifted minimum at 256 and changes only EMinLev1 to 1 at level 1; one synergy evaluation and result 384 distinguish the increment arm of the gate. |
+| SLD-R10: lightning, cold selector 12, selector 5 | No change: the explicit fixed table sends 2 to ordinary stat 330, 12 to the same cold stat/path as 4, and 5 to ordinary stat 332. SLD-V14 exercises ordinary-source arithmetic and unsupported-selector rejection; SCX-V31 exercises cold selected-array routing. These remaining table bindings introduce no additional result-changing control or arithmetic branch, and neither vector claims exhaustive selector coverage. |
+| SLD-R05: nonzero source share and maximum endpoint | SLD-V03(b) supplies a negative source, asserting truncation toward zero and source inclusion before synergy/shift, with distinct minimum 2304 and maximum 4864. Actual source production remains SLD-Q02. |
+| SLD-R11: first two duration bands | SLD-V07(c) adds levels 8,9,16 and results 120,125,160, covering both bands and their transition. |
+| SCX-R29a: type rejection and owner-skill binding | SCX-V29(b–c) adds wrong-type rejection and bytecode index 3 selecting owner skill/level with supplied entry/bonus/cap. No complete resolver result is added: SCX-Q04/SCX-Q07 still gate their producers. |
+| SCX-R30a: absent pool and invalid reference | SCX-V30(b) adds absent-pool, exclusive-upper-bound, and empty-sentinel rejection with no evaluation. |
 
 HARDEST outcomes, all no change because no missing decision was identified:
 
-- SCX-R30/SCX-R31 and SCX-V20–SCX-V22/SCX-V36: the existing rules explicitly
+- SLD-R09/SLD-R10 and SLD-V06, SLD-V14, SLD-V03 and SCX-V31: the existing rules explicitly
   order shift, minimum-only gate, synergy, and mastery, with NRF-R05's argument
   order. Existing exact results distinguish the arithmetic stages; the added
   increment-only case addresses the advisory branch without changing those rules.
-- SCX-R18a/SCX-R31 and SCX-V27/SCX-V36: own-array versus selected-array reads
-  consume NRF-R12b/NRF-R12c. SCX-V36's own 10 and selected 30 distinguish the
+- SCX-R18a/SLD-R10 and SCX-V22/SCX-V31: own-array versus selected-array reads
+  consume RLI-R02a/RLI-R02b. SCX-V31's own 10 and selected 30 distinguish the
   cold/qualifier source. The special to-hit producer remains an explicit gate.
 - SCX-R22/SCX-V16: signed divisions truncate toward zero, the upper clamp is
   explicit, and only the fourth pair omits the nonpositive-level guard. Existing
   cases give 110 at the upper clamp and distinguish fourth-pair 10 from first-pair
   zero at level 0; no additional implementation choice is needed.
 
-GATED 17 comprises SCX-R12, SCX-R16b, SCX-R18b, SCX-R27, SCX-R32b,
-SCX-R34b, SCX-R35b and SCX-Q01, SCX-Q02, SCX-Q03, SCX-Q05, SCX-Q06,
-SCX-Q07, SCX-Q08, SCX-Q09, SCX-Q11, SCX-Q12. Each retains its existing
+GATED 17 comprises SCX-R12, SCX-R16b, SCX-R18b, SCX-R27, SLD-R07,
+SCX-R29b, SCX-R30b and SCX-Q01, SCX-Q02, SCX-Q03, SCX-Q04, SCX-Q05,
+SLD-Q02, SCX-Q06, SCX-Q07, SCX-Q08, SCX-Q09. Each retains its existing
 outcome and exact blocked boundary in the Id map and gap file. Outside-boundary
 server-flag production and other builds do not block supplied-input consumer
 assertions. Pending observations do not become static implementation gates.
@@ -350,8 +320,8 @@ changes no selector binding, integer result, behavioral label or integration gat
 The coordinating review made fixture defaults explicit: unit absent unless supplied, and a
 named supplied calculation result selects nonempty reference 0 with a logged evaluation
 operation. This avoids inheriting the empty-reference default while expecting synergy.
-V21 now explicitly supplies its present mastery unit U; V32(b) explicitly supplies U for
-its asserted evaluation context. V22's elemental input names a supplied result rather than
+SLD-V14 now explicitly supplies its present mastery unit U; V27(b) explicitly supplies U for
+its asserted evaluation context. SLD-V03's elemental input names a supplied result rather than
 an ambiguous reference/value. Existing numerical results, rule behavior, ownership and gates
 are unchanged. These fixture-input clarifications are included in the forthcoming full
 second reader pass, rather than relying on pass 1's earlier inputs.
@@ -363,47 +333,47 @@ and recomputed all 36 vector families and their subcases. Counts: MISMATCH 0, GU
 GAP 0, DISCRIM 1, GATED 17, COVERAGE 17 grouped advisory branches, HARDEST 3.
 This is a full review, not a delta check. No source or gameplay evidence is added by it.
 
-DISCRIM V21: accepted. With damage 2560, synergy 50% and mastery 30%, both sequential
+DISCRIM SLD-V14: accepted. With damage 2560, synergy 50% and mastery 30%, both sequential
 percentage orders happen to return 4992. The prior discriminator's 4608 rejects adding
 base-only mastery after synergy, but does not reject moving the whole mastery stage
-before synergy. V21(c) now uses damage 257, shift zero, synergy 50 and mastery 30:
+before synergy. SLD-V14(c) now uses damage 257, shift zero, synergy 50 and mastery 30:
 synergy first gives 385, then mastery gives 500; reversed stages give 334, then 501.
 The original 4992/3840 outcomes remain unchanged. No behavioral rule changes.
 
 | Advisory branch group | Outcome |
 |---|---|
-| R03/R04 operand truncation | Added V09(e) for missing first operand and V09(f) for complete readable backing extending beyond declared length: the latter logs signed parameter -128 before returning 0 on run-off. Literal run-off already returns 0 in V06; inaccessible backing remains Q11, with no invented integer result |
+| R03/R04 operand truncation | Added V09(e) for missing first operand and V09(f) for complete readable backing extending beyond declared length: the latter logs signed parameter -128 before returning 0 on run-off. Literal run-off already returns 0 in V06; inaccessible backing remains Q08, with no invented integer result |
 | R06 INT_MIN/-1 | Added V03(c): complete bytecode reaches the unguarded signed division-overflow fault, unlike opcode division by zero's explicit zero result |
 | R07 positive-exponent product wrap | Added V04(d): 65536 squared returns low-32-bit zero; the original positive/nonpositive exponent cases remain |
 | R11 nonzero reference / secondary pool | Added V12(h): independent skill and secondary pools at reference 1 return 5/9 with remaining length 3 and the same supplied context. Selecting the wrong pool or starting at byte zero fails |
-| R17 absent context | Added V26(b): return 0 with no resolver request, contrasted with the original supplied return 73 |
-| R20 unavailable record / negative selector | No change: these select the same reject-with-zero/no-downstream-request recipe already exercised by V29's invalid identity and selector bound; distinct rejection predicates are stated, without claiming exhaustive predicate coverage |
+| R17 absent context | Added V21(b): return 0 with no resolver request, contrasted with the original supplied return 73 |
+| R20 unavailable record / negative selector | No change: these select the same reject-with-zero/no-downstream-request recipe already exercised by V24's invalid identity and selector bound; distinct rejection predicates are stated, without claiming exhaustive predicate coverage |
 | R22 negative / descending parameters / -6 fault | Added V16(f/g): the unguarded fourth pair returns -12 at level -1 without a lower clamp and faults at level -6. Descending endpoints use the same final upper-clamp recipe already shown by V16(c); no separate recipe is inferred |
 | R23 non-8 shift / negative / overflow mana | Added V17(e): signed mana -1 and shift 7 produce -1/-6/-128; the intermediate signed division distinguishes floor rounding. Low-32-bit arithmetic and masked shifts consume the same existing numeric contract, already exercised by wrapping arithmetic and shift vectors; no additional overflow policy is added |
-| R25a zero synergy / mastery with absent unit | V20(c) now logs both reached evaluations returning zero and unchanged endpoints 512. The absent-unit mastery guard is already exercised for this same endpoint by SLD-V14; SCX-V31 separately tests selector/request routing. No duplicated source getter behavior is introduced |
-| R25b invalid nonempty reference / pool | Added V32(d): reject with zero/no evaluation, without falling back to the distinct linear result 18 |
-| R28 selector pairs 0x18/0x19 | No change: the code-fixed pairs are stated. V33 discriminates earliest matching slot, either member of the pair, no match and nonpositive levels; the other fixed pairs repeat that selection recipe |
-| R29 absent increment table | No change: SLD-V01 exercises absent-array return zero for the same shared progression primitive; SCX-V18 discriminates all nonempty band transitions |
-| R30 zero synergy / D greater than 256 | Added V20(c) for zero-result evaluation and V21(c) for the positive D=257 minimum gate; original exact-threshold and nonzero-increment cases remain |
-| R31 lightning / poison selectors | No change: SLD-V14 checks both numeric bindings for the same mastery helper, while SCX-V21/V36 cover ordinary and cold selected-array results. More fixed-binding cases would not add an unshown arithmetic/source recipe |
-| R32a invalid skill / nonpositive level | No change: SLD-V09 and SLD-V02 exercise these original physical endpoint defaults and level-zero progression. SCX-V22 already distinguishes local physical rounding/source arithmetic. No nonpositive-level gate is inserted |
-| R33 invalid skill / nonpositive level | No change: SLD-V07/V09 exercise this original duration producer's zero returns; SCX-V23 exercises its three bands and synergy. Repeating the same zero-result guard adds no different recipe |
-| R34a absent-missile negative fallback | No change: Q11 explicitly retains the malformed fallback/fault boundary, and R34b is unresolved. No safe fallback result or new acceptance assertion is invented |
+| R25a zero synergy / mastery with absent unit | SLD-V06(c) now logs both reached evaluations returning zero and unchanged endpoints 512. The absent-unit mastery guard is already exercised for this same endpoint by SLD-V14; SCX-V26 separately tests selector/request routing. No duplicated source getter behavior is introduced |
+| R25b invalid nonempty reference / pool | Added V27(d): reject with zero/no evaluation, without falling back to the distinct linear result 18 |
+| R28 selector pairs 0x18/0x19 | No change: the code-fixed pairs are stated. V28 discriminates earliest matching slot, either member of the pair, no match and nonpositive levels; the other fixed pairs repeat that selection recipe |
+| SLD-R02 absent increment table | No change: SLD-V01 exercises absent-array return zero for the same shared progression primitive; SLD-V01 discriminates all nonempty band transitions |
+| SLD-R09 zero synergy / D greater than 256 | Added SLD-V06(c) for zero-result evaluation and SLD-V14(c) for the positive D=257 minimum gate; original exact-threshold and nonzero-increment cases remain |
+| SLD-R10 lightning / poison selectors | No change: SLD-V14 checks both numeric bindings for the same mastery helper, while SLD-V14 and SCX-V31 cover ordinary and cold selected-array results. More fixed-binding cases would not add an unshown arithmetic/source recipe |
+| SLD-R05 invalid skill / nonpositive level | No change: SLD-V09 and SLD-V02 exercise these original physical endpoint defaults and level-zero progression. SLD-V03 already distinguishes local physical rounding/source arithmetic. No nonpositive-level gate is inserted |
+| SLD-R11 invalid skill / nonpositive level | No change: SLD-V07/V09 exercise this original duration producer's zero returns; SLD-V07 exercises its three bands and synergy. Repeating the same zero-result guard adds no different recipe |
+| R29a absent-missile negative fallback | No change: Q08 explicitly retains the malformed fallback/fault boundary, and R29b is unresolved. No safe fallback result or new acceptance assertion is invented |
 
-GATED outcomes (17 ids), all no change: Q01/Q02/Q03/Q05/Q06/Q07/Q09/Q11 and
-R12/R16b/R18b/R27/R32b/R34b/R35b retain their exact producer, integration or malformed-input
-limits. Q12 is observation-only and does not gate the verified supplied-input arithmetic.
-The other-build Q08 is outside the 1.13c boundary, not another verified-profile dependency.
+GATED outcomes (17 ids), all no change: SCX-Q01/Q02/Q03/Q04/Q05/Q07/Q08 with SLD-Q02, and
+SCX-R12/R16b/R18b/R27/R29b/R30b with SLD-R07 retain their exact producer, integration or malformed-input
+limits. Q09 is observation-only and does not gate the verified supplied-input arithmetic.
+The other-build Q06 is outside the 1.13c boundary, not another verified-profile dependency.
 The reader found no new question. GUESS 0 and GAP 0 need no edit.
 
-HARDEST outcomes (3): V21's percentage order is addressed by the new noncommuting-rounding
-case; V36's cold source remains explicitly the NRF selected-array/minimum contract with
+HARDEST outcomes (3): SLD-V14's percentage order is addressed by the new noncommuting-rounding
+case; V31's cold source remains explicitly the NRF selected-array/minimum contract with
 separate own/resolved values; V13 already separates seed owners, inclusive range and
 no-draw/fault outcomes. The latter two need no change.
 
 Self-review preserves all original numerical outcomes, rule labels, ownership and gates.
-Changed cases are V03(c), V04(d), V09(e/f), V12(h), V16(f/g), V17(e), V20(c), V21(c),
-V26(a/b) and V32(d), plus the corrected V21 discriminator. These are fixture/assertion edits,
+Changed cases are SCX-V03(c), SCX-V04(d), SCX-V09(e/f), SCX-V12(h), SCX-V16(f/g), SCX-V17(e), SLD-V06(c), SLD-V14(c),
+SCX-V21(a/b) and SCX-V27(d), plus the corrected SLD-V14 discriminator. These are fixture/assertion edits,
 so fresh full reader pass 3 is required before review completion. No gameplay or
 implementation test ran.
 
@@ -416,35 +386,35 @@ This was a full review. The report is not source evidence or approval.
 
 | Finding | Outcome |
 |---|---|
-| GAP: GDF-R08a omits some named local fields | Citation clarified. GDF-R08a does not list mana/lvlmana/manashift or every local passive/calc field. Section 3 already declares those semantic inputs and widths; this companion's original Skills descriptor record identifies their field correspondence. Section 3 and Dependencies now cite that existing local record and limit GDF-R08a to its listed subset. No field, width, rule ownership or supplied-input boundary changes. Missile-slot identity/result correspondence remains Q05 rather than becoming an accepted mapping |
+| GAP: GDA-R11a omits some named local fields | Citation clarified. GDA-R11a does not list mana/lvlmana/manashift or every local passive/calc field. Section 3 already declares those semantic inputs and widths; this companion's original Skills descriptor record identifies their field correspondence. Section 3 and Dependencies now cite that existing local record and limit GDA-R11a to its listed subset. No field, width, rule ownership or supplied-input boundary changes. Missile-slot identity/result correspondence remains Q04 rather than becoming an accepted mapping |
 | DISCRIM: V08 empty-pop final zero | Added V08(e/f): one-value addition returns 5, and empty addition/negation followed by literal 5 and addition also returns 5. Premature abort with zero fails; the original empty-operation returns remain unchanged |
 | DISCRIM: V11(c) invalid-index pops | The existing Outputs already assert logical stack [3,9,0] before termination, so consuming arguments violates an explicit assertion. Added V11(i) as an end-to-end scalar check as well: two following additions return 12 with no function call; prematurely consumed arguments fail it |
-| DISCRIM: V25(c) unsupported-arity pops | The existing Outputs already assert logical stack [2,0] and no call. Added V25(e) as an end-to-end scalar check: a following addition returns 2, rejecting a consumer that discarded the retained operand |
+| DISCRIM: V20(c) unsupported-arity pops | The existing Outputs already assert logical stack [2,0] and no call. Added V20(e) as an end-to-end scalar check: a following addition returns 2, rejecting a consumer that discarded the retained operand |
 
 | Advisory COVERAGE group | Outcome |
 |---|---|
 | R21 remaining linear/raw selectors | No change: the fixed input-to-pair bindings share the progression/raw recipe already distinguished by V15; no additional arithmetic or control branch is claimed |
 | R22 other diminishing pairs | No change: V16 now covers positive, capped, guarded-zero, unguarded-negative and fault recipes. Changing the fixed parameter pair does not introduce another recipe |
-| R24 recursive columns besides `calc1` | No change: V30 checks forwarded recursive context; V12 checks reference/pool behavior. Other fixed column identities consume those same operations |
-| R28 remaining selector pairs | No change: V33 discriminates first matching slot, either pair member and rejection. The fixed 0x18/0x19 pairs use that same search recipe |
-| R30 invalid/nonpositive level / empty synergy | No change: the same original endpoint's SLD-V05/V09 check level/lookup rejection and unchanged base with no calculation. SCX-V20/V21 check the additional minimum gate and ordered percentages. No new rejection policy is introduced |
-| R31 remaining selectors / unavailable unit/definition | No change: SLD-V14 checks fixed numeric bindings, missing-unit/list/definition guards for the same helper. SCX-V36 distinguishes its selected-array/minimum source. A further binding case adds no unshown source or arithmetic recipe |
-| R32a invalid/nonpositive level / disabled source inclusion | No change: SLD-V09/V02/V04 exercise these same physical endpoints' sentinels, level-zero baseline and both source gates. SCX-V22 independently checks this consumer's source/rounding order |
-| R33 guards / negative percentage | No change: SLD-V07/V09 cover this duration producer's zero-result guards. A negative nonzero percentage follows the same signed mulDiv/add branch as V23(b), without a separate clamp; the numeric contract already specifies its rounding and width |
-| R34a min/max bindings / pool rejection | No change: the named min/max operations consume R14, distinguished by V11(a/b); R11/V12 own the common pool rejection recipe. V34 separately checks missile context and owner-skill selection. This does not claim exhaustive testing of every family/binding combination |
+| R24 recursive columns besides `calc1` | No change: V25 checks forwarded recursive context; V12 checks reference/pool behavior. Other fixed column identities consume those same operations |
+| R28 remaining selector pairs | No change: V28 discriminates first matching slot, either pair member and rejection. The fixed 0x18/0x19 pairs use that same search recipe |
+| SLD-R09 invalid/nonpositive level / empty synergy | No change: the same original endpoint's SLD-V05/V09 check level/lookup rejection and unchanged base with no calculation. SLD-V06/SLD-V14 check the additional minimum gate and ordered percentages. No new rejection policy is introduced |
+| SLD-R10 remaining selectors / unavailable unit/definition | No change: SLD-V14 checks fixed numeric bindings, missing-unit/list/definition guards for the same helper. SCX-V31 distinguishes its selected-array/minimum source. A further binding case adds no unshown source or arithmetic recipe |
+| SLD-R05 invalid/nonpositive level / disabled source inclusion | No change: SLD-V09/V02/V04 exercise these same physical endpoints' sentinels, level-zero baseline and both source gates. SLD-V03 independently checks this consumer's source/rounding order |
+| SLD-R11 guards / negative percentage | No change: SLD-V07/V09 cover this duration producer's zero-result guards. A negative nonzero percentage follows the same signed mulDiv/add branch as SLD-V07(b), without a separate clamp; the numeric contract already specifies its rounding and width |
+| R29a min/max bindings / pool rejection | No change: the named min/max operations consume R14, distinguished by V11(a/b); R11/V12 own the common pool rejection recipe. V29 separately checks missile context and owner-skill selection. This does not claim exhaustive testing of every family/binding combination |
 | R15 remaining absent-unit fault | No change: the reader itself identifies this as already covered by V13(h); no uncovered branch or missing default was reported |
 
 GATED outcomes: all existing rule/question gates remain. The reader's aggregate stage-only
 entry means supplied fixtures do not verify upstream producers or runtime behavior; it is
-not a new acceptance restriction. Q08 remains outside this build. Pass 2 reported GATED 17
-while its explicit in-scope id list contains 16 distinct ids and separately mentions Q08;
+not a new acceptance restriction. Q06 remains outside this build. Pass 2 reported GATED 17
+while its explicit in-scope id list contains 16 distinct ids and separately mentions Q06;
 this counting discrepancy does not identify an additional gate or silently close one.
-HARDEST outcomes (3), no rule change: R30/R31's minimum gate and ordered percentages are
-now distinguished by V20/V21(c); R15's range/seed/fault cases are explicit in V13;
+HARDEST outcomes (3), no rule change: SLD-R09/SLD-R10's minimum gate and ordered percentages are
+now distinguished by SLD-V06/SLD-V14(c); R15's range/seed/fault cases are explicit in V13;
 R22's signed truncation, upper-only clamp and fourth-pair negative/fault cases are explicit
 in V16. The reader supplied no additional unresolved decision for these entries.
 
-Only fixture cases/assertions V08(e/f), V11(i), V25(e) and the reference clarification
+Only fixture cases/assertions V08(e/f), V11(i), V20(e) and the reference clarification
 changed after this full pass. All original outcomes and rule behavior, ownership, labels
 and gates remain. With MISMATCH 0 and every finding adjudicated, the next applicable
 fresh run is a delta check under the fourth-run rule. It must confirm these additions
@@ -452,8 +422,8 @@ and the citation resolution before review completion. No gameplay or implementat
 
 ## Fresh delta blind-implementer pass 4, 2026-10-15
 
-Changed material: V08(e/f), V11(i), V25(e), and the section-3/Dependencies citation
-clarification for locally declared fields versus GDF-R08a's listed subset. The fresh
+Changed material: V08(e/f), V11(i), V20(e), and the section-3/Dependencies citation
+clarification for locally declared fields versus GDA-R11a's listed subset. The fresh
 reader checked these against the current contract, cited foundations/data contracts
 and existing companion mapping record. MISMATCH 0, GUESS 0, GAP 0, DISCRIM 0.
 No further contract edit follows this delta report. This was a changed-material check,
@@ -462,3 +432,27 @@ not a fourth full review or a new source reading.
 The applicable reader review is complete at the declared supplied-input/static
 boundary. All existing producer, integration, malformed-input and observation limits
 remain; status stays draft and no human approval or complete parity is inferred.
+
+## Restructure (2026-10-15)
+
+The approved review split the former expressions-and-synergies spec. The expression evaluator,
+pool storage, skill function bindings, skill parameter resolution and the missile and additional
+expression families stay in this spec, renamed `skill-calc-expressions`, with ids renumbered
+cleanly. The five-band progression, elemental and physical damage builders, elemental mastery and
+elemental duration duplicated rules already owned by
+[skill-leveled-damage-tohit-and-elements](../../specs/skill-leveled-damage-tohit-and-elements.md)
+(SLD-R01a through SLD-R11). Those rules were removed here; the damage, duration and to-hit
+parameter selectors (SCX-R25a/SCX-R25b) now return SLD-R08 through SLD-R12 results. Their unique
+vector cases moved into SLD-V01, SLD-V03, SLD-V05, SLD-V06 and SLD-V07; the mastery vector was
+already fully covered by SLD-V14. The physical source/Kick question merged into SLD-Q02, SLD-Q05
+and SLD-Q08, and the elemental-synergy observation into SLD-O02. The original-source rows for those
+builders (five-band helper, elemental and physical endpoints, mastery, percentage primitive,
+Kick/source dependencies, duration), their semantic mapping rows, targeted finding 4 and the
+elemental observation procedure moved, unchanged apart from ids, to the
+[leveled-damage companion](skill-leveled-damage-tohit-and-elements.md#records-absorbed-from-the-expression-spec-2026-10-15).
+No synergy behavior remained outside those damage builders, so no separate synergy spec was created.
+No rule behavior, label, value or vector result changed. Dated records in this companion give ids
+in the current numbering; rows that name SLD rules or vectors describe the damage-builder rules
+and vectors then in this spec, whose assertions now live in those SLD ids (case letters refer to
+the cases as then written). No source reading, gameplay observation or reader pass was performed
+for this restructure.

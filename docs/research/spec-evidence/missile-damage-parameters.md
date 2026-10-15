@@ -28,10 +28,10 @@ Missiles descriptor instructions were corroborated from the matching original im
 Disassembling embedded tables as instructions supplies no meaning: pointer entries and
 mastery byte indices were separately read as data.
 
-Reuse assessment: current SCX-R34a/SCX-R34b owns the missile expression front end/resolver;
+Reuse assessment: current SCX-R29a/SCX-R29b owns the missile expression front end/resolver;
 SLD-R02 owns the five bands and SLD-R01 through SLD-R11/SLD-R19 the skill endpoints. Their
 2026-10-12/2026-10-15 records match the Common artifact and exact contexts used here.
-NRF-R12b/NRF-R12c establishes read selection/minimum behavior only. NRF-Q20/STL-R06c leaves
+RLI-R02a/RLI-R02b establishes read selection/minimum behavior only. RLI-Q03/STL-R06c leaves
 write propagation unresolved. CSA-R02's fixed hireling category applies to the no-item branch.
 The compatible SBA/SLD/DUR/MMF records locate equipment and preparation producers but do
 not establish their complete production contracts. They therefore support dependency
@@ -61,7 +61,7 @@ are evidence for semantic terms, not required implementation interfaces.
 | `LOD113C-D2COMMON` | 0x4DDB0 | none recorded | Five-band progression | R02 | Matching-reconstruction evidence reused through SLD-R02; no new progression claim |
 | `LOD113C-D2COMMON` | 0x11E0 | none recorded | Argument-ordered percentage helper | R01a/R05 | NRF-R05 existing matching-reconstruction contract |
 | `LOD113C-D2COMMON` | 0x69DC0 | none recorded | Column element length | R03 | Compatible 2026-10-12 full instructions; complete 176-byte instruction form reread 2026-10-15 |
-| `LOD113C-D2COMMON` | 0x6B2B0; 0x9270; 0x6B160; 0x6A790 | 10231 for front end | Missile expression entry/interpreter/callback/resolver | R01b/Q02 | Reuse SCX-R34a/R34b and its current companion: front-end input/return coverage, resolver/owner-entry gates retained |
+| `LOD113C-D2COMMON` | 0x6B2B0; 0x9270; 0x6B160; 0x6A790 | 10231 for front end | Missile expression entry/interpreter/callback/resolver | R01b/Q02 | Reuse SCX-R29a/SCX-R29b and its current companion: front-end input/return coverage, resolver/owner-entry gates retained |
 | `LOD113C-D2COMMON` | 0x6A2B0; 0x1250 | 10240; none | Stored signed missile skill; Skills lookup | R04 | Matching reconstructions read 2026-10-15: type 3/data guards, signed i16 return; signed skill bounds and selected record |
 | `LOD113C-D2COMMON` | 0x52100; 0x51FF0; 0x50460; 0x50360; 0x4E900 | 10567; 10297; 10121; 11091; 10510 | Skill physical min/max, element min/max, duration | R04 | SLD current contracts reused; caller arguments newly traced; physical include-source0 and element/duration condition 1 |
 | `LOD113C-D2COMMON` | 0x6AB20 | none recorded | Element mastery bonus | R05 | Full 192-byte original image and instruction-form read 2026-10-15, both selector tables decoded as data; stat reads and NRF percentage boundary |
@@ -74,7 +74,7 @@ are evidence for semantic terms, not required implementation interfaces.
 | `LOD113C-D2COMMON` | 0x4F640 | 10804 | Weapon mastery dependency | R07b/R08b/Q04 | Full instruction form and compatible SBA record assessed 2026-10-15; context, special-case and enumeration producers remain open |
 | `LOD113C-D2COMMON` | 0x32EF0 | 10932 | Source preparation | R11b/Q04 | Matching reconstruction read first 2026-10-15; reaches selection/ownership-transfer dependencies, actual effects/draw budget open |
 | `LOD113C-D2COMMON` | 0x1A2D0 | 11104 | Fixed hireling category | R07a | Compatible CSA-R02 full instruction reading 2026-10-14; null/non-monster returns 0, five fixed classes |
-| `LOD113C-D2COMMON` | 0x38B70; 0x38A80 | 10973; none recorded | Ordinary stat read; optimized selected-array leaf | R05/R07/R08/R09/R10/R11 | NRF-R12b/NRF-R12c reused; getter evidence does not establish setters |
+| `LOD113C-D2COMMON` | 0x38B70; 0x38A80 | 10973; none recorded | Ordinary stat read; optimized selected-array leaf | R05/R07/R08/R09/R10/R11 | RLI-R02a/RLI-R02b reused; getter evidence does not establish setters |
 | `LOD113C-D2COMMON` | 0x3A280; 0x3A740; 0x382F0 | none recorded; 10887; none recorded | List replace request; unit replace request; stat enumeration | R12a/R12b/Q06 | Storage caller resolutions/read 2026-10-15; full propagation/enumeration not established |
 | `LOD113C-D2COMMON` | 0x7C8D0 | none recorded | Missiles descriptors/loader | R01/R03/R04/R06 | Existing GDF fields plus original 6592-byte loader image decode 2026-10-15; named descriptor links, not archive cell values |
 
@@ -143,7 +143,7 @@ requests stat 180/capacity 128 through `0x382F0`. Enumeration production remains
 ## Field bindings
 
 Missiles descriptor identities are code evidence, not values from a data row. The selected
-prepared record has stride 0x1A4; count/table are DataTables+0xB6C/+0xB64. Existing GDF-R07
+prepared record has stride 0x1A4; count/table are DataTables+0xB6C/+0xB64. Existing GDA-R10
 and its companion own the loader schema limits. Relevant layout correspondence:
 
 | Semantic field | Original prepared-record location | Evidence/consumer |
@@ -158,7 +158,7 @@ and its companion own the loader schema limits. Relevant layout correspondence:
 | ELen/ELevLen 1..3 | +0x11C/+0x120..0x128 | descriptor/length reads |
 | CltSrcTown/SrcDamage/SrcMissDmg/Holy | +0x12C/+0x12D/+0x12E/+0x12F | adjacent descriptors; builder consumes only the latter three here |
 | Skill/HitShift | +0x194/+0x196 | linked skill descriptor; signed 16/unsigned 8 consumers |
-| ApplyMastery/`Half2HSrc`/MissileSkill | flags | GDF-R07 named flag descriptors; consumer mask requests |
+| ApplyMastery/`Half2HSrc`/MissileSkill | flags | GDA-R10 named flag descriptors; consumer mask requests |
 | stored skill/level | missile data+0x0A/+0x0C | matching stored-skill getter; endpoint signed 16 fallback |
 | Skills SrcDam/EType | +0x1A5/+0x1DC | builder u8 reads; SLD field contract |
 | strength/dexterity coefficients | item record+0x106/+0x108 | matched getters return low16; caller sign-extends; raw 1 maps 100 |
@@ -419,7 +419,7 @@ result changes.
 | DISCRIM 3: V09(g)'s rejected linked skill does not distinguish a negative stored-skill fallback | Kept the count-equality rejection case. Added V09(h), linked 2/count 3/stored -1, valid skill 2 with SrcDam 128/EType 5: requires five successful linked-skill requests and selected 10/20/30/40/50; choosing stored -1 rejects and fails |
 | COVERAGE 1: R11a source lightning/magic/cold additions | No duplicate fixture matrix. The complete addition-helper evidence establishes one semantic mapping for stats 48..55, each with the same supplied-unit getter and supplied shift argument; the source caller passes 8, parent passes 0. V14 exercises source shift 8 and V18 each mapped non-fire field with parent shift 0. Their composition supports the declared uniform recipe; it does not claim every source field was separately observed |
 | COVERAGE 2: R12a enumeration beyond 128 | No invented oversized fixture or local clamp. The caller requests capacity 128 and consumes the producer's returned entries in order; actually producing a conforming bounded enumeration remains R12b/Q06. Behavior for a fabricated over-capacity producer response is not established by supplied valid entries |
-| COVERAGE 3: R01b actual expression draw | No duplicate evaluator/RNG fixture. SCX-R34a with SCX-R15 and SCX-V13 owns actual missile-context random draws/seed ownership; SCX-V34 covers front-end context. MDP's arithmetic fixture supplies evaluation results, while actual unresolved parameter/owner-entry production retains Q02 |
+| COVERAGE 3: R01b actual expression draw | No duplicate evaluator/RNG fixture. SCX-R29a with SCX-R15 and SCX-V13 owns actual missile-context random draws/seed ownership; SCX-V29 covers front-end context. MDP's arithmetic fixture supplies evaluation results, while actual unresolved parameter/owner-entry production retains Q02 |
 | GATED 1: Q02 | Unresolved calculation-produced results remain open; the new percentage fixture supplies p and does not verify its production |
 | GATED 2: Q04 | Equipment/mastery/Kick/override/preparation results and effects remain open; the new negative stored-skill consumer fixture does not close external skill endpoint producers |
 | GATED 3: Q06 | Stat replacement and enumeration production remain open; no greater-than-capacity return or final stored replacement was fabricated |

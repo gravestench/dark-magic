@@ -29,7 +29,7 @@ appearance, class draw, life roll, property chances, equipment roll), with the p
 mode update. It also defines the player-count term of the monster damage setup and, at a
 treasure drop, the eligible-player count, the NoDrop weight conversion and the pick draw.
 Out of scope, with their owners: the kill experience award and party share
-([player-party-experience-and-loot-sharing](player-party-experience-and-loot-sharing.md));
+([player-party-experience-sharing](player-party-experience-sharing.md));
 seed stepping, draw forms, `mulDiv`, the 8.8 format, stat reads and writes and state tests
 ([core-numeric-and-rng-foundations](core-numeric-and-rng-foundations.md)); the `unitGate`
 status helper ([combat-status-application](combat-status-application.md), CSA-R02);
@@ -53,7 +53,7 @@ Player units take another creation path and are outside this boundary.
 - Drop trigger: the treasure-class drop routine runs MSD-R21 to MSD-R23 once per pick of the
   dropping unit's treasure class; the killer is supplied by the caller.
 - These stages request local stat writes and send no direct client message. Stored-write
-  integration remains NRF-Q20; update bookkeeping remains NRF-Q17. Client delivery is outside
+  integration remains RLI-Q03; update bookkeeping remains RLI-Q02. Client delivery is outside
   this verified boundary; message contracts belong to `net-` specs.
 - Dispatch chains, function references and instruction locations are in the
   [companion](../research/spec-evidence/monster-scaling-by-players-and-difficulty.md#dispatch-and-function-references).
@@ -61,24 +61,24 @@ Player units take another creation path and are outside this boundary.
 ## 3. Inputs and data
 
 Operation names are illustrative. `Rand` and the inline step are NRF-R01/NRF-R02; `mulDiv` is
-NRF-R05; `HasState` is NRF-R12a; `GetStat(unit, id)` is the layer-0 read of NRF-R12b;
-`SetStat(unit, id, value)` is a layer-0 replacing write request (stored effect NRF-Q20);
+NRF-R05; `HasState` is RLI-R03; `GetStat(unit, id)` is the layer-0 read of RLI-R02a;
+`SetStat(unit, id, value)` is a layer-0 replacing write request (stored effect RLI-Q03);
 `unitGate` is CSA-R02. Signed `/` truncates toward zero; additions keep the low 32 bits.
 
 | Input | Semantic source | Width and format | Meaning |
 |---|---|---|---|
 | player units | the game's player-unit table | logical set; each entry's type is tested | Normally player (type 0) units; MSD-R05 also defines entries of other types |
-| player-unit conditions | `HasState(u, 7)`; `u.notAliveCondition`; `u.type`; `u.mode` (GDF-R14a, GDF-R15a) | boolean; i32 | `notAliveCondition` is a unit condition the alive test treats as not alive (MSD-Q01); it is the same unit condition that PXL-R04a and PXL-R09a call `excludedFromPartyCollection`; modes as named |
+| player-unit conditions | `HasState(u, 7)`; `u.aliveExclusionCondition`; `u.type`; `u.mode` (GDF-R05a, GDF-R06a) | boolean; i32 | `aliveExclusionCondition` is a unit condition the alive test treats as not alive (MSD-Q01); the shared name is defined in [core-game-data-fields](core-game-data-fields.md) section 3 and PXL-R04a and GPS-R01 test the same condition; modes as named |
 | player-count override | one process-wide value shared by every game in the server process, set by the client player-count command | i32, 0..8, 0 at load | Read at each MSD-R05 evaluation; its producer is outside this boundary |
 | `game.selectorByte`, `game.selectorFlag` | game-creation argument byte; game-creation flag | u8; i32 0 or 1 | Neutral names; roles in MSD-Q01 |
 | `game.difficulty` | game difficulty | u8 | 0 Normal, 1 Nightmare, 2 Hell |
 | `game.expansion` | game expansion condition | i32 | Nonzero is an expansion game |
 | `game.seed`, `monster.seed`, `dropper.seed` | NRF-R01 seeds | two u32 | `dropper` is the unit whose treasure class drops |
-| monster class | `monster.classId`; its MonStats row (GDF-R05a) | i32 | MonStats fields below |
-| creation eligibility | MonStats record availability and its per-class creation eligibility under NRF-R17a | boolean | Tested before allocation or seeding; distinct from the post-initialization `creationCondition` below |
-| table collections | MonStats, MonStats2, MonLvl, Levels, MonProp, MonEquip and DifficultyLevels collections and their counts | indexed logical records; i32 counts | Row availability and bounds used by the rules; DifficultyLevels uses GDF-R02's accepted three-row collection |
+| monster class | `monster.classId`; its MonStats row (GDA-R08a) | i32 | MonStats fields below |
+| creation eligibility | MonStats record availability and its per-class creation eligibility under NRF-R12a | boolean | Tested before allocation or seeding; distinct from the post-initialization `creationCondition` below |
+| table collections | MonStats, MonStats2, MonLvl, Levels, MonProp, MonEquip and DifficultyLevels collections and their counts | indexed logical records; i32 counts | Row availability and bounds used by the rules; DifficultyLevels uses GDA-R05's accepted three-row collection |
 | preset storage | game presets by room level id; optional level record with `entryCount`; ordered entries with stored class, `variantCount` and variants | association; u8 counts; i32 class; variants of 16 u8 components | Supplied existing storage for MSD-R02/MSD-R03; initialization of an unregistered slot is MSD-Q11 |
-| MonStats fields | `Align`, `noRatio`, `boss`, `Level`/`Level(N)`/`Level(H)`, `MinHP`, `MaxHP`, `AC`, `Exp` (each with `(N)`, `(H)`), `Skill1..8`, `Sk1lvl..Sk8lvl`, `MonStatsEx`, `MonProp` | u8; booleans; the GDF-R05a 16-bit words read sign-extended as i16 (a word of 0x8000 or more is negative); i16 links; signed bytes for skill levels | Difficulty `d` selects base, `(N)` or `(H)` |
+| MonStats fields | `Align`, `noRatio`, `boss`, `Level`/`Level(N)`/`Level(H)`, `MinHP`, `MaxHP`, `AC`, `Exp` (each with `(N)`, `(H)`), `Skill1..8`, `Sk1lvl..Sk8lvl`, `MonStatsEx`, `MonProp` | u8; booleans; the GDA-R08a 16-bit words read sign-extended as i16 (a word of 0x8000 or more is negative); i16 links; signed bytes for skill levels | Difficulty `d` selects base, `(N)` or `(H)` |
 | MonEquip first row | prepared per-class index of the first MonEquip row whose `monster` is this class | i16; -1 when none | Built at load (companion) |
 | MonLvl row | MonLvl row `min(level, rowCount - 1)`; columns `HP`, `AC`, `XP` and `L-HP`, `L-AC`, `L-XP`, each with `(N)`, `(H)` | i32 cells | Base-value multipliers in percent |
 | Levels row | Levels row by level id; `MonLvl2Ex`, `MonLvl3Ex` | i16 | Expansion area level for `d = 1`, `d = 2` |
@@ -88,8 +88,8 @@ NRF-R05; `HasState` is NRF-R12a; `GetStat(unit, id)` is the layer-0 read of NRF-
 | MonEquip rows | `monster`, `level`, `oninit`, `item1..3`, `loc1..3`, `mod1..3` | i16; signed i16; u8; item code; i8; i8 | Equipment rows of MSD-R16, consecutive in table order |
 | monster inventory | `monster.inventory` | association or null | Null means the monster has no inventory |
 | `creationCondition` | caller-supplied creation condition of generic unit creation | boolean | Selects the post-creation mode update (MSD-R19); role outside this boundary |
-| `MonsterSkillBonus` | DifficultyLevels (GDF-R02), row `clamp(game.difficulty, 0, rowCount - 1)` | i32 | Added to monster skill levels |
-| treasure pick | `Picks`, `NoDrop` = `N` (GDF-R10a/GDF-R10b); prepared probability total `T` (classic total when `game.expansion == 0`, else expansion total) | i32 | `T` is produced outside this boundary |
+| `MonsterSkillBonus` | DifficultyLevels (GDA-R05), row `clamp(game.difficulty, 0, rowCount - 1)` | i32 | Added to monster skill levels |
+| treasure pick | `Picks`, `NoDrop` = `N` (GDA-R15a/GDA-R15b); prepared probability total `T` (classic total when `game.expansion == 0`, else expansion total) | i32 | `T` is produced outside this boundary |
 | drop arguments | `killer` (unit or null); `dropper`; `noDropBypass` | association; boolean | `noDropBypass` is a caller-supplied condition (MSD-Q08) |
 | killer owner | `owner(k)`: the owner unit of a non-player unit (for example a summon), or null | association or null | "Not a player" means a null result or a unit whose type is not 0 |
 | killer party | `k.partyId` (0xFFFF means none; also none when `k` has no player data); `game.partyRecord(partyId)`, null when the game holds no record with that id; the record's member ids; each member's room level id | u16; association | The PXL-R04a enumeration terms; party identity is owned by the party system |
@@ -101,8 +101,8 @@ NRF-R05; `HasState` is NRF-R12a; `GetStat(unit, id)` is the layer-0 read of NRF-
 | Bonus tables `0, 0, 50, 100, 150, 200, 250, 300, 350` (life and experience, separate tables with equal contents) and the formulas for `n >= 9` | Engine code / image constants | Fixed by original code |
 | Damage-term table `0, 0, 8, 16, 24, 32, 40, 48, 56` and formula `8n - 16` for `n >= 9` | Engine code / image constants | Fixed by original code |
 | Life clamp `0x7FFFFF` at `0x800000`; 8.8 shift | Engine code | Fixed by original code (MSD-R12; 8.8 format NRF-R08a) |
-| Classes 311 and 312 for the class draw; classes 195, 196, 294, 296 without a preset; preset entry limit 13; property chance modulus 100; MonEquip location range 1..10 and mod range 0..7 | Engine code | Fixed by original code; MonStats row identities per GDF-R17a |
-| State 7 for the player-count exclusion; stat ids 6, 7, 12, 13, 19, 21, 22, 31, 100 | Engine code selects original-profile identities (GDF-R11a, GDF-R12) | Fixed by original code |
+| Classes 311 and 312 for the class draw; classes 195, 196, 294, 296 without a preset; preset entry limit 13; property chance modulus 100; MonEquip location range 1..10 and mod range 0..7 | Engine code | Fixed by original code; MonStats row identities per GDF-R08 |
+| State 7 for the player-count exclusion; stat ids 6, 7, 12, 13, 19, 21, 22, 31, 100 | Engine code selects original-profile identities (GDF-R02, GDF-R03) | Fixed by original code |
 | MonLvl, Levels, MonProp, MonEquip, MonStats and DifficultyLevels named columns | Engine loader descriptors bind table column names to prepared fields (companion records); actual cells are table data | Code fixes the consumed column and interpretation; cell values are resolved from data |
 
 All numeric data values used by the vectors are supplied fixture values, not cited cells of the
@@ -112,14 +112,14 @@ original tables.
 
 MSD-R01 to MSD-R19 run in this order for one created monster. MSD-R20 runs in the damage setup.
 MSD-R21 to MSD-R23 run per treasure pick. Each stat write is a `SetStat` request; the stored
-effect of the replacing write is the NRF-Q20 integration gate.
+effect of the replacing write is the RLI-Q03 integration gate.
 
 **MSD-R01** **Creation seeding** [verified in 1.13c code (static)]. After the monster class,
-record availability and per-class creation eligibility pass NRF-R17a, successful allocation
+record availability and per-class creation eligibility pass NRF-R12a, successful allocation
 steps `game.seed` once and initializes
-`monster.seed` to `{game.seed.lo, 666}` with `monster.initialLo = game.seed.lo` (NRF-R17a,
+`monster.seed` to `{game.seed.lo, 666}` with `monster.initialLo = game.seed.lo` (NRF-R12a,
 NRF-R03a). No other game-seed step precedes the monster's own draws below. A class that
-NRF-R17a rejects creates no monster; no rule of this spec runs for it (NRF-V17 (d)).
+NRF-R12a rejects creates no monster; no rule of this spec runs for it (NRF-V16 (d)).
 
 **MSD-R02** **Appearance preset lookup and build** [verified in 1.13c code (static)]. The
 initializer looks up the creation level's preset entry for `classId` before stat initialization:
@@ -179,7 +179,7 @@ bytes written by MSD-R03; class 312 takes one draw and stores it over bytes 10 a
 E = 0
 for each unit u in the game's player-unit table:
     if HasState(u, 7): continue
-    if u.notAliveCondition: continue
+    if u.aliveExclusionCondition: continue
     if u.type == 0 and u.mode in {0, 17}: continue
     if u.type == 1 and u.mode in {0, 12}: continue
     if u.type not in {0, 1}: continue
@@ -249,7 +249,7 @@ One draw when `range > 0`, none otherwise (NRF-R02). The operand order of `mulDi
 **MSD-R12** **Life clamp and write** [verified in 1.13c code (static)]. If `hp >= 0x800000`
 (signed), `hp = 0x7FFFFF`. Then `raw = low32(hp << 8)`; request `SetStat(monster, 7, raw)`
 followed by `SetStat(monster, 6, raw)`. Negative `hp` is not clamped. No draw. Values use the
-8.8 format of NRF-R08a; actual stored-write integration is NRF-Q20.
+8.8 format of NRF-R08a; actual stored-write integration is RLI-Q03.
 
 **MSD-R13** **Armor class and experience** [verified in 1.13c code (static)]. Request
 `SetStat(monster, 31, ac)`, then `xp = low32(exp + mulDiv(xpPct, exp, 100))` and request
@@ -300,7 +300,7 @@ followed by a row of another class (MSD-Q10). The location test and item creatio
 this boundary.
 
 **MSD-R17** **Equipment item seeding** [asm-only]. Each requested equipment item reaches generic
-item creation, which steps `game.seed` twice under NRF-R17a/NRF-R17b. Its item-generation draws
+item creation, which steps `game.seed` twice under NRF-R12a/NRF-R12b. Its item-generation draws
 use the new item seeds and belong to item generation (MSD-Q04).
 
 **MSD-R18** **Other initialization callees** [asm-only]. The remaining calls of stat
@@ -310,7 +310,7 @@ indirect calls in the stat-list operations (MSD-Q04).
 
 **MSD-R19** **Post-creation mode update** [asm-only]. When `creationCondition` is set, the
 mode update after initialization reaches the monster damage setup, which takes the monster-seed
-draws of NRF-R04b at elemental mode slots; eligibility is NRF-Q11 (MSD-Q04).
+draws of NRF-R04b at elemental mode slots; eligibility is NRF-Q05 (MSD-Q04).
 
 **MSD-R20** **Damage player-count term** [verified in 1.13c code (static)]. No draw.
 
@@ -349,7 +349,7 @@ PartyCount(k):
     whose room.levelId equals k's room.levelId and for which alive(m) holds
 ```
 
-`alive(u)` fails for a unit with `notAliveCondition`, for type 0 in mode 0 or 17, for type 1 in
+`alive(u)` fails for a unit with `aliveExclusionCondition`, for type 0 in mode 0 or 17, for type 1 in
 mode 0 or 12, and for other types; unlike MSD-R05 it does not test state 7. Only PXL-R04a's enumeration stage applies; its experience
 member filters (victim distance, zero position, the eight-member limit) are not part of this
 count. There is no distance test, and `elig` is not clamped to `E`.
@@ -398,11 +398,11 @@ is no separate treasure seed. Item selection is outside this boundary.
 | MSD-R06 | Scaling count; life/experience percents; difficulty rewrite | verified in 1.13c code (static) | none | MSD-V06 |
 | MSD-R07 | Difficulty index; Normal override | verified in 1.13c code (static) | none | MSD-V07 |
 | MSD-R08 | Monster level; expansion area level | verified in 1.13c code (static) | none | MSD-V08 |
-| MSD-R09 | Stat 12 then stat 100 write requests | verified in 1.13c code (static) | NRF-Q20: stored-write integration, not the requested values or order | MSD-V09, MSD-V21 |
+| MSD-R09 | Stat 12 then stat 100 write requests | verified in 1.13c code (static) | RLI-Q03: stored-write integration, not the requested values or order | MSD-V09, MSD-V21 |
 | MSD-R10 | Base values from MonStats and MonLvl | verified in 1.13c code (static) | none | MSD-V10 |
 | MSD-R11 | Life roll and life bonus | verified in 1.13c code (static) | none | MSD-V11, MSD-V21 |
-| MSD-R12 | Life clamp; stat 7 then stat 6 write requests | verified in 1.13c code (static) | NRF-Q20: stored-write integration, not clamp, shift or order | MSD-V12, MSD-V21 |
-| MSD-R13 | Armor class and experience write requests | verified in 1.13c code (static) | NRF-Q20: stored-write integration, not the values or order | MSD-V13, MSD-V21 |
+| MSD-R12 | Life clamp; stat 7 then stat 6 write requests | verified in 1.13c code (static) | RLI-Q03: stored-write integration, not clamp, shift or order | MSD-V12, MSD-V21 |
+| MSD-R13 | Armor class and experience write requests | verified in 1.13c code (static) | RLI-Q03: stored-write integration, not the values or order | MSD-V13, MSD-V21 |
 | MSD-R14 | Skill levels plus MonsterSkillBonus | verified in 1.13c code (static) | none for the requested level; the grant is outside | MSD-V14 |
 | MSD-R15 | Property chance draws, 0..6 | verified in 1.13c code (static) | none | MSD-V15, MSD-V21 |
 | MSD-R16 | Equipment roll: one draw per processed row | verified in 1.13c code (static) | MSD-Q10: tables whose class rows reach the end; supplied terminated rows eligible | MSD-V16, MSD-V21 |
@@ -437,7 +437,7 @@ is no separate treasure seed. Item selection is outside this boundary.
 | NoDrop outcome or item-selection roll; one `dropper.seed` draw per non-negative pick; pick consumed on NoDrop | MSD-R23 |
 
 No direct message is sent by these rules. Their stat-write requests do not establish stored
-effects (NRF-Q20), update bookkeeping (NRF-Q17) or client delivery.
+effects (RLI-Q03), update bookkeeping (RLI-Q02) or client delivery.
 
 Named stage results may also be asserted: the preset entry or null (MSD-R02); effective count
 `E` (MSD-R05); `n`, both bonus percents and the selected skill bonus (MSD-R06); `d`
@@ -480,10 +480,10 @@ numeric-return assertion.
 
 | Question | Kind / status | Evidence that would settle it |
 |---|---|---|
-| **MSD-Q01** | outside-boundary / open | Roles of `game.selectorByte`, `game.selectorFlag` and `notAliveCondition`, from their game-creation and unit-state producers; the rules use their tested values only |
+| **MSD-Q01** | outside-boundary / open | Roles of `game.selectorByte`, `game.selectorFlag` and `aliveExclusionCondition`, from their game-creation and unit-state producers; the rules use their tested values only |
 | **MSD-Q02** | behavior / unresolved | The floating-point precision control in effect when the conversion runs on the original server, and the conversion results for inputs outside MSD-R22a's covered domain |
 | **MSD-Q03** | behavior / unresolved | An exhaustive writer search for stats 100, 6, 7 and 13 on monsters, including undecoded regions, to establish whether any path recomputes them after creation |
-| **MSD-Q04** | integration / open | Reading the item-creation path called by the equipment roll, the two indirect calls of the stat-list operations and the post-creation mode-update chain, with NRF-Q11 for elemental-slot eligibility |
+| **MSD-Q04** | integration / open | Reading the item-creation path called by the equipment roll, the two indirect calls of the stat-list operations and the post-creation mode-update chain, with NRF-Q05 for elemental-slot eligibility |
 | **MSD-Q05** | outside-boundary / open | The monster damage setup's base damage and attack rating, `damageTermSkip` and the stat-write operation used for stats 19, 21, 22, under a monster damage owner |
 | **MSD-Q06** | outside-boundary / open | Preparation of the MonStats2 per-slot component counts and the variant-limit byte from the component columns, under the game-data owner |
 | **MSD-Q07** | observation / pending | Gameplay observations MSD-O01 to MSD-O06 on an owned 1.13c game; none were made |
@@ -504,7 +504,7 @@ supplied fixture data values; `game.expansion = 0`; `game.difficulty = 0`; `sele
 `selectorFlag = 0`; override 0; `Align = 0`; `noRatio` and `boss` clear; `unitGate = 0` unless
 a case names a nonzero-return class under CSA-R02 or supplies the gate result. The generic
 creation fixture supplies a present, eligible MonStats record and successful allocation under
-NRF-R17a; this eligibility does not set the separate post-initialization `creationCondition`.
+NRF-R12a; this eligibility does not set the separate post-initialization `creationCondition`.
 DifficultyLevels is an accepted three-row collection; bonus cells are 0 unless specified.
 Every vector is a supplied-input stage unless it states otherwise, and every case starts from its own
 listed state; no case inherits another case's state or outputs. `M` is the monster seed
@@ -519,7 +519,7 @@ property fields are passed through and not asserted) and `CreateEquipmentItem(it
 The preset level record, when present, holds the entries listed by each case in registration
 order. All rules owned within a vector's stated boundary execute; the supplied dependency
 operations above do not verify their producers or stored integration. In particular, the
-fixture's persisted stat value is a supplied effect, not evidence that NRF-Q20 is resolved.
+fixture's persisted stat value is a supplied effect, not evidence that RLI-Q03 is resolved.
 Outputs may assert named intermediate results. Each vector has `runtime_observed: no`.
 
 - **MSD-V01** Creation seeding (MSD-R01; boundary: supplied-input stage)
@@ -564,7 +564,7 @@ Outputs may assert named intermediate results. Each vector has `runtime_observed
   - runtime_observed: no
 
 - **MSD-V05** Effective player count (MSD-R05; boundary: supplied-input stage)
-  - Inputs, shared: player units of type 0: P1 alive (mode 1, no state 7, condition clear), P2 in mode 17, P3 with state 7 in mode 1, P4 with `notAliveCondition` in mode 1
+  - Inputs, shared: player units of type 0: P1 alive (mode 1, no state 7, condition clear), P2 in mode 17, P3 with state 7 in mode 1, P4 with `aliveExclusionCondition` in mode 1
   - Seeds: `no draw`
   - Draws: none
   - (a) `selectorByte = 0`, override 5. Trace: only P1 counts; override ignored. Outputs: `E = 1`
@@ -773,7 +773,7 @@ All are pending gameplay observations ([procedures](../research/spec-evidence/mo
 The behavior is reproduced when MSD-V01 to MSD-V21 pass and the observation vectors match.
 Partial acceptance covers the verified assertions of MSD-V01 to MSD-V21 with supplied inputs:
 draw counts, draw order, seed states, computed values and requested writes in order. Gated
-assertions: the stored effect of the requested writes (NRF-Q20); results of MSD-R22a that depend
+assertions: the stored effect of the requested writes (RLI-Q03); results of MSD-R22a that depend
 on intermediate rounding (MSD-Q02, MSD-R22b); real MonStats2 prepared preset inputs (MSD-Q06);
 real damage-setup inputs (MSD-Q05); and the asm-only creation draws of MSD-R17 to MSD-R19
 (MSD-Q04). Supplied MonEquip rows followed by another class are eligible; real tables whose
@@ -782,15 +782,15 @@ slot with variant count 0 is eligible; its actual initialized variant count requ
 A complete replay of a monster's creation draws needs MSD-Q04 resolved. Full
 reproduction also needs the observations of MSD-Q07.
 
-**Depends on:** [core-numeric-and-rng-foundations](core-numeric-and-rng-foundations.md):
-NRF-R01/NRF-R02 step and draw forms, NRF-R03a and NRF-R17a/NRF-R17b creation seeding, NRF-R04b
+**Depends on:** [core-numeric-and-rng-foundations](core-numeric-and-rng-foundations.md): Owners of the cited GDA, RLI, GPS ids: [core-game-data-table-records](core-game-data-table-records.md) (GDA); [core-record-layouts-and-ids](core-record-layouts-and-ids.md) (RLI); [player-party-gold-sharing](player-party-gold-sharing.md) (GPS).
+NRF-R01/NRF-R02 step and draw forms, NRF-R03a and NRF-R12a/NRF-R12b creation seeding, NRF-R04b
 mode-slot draws, NRF-R05 `mulDiv`, NRF-R06a `/128`, NRF-R08a 8.8 life format,
-NRF-R12a `HasState`, NRF-R12b stat reads; [combat-status-application](combat-status-application.md):
+RLI-R03 `HasState`, RLI-R02a stat reads; [combat-status-application](combat-status-application.md):
 CSA-R02 `unitGate`;
-[core-game-data-fields](core-game-data-fields.md): GDF-R02 DifficultyLevels, GDF-R05a MonStats,
-GDF-R10a/GDF-R10b treasure fields, GDF-R11a stats, GDF-R12 states, GDF-R14a and GDF-R15a modes,
-GDF-R17a class identities;
-[player-party-experience-and-loot-sharing](player-party-experience-and-loot-sharing.md): PXL-R04a
+[core-game-data-fields](core-game-data-fields.md): GDA-R05 DifficultyLevels, GDA-R08a MonStats,
+GDA-R15a/GDA-R15b treasure fields, GDF-R02 stats, GDF-R03 states, GDF-R05a and GDF-R06a modes,
+GDF-R08 class identities;
+[player-party-experience-sharing](player-party-experience-sharing.md): PXL-R04a
 enumeration of the killer's party members with matching room level id. Both contracts state
 that a missing party record yields no callback (companion).
 
@@ -800,7 +800,7 @@ bonus). A reverse consumer is not a delivery prerequisite.
 
 ## 10. Related specs
 
-- [player-party-experience-and-loot-sharing](player-party-experience-and-loot-sharing.md): the kill experience award that consumes stat 13, and the same-level party iterator also used by MSD-R21 (PXL-R04a).
+- [player-party-experience-sharing](player-party-experience-sharing.md): the kill experience award that consumes stat 13, and the same-level party iterator also used by MSD-R21 (PXL-R04a).
 - [combat-crushing-blow](combat-crushing-blow.md): reads stat 100 written by MSD-R09.
 - [combat-hit-recovery](combat-hit-recovery.md): monster mode-change draws in the damage setup (MSD-R19).
 - [combat-damage-pipeline-order](combat-damage-pipeline-order.md): where monster damage values are consumed.

@@ -1,27 +1,27 @@
-# Party experience and loot sharing
+# Party experience sharing
 
 **Description**
 
-When a monster dies, the game selects the player credited for the kill and calculates experience for that player, eligible nearby party members and an eligible hireling. Party members share a larger experience pool, with each share adjusted for the member's level and bonuses. Gold pickup uses a separate sharing rule without the experience distance limit.
+When a monster dies, the game selects the player credited for the kill and calculates experience for that player, eligible nearby party members and an eligible hireling. Party members share a larger experience pool, with each share adjusted for the member's level and bonuses. Only party members close to the victim on the same map take part in the experience share.
 
 Status: draft
 Evidence build: Lord of Destruction Expansion 1.13c
 Foundations: [core-numeric-and-rng-foundations](core-numeric-and-rng-foundations.md); names: [core-game-data-fields](core-game-data-fields.md)
 Ids: PXL-R, PXL-Q, PXL-V, PXL-O; policy in [README conventions](README.md#conventions)
-Evidence: [companion investigation records](../research/spec-evidence/player-party-experience-and-loot-sharing.md)
-Open evidence gaps: [gap file](../plans/gaps/player-party-experience-and-loot-sharing.md)
+Evidence: [companion investigation records](../research/spec-evidence/player-party-experience-sharing.md)
+Open evidence gaps: [gap file](../plans/gaps/player-party-experience-sharing.md)
 
 ## 1. Scope
 
-This contract begins with a victim's stored experience and level and a supplied killer. It covers credit selection, solo and party calculations, member collection, member scaling, player/hireling award requests and gold pickup sharing. Level-up, award storage and excess-gold recreation have integration gates. Drop ownership, pickup timers, death experience penalties and the corpse-experience lead remain bounded unanswered questions. [Monster scaling](monster-scaling-by-players-and-difficulty.md) owns difficulty/player-count changes to the victim's stored values and NoDrop; quest experience is not defined here.
+This contract begins with a victim's stored experience and level and a supplied killer. It covers credit selection, solo and party calculations, member collection including the same-level party iterator, member scaling and player/hireling award requests. Level-up and award storage have integration gates. Death experience penalties and the corpse-experience lead remain bounded unanswered questions. [Party gold sharing](player-party-gold-sharing.md) owns gold pickup sharing, the gold cap, excess-gold recreation and drop ownership/pickup timers. [Monster scaling](monster-scaling-by-players-and-difficulty.md) owns difficulty/player-count changes to the victim's stored values and NoDrop; quest experience is not defined here.
 
 ## 2. Trigger and ownership
 
-D2Game computes these server results in death/reward and party paths. The reached death path checks victim eligibility, enters the experience wrapper and award router, selects a credited player, attempts hireling routing, then selects solo or party experience. PVP-R10a/PVP-R10b/PVP-R11a in [PvP and kill credit](combat-pvp-damage-and-kill-credit.md) own the shared selector/routing contracts and retain their integration limits. The companion records dispatch roots and output-request locations. Operations run once per reached death or gold pickup, rather than every frame. Complete notification/message delivery inside level-up, hireling updates and gold recreation remains unestablished.
+D2Game computes these server results in death/reward and party paths. The reached death path checks victim eligibility, enters the experience wrapper and award router, selects a credited player, attempts hireling routing, then selects solo or party experience. PVP-R09a/PVP-R09b/PVP-R10a in [PvP and kill credit](combat-pvp-damage-and-kill-credit.md) own the shared selector/routing contracts and retain their integration limits. The companion records dispatch roots and output-request locations. Operations run once per reached death, rather than every frame. Complete notification/message delivery inside level-up and hireling updates remains unestablished.
 
 ## 3. Inputs and data
 
-Integer notation consumes foundations section 1 and NRF-R05. Unless specified otherwise values are signed 32-bit integers; low32 retains 32 bits, i32 interprets them as signed, u32 as unsigned, and trunc rounds toward zero. Stat reads use layer 0 and NRF-R12b/NRF-R12c; own-array reads are expressly named. Getters do not establish aggregation or mutation.
+Integer notation consumes foundations section 1 and NRF-R05. Unless specified otherwise values are signed 32-bit integers; low32 retains 32 bits, i32 interprets them as signed, u32 as unsigned, and trunc rounds toward zero. Stat reads use layer 0 and RLI-R02a/RLI-R02b; own-array reads are expressly named. Getters do not establish aggregation or mutation.
 
 | Input | Semantic source | Width / format | Meaning |
 |---|---|---|---|
@@ -30,23 +30,21 @@ Integer notation consumes foundations section 1 and NRF-R05. Unless specified ot
 | member level m; bonus | Stats 12 `level`, 85 `item_addexperience` | i32 | m is caller-supplied: initial routed player/hireling level is own-array, collected member level is effective; bonus is effective |
 | current experience; last gain | Stats 13 `experience`, 29 `lastexp` | i32 bits; cap comparisons u32 | Player/hireling addition reads current experience from own array |
 | victim eligibility | MonStats `killable`; victim.skipKillExperience | Booleans | Named monster flag and neutral runtime skip condition |
-| party eligibility | member.excludedFromPartyCollection; player data, party id, party record, ordered member identities | Boolean; unsigned 16-bit party id; logical records | 65535 means no party; condition producers Q02/Q04. excludedFromPartyCollection is the same unit condition that MSD-R05/MSD-R21 call `notAliveCondition`; the name is neutral and implies no party-specific meaning |
+| party eligibility | member.aliveExclusionCondition; player data, party id, party record, ordered member identities | Boolean; unsigned 16-bit party id; logical records | 65535 means no party; condition producers Q02/Q04. `aliveExclusionCondition` is the shared name from [core-game-data-fields](core-game-data-fields.md) section 3, the same condition MSD-R05/MSD-R21 test; it implies no party-specific meaning |
 | rooms/positions | Room presence, room level id, dynamic coordinates from NRF-R10b; supplied static positions | Level id i32; dynamic integer coordinates u16 zero-extended to i32; static coordinates i32 | Same-level enumeration; victim-centered XP distance |
-| credit inputs | One-hop owner record; owner-link and supplied game registries; active-state membership/mask; primary redirect lists | PVP-R10a/PVP-R10b inputs | Exact selector including victim null erasure |
+| credit inputs | One-hop owner record; owner-link and supplied game registries; active-state membership/mask; primary redirect lists | PVP-R09a/PVP-R09b inputs | Exact selector including victim null erasure |
 | prepared experience data | Per-class maximums, ordered class threshold rows, ratio rows, default shift | i32; threshold comparisons u32 | Supplied prepared records; original text correspondence Q01 |
 | hireling inputs | PetType count; active lookup result; entry eligibility; owner level; optional record and thresholdFactor | Count/levels/factor i32; logical records | Record/entry production Q07; supplied values independently usable |
-| gold | Stat 14 `gold`; amount; picker; ordered party records; ownerExceptionCondition and owner lookup result | i32 / logical records | Owner exception requires resolved player |
-| dependency operations | Replace/add stat, award, level-up, resource callback, hireling update/notification, recreate excess gold | Supplied operations with ordered logs | Requests distinct from stored effects; Q07 |
+| dependency operations | Replace stat, award, level-up, resource callback, hireling update/notification | Supplied operations with ordered logs | Requests distinct from stored effects; Q07 |
 | floating inputs | Stored binary floating point with 32-bit storage quotient, raw shares, rounding environment, alternate division selection | Supplied results/environment | Production Q07; explicit raw shares can enter R05a |
 | difficulty and effective player count | Game context | i32 | Varied only with other inputs held fixed for R07 |
 
 | Mapping or constant | Origin | Binding |
 |---|---|---|
-| Stats 12/13/14/29/85 and death/dead mode identities | Table names GDF-R11a/GDF-R14/GDF-R15; selections engine code | Code selects fixed numeric ids/modes; cited data records supply names |
-| MonStats `killable`; PetType count identity | GDF-R18/GDF-R19b | Table meaning/count identity; code fixes tests and signed count >7 |
-| Experience class fields and ExpRatio | GDF-R04 | Data fields; code fixes accessors; no original values assumed here |
-| Level-factor arrays, 89/256, 86/256, squared radius 6400, eight-member maximum, input cap 8388607, gold multiplier 10000 | Engine code | Fixed by original code |
-| ItemTypes row identity 4, ItemType `Gold`, Code `gold` | GDF-R16a | Original-profile item-type mapping; pickup selects the gold path. Recreation separately selects the item code `gld ` in R09d |
+| Stats 12/13/29/85 and death/dead mode identities | Table names GDF-R02/GDF-R05/GDF-R06; selections engine code | Code selects fixed numeric ids/modes; cited data records supply names |
+| MonStats `killable`; PetType count identity | GDA-R16/GDA-R04b | Table meaning/count identity; code fixes tests and signed count >7 |
+| Experience class fields and ExpRatio | GDA-R07 | Data fields; code fixes accessors; no original values assumed here |
+| Level-factor arrays, 89/256, 86/256, squared radius 6400, eight-member maximum, input cap 8388607 | Engine code | Fixed by original code |
 | Hireling thresholdFactor | Supplied record; original table correspondence unresolved | Code fixes multiplication; selection/preparation Q07 |
 
 No vector requires a shipped Experience cell. Maximums, ratios, thresholds and factors supplied below are synthetic inputs.
@@ -55,17 +53,17 @@ No vector requires a shipped Experience cell. Maximums, ratios, thresholds and f
 
 ### PXL-R01. Experience eligibility
 
-**PXL-R01a** Eligibility/routing [verified in 1.13c code (static)]. At the death entry, an absent victim or any victim type other than player/monster returns without an experience request. A monster victim must not already be mode 0 (`death`) or 12 (`dead`) and must be killable. A player victim must not already be mode 0 (`Death`) or 17 (`Dead`). After those death-entry checks, a present killer/victim with skipKillExperience=false enters award routing. The isolated wrapper itself checks presence/skipKillExperience, without adding the death entry's victim type/mode checks; the isolated router requires killer type player/monster and signed-positive own-array victim.experience, without a further victim-type check. Only after those router guards pass, request credited-player selection through R02a. A wrapper-to-router entry is distinct from this later selection request and does not imply an award. Consume PVP-R10a/PVP-R11a for the shared route. Hireling lookup additionally requires present credited-player data and signed PetType count >7. Rejection stops later selection/award operations at that stage; earlier RouterEntry or other already reached requests remain observable.
+**PXL-R01a** Eligibility/routing [verified in 1.13c code (static)]. At the death entry, an absent victim or any victim type other than player/monster returns without an experience request. A monster victim must not already be mode 0 (`death`) or 12 (`dead`) and must be killable. A player victim must not already be mode 0 (`Death`) or 17 (`Dead`). After those death-entry checks, a present killer/victim with skipKillExperience=false enters award routing. The isolated wrapper itself checks presence/skipKillExperience, without adding the death entry's victim type/mode checks; the isolated router requires killer type player/monster and signed-positive own-array victim.experience, without a further victim-type check. Only after those router guards pass, request credited-player selection through R02a. A wrapper-to-router entry is distinct from this later selection request and does not imply an award. Consume PVP-R09a/PVP-R10a for the shared route. Hireling lookup additionally requires present credited-player data and signed PetType count >7. Rejection stops later selection/award operations at that stage; earlier RouterEntry or other already reached requests remain observable.
 
 **PXL-R01b** Gate meanings [unresolved]. Wider skipKillExperience meaning and purpose of the PetType-count threshold remain Q02; supplied tests are independently available.
 
 ### PXL-R02. Credited player
 
-**PXL-R02a** Selection [verified in 1.13c code (static)]. Consume PVP-R10a/PVP-R10b. A player killer returns immediately; absent/other-type killer yields none. A monster starts with its one-hop owner result. An eligible killer supplies its first primary creditRedirect list; an eligible victim replaces that selection, including with absence. A present selected list replaces the result with its owner lookup in the supplied game, including failure. An absent selected list retains the original one-hop owner from the owner-link game. Return only a player result. That player's own class, level and bonus supply its scaling.
+**PXL-R02a** Selection [verified in 1.13c code (static)]. Consume PVP-R09a/PVP-R09b. A player killer returns immediately; absent/other-type killer yields none. A monster starts with its one-hop owner result. An eligible killer supplies its first primary creditRedirect list; an eligible victim replaces that selection, including with absence. A present selected list replaces the result with its owner lookup in the supplied game, including failure. An absent selected list retains the original one-hop owner from the owner-link game. Return only a player result. That player's own class, level and bonus supply its scaling.
 
 **PXL-R02b** Killer production [unresolved]. Complete upstream attribution, including each damage-over-time source, remains outside-boundary Q05. PVP-R07 establishes a separate missile creator-resolution boundary, not every caller's killer argument.
 
-**PXL-R02c** Selector roles [verified in 1.13c code (static)]. PVP-R10b defines creditEligible as active-state membership intersecting the supplied credit-state mask on an extended base list. firstCreditList returns the first matching primary-chain list, excluding base and secondary chain. Generic list existence is insufficient. Actual mask/list/owner production remains Q08/PVP-Q02/PVP-Q13.
+**PXL-R02c** Selector roles [verified in 1.13c code (static)]. PVP-R09b defines creditEligible as active-state membership intersecting the supplied credit-state mask on an extended base list. firstCreditList returns the first matching primary-chain list, excluding base and secondary chain. Generic list existence is insufficient. Actual mask/list/owner production remains Q08/PVP-Q02/PVP-Q09.
 
 **PXL-R03** Solo request [verified in 1.13c code (static)]. Party id 65535 selects R05a with X and credited player, then requests R06a with the result and that player's level. No distance or party-member level test applies. Stored effects remain Q07.
 
@@ -73,13 +71,13 @@ No vector requires a shipped Experience cell. Maximums, ratios, thresholds and f
 
 **PXL-R04a** Enumeration, collection and integer pool [verified in 1.13c code (static)]. The same-level iterator invokes its callback once on the credited player when that player has no room, no usable player party data, or party id 65535. A non-solo id without a matching party record returns without a callback; an empty record member list likewise returns without a callback. Otherwise visit record identities in order, resolve through the game's player registry, and invoke the callback only for found members with a room on the credited player's map level.
 
-The XP callback rejects absent members, excludedFromPartyCollection=true, other unit types, player modes 0/17 and monster modes 0/12. With a present victim read victim/member coordinates. For dynamic units, a present path supplies NRF-R10b unsigned 16-bit integer coordinates, zero-extended to i32; an absent path supplies 0. The static-victim route for types 2/4/5 reads supplied i32 coordinates directly. These getter routes do not establish world-unit equivalence for every position producer (Q03). Reject if either X coordinate is 0. Compute dx=i32(low32(memberX-victimX)), dy likewise, d=u32(low32(dx*dx+dy*dy)); reject d>6400. With no victim skip the position test. The ninth passing member causes fatal failure, rather than silent truncation. Store admitted members/levels; n is count and sumL the wrapping i32 level sum.
+The XP callback rejects absent members, aliveExclusionCondition=true, other unit types, player modes 0/17 and monster modes 0/12. With a present victim read victim/member coordinates. For dynamic units, a present path supplies NRF-R10b unsigned 16-bit integer coordinates, zero-extended to i32; an absent path supplies 0. The static-victim route for types 2/4/5 reads supplied i32 coordinates directly. These getter routes do not establish world-unit equivalence for every position producer (Q03). Reject if either X coordinate is 0. Compute dx=i32(low32(memberX-victimX)), dy likewise, d=u32(low32(dx*dx+dy*dy)); reject d>6400. With no victim skip the position test. The ninth passing member causes fatal failure, rather than silent truncation. Store admitted members/levels; n is count and sumL the wrapping i32 level sum.
 
 If n<=0 or sumL<=0 request nothing. For n=1 calculate R05a and request R06a for the original credited player, even if the sole admitted member is someone else. For n>=2 calculate p=i32(low32(low32((n-1)*X)*89)), extra=trunc(p/256), total=i32(low32(X+extra)). Pass total/sumL/levels to R04b, then R05a/R06a for each admitted member in order using its raw share. Effective player count does not cap n.
 
 **PXL-R04b** Floating shares [unresolved]. The located path divides signed total by signed sumL, stores a binary floating point with 32-bit storage quotient, multiplies it by each signed member level and converts the product for the raw share. Exact division environment, alternate-division branch, precision/rounding and out-of-range conversion remain Q07. Section 8's supplied example environment uses nearest-even binary floating point with 32-bit storage quotient, exact multiplication then truncation for finite in-range values; examples do not establish the original environment. Explicit raw shares independently enter verified R05a.
 
-**PXL-R04c** World distance conversion [unresolved]. Raw getter-scale comparison is established. Conversion to yards/screens remains Q03/NRF-Q04 and does not gate supplied coordinates.
+**PXL-R04c** World distance conversion [unresolved]. Raw getter-scale comparison is established. Conversion to yards/screens remains Q03/NRF-Q03 and does not gate supplied coordinates.
 
 ### PXL-R05. Per-member scaling
 
@@ -108,67 +106,46 @@ If n<=0 or sumL<=0 request nothing. For n=1 calculate R05a and request R06a for 
 
 ### PXL-R08. Hireling requests
 
-**PXL-R08a** Share, gates and updates [verified in 1.13c code (static)]. Consume PVP-R11a for signed PetType count>7 and supplied eligible monster lookup. Calculate x_m through R05a. Retain it if this hireling is the killer; otherwise use trunc(i32(low32(x_m*86))/256). Reject signed x_m<=0, missing supplied hireling record, or signed hireling level>=owner effective level. Read own-array old hireling experience; new=low32(old+2*x_m). Reject hireling level>=classMax(0)-1; otherwise request stat 13=new with no experience cap, then request an experience-change notification carrying hireling, stat 13, old/new values and the supplied owner delivery context. Starting at existing level, test T(level+1)<=u32(new), advancing while below classMax(0)-1; stop on first failed unsigned threshold. A rise requests hireling progression, owner update, unit notification and resource handling in that order; actual effects Q07. This is additional to player routing.
+**PXL-R08a** Share, gates and updates [verified in 1.13c code (static)]. Consume PVP-R10a for signed PetType count>7 and supplied eligible monster lookup. Calculate x_m through R05a. Retain it if this hireling is the killer; otherwise use trunc(i32(low32(x_m*86))/256). Reject signed x_m<=0, missing supplied hireling record, or signed hireling level>=owner effective level. Read own-array old hireling experience; new=low32(old+2*x_m). Reject hireling level>=classMax(0)-1; otherwise request stat 13=new with no experience cap, then request an experience-change notification carrying hireling, stat 13, old/new values and the supplied owner delivery context. Starting at existing level, test T(level+1)<=u32(new), advancing while below classMax(0)-1; stop on first failed unsigned threshold. A rise requests hireling progression, owner update, unit notification and resource handling in that order; actual effects Q07. This is additional to player routing.
 
-**PXL-R08b** Entry production [asm-only]. Located iteration tests a neutral entry-exclusion condition before resolving a monster hireling. Complete entry identity/creation/lookup remains Q07/PVP-Q13; no gameplay name is inferred for the condition.
+**PXL-R08b** Entry production [asm-only]. Located iteration tests a neutral entry-exclusion condition before resolving a monster hireling. Complete entry identity/creation/lookup remains Q07/PVP-Q09; no gameplay name is inferred for the condition.
 
-### PXL-R09. Gold pickup
+**PXL-R09** NoDrop relationship [verified in 1.13c code (static)]. Consume MSD-R21 for NoDrop eligibility. Shared same-level enumeration omits the XP victim-distance filter: a far living same-level member can count there while excluded from XP. Do not substitute XP n into NoDrop.
 
-**PXL-R09a** Amounts and requests [verified in 1.13c code (static)]. Gold bypasses party sharing when ownerExceptionCondition and its owner lookup yields a player, or picker has no usable party. Otherwise count n with R04a's same-level iterator and an alive callback: exclusion/type/death-mode checks, no distance or extra state-7 test. n<=1 or failed party-record lookup selects picker-only.
+### PXL-R10. Death experience/corpse lead
 
-For n>1, share=trunc(amount/n). Visit ordered party identities. A found other member requires a room on picker's map level. This pass checks the picker's mode is neither 0 nor 17, not recipient liveness/exclusion. Calculate accepted capacity below and request recipient gold add; set remaining=i32(low32(remaining-accepted)). Finally calculate picker's capacity on remaining and request its add. Picker-only uses the whole amount. Return excess; positive excess requests R09d recreation.
+**PXL-R10a** Penalty consumer [unresolved]. GDA-R05 identifies DifficultyLevels.DeathExpPenalty; complete death-time consumer/lost-experience result remains Q06. No absence claim is established.
 
-Capacity: proposed=i32(low32(gold+amount)); initially accepted=amount, excess=0. If signed proposed>cap, accepted=i32(low32(cap-gold)), excess=i32(low32(amount-accepted)). Add guards compute i32(low32(gold+accepted)); negative result or, for a player, signed result>cap requests replacement with 0; otherwise request addition of accepted. These are requests, not a mutated stat-store guarantee. For ordinary nonnegative gold<=cap without overflow, accepted=min(amount, cap-gold).
+**PXL-R10b** Corpse lead [recovered; unverified]. A player-creation lead suggests assigning 75 percent of a pending corpse-experience value to a new corpse's stat 13 and clearing pending value. Producer, consumer and arithmetic/store effects remain Q06; this is not an executable penalty/recovery contract.
 
-**PXL-R09b** Gold cap [verified in 1.13c code (static)]. Missing unit/list or unavailable level definition yields 0. Otherwise read effective level through NRF-R12b/NRF-R12c and return i32(low32(level*10000)), without an independent level clamp.
-
-**PXL-R09c** Owner condition meaning [unresolved]. Supplied condition/lookup tests are established; whether a particular player-dropped pile carries them remains Q04.
-
-**PXL-R09d** Storage and recreation [unresolved]. Actual additive/replacing stat propagation remains Q07. Positive excess reaches a path selecting item code `gld ` and chunks no larger than 2000000000 near picker room/position. Complete placement, creation, RNG and success/failure effects remain Q07; a request does not assert created items.
-
-**PXL-R10** Drop ownership/timers [unresolved]. Complete ownership, visibility, pickup eligibility and timer policies remain Q06. Located pickup/validation is not a complete absence proof.
-
-**PXL-R11** NoDrop relationship [verified in 1.13c code (static)]. Consume MSD-R21 for NoDrop eligibility. Shared same-level enumeration omits the XP victim-distance filter: a far living same-level member can count there while excluded from XP. Do not substitute XP n into NoDrop.
-
-### PXL-R12. Death experience/corpse lead
-
-**PXL-R12a** Penalty consumer [unresolved]. GDF-R02 identifies DifficultyLevels.DeathExpPenalty; complete death-time consumer/lost-experience result remains Q06. No absence claim is established.
-
-**PXL-R12b** Corpse lead [recovered; unverified]. A player-creation lead suggests assigning 75 percent of a pending corpse-experience value to a new corpse's stat 13 and clearing pending value. Producer, consumer and arithmetic/store effects remain Q06; this is not an executable penalty/recovery contract.
-
-**PXL-R13** Direct random draws [verified in 1.13c code (static)]. Credit selection, local supplied-input amount calculations, collection and award/split request routing perform no direct random draw. Dependency results are supplied. Actual level-up/resource/hireling interiors, stat propagation, recreation and other death effects are excluded; their draws are not established here.
+**PXL-R11** Direct random draws [verified in 1.13c code (static)]. Credit selection, local supplied-input amount calculations, collection and award request routing perform no direct random draw. Dependency results are supplied. Actual level-up/resource/hireling interiors, stat propagation and other death effects are excluded; their draws are not established here. GPS-R06 states the gold-split counterpart.
 
 ### Id map
 
 | Id | Summary | Status label | Gates | Vectors |
 |---|---|---|---|---|
-| PXL-R01a | Eligibility | verified in 1.13c code (static) | none for supplied gates | PXL-V07, PXL-V14 |
+| PXL-R01a | Eligibility | verified in 1.13c code (static) | none for supplied gates | PXL-V06, PXL-V13 |
 | PXL-R01b | Gate meanings | unresolved | Q02: producer meaning | none |
-| PXL-R02a | Credit selection | verified in 1.13c code (static) | Q08: registration only | PXL-V08 |
+| PXL-R02a | Credit selection | verified in 1.13c code (static) | Q08: registration only | PXL-V07 |
 | PXL-R02b | Upstream killer | unresolved | Q05: attribution | none |
-| PXL-R02c | Selector roles | verified in 1.13c code (static) | Q08: producers only | PXL-V08 |
-| PXL-R03 | Solo request | verified in 1.13c code (static) | Q07: stored effects only | PXL-V07, PXL-V09 |
-| PXL-R04a | Collection/integer pool | verified in 1.13c code (static) | Q07: floating producer/stored awards only | PXL-V04, PXL-V10 |
-| PXL-R04b | Floating shares | unresolved | Q07: environment/division/conversion | PXL-V04, PXL-V10 supplied examples only |
+| PXL-R02c | Selector roles | verified in 1.13c code (static) | Q08: producers only | PXL-V07 |
+| PXL-R03 | Solo request | verified in 1.13c code (static) | Q07: stored effects only | PXL-V06, PXL-V08 |
+| PXL-R04a | Collection/integer pool | verified in 1.13c code (static) | Q07: floating producer/stored awards only | PXL-V04, PXL-V09 |
+| PXL-R04b | Floating shares | unresolved | Q07: environment/division/conversion | PXL-V04, PXL-V09 supplied examples only |
 | PXL-R04c | World conversion | unresolved | Q03: yards/screens | none |
-| PXL-R05a | Scaling | verified in 1.13c code (static) | Q01/Q07/Q08: data/record/owner production only | PXL-V01, PXL-V02, PXL-V03, PXL-V04, PXL-V07, PXL-V11, PXL-V14, PXL-V18 |
-| PXL-R05b | Prepared accessors | verified in 1.13c code (static) | Q01: original data only | PXL-V11 |
+| PXL-R05a | Scaling | verified in 1.13c code (static) | Q01/Q07/Q08: data/record/owner production only | PXL-V01, PXL-V02, PXL-V03, PXL-V04, PXL-V06, PXL-V10, PXL-V13, PXL-V16 |
+| PXL-R05b | Prepared accessors | verified in 1.13c code (static) | Q01: original data only | PXL-V10 |
 | PXL-R05c | Text alignment | unresolved | Q01: correspondence | none |
-| PXL-R05d | Threshold factor | verified in 1.13c code (static) | Q07: record preparation only | PXL-V14 |
-| PXL-R06a | Player requests | verified in 1.13c code (static) | Q07: storage/level-up/callback | PXL-V12 |
-| PXL-R06b | Level scan | verified in 1.13c code (static) | Q01: original data only | PXL-V12 |
-| PXL-R07 | Local context | verified in 1.13c code (static) | none within stage | PXL-V13 |
-| PXL-R08a | Hireling requests | verified in 1.13c code (static) | Q07: lookup/storage/update | PXL-V05, PXL-V14 |
+| PXL-R05d | Threshold factor | verified in 1.13c code (static) | Q07: record preparation only | PXL-V13 |
+| PXL-R06a | Player requests | verified in 1.13c code (static) | Q07: storage/level-up/callback | PXL-V11 |
+| PXL-R06b | Level scan | verified in 1.13c code (static) | Q01: original data only | PXL-V11 |
+| PXL-R07 | Local context | verified in 1.13c code (static) | none within stage | PXL-V12 |
+| PXL-R08a | Hireling requests | verified in 1.13c code (static) | Q07: lookup/storage/update | PXL-V05, PXL-V13 |
 | PXL-R08b | Active entry | asm-only | Q07: entry producer/lookup | none |
-| PXL-R09a | Gold requests | verified in 1.13c code (static) | Q07: storage/recreation | PXL-V06, PXL-V15 |
-| PXL-R09b | Gold cap | verified in 1.13c code (static) | none with supplied getter | PXL-V15 |
-| PXL-R09c | Owner meaning | unresolved | Q04: pile producer | none |
-| PXL-R09d | Storage/recreation | unresolved | Q07: actual effects/RNG | PXL-V15 request only |
-| PXL-R10 | Drop policy | unresolved | Q06: complete behavior | none |
-| PXL-R11 | NoDrop link | verified in 1.13c code (static) | MSD dependency limits | PXL-V16 |
-| PXL-R12a | Penalty | unresolved | Q06: consumer/result | none |
-| PXL-R12b | Corpse lead | recovered; unverified | Q06: producer/consumer | none |
-| PXL-R13 | Direct draw boundary | verified in 1.13c code (static) | Q07: excluded interiors | PXL-V17 |
+| PXL-R09 | NoDrop link | verified in 1.13c code (static) | MSD dependency limits | PXL-V14 |
+| PXL-R10a | Penalty | unresolved | Q06: consumer/result | none |
+| PXL-R10b | Corpse lead | recovered; unverified | Q06: producer/consumer | none |
+| PXL-R11 | Direct draw boundary | verified in 1.13c code (static) | Q07: excluded interiors | PXL-V15 |
 
 ## 5. Outputs and side effects
 
@@ -177,21 +154,19 @@ Capacity: proposed=i32(low32(gold+amount)); initially accepted=amount, excess=0.
 | Wrapper-to-router entry request and, separately, credit-selection request after the router guards | R01a/R02a; entry does not imply an award |
 | Credited player/none; owner lookup arguments | R02a/R02c |
 | Ordered collection, count/sum; fatal ninth-member failure | R04a |
-| Amount, pool, supplied cap/threshold/level results | R04a/R05a/R05b/R05d/R06b/R08a/R09a/R09b |
+| Amount, pool, supplied cap/threshold/level results | R04a/R05a/R05b/R05d/R06b/R08a |
 | Replacement requests stat 29 then stat 13, layer 0 | R06a; actual storage Q07 |
 | Level-up then resource event-12 requests | R06a; progression/resources/messages Q07 |
-| Conditional active-hireling lookup attempt and supplied result | R01a/R08a/PVP-R11a; full lookup/entry production R08b/Q07 |
+| Conditional active-hireling lookup attempt and supplied result | R01a/R08a/PVP-R10a; full lookup/entry production R08b/Q07 |
 | Hireling stat-13, experience-change and level/update/notification/resource requests | R08a; actual writes/messages Q07 |
-| Recipient/picker stat-14 add or zero-replacement requests; excess return | R09a; actual storage Q07 |
-| Positive-excess recreation request with picker/game/amount | R09a/R09d; creation/placement/draws Q07 |
-| Dependency-owned NoDrop count before normalization, used only for the count comparison | R11/MSD-R21; no treasure-roll assertion |
-| No direct seed update within local stage | R13 |
+| Dependency-owned NoDrop count before normalization, used only for the count comparison | R09/MSD-R21; no treasure-roll assertion |
+| No direct seed update within local stage | R11 |
 
 No persistence or delivered-message guarantee is established for gated interiors.
 
 ## 6. Branches and edge cases
 
-Solo ignores distance. Party collection is victim-centered, rejects zero X, compares wrapped distance unsigned, rejects death/dead modes and fails at member nine. Missing party records produce zero callbacks; early no-room/no-party guards invoke one. n=1 credits the original player. Nonpositive ScaleXP returns 1 before maximum-level checks. XP/hireling caps compare unsigned. Gold divisor/recipient liveness differs. Excess requests do not prove creation or draws. Classic/custom-data equivalence is not established beyond Expansion 1.13c and supplied-input operations.
+Solo ignores distance. Party collection is victim-centered, rejects zero X, compares wrapped distance unsigned, rejects death/dead modes and fails at member nine. Missing party records produce zero callbacks; early no-room/no-party guards invoke one. n=1 credits the original player. Nonpositive ScaleXP returns 1 before maximum-level checks. XP/hireling caps compare unsigned. Classic/custom-data equivalence is not established beyond Expansion 1.13c and supplied-input operations.
 
 ## 7. Open questions
 
@@ -199,14 +174,14 @@ Solo ignores distance. Party collection is victim-centered, rejects zero X, comp
 |---|---|---|
 | **PXL-Q01** | integration / open | Original Experience Level/header text, compiled preparation and loaded-record correspondence for R05b/R06b. Dated GDF complete file coverage exists; named level/ratio correspondence is still needed. Compare complete named rows/prepared values with consumer indices; partial text maximum alone is insufficient |
 | **PXL-Q02** | outside-boundary / open | Wider skipKillExperience/PetType gate purpose: trace producers/qualifying inputs; supplied consumer gates available |
-| **PXL-Q03** | outside-boundary / open | Raw scale to yards/screens, NRF-Q04; supplied-coordinate predicate available |
-| **PXL-Q04** | outside-boundary / open | Collection-exclusion and gold ownerExceptionCondition producers: trace writers/pile creation; supplied tests available |
+| **PXL-Q03** | outside-boundary / open | Raw scale to yards/screens, NRF-Q03; supplied-coordinate predicate available |
+| **PXL-Q04** | outside-boundary / open | Collection-exclusion producer: trace writers; supplied test available. The gold ownerExceptionCondition producer is GPS-Q01 |
 | **PXL-Q05** | outside-boundary / open | Full killer selection by source, especially damage over time; consume PVP-R07 and source-specific contacts, then trace remaining producer |
-| **PXL-Q06** | behavior / open | Complete drop policy, DeathExpPenalty consumer and corpse production/recovery. Quest experience has no contract here. Root/output anchors, complete callee reading and distinguishing vectors needed |
-| **PXL-Q07** | integration / open | Actual stat write/add propagation, level-up/resources/hireling effects/messages, active lookup/record preparation, extreme scaling indices, floating environment/alternate divide/conversion, excess creation/RNG. Supplied arithmetic/requests available; read specific interiors and reproduce attributable cases |
-| **PXL-Q08** | outside-boundary / open | Owner registration and redirect mask/list producers. PVP-R10 establishes one-hop indirection/selector, not production history |
+| **PXL-Q06** | behavior / open | Complete DeathExpPenalty consumer and corpse production/recovery. Quest experience has no contract here. Drop policy is GPS-Q03. Root/output anchors, complete callee reading and distinguishing vectors needed |
+| **PXL-Q07** | integration / open | Actual stat write propagation, level-up/resources/hireling effects/messages, active lookup/record preparation, extreme scaling indices, floating environment/alternate divide/conversion. Gold storage and excess creation are GPS-Q02. Supplied arithmetic/requests available; read specific interiors and reproduce attributable cases |
+| **PXL-Q08** | outside-boundary / open | Owner registration and redirect mask/list producers. PVP-R09 establishes one-hop indirection/selector, not production history |
 
-Every verified behavioral rule still lacks matching gameplay observations for this contract. This observation gap is separate from integration gates and appears in the [gap file](../plans/gaps/player-party-experience-and-loot-sharing.md).
+Every verified behavioral rule still lacks matching gameplay observations for this contract. This observation gap is separate from integration gates and appears in the [gap file](../plans/gaps/player-party-experience-sharing.md).
 
 ## 8. Test vectors
 
@@ -259,16 +234,7 @@ All vectors are supplied-input stage fixtures with Seeds: no draw; Draws: none; 
   - Discriminates: missing doubling gives 335; missing sharing gives 2000.
   - runtime_observed: no
 
-- **PXL-V06** Gold remainder (R09a; boundary: supplied-input stage)
-  - Inputs: amount 1000; same-level alive P/A/B, each gold 0, cap 100000; other order A/B.
-  - Seeds: no draw.
-  - Draws: none.
-  - Trace: n=3, share 333, remaining 1000-333-333=334.
-  - Outputs: add(A, 333), add(B, 333), add(P, 334), excess 0, no recreation.
-  - Discriminates: discarding remainder gives P=333.
-  - runtime_observed: no
-
-- **PXL-V07** Death gates and routed input sources (R01a/R03/R05a; boundary: supplied-input stage)
+- **PXL-V06** Death gates and routed input sources (R01a/R03/R05a; boundary: supplied-input stage)
   - Inputs: monster victim mode 1, X=500, killable=true, skipKillExperience=false, present player killer. Baseline and cases (a)..(i)/(l) log the post-guard CreditSelection request, not mere router entry; case (d) additionally observes RouterEntry, case (j) observes only wrapper forwarding, and case (k) uses its stated scaling/update log.
   - Seeds: no draw.
   - Draws: none.
@@ -290,7 +256,7 @@ All vectors are supplied-input stage fixtures with Seeds: no draw; Draws: none; 
   - (m) Inputs: isolated award router, exactly the immutable arrays, player killer/credited P, no-party, PetType count 7 and synthetic records of case (k), except victim V has type 2. Observe CreditSelection in addition to the stated scaling/update log. Draws: none. Trace: this direct router input bypasses death-entry eligibility; player killer and own XP 200 pass the router guards, selection returns P, and own victim/credited levels 10 give amount 200. Outputs: CreditSelection(game,P,V)=P, solo scaling inputs (P,m=10,v=10,x=200), scaled result 200, level-update request carrying P/entry level 10/award 200; no hireling or outer RouterEntry request. The stage begins inside the router and makes no claim that a type-2 victim passes death-entry eligibility.
   - runtime_observed: no
 
-- **PXL-V08** Credit order/list roles (R02a/R02c; boundary: supplied-input stage)
+- **PXL-V07** Credit order/list roles (R02a/R02c; boundary: supplied-input stage)
   - Inputs: owner-link game X maps owner 1 to player P; game G maps redirect owner 2 to Q, owner 3 to R. Eligibility inputs: stateCount=32, credit mask state 7, extended lists and active state 7 when called eligible. Primary credit lists as stated; no other matches.
   - Seeds: no draw.
   - Draws: none.
@@ -308,7 +274,7 @@ All vectors are supplied-input stage fixtures with Seeds: no draw; Draws: none; 
   - (i) Inputs: monster linked P; eligible victim primary owner 99 absent in G. Outputs: none, no owner fallback.
   - runtime_observed: no
 
-- **PXL-V09** Solo distance (R03/R05a/R06a; boundary: supplied-input stage)
+- **PXL-V08** Solo distance (R03/R05a/R06a; boundary: supplied-input stage)
   - Inputs: credited player m=10, v=10, X=200, party id 65535, squared distance 1000000; own XP=0, cap 20000000, unchanged level result 10; synthetic store.
   - Seeds: no draw.
   - Draws: none.
@@ -317,7 +283,7 @@ All vectors are supplied-input stage fixtures with Seeds: no draw; Draws: none; 
   - Discriminates: party range incorrectly applied to solo would suppress requests.
   - runtime_observed: no
 
-- **PXL-V10** Party branches (R04a/R04b/R05a; boundary: supplied-input stage)
+- **PXL-V09** Party branches (R04a/R04b/R05a; boundary: supplied-input stage)
   - Inputs: credited P and A/B all level 10; victim level 10/X=1000 at(100, 100); P=(100, 100), A=(101, 100), B=(102, 100); record order P/A/B; supplied finite share environment.
   - Seeds: no draw.
   - Draws: none.
@@ -334,16 +300,16 @@ All vectors are supplied-input stage fixtures with Seeds: no draw; Draws: none; 
   - (h) Inputs: record P/A, A X=0, Y=100, P at victim. Outputs: A excluded, n=1, P request 1000.
   - (i) Inputs: nine distinct alive level 10 members at victim. Outputs: first eight admitted;ninth fatal failure before awards.
   - (j) Inputs: isolated collection/pool consumer, supplied victim X=1000/v=10 and static victim type 2 with position (65636, 100); record P/A, both player members level 10 at (100, 100). This does not assert that the static victim passes monster-death award eligibility. Draws: none. Trace: each dx=-65536, dy=0, low32(dx*dx)=0. Outputs: wrapped d=0, n=2, sumL=20, total 1347; supplied raw/requests 673 each. Discriminates: unbounded squared distance would exclude both.
-  - (k) Inputs: record P/A only, A.excludedFromPartyCollection=true; all other baseline inputs. Draws: none. Trace: exclusion rejects A before position/level collection. Outputs: n=1, sumL=10, P request 1000; no A request.
+  - (k) Inputs: record P/A only, A.aliveExclusionCondition=true; all other baseline inputs. Draws: none. Trace: exclusion rejects A before position/level collection. Outputs: n=1, sumL=10, P request 1000; no A request.
   - (l) Inputs: isolated member callback, empty collection, supplied present victim (100, 100), member at (100, 100) with level 10. Three fresh runs supply member type 3/mode 1, monster type 1/mode 12, and monster type 1/mode 1 respectively. Draws: none. Trace: type rejection, monster dead rejection, then monster acceptance. Outputs: first two runs n=0/sumL=0; third n=1/sumL=10 with that monster stored. No iterator or award eligibility is asserted for these direct callback runs.
   - (m) Inputs: isolated collector/pool stage, victim absent, supplied v=10/X=1000, sole callback member A is an alive player level 10 at (0, 0), credited P level 10. Draws: none. Trace: victim absence skips coordinate checks, including zero X; n=1 credits original P. Outputs: n=1, sumL=10, P request 1000; no A request.
   - (n) Inputs: ordered record P/A/B; P has baseline room/coordinates, A's room has another map level, B has no registry match. Draws: none. Trace: map/lookup guards omit both callbacks. Outputs: callback list [P], n=1, sumL=10, P request 1000.
   - (o) Inputs: record P/A, both admitted levels 0 at victim position, supplied X=1000/v=10. Draws: none. Trace: n=2 but sumL=0 fails the signed sum guard before sharing/scaling. Outputs: n=2, sumL=0, no award requests.
   - (p) Inputs: record P/A; victim and P have baseline dynamic paths at (100, 100); A is an alive player level 10 with dynamic path absent. Draws: none. Trace: member wrapper returns X=0 without calling the path extractor; zero-X guard excludes A. Outputs: n=1, sumL=10, P request 1000; no A request.
-  - (q) Inputs: record P/A with valid baseline member paths, present monster victim whose dynamic path is absent, supplied victim X=1000/v=10. Draws: none. Trace: victim coordinate route yields X=0; collector rejects each member before distance. Outputs: n=0, sumL=0, no award request. This is distinct from absent victim V10(m), which skips distance.
+  - (q) Inputs: record P/A with valid baseline member paths, present monster victim whose dynamic path is absent, supplied victim X=1000/v=10. Draws: none. Trace: victim coordinate route yields X=0; collector rejects each member before distance. Outputs: n=0, sumL=0, no award request. This is distinct from absent victim V09(m), which skips distance.
   - runtime_observed: no
 
-- **PXL-V11** Scaling/accessor boundaries (R05a/R05b; boundary: supplied-input stage)
+- **PXL-V10** Scaling/accessor boundaries (R05a/R05b; boundary: supplied-input stage)
   - Inputs: defaults except overrides; (e)-(g), (i) enter named stage with supplied preceding result.
   - Seeds: no draw.
   - Draws: none.
@@ -365,7 +331,7 @@ All vectors are supplied-input stage fixtures with Seeds: no draw; Draws: none; 
   - (m) Inputs: player m=v=10, x=1000, bonus=-200, shift=0. Draws: none. Trace: level/ratio stages retain 1000; bonus trunc(-200000/100)=-2000; sum=-1000; player hook returns it unchanged. Outputs: -1000, without a second nonpositive-input clamp.
   - runtime_observed: no
 
-- **PXL-V12** Cap/level requests (R06a/R06b; boundary: supplied-input stage)
+- **PXL-V11** Cap/level requests (R06a/R06b; boundary: supplied-input stage)
   - Inputs: player class 0, own XP=1000, effective XP=9999, award 500, entry level 10; supplied cap/returned level per case; operations logged.
   - Seeds: no draw.
   - Draws: none.
@@ -381,8 +347,8 @@ All vectors are supplied-input stage fixtures with Seeds: no draw; Draws: none; 
   - (g) Inputs: isolated prepared class 0 max=3, available threshold rows 1..4=[0,100,300,600], experience=999; no later row is supplied. Draws: none. Trace: experience passes each available threshold; result reaches signed maximum 3 and returns before needing another row. Outputs: level scan 3.
   - runtime_observed: no
 
-- **PXL-V13** Context independence (R07; boundary: supplied-input stage)
-  - Inputs: V09 inputs;six fresh combinations difficulty 0/1/2, effective count 1/8; victim/member/dependency results fixed.
+- **PXL-V12** Context independence (R07; boundary: supplied-input stage)
+  - Inputs: V08 inputs; six fresh combinations difficulty 0/1/2, effective count 1/8; victim/member/dependency results fixed.
   - Seeds: no draw.
   - Draws: none.
   - Trace: no local amount input changes.
@@ -391,7 +357,7 @@ All vectors are supplied-input stage fixtures with Seeds: no draw; Draws: none; 
   - (a) Inputs: party fixture with P/A/B alive level 10, same-level rooms, all at victim (100, 100), victim X=1000/v=10, record P/A/B, supplied binary floating point quotient 56.5 with 32-bit storage and raw shares 565 each. Two fresh runs set effective player count 1 and 8. Draws: none. Trace: collected n=3 is unchanged, pool 1000+trunc(2*1000*89/256)=1695; supplied shares scale unchanged. Outputs: both runs n=3/sumL=30/total=1695 and requests (P,565),(A,565),(B,565). Original floating production remains Q07. Discriminates: capping collection by effective count 1 would instead choose n=1 and P-only 1000.
   - runtime_observed: no
 
-- **PXL-V14** Hireling gates/cap (R01a/R05a/R05d/R08a; boundary: supplied-input stage)
+- **PXL-V13** Hireling gates/cap (R01a/R05a/R05d/R08a; boundary: supplied-input stage)
   - Inputs: PetType count 20, eligible monster lookup, hireling level 20, owner level 30, v=20, X=1000; owner/record present; thresholdFactor=100, T(20)=840000, T(21)=970200, gap=130200, own XP=0, effective XP=9999, max 99.
   - Seeds: no draw.
   - Draws: none.
@@ -411,29 +377,7 @@ All vectors are supplied-input stage fixtures with Seeds: no draw; Draws: none; 
   - (k) Inputs: hireling award stage, hireling killer with level 97, victim level 97/X=1000, owner level 99, class-0 max=99, thresholdFactor=100, owner/record present, own hireling XP=100000000; ratio/shift/bonus=0. Draws: none. Trace: T(97)=92208200, T(98)=95079600, hook cap=44865 retains 1000; owner-level and existing-level maximum guards pass. New XP=100002000; T(98)<=new advances to 98, which equals max-1 and stops. Although T(99)=98010000 also fits the new XP, it does not advance again. Outputs: replace(13,100002000), experience-change(13,100000000,100002000), final level 98, then progression/owner-update/unit-notification/resource requests in order; actual effects remain Q07. Discriminates: scanning beyond max-1 would give level 99.
   - runtime_observed: no
 
-- **PXL-V15** Gold cap/excess/liveness (R09a/R09b/R09d; boundary: supplied-input stage)
-  - Inputs: amount 1001, same-level alive P/A, effective level 10, caps 100000, P gold 0, A gold 99900, no owner exception, record P/A; operation log.
-  - Seeds: no draw.
-  - Draws: none.
-  - Trace: n=2, share 500, A accepts 100, remaining 901, picker capacity then excess.
-  - Outputs: baseline add(A, 100), add(P, 901), excess 0; storage Q07.
-  - Discriminates: unused shares return to picker; count/recipient liveness differs.
-  - (a) Inputs: P gold 99950. Outputs: add(A, 100), add(P, 50), excess 851, recreation(P, 851); no created-item/draw assertion.
-  - (b) Inputs: record P only. Outputs: n=1, picker-only add(P, 1001), excess 0.
-  - (c) Inputs: amount 1000, record P/A/B, P/A alive, B mode 17, all gold 0/cap 100000. Outputs: n=2, share 500, add(A, 500), add(B, 500), add(P, 0), excess 0.
-  - (d) Inputs: amount 1000, record P/A/B, P mode 17, A/B alive, all gold 0/cap 100000. Outputs: n=2, share 500, no other adds, add(P, 1000), excess 0.
-  - (e) Inputs: isolated cap, present unit/list, ordinary NRF getter inputs, effective level 10, own level 20. Outputs: 100000. Independent missing-unit/missing-list cases return 0.
-  - (f) Inputs: isolated capacity amount 100, gold 2147483647, cap 100000. Outputs: signed proposed=-2147483549, accepted 100, excess 0; add guard requests replace(gold, 0) for negative total.
-  - (g) Inputs: amount=1000, ordinary alive P/A party with gold 0/cap 100000, ownerExceptionCondition=true and supplied owner lookup returns player Q distinct from picker P. Draws: none. Trace: resolved player selects picker-only before counting. Outputs: add(P,1000), excess=0, no A request.
-  - (h) Inputs: amount=1000, ordinary alive same-level P/A party, each gold 0/cap 100000, ownerExceptionCondition=true, supplied owner lookup returns a monster. Draws: none. Trace: exception requires player type; count n=2 and share=500. Outputs: add(A,500), add(P,500), excess=0.
-  - (i) Inputs: amount=1001, player picker P gold 0/cap 100000, no usable player party data, no owner exception. Draws: none. Trace: unusable party selects picker-only. Outputs: add(P,1001), excess=0.
-  - (j) Inputs: amount=1000, record P/A/B, P/A ordinary same-level alive players, B has no room, all gold 0/cap 100000. Draws: none. Trace: P/A give divisor n=2; recipient A accepts 500; B's missing room omits its request; picker retains 500. Outputs: add(A,500), add(P,500), excess=0, no B request.
-  - (k) Inputs: isolated picker-only allocation stage, supplied amount=-100, player P gold=200/cap=100000. Draws: none. Trace: proposed=100<=cap, accepted=-100/excess=0; add guard sees nonnegative total 100. Outputs: add(P,-100), excess=0, no recreation request. No original negative-valued gold item is claimed.
-  - (l) Inputs: isolated gold-cap calculation, player P with usesResolvedStats=true, own stat 12/layer 0=10, resolved stat 12/layer 0=-1, definition count 13, level definition available with minimum adjustment disabled. Draws: none. Trace: effective read selects -1, low32(-1*10000)=-10000. Outputs: cap=-10000; no implicit zero-level clamp.
-  - (m) Inputs: isolated party allocation stage, supplied amount=-1000, ordered same-level alive P/A/B with valid party/rooms, each gold=1000/cap=100000, no owner exception. Draws: none. Trace: n=3, trunc(-1000/3)=-333; A/B each accept -333 with nonnegative resulting gold 667; remaining=-1000-(-333)-(-333)=-334, and picker's resulting gold is 666. Outputs: ordered add(A,-333), add(B,-333), add(P,-334), excess=0, no recreation request. No original negative-valued gold item is claimed. Discriminates: floor division would allocate -334/-334/-332; picker-only would omit both recipient requests.
-  - runtime_observed: no
-
-- **PXL-V16** Separate NoDrop count (R11/R04a; boundary: supplied-input stage)
+- **PXL-V14** Separate NoDrop count (R09/R04a; boundary: supplied-input stage)
   - Inputs: P/A alive same-level/party, levels 10, X=1000, v=10; victim/P=(100, 100), A=(200, 100); MSD-R21 supplied valid player/party enumeration.
   - Seeds: no draw.
   - Draws: none.
@@ -442,16 +386,16 @@ All vectors are supplied-input stage fixtures with Seeds: no draw; Draws: none; 
   - Discriminates: substituting XP n incorrectly gives party count 1.
   - runtime_observed: no
 
-- **PXL-V17** Local seeds (R13; boundary: supplied-input stage)
-  - Inputs: V09 downstream solo inputs; distinct monster killer M with supplied one-hop player owner P, victim V, credited member P and unused hireling H; PetType count 7. Initial seeds M={lo:1, hi:2}, V={lo:3, hi:4}, P={lo:5, hi:6}, H={lo:7, hi:8}, game={lo:9, hi:10}. Supplied dependencies only log. An independent V15(a) gold run uses the same five initial seed pairs and stops at the recreation request.
+- **PXL-V15** Local seeds (R11; boundary: supplied-input stage)
+  - Inputs: V08 downstream solo inputs; distinct monster killer M with supplied one-hop player owner P, victim V, credited member P and unused hireling H; PetType count 7. Initial seeds M={lo:1, hi:2}, V={lo:3, hi:4}, P={lo:5, hi:6}, H={lo:7, hi:8}, game={lo:9, hi:10}. Supplied dependencies only log. GPS-V03 covers the gold-split run.
   - Seeds: no draw.
   - Draws: none.
   - Trace: no local random operation reached; dependency interiors excluded.
-  - Outputs: all ten seed words unchanged, direct draw count 0; no claim inside recreation/stat propagation/level/hireling callbacks.
-  - Discriminates: a local award/split roll changes seed or draw count.
+  - Outputs: all ten seed words unchanged, direct draw count 0; no claim inside stat propagation/level/hireling callbacks.
+  - Discriminates: a local award roll changes seed or draw count.
   - runtime_observed: no
 
-- **PXL-V18** Divide-first order (R05a/NRF-R05; boundary: supplied-input stage)
+- **PXL-V16** Divide-first order (R05a/NRF-R05; boundary: supplied-input stage)
   - Inputs: player m=30, v=24, x=8388607, bonus 50, shift 0.
   - Seeds: no draw.
   - Draws: none.
@@ -462,24 +406,24 @@ All vectors are supplied-input stage fixtures with Seeds: no draw; Draws: none; 
 
 ### 8.2 Observation vectors
 
-All remain pending; the [companion procedures](../research/spec-evidence/player-party-experience-and-loot-sharing.md#observation-procedures) state setup and measurements.
+All remain pending; the [companion procedures](../research/spec-evidence/player-party-experience-sharing.md#observation-procedures) state setup and measurements.
 
-- **PXL-O01** Two/three-member kills: expected supplied arithmetic V04/V10; measure collection/floating environment before comparing complete effects. Include range, map-level, death controls.
+- **PXL-O01** Two/three-member kills: expected supplied arithmetic V04/V09; measure collection/floating environment before comparing complete effects. Include range, map-level, death controls.
 - **PXL-O02** Solo summon/golem/trap/hireling/damage-over-time kills: measure upstream killer and final credited player; compare only established selectors with actual inputs.
-- **PXL-O03** Hireling killer/non-killer and owner-level controls: expect V05/V14 supplied arithmetic; measure actual stat/level/resources separately.
-- **PXL-O04** Gold near/far/dead/other-level/cap controls: expect V06/V15 amounts; measure storage/excess creation separately.
-- **PXL-O05** First establish Experience header/text/prepared correspondence, then reproduce a known-level award; no unknown cell has an invented expected value.
+- **PXL-O03** Hireling killer/non-killer and owner-level controls: expect V05/V13 supplied arithmetic; measure actual stat/level/resources separately.
+- **PXL-O04** First establish Experience header/text/prepared correspondence, then reproduce a known-level award; no unknown cell has an invented expected value.
 
 ## 9. Acceptance and dependencies
 
-Partial acceptance covers verified supplied-input assertions in V01-V18: eligibility/credit, member collection/integer pool/n=1 identity, scaling/prepared accessors, capped player/hireling/gold requests, local context independence, NoDrop count distinction and no direct local draw. Floating examples do not verify R04b production; synthetic stores do not establish original mutation. Full reproduction additionally requires resolving R01b/R02b/R04b/R04c/R05c/R08b/R09c/R09d/R10/R12a/R12b at their stated boundaries, complete dependency-backed stored award/level/hireling/gold effects and attributable observations for all verified behavioral rules. A verified-subset pass is partial acceptance. User approval is explicit and separate.
+Partial acceptance covers verified supplied-input assertions in V01-V16: eligibility/credit, member collection/integer pool/n=1 identity, scaling/prepared accessors, capped player/hireling requests, local context independence, NoDrop count distinction and no direct local draw. Floating examples do not verify R04b production; synthetic stores do not establish original mutation. Full reproduction additionally requires resolving R01b/R02b/R04b/R04c/R05c/R08b/R10a/R10b at their stated boundaries, complete dependency-backed stored award/level/hireling effects and attributable observations for all verified behavioral rules. A verified-subset pass is partial acceptance. User approval is explicit and separate.
 
-**Depends on:** NRF-R05 ordered signed multiply/divide; NRF-R10b dynamic integer coordinate extraction; NRF-R12b/NRF-R12c stat reads, with NRF-Q20/STL-R06c actual-write limits. GDF-R02/R04/R11a/R14/R15/R16a/R18/R19b supply named fields/stat/mode/type/count identities. PVP-R10a/PVP-R10b/PVP-R11a/PVP-R11b supply shared death/credit/routing/share contracts with PVP-Q02/PVP-Q13 limits. MSD-R21 supplies the distinct NoDrop count. Supporting producer/schema records do not establish complete integration.
+**Depends on:** NRF-R05 ordered signed multiply/divide; NRF-R10b dynamic integer coordinate extraction; RLI-R02a/RLI-R02b stat reads, with RLI-Q03/STL-R06c actual-write limits. GDA-R05/GDA-R07/GDF-R02/GDF-R05/GDF-R06/GDA-R16/GDA-R04b supply named fields/stat/mode/type/count identities. PVP-R09a/PVP-R09b/PVP-R10a/PVP-R10b supply shared death/credit/routing/share contracts with PVP-Q02/PVP-Q09 limits. MSD-R21 supplies the distinct NoDrop count. Supporting producer/schema records do not establish complete integration. Owners of the cited GDA, RLI ids: [core-game-data-table-records](core-game-data-table-records.md) (GDA); [core-record-layouts-and-ids](core-record-layouts-and-ids.md) (RLI).
 
-**Depended on by:** MSD-R21 consumes same-level enumeration; PVP-R11b refers amount ownership here. Reverse references do not add another prerequisite calculation.
+**Depended on by:** MSD-R21 and GPS-R01 consume same-level enumeration; PVP-R10b refers amount ownership here. Reverse references do not add another prerequisite calculation.
 
 ## 10. Related specs
 
+- [Party gold sharing](player-party-gold-sharing.md): gold pickup split over the same-level party iterator.
 - [Monster scaling](monster-scaling-by-players-and-difficulty.md): stored victim values and NoDrop.
 - [PvP damage and kill credit](combat-pvp-damage-and-kill-credit.md): source contacts/shared selectors.
 - [Timed state lifecycle](state-timed-state-lifecycle.md): propagation integration limits.
@@ -488,4 +432,4 @@ Partial acceptance covers verified supplied-input assertions in V01-V18: eligibi
 
 ## Appendix A. Provenance
 
-Evidence build: Lord of Destruction Expansion 1.13c. Original D2Game/D2Common identities are in the [source manifest](../research/source-manifest.md). Compatible static readings retain 2026-10-11/12 dates; dependency and targeted original-image/source checks retain their actual 2026-10-14/15 dates and limits in the [public companion](../research/spec-evidence/player-party-experience-and-loot-sharing.md). No new gameplay observation is claimed. The companion maps semantic operations to original locations, records corrections, data-profile limits and pending procedures. Status remains draft and does not imply approval.
+Evidence build: Lord of Destruction Expansion 1.13c. Original D2Game/D2Common identities are in the [source manifest](../research/source-manifest.md). Compatible static readings retain 2026-10-11/12 dates; dependency and targeted original-image/source checks retain their actual 2026-10-14/15 dates and limits in the [public companion](../research/spec-evidence/player-party-experience-sharing.md). No new gameplay observation is claimed. The companion maps semantic operations to original locations, records corrections, data-profile limits and pending procedures. Status remains draft and does not imply approval.

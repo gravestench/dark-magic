@@ -13,13 +13,13 @@ Open evidence gaps: [gap file](../plans/gaps/combat-pvp-damage-and-kill-credit.m
 
 ## 1. Scope
 
-This specification owns the server damage-scale selector and its field arithmetic, the hostility and early room/town gates, the owner resolution used by those gates, declaration eligibility checks, and the selection of a player for kill-experience credit. It also identifies the experience-routing requests made after credit selection. The existing boundary includes the selector's non-player cases. Damage construction, mitigation and final resource changes belong to [damage pipeline](combat-damage-pipeline-order.md) and [mitigation](combat-damage-mitigation.md); hit rolls/block/avoidance belong to [shield block and avoidance](combat-shield-block-and-avoidance.md); experience amounts belong to [party experience](player-party-experience-and-loot-sharing.md). Loot and ear generation, complete party/declaration effects, and unspecified caller behavior are outside the verified slice.
+This specification owns the server damage-scale selector and its field arithmetic, the hostility and early room/town gates, the owner resolution used by those gates, and the selection of a player for kill-experience credit. It also identifies the experience-routing requests made after credit selection. The existing boundary includes the selector's non-player cases. Damage construction, mitigation and final resource changes belong to [damage pipeline](combat-damage-pipeline-order.md) and [mitigation](combat-damage-mitigation.md); hit rolls/block/avoidance belong to [shield block and avoidance](combat-shield-block-and-avoidance.md); experience amounts belong to [party experience](player-party-experience-sharing.md); the hostility-declaration request that sets the relation flag read here belongs to [hostility declaration](player-hostility-declaration.md). Loot and ear generation, complete party effects, and unspecified caller behavior are outside the verified slice.
 
 ## 2. Trigger and ownership
 
 D2Game computes the damage-scale and credit decisions. D2Common supplies class predicates, alignment reads, room/town predicates and the stat-list helpers described below. A connected attack reaches these decisions through the server skill/damage path; missile contact passes its resolved creator as attacker. The queued damage path runs scaling at build time and later applies the stored record without repeating that stage. Direct callers select whether the stage runs again (PVP-R01/PVP-R01a).
 
-Declaration checks are reached by a server player-relation command selecting relation operation 4, with an acting player, a looked-up target player, and a requested relation value. They are request-driven, not a per-frame timer. Credit selection is reached from the death path with the killer and victim supplied by that path; it does not discover the source of damage independently. The companion records the original dispatch/call chains. Only named requests are covered for relation notifications, chat and experience updates; client delivery and complete scoring effects are not established here.
+Credit selection is reached from the death path with the killer and victim supplied by that path; it does not discover the source of damage independently. The companion records the original dispatch/call chains. Only named requests are covered for experience updates; client delivery and complete scoring effects are not established here.
 
 ## 3. Inputs and data
 
@@ -33,28 +33,27 @@ All operation names are illustrative. Integer arithmetic uses the foundations' i
 | damage record | physical, fire, lightning, cold, magic, poison magnitude, lifeDrain, manaDrain, staminaDrain; poison/cold/freeze length; burn magnitude/length; stun length | i32 | Exact scaled and retained fields are PVP-R03 |
 | damage/result flags | hostilityOverride; result word with hit mask 1 and lethal mask 2 | boolean; u16 result | Other result bits survive the PVP-R06 guards |
 | scale inputs | defender/attacker type, hireling predicate; attacker.scaleCondition and defender.scaleCondition | logical predicates | The neutral scaleCondition's hit-time producer remains PVP-Q01/PVP-Q02 |
-| monster class flags | MonStats.boss, primeevil, inTown and Align | booleans; Align u8 | GDF-R05a/GDF-R18; invalid/missing class gives false flag predicates |
+| monster class flags | MonStats.boss, primeevil, inTown and Align | booleans; Align u8 | GDA-R08a/GDA-R16; invalid/missing class gives false flag predicates |
 | difficulty | supplied game's difficulty and corresponding DifficultyLevels.HireableBossDamagePercent | difficulty u8; field i32 | Selected only for hireling versus boss, after hireling-versus-hireling priority; missing difficulty record returns factor 100 |
-| relations | acting player's ordered relation nodes: other unit id, flags, timestamp; player data | id i32, flags/timestamp u32 | Directional match; first matching node; missing match gives zero |
-| alignment | state 105 alignment list, stat 172 alignment at layer 0; base/extended-list eligibility | state/stat identities; i32 value | GDF-R11a/GDF-R12; read through PVP-R05a with NRF-R12b/c |
+| relations | acting player's ordered relation nodes: other unit id, flags; player data | id i32, flags u32 | Directional match; first matching node; missing match gives zero. The declaration request for this flag is HOS-R02; its stored effects are HOS-R03 |
+| alignment | state 105 alignment list, stat 172 alignment at layer 0; base/extended-list eligibility | state/stat identities; i32 value | GDF-R02/GDF-R03; read through PVP-R05a with RLI-R02a/RLI-R02b |
 | contact | Missiles.CollideFriend | u8 | Zero rejects a non-hostile contact before apply |
-| defense adjustment | stat 115 item_ignoretargetac, stat 116 item_fractionaltargetac; monsterDefenseExclusion and monsterDefenseHalf | i32; booleans | Supplied inputs to SBA-R02c/SBA-R02d; producers remain SBA-Q18 |
-| declaration | acting/target own-array stat 12 level, target effective stat 12 level (NRF-R12b/c existing arrays), acting room/town result, requested relation value, existing relation raw result, stored timestamp and current tick samples | levels i32; request/timestamps u32 | Request 0 disables; nonzero enables. Existing eligibility result is raw 0 or 8, not normalized to 1. Timestamp comparison is unsigned, not elapsed-time subtraction |
+| defense adjustment | stat 115 item_ignoretargetac, stat 116 item_fractionaltargetac; monsterDefenseExclusion and monsterDefenseHalf | i32; booleans | Supplied inputs to HIT-R02c/HIT-R02d; producers remain HIT-Q03 |
 | credit eligibility | optional extended base list, active state membership, credit-state mask, state-definition count | boolean/sets; count i32 | Intersect active states with the supplied credit-state mask; its wider producer meaning is PVP-Q02 |
 | credit redirect | ordered primary list chain, each list's creditRedirect condition, owner type/id | optional lists; boolean; i32 | First matching list; base list and secondary chain are not candidates |
 | death gates | victim.skipKillExperience; victim stat 13 experience | boolean; i32 | Unknown flag producer is PVP-Q02; positive victim experience is required for routing |
-| awards | credited player's data/party id; PetType count; supplied active-hireling lookup; victim/credited/hireling levels; supplied amount helper | optional identity; party u16; count/levels/amount i32 | No-party id 65535; PetType ownership GDF-R19b; amount contracts PXL-R03/PXL-R04/PXL-R05/PXL-R08 |
+| awards | credited player's data/party id; PetType count; supplied active-hireling lookup; victim/credited/hireling levels; supplied amount helper | optional identity; party u16; count/levels/amount i32 | No-party id 65535; PetType ownership GDA-R04b; amount contracts PXL-R03/PXL-R04/PXL-R05/PXL-R08 |
 | scoring | optional game scoring context, killer identity | optional identity | This contract proves only the absent-context no-op and request placement |
-| dependency operations | supplied relation-node creation, timestamp access, messages, activation, party cleanup, award/level operations and source predicates | named results and ordered call log | Stored effects must be explicitly supplied; local call routing does not verify their implementations |
+| dependency operations | supplied tier-creation requests, award/level and scoring operations, lookups and source predicates | named results and ordered call log | Stored effects must be explicitly supplied; local call routing does not verify their implementations |
 
 Implementation-relevant identities and constants:
 
 | Mapping/constant | Origin | Binding |
 |---|---|---|
-| Stat/state names and ids above | table data: effective data/global/excel/itemstatcost.txt columns ID/Stat; states.txt columns id/state, named rows in GDF-R11a/GDF-R12 | Original consumers select the stated numeric identities in code |
-| Hireling classes 271 roguehire, 338 act2hire, 359 act3hire, 560 act5hire1, 561 act5hire2 | Class names/data correspondence GDF-R17a; class membership engine code | Fixed class comparisons; not a table-controlled hireling category |
-| MonStats.boss/primeevil/inTown/Align; DifficultyLevels.HireableBossDamagePercent; Missiles.CollideFriend | table fields, GDF-R02/R05a/R07/R18 | Named prepared fields selected by code; code defines how they affect a hit |
-| Factors 17, 25, 100, 200, 400; level 9; delay 60000 ms; alignment conversion; party sentinel 65535 | engine code | Fixed by original consumers |
+| Stat/state names and ids above | table data: effective data/global/excel/itemstatcost.txt columns ID/Stat; states.txt columns id/state, named rows in GDF-R02/GDF-R03 | Original consumers select the stated numeric identities in code |
+| Hireling classes 271 roguehire, 338 act2hire, 359 act3hire, 560 act5hire1, 561 act5hire2 | Class names/data correspondence GDF-R08; class membership engine code | Fixed class comparisons; not a table-controlled hireling category |
+| MonStats.boss/primeevil/inTown/Align; DifficultyLevels.HireableBossDamagePercent; Missiles.CollideFriend | table fields, GDA-R05/GDA-R08a/GDA-R10/GDA-R16 | Named prepared fields selected by code; code defines how they affect a hit |
+| Factors 17, 25, 100, 200, 400; alignment conversion; party sentinel 65535 | engine code | Fixed by original consumers |
 | scaleCondition, skipKillExperience, credit-state mask and redirect-list producer roles | unresolved wider origin | Known consumer behavior uses supplied conditions; producers remain PVP-Q01/PVP-Q02 |
 
 Original bindings describe the evidence profile; support for custom data remapping is a separate capability. No named original difficulty cell is asserted by this specification: vector field values are explicitly synthetic inputs.
@@ -102,99 +101,84 @@ hireling is true only for the five monster classes in section 3. boss/primeevil 
 
 ### PVP-R05. Hostility and alignment
 
-**PVP-R05a. Hostility predicate** [verified in 1.13c code (static)]. Resolve attacker and defender as R07. Equal identities return false, including two absent identities. Two players return true only for a matching directional relation node on the attacker's list whose relation eligibility flag is set; no reverse check occurs. Other pairs return NOT sameTierNeutral(a,b). sameTierNeutral returns false if either unit is absent, true if both non-null identities are equal, otherwise true only when both alignment tiers equal 0 or both equal 2. Tier 1 never qualifies.
+**PVP-R05a. Hostility predicate** [verified in 1.13c code (static)]. Resolve attacker and defender as R07. Equal identities return false, including two absent identities. Two players return true only for a matching directional relation node on the attacker's list whose relation eligibility flag is set (the declaration request is HOS-R02; the flag's meaning is HOS-R04); no reverse check occurs. Other pairs return NOT sameTierNeutral(a,b). sameTierNeutral returns false if either unit is absent, true if both non-null identities are equal, otherwise true only when both alignment tiers equal 0 or both equal 2. Tier 1 never qualifies.
 
-Tier read: absent unit or absent base list -> 0. A non-player/non-monster with a present base list -> 2. For player or monster, require an extended base list, find state 105 under NRF-R12a on the primary chain, then secondary if not found, and read that list's own stat 172/layer 0 under NRF-R12b/c. Missing list yields 0. State-list presence, rather than the active-state bit, controls this read. This consumes the existing-array stat rules and does not establish state-list creation.
+Tier read: absent unit or absent base list -> 0. A non-player/non-monster with a present base list -> 2. For player or monster, require an extended base list, find state 105 under RLI-R03 on the primary chain, then secondary if not found, and read that list's own stat 172/layer 0 under RLI-R02a/RLI-R02b. Missing list yields 0. State-list presence, rather than the active-state bit, controls this read. This consumes the existing-array stat rules and does not establish state-list creation.
 
-**PVP-R05b. Relation meaning** [recovered; unverified]. The relation eligibility flag is interpreted as the player's hostile declaration. Its actual consumption by R05a is verified; complete declaration/update/UI semantics remain PVP-Q03. This name does not add a symmetric relation requirement.
+**PVP-R05b. Tier selections at creation** [verified in 1.13c code (static)]. The recorded sentry/Blade Sentinel/hireling creation sites request tier 2. At the summoned-monster site, MonStats.Align 1 requests tier 2 and sets alignmentCreationCondition; Align 2 requests tier 1; other byte values request tier 0. These are the caller's selected values and, for Align 1, its direct unit-condition write. Persisting a newly allocated/attached alignment list, propagation and notifications are integration PVP-Q07; a supplied existing alignment result is available to R05a independently.
 
-**PVP-R05c. Tier selections at creation** [verified in 1.13c code (static)]. The recorded sentry/Blade Sentinel/hireling creation sites request tier 2. At the summoned-monster site, MonStats.Align 1 requests tier 2 and sets alignmentCreationCondition; Align 2 requests tier 1; other byte values request tier 0. These are the caller's selected values and, for Align 1, its direct unit-condition write. Persisting a newly allocated/attached alignment list, propagation and notifications are integration PVP-Q11; a supplied existing alignment result is available to R05a independently.
-
-**PVP-R05d. Player-tier production** [unresolved]. The player/monster tier reader is R05a. Which creation or later writers establish a player's actual alignment tier against monsters remains outside-boundary producer PVP-Q05; do not assume every player has tier 2.
+**PVP-R05c. Player-tier production** [unresolved]. The player/monster tier reader is R05a. Which creation or later writers establish a player's actual alignment tier against monsters remains outside-boundary producer PVP-Q04; do not assume every player has tier 2.
 
 **PVP-R06. Early damage gates** [verified in 1.13c code (static)]. At apply entry, run R05a first. If false and hostilityOverride is false, clear hit and lethal and return before scaling or resource changes. Next require defender room; missing room has the same two-bit clearing. If the defender room is a town, proceed only for a monster attacker with a present valid class record and inTown true; otherwise clear lethal only and return. Unrelated result bits and damage magnitudes survive these early returns. Override bypasses hostility alone. Party membership and level are not tested here. Upstream missile contact skips a non-hostile contact if CollideFriend is zero; it does not bypass the apply guards. Passing these guards is permission to continue DPO-R13, not a promise that later guards permit damage.
 
-**PVP-R07. Owner resolution** [verified in 1.13c code (static)]. Hostility's attacker takes one monster-owner hop, or one missile-owner hop when its owner-link-valid condition is true. Hostility's defender repeatedly takes monster-owner hops until the current unit is non-monster or the link/game/lookup is missing, or owner == current unit. A failed replacement retains the current unit. There is no depth cap and no multi-unit cycle detector. The missile-contact path resolves its creator before invoking apply/results; a sentry-created bolt therefore supplies the sentry, and the hostility predicate can take the additional sentry-to-player hop. Absent contact owner can stop contact under SBA-R22; the isolated resolver's missing-owner fallback does not override that caller.
+**PVP-R07. Owner resolution** [verified in 1.13c code (static)]. Hostility's attacker takes one monster-owner hop, or one missile-owner hop when its owner-link-valid condition is true. Hostility's defender repeatedly takes monster-owner hops until the current unit is non-monster or the link/game/lookup is missing, or owner == current unit. A failed replacement retains the current unit. There is no depth cap and no multi-unit cycle detector. The missile-contact path resolves its creator before invoking apply/results; a sentry-created bolt therefore supplies the sentry, and the hostility predicate can take the additional sentry-to-player hop. Absent contact owner can stop contact under SBA-R13; the isolated resolver's missing-owner fallback does not override that caller.
 
 ### PVP-R08. Related effect inputs
 
-**PVP-R08a. Leech inputs** [verified in 1.13c code (static)]. lifeDrain/manaDrain/staminaDrain are among R03's scaled fields. With P=17, positive inputs 3/8/12 become 0/1/2 before the later leech computation. Non-monster leech-effectiveness input is 100 under LSE-R03. This proves the input transformation, not a final amount healed or mana gained.
+**PVP-R08a. Leech inputs** [verified in 1.13c code (static)]. lifeDrain/manaDrain/staminaDrain are among R03's scaled fields. With P=17, positive inputs 3/8/12 become 0/1/2 before the later leech computation. Non-monster leech-effectiveness input is 100 under LSE-R02. This proves the input transformation, not a final amount healed or mana gained.
 
-**PVP-R08b. Defense inputs** [verified in 1.13c code (static)]. Consume SBA-R02c and SBA-R02d for the player-attacker defense-adjustment slice: stat 115 does not ignore a player's defense; positive stat 116 is halved against a player, hireling, boss or monsterDefenseHalf monster and capped at 100. SBA-R02c's exclusion condition controls stat 115 on other monsters. Full attack rating, defense reduction, hit probability and draws remain SBA-R01 through SBA-R08; this rule adds no PvP hit roll.
+**PVP-R08b. Defense inputs** [verified in 1.13c code (static)]. Consume HIT-R02c and HIT-R02d for the player-attacker defense-adjustment slice: stat 115 does not ignore a player's defense; positive stat 116 is halved against a player, hireling, boss or monsterDefenseHalf monster and capped at 100. HIT-R02c's exclusion condition controls stat 115 on other monsters. Full attack rating, defense reduction, hit probability and draws remain HIT-R01 through HIT-R08; this rule adds no PvP hit roll.
 
-**PVP-R08c. Other effects** [unresolved]. Block/avoidance behavior is owned by SBA-R17a, Crushing Blow by [Crushing Blow](combat-crushing-blow.md), and Open Wounds by [Open Wounds](combat-open-wounds.md). Their current labels, gates and target-specific arithmetic apply at their own boundaries. This rule supplies no additional PvP multiplier or claim that such effects are absent. Complete combined effect/credit behavior is PVP-Q07.
+**PVP-R08c. Other effects** [unresolved]. Block/avoidance behavior is owned by SBA-R09a, Crushing Blow by [Crushing Blow](combat-crushing-blow.md), and Open Wounds by [Open Wounds](combat-open-wounds.md). Their current labels, gates and target-specific arithmetic apply at their own boundaries. This rule supplies no additional PvP multiplier or claim that such effects are absent. Complete combined effect/credit behavior is PVP-Q05.
 
-### PVP-R09. Declaration
+### PVP-R09. Kill credit
 
-**PVP-R09a. Declaration checks** [verified in 1.13c code (static)]. At the relation-operation entry, require the acting player's room to exist and be a town, and both acting/target initial own-array levels >=9, or write rejection=1 and return. These initial stat 12/layer 0 reads select ownStats even when usesResolvedStats is true, then apply NRF-R12c; absent unit/list or invalid/missing definition yields 0 under the stated getter guards. With those passed, request relation-node availability in both directions (creation effects supplied). Read the acting player's current directional eligibility raw result (node flags AND 8) for the target. If equal to requestedRelation, request relation notifications in both directions and return. If it is zero, read the target's effective stat 12/layer 0 through NRF-R12b/NRF-R12c: resolvedStats when usesResolvedStats is true, otherwise ownStats. A value <9 returns without changing the rejection output. These are different array-selection operations; their stored inputs can differ without a getter changing during the request. A nonzero enabling request reads the stored directional timestamp and currentTick: if stored > currentTick unsigned, request the refusal chat and both notifications, without a new timestamp or activation. Otherwise sample ticks again and request storing low32(secondTick+60000), then enter R09b. A zero request enters the disable branch of R09b. These checks consume no random value. Declaring is distinct from R06's hit-time gates.
+**PVP-R09a. Player credit and death eligibility** [verified in 1.13c code (static)]. The reached death-experience wrapper skips when killer/victim is absent or victim.skipKillExperience is true. Award routing then requires killer type player/monster, a present victim and victim.experience >0. The isolated credited-player resolver returns a player killer immediately, without testing either unit's redirect lists; a non-monster/non-player or absent killer gives none. For a monster killer, start with its one-hop monster owner (or none), apply R09b, and retain the result only if it is a player. A minion's monster owner does not automatically resolve a second hop. Missile contact's prior creator resolution is a separate R07 boundary.
 
-**PVP-R09b. Declaration side effects** [unresolved]. Accepted enable/disable branches request relation changes, notifications and party/skill cleanup. Full stored relation changes, removal effects and message delivery are integration PVP-Q03. R09a's local guard, refusal and timestamp-request assertions remain available with explicit dependency results; they do not establish these integrated effects.
-
-**PVP-R09c. Command roles and complete dispatch** [unresolved]. The recorded command handler passes its acting player and looked-up target to the declaration entry; that establishes R09a's roles. Complete command validation, every relation operation and every write producer remain PVP-Q03. No wire-format contract or complete party protocol is defined here.
-
-### PVP-R10. Kill credit
-
-**PVP-R10a. Player credit and death eligibility** [verified in 1.13c code (static)]. The reached death-experience wrapper skips when killer/victim is absent or victim.skipKillExperience is true. Award routing then requires killer type player/monster, a present victim and victim.experience >0. The isolated credited-player resolver returns a player killer immediately, without testing either unit's redirect lists; a non-monster/non-player or absent killer gives none. For a monster killer, start with its one-hop monster owner (or none), apply R10b, and retain the result only if it is a player. A minion's monster owner does not automatically resolve a second hop. Missile contact's prior creator resolution is a separate R07 boundary.
-
-**PVP-R10b. Redirect selection** [verified in 1.13c code (static)]. For a monster killer only, set selectedList absent. If creditEligible(killer), assign firstCreditList(killer), including absent. If victim exists and creditEligible(victim), assign firstCreditList(victim), including absent; this replaces the earlier selection. If selectedList exists, replace the one-hop owner result with lookup(game argument, selectedList.ownerType, selectedList.ownerId), including a missing lookup result. If selectedList is absent, retain the original one-hop owner result. Then R10a requires player type.
+**PVP-R09b. Redirect selection** [verified in 1.13c code (static)]. For a monster killer only, set selectedList absent. If creditEligible(killer), assign firstCreditList(killer), including absent. If victim exists and creditEligible(victim), assign firstCreditList(victim), including absent; this replaces the earlier selection. If selectedList exists, replace the one-hop owner result with lookup(game argument, selectedList.ownerType, selectedList.ownerId), including a missing lookup result. If selectedList is absent, retain the original one-hop owner result. Then R09a requires player type.
 
 creditEligible returns false for absent unit, missing/non-extended base list or absent active-state membership; otherwise true iff any of the scanned membership words intersects the supplied credit-state mask. The word count is trunc(i32(low32(stateCount+31))/32); nonpositive count scans nothing and returns false. For ordinary nonnegative counts this is ceiling(stateCount/32). firstCreditList requires an extended base list, then visits primary-chain entries in order, returning the first creditRedirect entry; it never tests the base list or secondary chain. Owner type/id are read from that selected list. No ownership lookup or eligibility operation draws a random number within this defined slice.
 
-**PVP-R10c. Redirect producers** [asm-only]. R10b establishes the active-state predicate, first-list search and selected owner reads. Which original gameplay effects create the selected lists or populate the credit-state mask remains outside-boundary PVP-Q02. No game-effect name is inferred from a flag or accessor label.
+**PVP-R09c. Redirect producers** [asm-only]. R09b establishes the active-state predicate, first-list search and selected owner reads. Which original gameplay effects create the selected lists or populate the credit-state mask remains outside-boundary PVP-Q02. No game-effect name is inferred from a flag or accessor label.
 
-### PVP-R11. Experience and scoring
+### PVP-R10. Experience and scoring
 
-**PVP-R11a. Experience/scoring routing** [verified in 1.13c code (static)]. After R10a selects a player, the credited player's active-hireling lookup is attempted only with present player data and signed PetType count >7. A found hireling receives an experience-update request using the supplied scaled amount; if it is not the killer, apply R11b's share first. Next, party id 65535 selects solo-amount then level-update requests; other party ids select party-distribution request. This does not perform the award inside the supplied callees. Separately, the reached death path with a killer requests scoring; absent scoring context returns immediately before score writes. Full scoring when present and complete active-hireling lookup are PVP-Q13.
+**PVP-R10a. Experience/scoring routing** [verified in 1.13c code (static)]. After R09a selects a player, the credited player's active-hireling lookup is attempted only with present player data and signed PetType count >7. A found hireling receives an experience-update request using the supplied scaled amount; if it is not the killer, apply R10b's share first. Next, party id 65535 selects solo-amount then level-update requests; other party ids select party-distribution request. This does not perform the award inside the supplied callees. Separately, the reached death path with a killer requests scoring; absent scoring context returns immediately before score writes. Full scoring when present and complete active-hireling lookup are PVP-Q09.
 
-**PVP-R11b. Experience amounts** [verified in 1.13c code (static)]. PXL-R03/PXL-R04/PXL-R05/PXL-R08 own solo/party amount calculations and their existing gates. For a supplied nonnegative hireling amount x when that hireling is not the killer, the local share is trunc(i32(low32(x*86))/256); do not replace this with an unbounded 64-bit multiplication. When the hireling is the killer, retain x. This specification's executable share example uses x=1000 and produces 335; it does not establish a complete integrated award.
+**PVP-R10b. Experience amounts** [verified in 1.13c code (static)]. PXL-R03/PXL-R04/PXL-R05/PXL-R08 own solo/party amount calculations and their existing gates. For a supplied nonnegative hireling amount x when that hireling is not the killer, the local share is trunc(i32(low32(x*86))/256); do not replace this with an unbounded 64-bit multiplication. When the hireling is the killer, retain x. This specification's executable share example uses x=1000 and produces 335; it does not establish a complete integrated award.
 
-**PVP-R12. Same-party predicate** [verified in 1.13c code (static)]. Independently replace each monster input by at most one found owner, using its link's game. Equal resulting identities return true, including two absent inputs. For two players, read their party id only with present game context; otherwise use 65535. Return true only for equal ids other than 65535. Other pairs return sameTierNeutral from R05a, without inversion. The damage guards do not call this predicate.
+**PVP-R11. Same-party predicate** [verified in 1.13c code (static)]. Independently replace each monster input by at most one found owner, using its link's game. Equal resulting identities return true, including two absent inputs. For two players, read their party id only with present game context; otherwise use 65535. Return true only for equal ids other than 65535. Other pairs return sameTierNeutral from R05a, without inversion. The damage guards do not call this predicate.
 
-**PVP-R13. Local RNG** [verified in 1.13c code (static)]. The factor selector, scale arithmetic, relation/tier/owner predicates, declaration checks, credit resolver, share arithmetic and routing decisions above make no direct random step. Their supplied getters/lookups and notification/award operations are explicit execution boundaries. Additional RNG in caller damage build, callbacks, state appliers, full party/award operations or other unverified callees is owned there. A no-draw fixture for this slice does not assert that a complete PvP attack/death leaves every seed unchanged.
+**PVP-R12. Local RNG** [verified in 1.13c code (static)]. The factor selector, scale arithmetic, relation/tier/owner predicates, credit resolver, share arithmetic and routing decisions above make no direct random step. Their supplied getters/lookups and notification/award operations are explicit execution boundaries. Additional RNG in caller damage build, callbacks, state appliers, full party/award operations or other unverified callees is owned there. A no-draw fixture for this slice does not assert that a complete PvP attack/death leaves every seed unchanged.
 
 ### Id map
 
 | Id | Summary | Status label | Gates | Vectors |
 |---|---|---|---|---|
-| PVP-R01 | Stage placement | verified in 1.13c code (static) | none at stated stage/request boundary | PVP-V01, PVP-V09 |
-| PVP-R01a | Runs per route | verified in 1.13c code (static) | none for recorded routes | PVP-V01, PVP-V09 |
-| PVP-R02a | Factor selection | verified in 1.13c code (static) | PVP-Q01/PVP-Q02 actual scaleCondition producer only | PVP-V01, PVP-V06, PVP-V10, PVP-V23 |
+| PVP-R01 | Stage placement | verified in 1.13c code (static) | none at stated stage/request boundary | PVP-V01, PVP-V08 |
+| PVP-R01a | Runs per route | verified in 1.13c code (static) | none for recorded routes | PVP-V01, PVP-V08 |
+| PVP-R02a | Factor selection | verified in 1.13c code (static) | PVP-Q01/PVP-Q02 actual scaleCondition producer only | PVP-V01, PVP-V06, PVP-V09, PVP-V22 |
 | PVP-R02b | Hit-time condition producer | unresolved | PVP-Q01/PVP-Q02 actual carrier | PVP-V06 supplied condition only |
-| PVP-R03 | Selected fields | verified in 1.13c code (static) | none | PVP-V01, PVP-V05, PVP-V11, PVP-V23 |
-| PVP-R04 | Operand order and scale arithmetic | verified in 1.13c code (static) | none | PVP-V01, PVP-V02, PVP-V12, PVP-V23 |
-| PVP-R05a | Directional hostility and tier read | verified in 1.13c code (static) | PVP-Q05 actual player tier producer only | PVP-V04, PVP-V13, PVP-V26 |
-| PVP-R05b | Complete hostile-declaration meaning | recovered; unverified | PVP-Q03 integration/name interpretation | none |
-| PVP-R05c | Creation tier selection/request | verified in 1.13c code (static) | PVP-Q11 stored list/propagation integration | PVP-V14 |
-| PVP-R05d | Player tier producer | unresolved | PVP-Q05 producer | none |
-| PVP-R06 | Early legality/room/town guards | verified in 1.13c code (static) | none for supplied predicates | PVP-V03, PVP-V04, PVP-V15 |
-| PVP-R07 | Owner depth and fallback | verified in 1.13c code (static) | contact callers retain SBA-Q22 integration | PVP-V06, PVP-V08, PVP-V16 |
+| PVP-R03 | Selected fields | verified in 1.13c code (static) | none | PVP-V01, PVP-V05, PVP-V10, PVP-V22 |
+| PVP-R04 | Operand order and scale arithmetic | verified in 1.13c code (static) | none | PVP-V01, PVP-V02, PVP-V11, PVP-V22 |
+| PVP-R05a | Directional hostility and tier read | verified in 1.13c code (static) | PVP-Q04 actual player tier producer only | PVP-V04, PVP-V12, PVP-V24 |
+| PVP-R05b | Creation tier selection/request | verified in 1.13c code (static) | PVP-Q07 stored list/propagation integration | PVP-V13 |
+| PVP-R05c | Player tier producer | unresolved | PVP-Q04 producer | none |
+| PVP-R06 | Early legality/room/town guards | verified in 1.13c code (static) | none for supplied predicates | PVP-V03, PVP-V04, PVP-V14 |
+| PVP-R07 | Owner depth and fallback | verified in 1.13c code (static) | contact callers retain SBA-Q08 integration | PVP-V06, PVP-V07, PVP-V15 |
 | PVP-R08a | Leech input transformation | verified in 1.13c code (static) | LSE gates only for final leech effects | PVP-V05 |
-| PVP-R08b | Defense-input dependency | verified in 1.13c code (static) | SBA-Q18 producers only | PVP-V17 |
-| PVP-R08c | Combined effect integration | unresolved | PVP-Q07 complete cross-effect parity | none |
-| PVP-R09a | Declaration guard/timestamp requests | verified in 1.13c code (static) | PVP-Q03 stored node/activation integration | PVP-V07, PVP-V25 |
-| PVP-R09b | Stored declaration side effects | unresolved | PVP-Q03 complete enable/disable effects | none |
-| PVP-R09c | Complete command integration | unresolved | PVP-Q03 full command/write producers | none |
-| PVP-R10a | Credit selection and death gates | verified in 1.13c code (static) | PVP-Q04 gameplay observation only | PVP-V08, PVP-V18, PVP-V24, PVP-V27 |
-| PVP-R10b | Active-state redirect selection | verified in 1.13c code (static) | PVP-Q02 supplied mask/list producers only | PVP-V18, PVP-V24 |
-| PVP-R10c | Wider redirect-list meaning | asm-only | PVP-Q02 original gameplay producer | none |
-| PVP-R11a | Award/scoring requests | verified in 1.13c code (static) | PVP-Q13 full lookup/scoring; PXL dependency gates | PVP-V19, PVP-V27 |
-| PVP-R11b | Supplied share and amount owner | verified in 1.13c code (static) | PXL gates for integrated amounts only | PVP-V20 |
-| PVP-R12 | Same-party predicate | verified in 1.13c code (static) | PVP-Q05 tier producer only | PVP-V21, PVP-V26 |
-| PVP-R13 | Owned direct no-draw slice | verified in 1.13c code (static) | external operations retain own draw contracts | PVP-V22 |
+| PVP-R08b | Defense-input dependency | verified in 1.13c code (static) | HIT-Q03 producers only | PVP-V16 |
+| PVP-R08c | Combined effect integration | unresolved | PVP-Q05 complete cross-effect parity | none |
+| PVP-R09a | Credit selection and death gates | verified in 1.13c code (static) | PVP-Q03 gameplay observation only | PVP-V07, PVP-V17, PVP-V23, PVP-V25 |
+| PVP-R09b | Active-state redirect selection | verified in 1.13c code (static) | PVP-Q02 supplied mask/list producers only | PVP-V17, PVP-V23 |
+| PVP-R09c | Wider redirect-list meaning | asm-only | PVP-Q02 original gameplay producer | none |
+| PVP-R10a | Award/scoring requests | verified in 1.13c code (static) | PVP-Q09 full lookup/scoring; PXL dependency gates | PVP-V18, PVP-V25 |
+| PVP-R10b | Supplied share and amount owner | verified in 1.13c code (static) | PXL gates for integrated amounts only | PVP-V19 |
+| PVP-R11 | Same-party predicate | verified in 1.13c code (static) | PVP-Q04 tier producer only | PVP-V20, PVP-V24 |
+| PVP-R12 | Owned direct no-draw slice | verified in 1.13c code (static) | external operations retain own draw contracts | PVP-V21 |
 
 ## 5. Outputs and side effects
 
 | Output/write/request | Rule |
 |---|---|
 | Selected signed factor; selected positive damage/leech fields replaced; unselected fields retained | PVP-R02a/PVP-R03/PVP-R04 |
-| Directional eligibility/same-tier result and resolved identities; no unit replacement is persisted | PVP-R05a/PVP-R07/PVP-R12 |
-| Creation tier request and Align-1 alignmentCreationCondition=true | PVP-R05c; attached/stat propagation gated PVP-Q11 |
+| Directional eligibility/same-tier result and resolved identities; no unit replacement is persisted | PVP-R05a/PVP-R07/PVP-R11 |
+| Creation tier request and Align-1 alignmentCreationCondition=true | PVP-R05b; attached/stat propagation gated PVP-Q07 |
 | Hit/lethal bit clearing on early return; no life/leech writes at this boundary | PVP-R06 |
 | Defense/leech inputs transformed before their owning consumers | PVP-R08a/PVP-R08b |
-| Rejection output=1 on initial declaration rejection; relation-node, refusal-chat, notification and timestamp-store requests | PVP-R09a; stored enable/disable effects PVP-R09b/PVP-Q03 |
-| Credited player or none; selected redirect list and owner lookup arguments | PVP-R10a/PVP-R10b |
-| Active-hireling lookup, hireling-update, solo-amount, level-update, party-distribution and scoring requests; supplied hireling share | PVP-R11a/PVP-R11b |
-| No direct seed mutation in owned operations | PVP-R13 |
+| Credited player or none; selected redirect list and owner lookup arguments | PVP-R09a/PVP-R09b |
+| Active-hireling lookup, hireling-update, solo-amount, level-update, party-distribution and scoring requests; supplied hireling share | PVP-R10a/PVP-R10b |
+| No direct seed mutation in owned operations | PVP-R12 |
 
 Resource subtraction, final leech, experience stat writes, stored relation activation, state-list attachment, scoring with a present context and client delivery require their owning contracts and gates. No persistence format, unit allocation or event schedule is introduced by the verified local slice.
 
@@ -204,7 +188,7 @@ Scale selection does not itself check hostility or town. Guard rejection at appl
 
 Hostility and same-party use different owner depths and opposite tier results; a party match is not a damage guard. A directional relation need not exist in reverse. Owner chains can be deeper than one on the defender side; a cycle longer than one can fail to terminate. Invalid/missing monster class records disable boss/primeevil/inTown predicates. A missing contact creator is not the same boundary as the isolated hostility resolver's fallback.
 
-A player killer bypasses redirect tests. A qualifying victim with no matching credit list erases the killer-side list selection and retains the original owner; a present redirect whose unit lookup fails produces no credited player. Declaration tick addition wraps u32 and comparison remains ordinary unsigned comparison across wrap. No additional classic/expansion branch exists in the local selector or predicates; dependencies retain their own differences.
+A player killer bypasses redirect tests. A qualifying victim with no matching credit list erases the killer-side list selection and retains the original owner; a present redirect whose unit lookup fails produces no credited player. No additional classic/expansion branch exists in the local selector or predicates; dependencies retain their own differences.
 
 ## 7. Open questions
 
@@ -212,14 +196,13 @@ A player killer bypasses redirect tests. A qualifying victim with no matching cr
 |---|---|---|
 | **PVP-Q01** | outside-boundary / open | Establish scaleCondition carried by each sentry/summon at hit time, using applicable creation/update paths or an attributable hit. This does not gate R02a with supplied true/false |
 | **PVP-Q02** | outside-boundary / open | Establish wider producer meanings of scaleCondition, skipKillExperience, credit-state mask and creditRedirect lists. Read actual producers and trace their use; known consumer predicates/owner reads remain executable |
-| **PVP-Q03** | integration / open | Complete relation-node creation, enable/disable, party/skill cleanup and command/message behavior from request to stored effects. R09a's acting/target roles and local numeric/room/refusal checks are established; supplied operations do not close this gate |
-| **PVP-Q04** | observation / pending | Observe a player-victim kill's actual experience routing with known raw victim experience and attribution. The positive supplied-input route remains statically available |
-| **PVP-Q05** | outside-boundary / open | Identify player alignment-list writers and their current values against monsters; R05a's supplied-list reader is independent |
-| **PVP-Q07** | integration / open | Establish complete combined effects/credit outcomes through the current Crushing Blow/Open Wounds/avoidance owners, preserving their gates. Loot and ear production remain outside this spec and unestablished; no completed absence search is claimed |
-| **PVP-Q10** | observation / pending | Observe a plain player melee hit at both build and apply, expecting one 17-percent scale for PVP-V01/PVP-V09. Stage-location evidence is static |
-| **PVP-Q11** | integration / open | Complete alignment-list allocation/attachment/propagation and creation notifications after R05c's selected tier. Reuse STL/NRF state/stat contracts where applicable; source requests do not prove their stored effects |
-| **PVP-Q12** | observation / pending | Reproduce the verified behavioral assertions on original 1.13c with attributable inputs, reached stage and measured outputs. No executable vector below is newly gameplay-observed |
-| **PVP-Q13** | integration / open | Complete active-hireling lookup and score writes with a present scoring context, and dependency-backed experience updates. R11a's supplied lookup/routing and absent-context no-op remain available |
+| **PVP-Q03** | observation / pending | Observe a player-victim kill's actual experience routing with known raw victim experience and attribution. The positive supplied-input route remains statically available |
+| **PVP-Q04** | outside-boundary / open | Identify player alignment-list writers and their current values against monsters; R05a's supplied-list reader is independent |
+| **PVP-Q05** | integration / open | Establish complete combined effects/credit outcomes through the current Crushing Blow/Open Wounds/avoidance owners, preserving their gates. Loot and ear production remain outside this spec and unestablished; no completed absence search is claimed |
+| **PVP-Q06** | observation / pending | Observe a plain player melee hit at both build and apply, expecting one 17-percent scale for PVP-V01/PVP-V08. Stage-location evidence is static |
+| **PVP-Q07** | integration / open | Complete alignment-list allocation/attachment/propagation and creation notifications after R05b's selected tier. Reuse STL/NRF state/stat contracts where applicable; source requests do not prove their stored effects |
+| **PVP-Q08** | observation / pending | Reproduce the verified behavioral assertions on original 1.13c with attributable inputs, reached stage and measured outputs. No executable vector below is newly gameplay-observed |
+| **PVP-Q09** | integration / open | Complete active-hireling lookup and score writes with a present scoring context, and dependency-backed experience updates. R10a's supplied lookup/routing and absent-context no-op remain available |
 
 Detailed attempts and remaining limits are in the [gap file](../plans/gaps/combat-pvp-damage-and-kill-credit.md#open-evidence-gaps).
 
@@ -227,7 +210,7 @@ Detailed attempts and remaining limits are in the [gap file](../plans/gaps/comba
 
 ### 8.1 Executable vectors
 
-Each vector/case starts afresh. Unless overridden: distinct present player A/B, type 0, level 9, field rooms present/not town; A has a directional eligible relation to B; damage physical 2560, hit/lethal result 3 with other bits zero; all other damage fields/stat values/conditions zero; monster-specific data and definitions present for supplied valid monsters; no ownership link; no party (65535); scoring context absent; no skipKillExperience; victim experience 1000 when a credit/award route is invoked. Base/extended lists and counts are supplied explicitly where read. Definitions for cited stats exist with min-adjustment disabled; stat definition count is 359 and state definition count 185 where required. Declaration fixtures use present player base lists with usesResolvedStats=true. An unqualified level n supplies ownStats[(12,0,n)] and resolvedStats[(12,0,n)]; the default is n=9. An explicit own/effective-level case supplies each array separately. No dependency operation mutates these arrays within a case. Supplied MonStats count is 734: a fixture described as a hireling has class 271; other valid monster fixtures have class 0 unless overridden. These are synthetic class records, with flags supplied by each case, not new original table-cell claims. Tier fixtures use extended base lists with one matching state-105 list and its own stat 172/layer 0 equal to the supplied tier; unspecified state-list chains are empty. Player A's eligible node has flags 8, and an ineligible node has flags 0 unless a case states 256. Unstated callbacks/award/notification operations are supplied no-op/log operations with no draws; they record call arguments/order and persist nothing. Actual owned factor/arithmetic/owner/relation/tier/credit helpers execute rather than being replaced by their expected values. These fixtures do not execute damage construction, mitigation, callback effects, full declaration changes, complete hireling search or experience-award callees. All cases have Seeds: no draw; Draws: none; runtime_observed: no. Logical field names express the fixture values; the companion maps them to original binary evidence.
+Each vector/case starts afresh. Unless overridden: distinct present player A/B, type 0, level 9, field rooms present/not town; A has a directional eligible relation to B; damage physical 2560, hit/lethal result 3 with other bits zero; all other damage fields/stat values/conditions zero; monster-specific data and definitions present for supplied valid monsters; no ownership link; no party (65535); scoring context absent; no skipKillExperience; victim experience 1000 when a credit/award route is invoked. Base/extended lists and counts are supplied explicitly where read. Definitions for cited stats exist with min-adjustment disabled; stat definition count is 359 and state definition count 185 where required. Supplied MonStats count is 734: a fixture described as a hireling has class 271; other valid monster fixtures have class 0 unless overridden. These are synthetic class records, with flags supplied by each case, not new original table-cell claims. Tier fixtures use extended base lists with one matching state-105 list and its own stat 172/layer 0 equal to the supplied tier; unspecified state-list chains are empty. Player A's eligible node has flags 8, and an ineligible node has flags 0 unless a case states 256. Unstated callbacks/award/notification operations are supplied no-op/log operations with no draws; they record call arguments/order and persist nothing. Actual owned factor/arithmetic/owner/relation/tier/credit helpers execute rather than being replaced by their expected values. These fixtures do not execute damage construction, mitigation, callback effects, complete hireling search or experience-award callees. All cases have Seeds: no draw; Draws: none; runtime_observed: no. Logical field names express the fixture values; the companion maps them to original binary evidence.
 
 - **PVP-V01** Single-route player scaling (PVP-R01/PVP-R01a/PVP-R02a/PVP-R03/PVP-R04; boundary: supplied-input stage)
   - Inputs: Independently run queued build+disabled apply, direct missile-enabled apply and other direct-enabled apply, with defaults and no later resource operations.
@@ -283,16 +266,7 @@ Each vector/case starts afresh. Unless overridden: distinct present player A/B, 
   - Discriminates: Do not replace scaling attacker with player owner.
   - runtime_observed: no.
 
-- **PVP-V07** Low-level declaration rejection (PVP-R09a; boundary: supplied-input stage)
-  - Inputs: Acting level 8, target 9, acting in town; rejection initially 0. All later operations log. Also reverse levels 9/8.
-  - Seeds: no draw.
-  - Draws: none.
-  - Trace: Initial level check fails before relation-node requests.
-  - Outputs: rejection=1; no node/timestamp/activation/chat/notification request.
-  - Discriminates: Both players must meet level 9.
-  - runtime_observed: no.
-
-- **PVP-V08** Sentry kill credit (PVP-R07/PVP-R10a; boundary: supplied-input stage)
+- **PVP-V07** Sentry kill credit (PVP-R07/PVP-R09a; boundary: supplied-input stage)
   - Inputs: Killer monster S has valid link to player A; victim monster V. No active states, no credit-mask intersection; base lists absent.
   - Seeds: no draw.
   - Draws: none.
@@ -301,7 +275,7 @@ Each vector/case starts afresh. Unless overridden: distinct present player A/B, 
   - Discriminates: Credit uses immediate monster owner.
   - runtime_observed: no.
 
-- **PVP-V09** Route multiplicity (PVP-R01/PVP-R01a; boundary: supplied-input stage)
+- **PVP-V08** Route multiplicity (PVP-R01/PVP-R01a; boundary: supplied-input stage)
   - Inputs: Defaults, no mitigation or resource operations. Independent routes: queued; disabled self-apply; enabled direct apply; direct-stage then enabled; direct-stage then disabled. The self-apply case uses attacker == defender; its unchanged magnitude assertion does not require passing the hostility guard. Route calls are logged and the reached scale body executes; complete caller construction is not executed.
   - Seeds: no draw.
   - Draws: none.
@@ -310,7 +284,7 @@ Each vector/case starts afresh. Unless overridden: distinct present player A/B, 
   - Discriminates: Stage-enable controls apply; no automatic already-scaled marker.
   - runtime_observed: no.
 
-- **PVP-V10** Other selector factors (PVP-R02a; boundary: isolated rule)
+- **PVP-V09** Other selector factors (PVP-R02a; boundary: isolated rule)
   - Inputs: physical 2560, distinct identities unless absent. Cases (a) attacker absent; (b) both hireling monsters; (c) primeevil monster attacker, ordinary non-hireling monster defender scaleCondition=true; (d) same with hireling defender.
   - Seeds: no draw.
   - Draws: none.
@@ -321,7 +295,7 @@ Each vector/case starts afresh. Unless overridden: distinct present player A/B, 
   - (f) Inputs: fresh hireling monster attacker, class 271 with valid record, scaleCondition=false; distinct player defender; physical=2560. Draws: none. Trace: player-defender branch recognizes the hireling before consulting the neutral scale condition. Outputs: P=17, physical=435. This rejects treating a hireling with scaleCondition=false as an ordinary unscaled monster attacker.
   - runtime_observed: no.
 
-- **PVP-V11** Selected fields and exclusions (PVP-R03; boundary: isolated rule)
+- **PVP-V10** Selected fields and exclusions (PVP-R03; boundary: isolated rule)
   - Inputs: P = 17; poisonLength 200, coldLength 100, freezeLength 75, burnMagnitude 512, burnLength 23, stunLength 50, fire 1000; other scaled magnitudes zero.
   - Seeds: no draw.
   - Draws: none.
@@ -331,7 +305,7 @@ Each vector/case starts afresh. Unless overridden: distinct present player A/B, 
   - (b) Inputs: fresh P=17; physical=2560, fire=1000, lightning=1100, cold=1200, magic=1300, poisonMagnitude=1400, lifeDrain=8, manaDrain=18, staminaDrain=28; poisonLength=200, coldLength=100, freezeLength=75, burnMagnitude=512, burnLength=23, stunLength=50. Draws: none. Trace: multiply each selected positive input by 17, divide by 100 with truncation; the products are 43520, 17000, 18700, 20400, 22100, 23800, 136, 306 and 476 in the selected field order. Outputs: physical=435, fire=170, lightning=187, cold=204, magic=221, poisonMagnitude=238, lifeDrain=1, manaDrain=3, staminaDrain=4; excluded lengths remain 200/100/75, burn 512/23 and stun 50. Each selected field has its own output assertion, rejecting an omitted field or swapped outputs.
   - runtime_observed: no.
 
-- **PVP-V12** Nonpositive and threshold arithmetic (PVP-R04; boundary: isolated rule)
+- **PVP-V11** Nonpositive and threshold arithmetic (PVP-R04; boundary: isolated rule)
   - Inputs: Independent P = 17, v=0, -300, 1, 1048576.
   - Seeds: no draw.
   - Draws: none.
@@ -341,7 +315,7 @@ Each vector/case starts afresh. Unless overridden: distinct present player A/B, 
   - (b) Inputs: fresh isolated scale arithmetic, P=65535, positive v=65535. Draws: none. Trace: neither threshold is exceeded; the product 4294836225 wraps to low32 4294836225, interpreted as i32 -131071; signed division by 100 truncates to -1310. Outputs: scaled field=-1310. A wide unwrapped product would yield 42948362 and is rejected; no positive floor applies.
   - runtime_observed: no.
 
-- **PVP-V13** Directional relation and equal tiers (PVP-R05a; boundary: isolated rule)
+- **PVP-V12** Directional relation and equal tiers (PVP-R05a; boundary: isolated rule)
   - Inputs: Cases (a) players A relation flags 8 only; (b) player node with flags 256 only; (c) distinct monsters tiers 1/1; (d) 0/0; (e) 2/2; (f) 0/2. For monsters: extended base lists and matching state 105 lists own stat 172 supplied as stated, stateCount 185, statCount 359. No active-state bit is required.
   - Seeds: no draw.
   - Draws: none.
@@ -352,7 +326,7 @@ Each vector/case starts afresh. Unless overridden: distinct present player A/B, 
   - (h) Inputs: attacker and defender are the same present player A; its synthetic relation list contains an eligible self-node (otherId=A.id, flags=8). Draws: none. Trace: equal resolved identities require false regardless of the self-node flag. Outputs: hostility=false. This rejects granting permission from the eligible self-node.
   - runtime_observed: no.
 
-- **PVP-V14** Summon alignment selection (PVP-R05c; boundary: supplied-input stage)
+- **PVP-V13** Summon alignment selection (PVP-R05b; boundary: supplied-input stage)
   - Inputs: Fresh summoned monster, alignmentCreationCondition=false; synthetic MonStats.Align 1, 2, 0, 3; tier request logs only.
   - Seeds: no draw.
   - Draws: none.
@@ -361,7 +335,7 @@ Each vector/case starts afresh. Unless overridden: distinct present player A/B, 
   - Discriminates: Do not copy Align directly or invent stored effects.
   - runtime_observed: no.
 
-- **PVP-V15** Town exception and override (PVP-R06; boundary: supplied-input stage)
+- **PVP-V14** Town exception and override (PVP-R06; boundary: supplied-input stage)
   - Inputs: Attacker M is a monster with valid class and no owner; defender B is a player. Both have the tier-list inputs from the preamble. Cases (a)/(b): M tier 0, B tier 2, so the actual hostility helper returns true; defender is in town; M.inTown is true/false respectively. Cases (c)/(d): both tiers 0, so the actual helper returns false; hostilityOverride=true, M.inTown=false; defender is in the field/town respectively. Stop at the early guards.
   - Seeds: no draw.
   - Draws: none.
@@ -373,7 +347,7 @@ Each vector/case starts afresh. Unless overridden: distinct present player A/B, 
   - (g) Inputs: fresh monster M and player B with actual tier-list values 0/0, so hostility=false; hostilityOverride=true; B has no room; incoming result=7, physical=2560. Draws: none. Trace: override passes the hostility gate, then missing defender room clears hit and lethal: 7 AND NOT 3 = 4. Outputs: early return, result=4, physical=2560; no town test, scale or resource operation. This rejects applying override to the room requirement or clearing only lethal.
   - runtime_observed: no.
 
-- **PVP-V16** Asymmetric owner depth (PVP-R07; boundary: isolated rule)
+- **PVP-V15** Asymmetric owner depth (PVP-R07; boundary: isolated rule)
   - Inputs: Monster M2->monster M1->player A, all valid links and lookup results; independently resolve defender and attacker. Another case: valid missile link whose lookup is absent.
   - Seeds: no draw.
   - Draws: none.
@@ -386,8 +360,8 @@ Each vector/case starts afresh. Unless overridden: distinct present player A/B, 
   - (e) Inputs: fresh defender monster M with valid owner link and present owner game; its stored owner type/id lookup returns M itself. Draws: none. Trace: owner == current unit stops the loop after that successful lookup. Outputs: resolved defender=M; exactly one lookup and no repeat. This rejects repeatedly traversing a self-owner link.
   - runtime_observed: no.
 
-- **PVP-V17** Player defense adjustments (PVP-R08b; boundary: supplied-input stage)
-  - Inputs: Invoke SBA-R02c/d slice only. Fresh DEF = 1000, stat 115=0, stat 116 values:50 vs player; 250 vs player; 50 vs ordinary monster; 50 vs hireling; 51 vs boss monster. Ordinary monster has boss/monsterDefenseHalf/monsterDefenseExclusion false. Extra cases stat 115=1, stat 116=0 vs player and vs ordinary monster with monsterDefenseExclusion=true.
+- **PVP-V16** Player defense adjustments (PVP-R08b; boundary: supplied-input stage)
+  - Inputs: Invoke HIT-R02c/HIT-R02d slice only. Fresh DEF = 1000, stat 115=0, stat 116 values:50 vs player; 250 vs player; 50 vs ordinary monster; 50 vs hireling; 51 vs boss monster. Ordinary monster has boss/monsterDefenseHalf/monsterDefenseExclusion false. Extra cases stat 115=1, stat 116=0 vs player and vs ordinary monster with monsterDefenseExclusion=true.
   - Seeds: no draw.
   - Draws: none.
   - Trace: Half positive values where required: 50 -> 25, 250 -> 125, 51 -> 25; cap 125 to 100. Compute cut = DEF * p / 100.
@@ -395,7 +369,7 @@ Each vector/case starts afresh. Unless overridden: distinct present player A/B, 
   - Discriminates: Odd 51 halves to 25; stat 115 does not bypass players/excluded monsters.
   - runtime_observed: no.
 
-- **PVP-V18** Player bypass and victim redirect (PVP-R10a/PVP-R10b; boundary: supplied-input stage)
+- **PVP-V17** Player bypass and victim redirect (PVP-R09a/PVP-R09b; boundary: supplied-input stage)
   - Inputs: Player P1 killer; victim has eligible primary credit list owned P2; killer list owned P3. Then monster M killer one-hop owner P1 with eligible primary list owned P3, victim eligible list owned P2. Eligibility uses extended base lists, active state 1 and supplied mask {1}, stateCount = 32. All owner lookups succeed; list creditRedirect=true.
   - Seeds: no draw.
   - Draws: none.
@@ -404,7 +378,7 @@ Each vector/case starts afresh. Unless overridden: distinct present player A/B, 
   - Discriminates: Victim selection supersedes killer selection; player bypass is before both.
   - runtime_observed: no.
 
-- **PVP-V19** Solo routing and absent scoring (PVP-R11a; boundary: supplied-input stage)
+- **PVP-V18** Solo routing and absent scoring (PVP-R10a; boundary: supplied-input stage)
   - Inputs: Credited player A, party 65535, playerData present, PetType count 7 (skip hireling), victim experience 1000; supplied solo amount 321; scoring context absent.
   - Seeds: no draw.
   - Draws: none.
@@ -413,7 +387,7 @@ Each vector/case starts afresh. Unless overridden: distinct present player A/B, 
   - Discriminates: Solo/party routing distinct; no absent-context scoring.
   - runtime_observed: no.
 
-- **PVP-V20** Hireling share (PVP-R11b; boundary: isolated rule)
+- **PVP-V19** Hireling share (PVP-R10b; boundary: isolated rule)
   - Inputs: Supplied x 1000, hireling not killer; independent hireling==killer.
   - Seeds: no draw.
   - Draws: none.
@@ -423,7 +397,7 @@ Each vector/case starts afresh. Unless overridden: distinct present player A/B, 
   - (b) Inputs: fresh supplied amount x=50000000; hireling is not the killer. Draws: none. Trace: x*86=4300000000; low32 product=5032704, positive as i32; trunc(5032704/256)=19659. Outputs: share=19659. A wide multiplication without the required product wrap would return 16796875 and is rejected.
   - runtime_observed: no.
 
-- **PVP-V21** Same-party inputs (PVP-R12; boundary: isolated rule)
+- **PVP-V20** Same-party inputs (PVP-R11; boundary: isolated rule)
   - Inputs: Cases (a) players party 3/3, game present; (b) 65535/65535; (c) same unit A; (d) monster owner A vs A; (e) player A game absent, other party 3. All owner links are valid when provided.
   - Seeds: no draw.
   - Draws: none.
@@ -433,8 +407,8 @@ Each vector/case starts afresh. Unless overridden: distinct present player A/B, 
   - (f) Inputs: fresh first input monster M -> monster M1 -> player A with both owner links valid and all requested lookups successful; second input is player A. M1 and A each have the preamble's tier-list inputs with own stat 172=1. Draws: none. Trace: resolve M only once to M1; A remains A; distinct identities and a monster/player pair use sameTierNeutral, which is false for tiers 1/1. Outputs: sameParty=false, exactly one owner lookup returning M1; no lookup of M1's owner. A recursive owner resolver would reach A and wrongly return true on identity.
   - runtime_observed: no.
 
-- **PVP-V22** No direct RNG (PVP-R13; boundary: supplied-input stage)
-  - Inputs: Execute selector/scale, hostility/owner, same-party, declaration check, credited-player and routing slices with the exact PVP-V01/PVP-V08/PVP-V19/PVP-V21/PVP-V25 fixtures independently. Every external operation is the stated no-draw logger; initialize involved game/unit seed pairs {1, 666}.
+- **PVP-V21** No direct RNG (PVP-R12; boundary: supplied-input stage)
+  - Inputs: Execute selector/scale, hostility/owner, same-party, credited-player and routing slices with the exact PVP-V01/PVP-V07/PVP-V18/PVP-V20 fixtures independently. The declaration checks' no-draw assertion is HOS-V03. Every external operation is the stated no-draw logger; initialize involved game/unit seed pairs {1, 666}.
   - Seeds: no draw.
   - Draws: none.
   - Trace: Only owned decisions and no-draw supplied operations execute.
@@ -442,7 +416,7 @@ Each vector/case starts afresh. Unless overridden: distinct present player A/B, 
   - Discriminates: Reject adding a local random draw without asserting unexecuted callback behavior.
   - runtime_observed: no.
 
-- **PVP-V23** Data-selected scale factor (PVP-R02a/PVP-R03/PVP-R04; boundary: supplied-input stage)
+- **PVP-V22** Data-selected scale factor (PVP-R02a/PVP-R03/PVP-R04; boundary: supplied-input stage)
   - Inputs: Hireling attacker, boss non-hireling monster defender; supplied difficulty.HireableBossDamagePercent=70001, physical=1234. Fresh cases field = -50 and 0; missing difficulty record; attacker == defender.
   - Seeds: no draw.
   - Draws: none.
@@ -452,7 +426,7 @@ Each vector/case starts afresh. Unless overridden: distinct present player A/B, 
   - (b) Inputs: fresh same hireling/boss types and available difficulty record; HireableBossDamagePercent=70001, physical=1048577. Draws: none. Trace: both thresholds are exceeded, so the v-first branch takes precedence: trunc(1048577/100)=10485; 10485*70001=733960485. Outputs: P=70001, physical=733960485. The wrong P-first branch would produce trunc(70001/100)*1048577=734003900 and is rejected.
   - runtime_observed: no.
 
-- **PVP-V24** Victim null erasure and eligibility (PVP-R10a/PVP-R10b; boundary: supplied-input stage)
+- **PVP-V23** Victim null erasure and eligibility (PVP-R09a/PVP-R09b; boundary: supplied-input stage)
   - Inputs: Monster M one-hop owner P1. Extended base with primary lists[nonredirect, redirect(owner P3), redirect(owner P4)], secondary redirect P5; active state 1 / mask {1}, count 32. Victim(a) eligible with no matching list; (b) ineligible; (c) eligible matching list owner P2 whose lookup fails. All players distinct; P1/P3 lookup succeeds.
   - Seeds: no draw.
   - Draws: none.
@@ -464,31 +438,16 @@ Each vector/case starts afresh. Unless overridden: distinct present player A/B, 
   - (f) Inputs: fresh monster killer M, one-hop owner player P1; creditEligible=true through extended base, active state 1/mask {1}, stateCount=32. The extended base itself has creditRedirect=true and owner P6, whose lookup would succeed. Its primary chain has only nonredirect entries; secondary chain empty; victim ineligible. Draws: none. Trace: firstCreditList searches primary attached entries rather than the extended base, finds no match, and leaves selectedList absent. Outputs: credited=P1. Selecting the base would redirect to distinct P6 and is rejected.
   - runtime_observed: no.
 
-- **PVP-V25** Declaration timing and request order (PVP-R09a; boundary: supplied-input stage)
-  - Inputs: Acting player A and target B both level 9; A in town; A's node for B flags 0, requestedRelation=1, rejection initially 0; node availability calls supplied successful/no stored change. Cases (a) stored = 1001, current = 1000; (b) stored = 1000, current = 1000, second tick = 1002; (c) acting room absent; (d) acting in field; (e) A's node flags 8 and requestedRelation=8, so existing raw result 8 equals request 8.
-  - Seeds: no draw.
-  - Draws: none.
-  - Trace: (a) unsigned greater comparison refuses; (b) equality passes, second tick+60000=61002; (c/d)initial guard rejects; (e) equal result requests notifications only.
-  - Outputs: (a) node requests in both directions, refusal chat, notifications in both directions; rejection 0, no timestamp/activation; (b) node requests in both directions, storeTimestamp(61002), enter enable branch; rejection 0; (c/d)rejection 1, no other calls; (e) node requests in both directions, notifications in both directions, no timestamp.
-  - Discriminates: Timestamp equality is allowed; store uses second sample after comparison.
-  - (f) Inputs: fresh acting/target/node inputs as case (a), but stored timestamp=2147483649 and current tick=2147483647. Draws: none. Trace: unsigned 2147483649 > 2147483647, so refuse; interpreting the timestamps as signed would reverse this decision. Outputs: node requests in both directions, refusal chat, notifications in both directions; rejection remains 0, no second tick sample, timestamp store or activation request.
-  - (g) Inputs: fresh acting/target/node inputs as case (b), stored timestamp=0, first current tick=0, second tick=4294967280. Draws: none. Trace: unsigned equality permits enabling; second tick+60000=4295027280, whose low32 value is 59984. Outputs: node requests in both directions, storeTimestamp(59984), enter enable branch; rejection remains 0. This rejects storing the unbounded sum or clamping instead of wrapping.
-  - (h) Inputs: fresh acting/target players, both own/effective levels 9, acting in town; existing directional node flags=8, requestedRelation=0, rejection initially 0. Draws: none. Trace: raw 8 differs from request 0; the existing nonzero result skips the repeat-level guard; a zero request selects the disable branch. Outputs: node-availability requests in both directions, enter disable branch; rejection remains 0; no tick sample or timestamp-store request. Stored disable effects remain PVP-Q03.
-  - (i) Inputs: fresh acting player A and target B in the declaration fixture, A in town; A.ownStats=[(12,0,9)] and A.resolvedStats=[(12,0,9)]; B.ownStats=[(12,0,9)] and B.resolvedStats=[(12,0,8)]; both lists usesResolvedStats=true, definitions present/count 359, minimum adjustment disabled; A's directional node flags=0, requestedRelation=1, rejection initially 0. Draws: none. Trace: initial own-array checks read 9/9 and pass; after both node-availability requests, raw eligibility 0 triggers the effective target read, which selects resolved value 8 and returns. Outputs: rejection remains 0; two node-availability requests only, no tick sample, timestamp store, activation, disable, refusal-chat or notification request. All four arrays remain unchanged. This rejects using the initial own-array value for the later effective-level guard.
-  - (j) Inputs: fresh acting player A and target B, A in town; A.ownStats=[(12,0,8)] and A.resolvedStats=[(12,0,9)]; B.ownStats=[(12,0,9)] and B.resolvedStats=[(12,0,9)]; usesResolvedStats=true on both, minimum adjustment disabled, definitions present/count 359; requestedRelation=1 and rejection initially 0. Draws: none. Trace: initial actor own-array level is 8, so reject before node requests despite effective level 9. Outputs: rejection=1; no node, tick, timestamp, enable/disable or notification request; arrays unchanged.
-  - (k) Inputs: fresh acting/target players, A in town; A own/effective level 9; B.ownStats=[(12,0,9)], B.resolvedStats=[(12,0,8)], usesResolvedStats=true, minimum adjustment disabled and definitions present/count 359. Existing A-to-B node flags=8, requestedRelation=0, rejection initially 0. Draws: none. Trace: initial own-array levels 9/9 pass; nonzero existing raw result 8 skips the repeat effective-level guard even though it would read 8; request 0 enters the disable branch. Outputs: two node-availability requests, enter disable branch, rejection remains 0; no tick or timestamp-store request; arrays unchanged. This rejects applying the zero-existing-result level guard to disabling an existing relation; stored disable effects remain Q03.
-  - runtime_observed: no.
-
-- **PVP-V26** Tier-reader presence and identity (PVP-R05a/PVP-R12; boundary: isolated rule)
+- **PVP-V24** Tier-reader presence and identity (PVP-R05a/PVP-R11; boundary: isolated rule)
   - Inputs: Stat definition count 359, state definition count 185, minimum adjustments disabled. Cases (a) player A extended base list, primary matching state 105 with own stat 172=2, active state 105 false; distinct monster B has its own matching state-105 list with stat 172=2; (b) A has no matching state-105 list; B retains its matching list/tier 2; (c) other-type unit with base present; (d) other-type unit with base missing; (e) two absent inputs.
   - Seeds: no draw.
   - Draws: none.
   - Trace: (a) read the matching list despite inactive state bit; (b) tier 0; (c) tier 2; (d) tier 0; (e) identity test before fallback.
   - Outputs: (a) hostility = false, sameTierNeutral = true; (b) hostility = true against B; (c) tier 2; (d) tier 0; (e) hostility = false, sameParty = true.
-  - Discriminates: Do not require active state 105 or give every other-type unit tier 2 without a base. The consumed state-list lookup's secondary fallback is separately discriminated by NRF-V33 case (g), where a nonmatching primary chain and matching secondary chain return the secondary list; NRF-V33 case (a) rejects preferring secondary over a matching primary. R05a supplies state 105 to that same NRF-R12a operation.
+  - Discriminates: Do not require active state 105 or give every other-type unit tier 2 without a base. The consumed state-list lookup's secondary fallback is separately discriminated by RLI-V05 case (g), where a nonmatching primary chain and matching secondary chain return the secondary list; RLI-V05 case (a) rejects preferring secondary over a matching primary. R05a supplies state 105 to that same RLI-R03 operation.
   - runtime_observed: no.
 
-- **PVP-V27** Death and routing guards (PVP-R10a/PVP-R11a; boundary: supplied-input stage)
+- **PVP-V25** Death and routing guards (PVP-R09a/PVP-R10a; boundary: supplied-input stage)
   - Inputs: Independent cases:skipKillExperience = true; victim experience 0; killer type 3; credited player A with PetType count 8 and supplied hireling H found, x 1000, not the killer, party 3; scoring context absent. Supply exact hireling lookup result, amount and player data.
   - Seeds: no draw.
   - Draws: none.
@@ -500,15 +459,15 @@ Each vector/case starts afresh. Unless overridden: distinct present player A/B, 
 
 ### 8.2 Observation vectors
 
-**PVP-O01. Player combat and credit cross-checks.** Pending original 1.13c observation. Use matched attacker/defender/gear and recorded raw inputs. Compare player attacks, summon-created attacks, sentry bolts and hireling attacks against player and monster controls; include field/town, directional relation enabled/disabled, party differences and both sides of level 9. Measure the reached scale count and raw field values, guard result bits, actual leech changes separately from scaled inputs, and kill-experience recipients. Expected local assertions are PVP-V01 through PVP-V08/PVP-V09; actual condition/award integration assertions remain their gates. No observation is recorded as matched. A later build cannot confirm a 1.13c rule.
+**PVP-O01. Player combat and credit cross-checks.** Pending original 1.13c observation. Use matched attacker/defender/gear and recorded raw inputs. Compare player attacks, summon-created attacks, sentry bolts and hireling attacks against player and monster controls; include field/town, directional relation enabled/disabled and party differences; declaration level and timer cross-checks are HOS-O01. Measure the reached scale count and raw field values, guard result bits, actual leech changes separately from scaled inputs, and kill-experience recipients. Expected local assertions are PVP-V01 through PVP-V07/PVP-V08; actual condition/award integration assertions remain their gates. No observation is recorded as matched. A later build cannot confirm a 1.13c rule.
 
 ## 9. Acceptance and dependencies
 
-Partial static acceptance comprises the verified assertions of PVP-V01 through PVP-V27 at their named execution boundaries. PVP-V06's actual sentry condition, PVP-V14's stored tier effects, PVP-V25's accepted enable/disable effects, and complete dependency-backed awards are excluded until their gates close. Exact stage counts, factor/field arithmetic, guard writes, owner depth, directional relation results, supplied tier/list reads, null-erasing credit selection, request order and local no-draw assertions are available with explicit inputs. Passing those assertions does not establish complete original-game parity.
+Partial static acceptance comprises the verified assertions of PVP-V01 through PVP-V25 at their named execution boundaries. PVP-V06's actual sentry condition, PVP-V13's stored tier effects and complete dependency-backed awards are excluded until their gates close. Exact stage counts, factor/field arithmetic, guard writes, owner depth, directional relation results, supplied tier/list reads, null-erasing credit selection, request order and local no-draw assertions are available with explicit inputs. Passing those assertions does not establish complete original-game parity.
 
-Full reproduction also requires the in-scope behavior/integration questions settled with source-complete contracts and distinguishing executable vectors, plus matching original 1.13c gameplay observations for every verified behavioral rule (PVP-Q12). Producer questions do not block a supplied-input consumer, and pending observations do not erase static evidence. User approval is separate.
+Full reproduction also requires the in-scope behavior/integration questions settled with source-complete contracts and distinguishing executable vectors, plus matching original 1.13c gameplay observations for every verified behavioral rule (PVP-Q08). Producer questions do not block a supplied-input consumer, and pending observations do not erase static evidence. User approval is separate.
 
-**Depends on:** NRF-R05/R06a for ordered percent arithmetic and wrapping; NRF-R12a for state-list lookup and NRF-R12b/R12c for selected-list stat reads; GDF-R02/R05a/R07/R11a/R12/R17a/R18/R19b for named fields/identities/count ownership; DPO-R08a/R09/R13 for surrounding stage/apply boundaries; DMI-R03 for stage placement; IEP-R07 for event traversal; SBA-R02c/R02d/R17a/R22 for defense differences and contact preconditions; LSE-R03 for leech effectiveness; PXL-R02a/R03/R04/PXL-R05/PXL-R08 for compatible credit/experience assertions at their documented evidence boundaries. Complete implementations of dependencies are not asserted by supplied fixture outcomes.
+**Depends on:** NRF-R05/R06a for ordered percent arithmetic and wrapping; RLI-R03 for state-list lookup and RLI-R02a/RLI-R02b for selected-list stat reads; GDA-R05/GDA-R08a/GDA-R10/GDF-R02/GDF-R03/GDF-R08/GDA-R16/GDA-R04b for named fields/identities/count ownership; DPO-R08a/R09/R13 for surrounding stage/apply boundaries; DMI-R03 for stage placement; IEP-R07 for event traversal; HIT-R02c/HIT-R02d/SBA-R09a/SBA-R13 for defense differences and contact preconditions; LSE-R02 for leech effectiveness; PXL-R02a/R03/R04/PXL-R05/PXL-R08 for compatible credit/experience assertions at their documented evidence boundaries. Complete implementations of dependencies are not asserted by supplied fixture outcomes. Owners of the cited HIT, GDA, RLI ids: [combat-hit-roll](combat-hit-roll.md) (HIT); [core-game-data-table-records](core-game-data-table-records.md) (GDA); [core-record-layouts-and-ids](core-record-layouts-and-ids.md) (RLI).
 
 **Depended on by:** damage-pipeline ordering and missile/contact/skill consumers requiring factor selection, hostility or player-credit decisions. Party-experience consumers may reuse the credit resolver, while this specification consumes their amount contracts; these are different operation boundaries. Crushing Blow/Open Wounds share predicates but own their own effects. A supporting citation alone does not create an execution prerequisite.
 
@@ -517,12 +476,13 @@ Full reproduction also requires the in-scope behavior/integration questions sett
 - [Damage pipeline](combat-damage-pipeline-order.md): build/apply order and resource writes.
 - [Mitigation](combat-damage-mitigation.md): resistance/absorb and defender event placement.
 - [Shield block and avoidance](combat-shield-block-and-avoidance.md): defense adjustments, hit/block/avoidance.
-- [Leech and status effects](combat-leech-and-status-effects.md): final leech arithmetic.
+- [Leech and status effects](combat-leech-and-drain.md): final leech arithmetic.
 - [Crushing Blow](combat-crushing-blow.md) and [Open Wounds](combat-open-wounds.md): effect-specific target rules.
 - [Death Sentry corpse damage](skill-assassin-death-sentry-corpse-damage.md): supplied sentry attacker on explosion callbacks.
-- [Party experience and loot sharing](player-party-experience-and-loot-sharing.md): credit/award dependencies and remaining ownership gaps.
+- [Hostility declaration](player-hostility-declaration.md): request that sets the relation eligibility flag read by PVP-R05a.
+- [Party experience sharing](player-party-experience-sharing.md): credit/award dependencies and remaining ownership gaps.
 - [Timed-state lifecycle](state-timed-state-lifecycle.md): list/propagation integration context.
 
 ## Appendix A. Provenance
 
-Evidence build is original Lord of Destruction Expansion 1.13c. D2Game/D2Common original specimens are identified by the [source manifest](../research/source-manifest.md). Compatible static readings retain their 2026-10-11/12 dates and limits. Targeted 2026-10-15 disassembly/original-image checks and available byte-matched reconstructions support the declaration, redirect and predicate corrections recorded in the [public companion](../research/spec-evidence/combat-pvp-damage-and-kill-credit.md). Shared data identities reuse the dated GDF records; no new table-cell or gameplay observation is claimed. No executable vector is runtime-confirmed here.
+Evidence build is original Lord of Destruction Expansion 1.13c. D2Game/D2Common original specimens are identified by the [source manifest](../research/source-manifest.md). Compatible static readings retain their 2026-10-11/12 dates and limits. Targeted 2026-10-15 disassembly/original-image checks and available byte-matched reconstructions support the redirect and predicate corrections recorded in the [public companion](../research/spec-evidence/combat-pvp-damage-and-kill-credit.md); declaration evidence is in the [hostility declaration companion](../research/spec-evidence/player-hostility-declaration.md). Shared data identities reuse the dated GDF records; no new table-cell or gameplay observation is claimed. No executable vector is runtime-confirmed here.

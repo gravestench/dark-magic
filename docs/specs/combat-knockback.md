@@ -28,8 +28,8 @@ remain explicit questions within this boundary.
 D2Game's server item-event selector 7 invokes the item chance callback with owner, target,
 damage record and stat identity supplied by IEP-R02/IEP-R03/IEP-R07. The missile unit-to-unit
 damage path invokes its separate chance check after presetting hit and before block/avoidance
-(SBA-R20). Queued-path reaction follows application through DPO-R26. On the missile path,
-MHD-R26 owns owner multiplication, hit-conditional direct application and the subsequent
+(SBA-R11). Queued-path reaction follows application through DPO-R26. On the missile path,
+MHD-R12 owns owner multiplication, hit-conditional direct application and the subsequent
 direct reaction, which is called even when the hit bit was cleared. Reaction runs once per call.
 Monster mode 13's start dispatch requests path type 8; D2Common's planner dispatch reaches
 the endpoint generator. The companion records the dispatch chains and verified boundaries.
@@ -40,16 +40,16 @@ Client notification/correction is KNB-Q10; no packet identity is established her
 | Input | Semantic source | Width and format | Meaning |
 |---|---|---|---|
 | Callback arguments | Owner, target, damage record, supplied stat identity | Optional logical references | Missing owner, target or record rejects item callback |
-| Item stat | Stat 81 `item_knockback`; callback uses supplied identity rather than fixed 81 | Signed i32 current value, NRF-R12b/NRF-R12c selected-array/minimum contract | Positive enables one draw; magnitude unused |
-| Missile chance | `Missiles.KnockBack`, GDF-R07 | u8 | Zero skips; positive compared against remainder out of 100 |
+| Item stat | Stat 81 `item_knockback`; callback uses supplied identity rather than fixed 81 | Signed i32 current value, RLI-R02a/RLI-R02b selected-array/minimum contract | Positive enables one draw; magnitude unused |
+| Missile chance | `Missiles.KnockBack`, GDA-R10 | u8 | Zero skips; positive compared against remainder out of 100 |
 | Result | Per-hit result word, NRF section 3.2 | u16 | Hit 1, lethal 2, GH 4, KB 8, block 16; other flags via HRC-R04a |
-| Kind and mode | Player 0, monster 1; monster modes 0 death, 3 gethit, 12 dead, 13 knockback; player modes 4 Get Hit, 19 Knock back | Integer identities, GDF-R14/GDF-R15 | Reaction routing |
-| Mode availability | `MonStats2.mGH`, `MonStats2.mKB` | Boolean fields, GDF-R06 | Start and fallback gates; `dKB` unused in these decisions |
-| Size | `MonStats2.small`, `MonStats2.large`; record optional | Booleans, GDF-R06 | Item threshold only |
-| Town permission | Optional source and optional valid source-monster `MonStats` lookup; `inTown` only from a valid record | Optional references plus Boolean, GDF-R18 | Town reaction requires a monster source and present valid record with permission; a detached flag does not replace the record |
-| Mode bookkeeping | `modeChanged`, NRF-R14a | Boolean | V13c supplies the actual equal-mode setter model; engine update integration remains NRF-Q17 |
-| Base | Valid monster `MonStats.BaseId` lookup | Signed i16, GDF-R05 | Base 78 exception |
-| States | 54 `uninterruptable`, 1 `freeze`; requested state 92 `death_delay` | Predicates / state-on request, GDF-R12/NRF-R12a; state 92 text name in companion | Chance/reaction and conversion vetoes; lethal state-54 branch requests state 92 on |
+| Kind and mode | Player 0, monster 1; monster modes 0 death, 3 gethit, 12 dead, 13 knockback; player modes 4 Get Hit, 19 Knock back | Integer identities, GDF-R05/GDF-R06 | Reaction routing |
+| Mode availability | `MonStats2.mGH`, `MonStats2.mKB` | Boolean fields, GDA-R09 | Start and fallback gates; `dKB` unused in these decisions |
+| Size | `MonStats2.small`, `MonStats2.large`; record optional | Booleans, GDA-R09 | Item threshold only |
+| Town permission | Optional source and optional valid source-monster `MonStats` lookup; `inTown` only from a valid record | Optional references plus Boolean, GDA-R16 | Town reaction requires a monster source and present valid record with permission; a detached flag does not replace the record |
+| Mode bookkeeping | `modeChanged`, RLI-R04a | Boolean | V13c supplies the actual equal-mode setter model; engine update integration remains RLI-Q02 |
+| Base | Valid monster `MonStats.BaseId` lookup | Signed i16, GDA-R08 | Base 78 exception |
+| States | 54 `uninterruptable`, 1 `freeze`; requested state 92 `death_delay` | Predicates / state-on request, GDF-R03/RLI-R03; state 92 text name in companion | Chance/reaction and conversion vetoes; lethal state-54 branch requests state 92 on |
 | Room and level | Optional target room and its level | Level as i32 bit pattern | Unsigned bounded town predicate |
 | Seeds | Attacker, missile, defender | `{lo,hi}` u32 words | NRF-R01/NRF-R02; separate owners |
 | Start | Supplied generator start point | Two u16 path coordinates | Planned path origin |
@@ -67,14 +67,14 @@ matching gameplay observation (KNB-Q04).
 | `item_knockback` identity 81; `itemeventfunc1/2 = 7` | Effective `data/global/excel/itemstatcost.txt`, row `item_knockback`, explicit ID and zero-based data-row index 81 | Named text cells verified in the [2026-10-15 record](../research/spec-evidence/combat-knockback.md#item-stat-text-cells-2026-10-15); compiled correspondence KNB-Q01 |
 | `itemevent1 = domeleedamage`, `itemevent2 = domissiledamage` | Same file/row, named columns | Data chooses event names; numeric binding and execution KNB-Q02 |
 | Selector 7 callback | Engine table, IEP-R02/IEP-R06 | Data selects engine-defined handler; registration integration IEP-R04 |
-| State 54/1; base 78 `sandleaper1` | Named mappings GDF-R12/GDF-R17 | Numeric identities fixed by code consumers |
+| State 54/1; base 78 `sandleaper1` | Named mappings GDF-R03/GDF-R08 | Numeric identities fixed by code consumers |
 | State 92 `death_delay` | Effective `data/global/excel/states.txt`, explicit `id = 92`, zero-based data-row index 92, column `state`; [named-cell record](../research/spec-evidence/combat-knockback.md#state-92-text-name-2026-10-15) | Code fixes request id 92; text supplies its name, without establishing timers or death-mode execution |
 | Thresholds 32/64/128; path type 8; byte 5/10; town ids 1/40/75/103/109 | Engine code | Fixed by original code; no remapping capability established |
 
 ## 4. Rules (execution order)
 
 **KNB-R01 Item roll** [verified in 1.13c code (static)]. With owner, target and damage
-record present, read owner's current supplied stat using NRF-R12b/NRF-R12c's selected-array
+record present, read owner's current supplied stat using RLI-R02a/RLI-R02b's selected-array
 lookup and minimum adjustment. A nonpositive value
 returns 0 without draw/write. Otherwise step the attacker's seed once through NRF-R01;
 `roll = newLow & 127`. Threshold is 32 for a monster with `large`, else 128 for a monster
@@ -87,10 +87,10 @@ does not change the threshold. Missing owner/target/record returns 0 without dra
 a nonzero unsigned chance byte causes one NRF-R02 `Rand(missile,100)` draw. If the unsigned
 remainder is less than the byte, OR 8 into result. Zero skips without clearing existing flags.
 Bytes 1, 33, 75 cover 1/100, 33/100, 75/100 remainder values; bytes at least 100 always pass.
-Surrounding hit/GH/soft flags are SBA-R20/HRC-R01b, outside this isolated chance stage.
+Surrounding hit/GH/soft flags are SBA-R11/HRC-R01b, outside this isolated chance stage.
 
 **KNB-R02b Missile state gate** [verified in 1.13c code (static)]. State 54, tested through
-NRF-R12a, skips the missile chance stage: no seed step or KB OR. It does not clear an existing bit.
+RLI-R03, skips the missile chance stage: no seed step or KB OR. It does not clear an existing bit.
 
 **KNB-R03b Town gate** [verified in 1.13c code (static)]. At reaction entry, a target room
 with level in `{1,40,75,103,109}` requires a monster source with valid supplied `MonStats`
@@ -100,10 +100,10 @@ then consults the fixed table. This gate precedes state/type checks. No direct d
 
 **KNB-R05a Uninterruptible reaction** [verified in 1.13c code (static)]. After town gate,
 state 54 returns before type-specific dispatch. With lethal set, first request
-`SetState(target,92,1)` through NRF-R12a and STL-R07; otherwise request nothing.
+`SetState(target,92,1)` through RLI-R03 and STL-R07; otherwise request nothing.
 This requests state 92 `death_delay` on, using those owners' state-range/storage guards and membership
 contract. Only disguise bookkeeping and update-queue integration remain KNB-Q11 through
-STL-R07a/STL-Q07 and NRF-Q17. Ordinary death-mode execution is not asserted here. No direct draw.
+STL-R07a/STL-Q07 and RLI-Q02. Ordinary death-mode execution is not asserted here. No direct draw.
 
 **KNB-R03a Target dispatch** [verified in 1.13c code (static)]. Once preceding gates pass,
 null targets and kinds other than player/monster request no reaction. Monster mode 0 or 12
@@ -133,7 +133,7 @@ preempt KB. Complete selected-operation effects retain their dependency limits.
 return 0 without local path/mode writes unless both `mGH` and `mKB` are true. With both true,
 a missing unit or mode 0 returns 1 without these writes. Otherwise set path type 8, set byte
 through KNB-R07a, call `planner(target,0)`, call mode entry preparation, request mode 13 through
-NRF-R14a, return 1. Ignore planner return. `dKB` is unused. Complete planner/preparation/mode
+RLI-R04a, return 1. Ignore planner return. `dKB` is unused. Complete planner/preparation/mode
 effects are KNB-Q06/KNB-Q07. No direct RNG instruction in this handler.
 
 **KNB-R07a Distance** [verified in 1.13c code (static)]. Monster start writes unsigned
@@ -169,12 +169,12 @@ Local selection/start/endpoint instructions add no direct draw. Supplied operati
 excluded. HRC-R15's unresolved monster mode-change elemental path may draw; KNB-Q06 gates the
 complete event total. There is no universal zero-draw claim for full mode integration.
 
-**KNB-R10b Missile order** [verified in 1.13c code (static)]. Consume SBA-R20 and MHD-R26:
+**KNB-R10b Missile order** [verified in 1.13c code (static)]. Consume SBA-R11 and MHD-R12:
 missile chance precedes defender block/avoidance, later owner monster multiplication
 (DPO-R22), hit-conditional direct application and the subsequent unconditional direct
 reaction. Chance steps neither defender nor owner. Upstream hit checks are outside this
 boundary. Block need not erase KB; reaction priority still chooses the operation. V24 supplies
-later-stage operations to check ordering; MHD-R26 owns their real eligibility and call path.
+later-stage operations to check ordering; MHD-R12 owns their real eligibility and call path.
 
 **KNB-R10c Item dispatch integration** [unresolved]. Text selects `domeleedamage` and
 `domissiledamage` with selector 7. Compiled registration and event-name numeric binding are
@@ -183,7 +183,7 @@ blow or deadly strike. Supplied callback invocation is independently KNB-R01.
 
 **KNB-R10d GH-veto order** [verified in 1.13c code (static)]. Queued reaction follows
 application through DPO-R26; missile direct reaction follows its conditional application
-through MHD-R26. Only GH selection reaches HRC-R06's zero to two defender draws, after the
+through MHD-R12. Only GH selection reaches HRC-R06's zero to two defender draws, after the
 earlier missile chance. KB selection has no GH-veto call. Item-callback timing remains KNB-Q02.
 
 ### Id map
@@ -194,7 +194,7 @@ earlier missile chance. KB selection has no GH-veto call. Item-callback timing r
 | KNB-R02a | Missile chance | verified in 1.13c code (static) | none | KNB-V04, KNB-V05, KNB-V06, KNB-V07, KNB-V17, KNB-V18 |
 | KNB-R02b | Missile state gate | verified in 1.13c code (static) | none | KNB-V12 |
 | KNB-R03b | Town gate | verified in 1.13c code (static) | none for supplied valid room/record | KNB-V27 |
-| KNB-R05a | State-54 calls | verified in 1.13c code (static) | KNB-Q11: STL-Q07 disguise bookkeeping / NRF-Q17 update queue only | KNB-V12, KNB-V27(k) |
+| KNB-R05a | State-54 calls | verified in 1.13c code (static) | KNB-Q11: STL-Q07 disguise bookkeeping / RLI-Q02 update queue only | KNB-V12, KNB-V27(k) |
 | KNB-R03a | Kind/mode gate | verified in 1.13c code (static) | none | KNB-V26 |
 | KNB-R06a | Fallback | verified in 1.13c code (static) | none | KNB-V10, KNB-V19, KNB-V32 |
 | KNB-R06c | Base conversion | verified in 1.13c code (static) | none | KNB-V09, KNB-V20, KNB-V32 |
@@ -219,7 +219,7 @@ earlier missile chance. KB selection has no GH-veto call. Item-callback timing r
 | Attacker seed step, KB OR, callback return 0/1 | KNB-R01 |
 | Missile seed step, KB OR | KNB-R02a |
 | Continue or stop reaction at the town gate | KNB-R03b |
-| `SetState(target,92,1)` request, with membership effects owned by NRF-R12a/STL-R07 | KNB-R05a |
+| `SetState(target,92,1)` request, with membership effects owned by RLI-R03/STL-R07 | KNB-R05a |
 | Replace KB by GH, or add KB to GH | KNB-R06a/KNB-R06c |
 | Select/request one reaction operation | KNB-R04/KNB-R06b |
 | Path type/distance; ordered planner/preparation/mode calls; return 0/1 | KNB-R06d/KNB-R07a |
@@ -228,8 +228,8 @@ earlier missile chance. KB selection has no GH-veto call. Item-callback timing r
 
 HRC-R14 supplies downstream knockback animation rate and path speed 4096. Actual motion,
 dependent state/entry/mode effects, messages and persistence are not additional local writes.
-V13c's modeChanged/update assertions use the supplied NRF-R14a model; actual update
-bookkeeping and queue effects retain NRF-Q17's integration boundary.
+V13c's modeChanged/update assertions use the supplied RLI-R04a model; actual update
+bookkeeping and queue effects retain RLI-Q02's integration boundary.
 
 ## 6. Branches and edge cases
 
@@ -262,7 +262,7 @@ Attempts and exact blocked assertions are in the [gap file](../plans/gaps/combat
 - **KNB-Q10** Outside-boundary: resolve simultaneous movement conflicts and client correction
   in movement/network owners. No complete client search supports absence.
 - **KNB-Q11** Integration: only state-92 disguise bookkeeping and update-queue effects remain
-  STL-R07a/STL-Q07 and NRF-Q17. SetState routing/membership is owned by NRF-R12a/STL-R07;
+  STL-R07a/STL-Q07 and RLI-Q02. SetState routing/membership is owned by RLI-R03/STL-R07;
   ordinary death-mode execution is not this request.
 - **KNB-Q12** Observation: gameplay confirmation remains pending for all behavioral rules;
   KNB-O01–KNB-O06 are procedures, not observations.
@@ -369,11 +369,11 @@ does not verify these dependencies. Unlisted seeds and fields remain unchanged.
   - Outputs: a result 4/log `[]`; b result 8/log `[]`; c result 10/log `[SetState(target,92,1)]`; d result 12/log `[]` with missile seed `{1,0}` unchanged; no KB/GH/death-mode call in any case. The supplied SetState operation logs only; membership effects are tested by its owning contract.
   - Discriminates: ordinary death substitution changes c's log; clearing KB in the missile state gate changes d's result to 4.
 - **KNB-V13** Ignored dependency returns (KNB-R06d/KNB-R09a; boundary: supplied-input stage)
-  - Inputs: (a) monster start defaults, planner returns 0; (b) path defaults, clip returns start `(100,100)`, count 0; (c) monster start defaults except current mode 13/modeChanged false, initial path type 2/B 77, planner returns 0. In c only, setMode logs its invocation then executes NRF-R14a's actual equal-mode branch with a supplied MarkForUpdate operation that logs current mode/modeChanged and has no queue effects; it replaces the default return-1 setter. List processing and animation-reset operations log if called.
+  - Inputs: (a) monster start defaults, planner returns 0; (b) path defaults, clip returns start `(100,100)`, count 0; (c) monster start defaults except current mode 13/modeChanged false, initial path type 2/B 77, planner returns 0. In c only, setMode logs its invocation then executes RLI-R04a's actual equal-mode branch with a supplied MarkForUpdate operation that logs current mode/modeChanged and has no queue effects; it replaces the default return-1 setter. List processing and animation-reset operations log if called.
   - Seeds: no draw.
   - Draws: none.
   - Trace: a ignores planner return; b clipped equals start; c equal mode 13 invokes update marking, stores modeChanged true and returns 0 from the setter, then the start handler returns 1.
-  - Outputs: a log `[setPathType(8),setDistance(5),planner(target,0),prepareModeEntry,setMode(13)]`, mode 13, return 1; b planned `(100,100)`, stored requested waypoint `(103,100)`, count 0, reference absent, return 0, actual `(100,100)`; c log `[setPathType(8),setDistance(5),planner(target,0),prepareModeEntry,setMode(13),MarkForUpdate(mode=13,modeChanged=false)]`, path type 8/B 5/mode 13, supplied-model modeChanged true, setter return 0 but handler return 1, no list-processing or animation-reset call. Actual update effects remain NRF-Q17.
+  - Outputs: a log `[setPathType(8),setDistance(5),planner(target,0),prepareModeEntry,setMode(13)]`, mode 13, return 1; b planned `(100,100)`, stored requested waypoint `(103,100)`, count 0, reference absent, return 0, actual `(100,100)`; c log `[setPathType(8),setDistance(5),planner(target,0),prepareModeEntry,setMode(13),MarkForUpdate(mode=13,modeChanged=false)]`, path type 8/B 5/mode 13, supplied-model modeChanged true, setter return 0 but handler return 1, no list-processing or animation-reset call. Actual update effects remain RLI-Q02.
   - Discriminates: aborting start on zero planner omits mode call; forwarding the equal-mode setter's 0 as handler result fails c. Completed blocked motion is gated.
 - **KNB-V14** Seed owner (KNB-R01/KNB-R10a; boundary: isolated rule)
   - Inputs: independent small-only, normal, large-only item cases.
@@ -560,19 +560,19 @@ Full reproduction also needs compiled item binding/timing, mode/player/collision
 integration and matching gameplay observations for in-scope rules. A stage pass or text-cell
 read establishes neither complete parity nor runtime confirmation.
 
-**Depends on:** NRF-R01/NRF-R02 seed/draw; NRF-R10 coordinates; NRF-R12a states and
-NRF-R12b/NRF-R12c selected-array/minimum stat lookup;
-NRF-R14a mode write; GDF-R05/GDF-R06/GDF-R07/GDF-R12/GDF-R14/GDF-R15/GDF-R17/GDF-R18 names;
-SBA-R20 missile chance position; MHD-R26 missile owner-multiply/direct-apply/direct-reaction
+**Depends on:** NRF-R01/NRF-R02 seed/draw; NRF-R10 coordinates; RLI-R03 states and Owners of the cited GDA, RLI ids: [core-game-data-table-records](core-game-data-table-records.md) (GDA); [core-record-layouts-and-ids](core-record-layouts-and-ids.md) (RLI).
+RLI-R02a/RLI-R02b selected-array/minimum stat lookup;
+RLI-R04a mode write; GDA-R08/GDA-R09/GDA-R10/GDF-R03/GDF-R05/GDF-R06/GDF-R08/GDA-R16 names;
+SBA-R11 missile chance position; MHD-R12 missile owner-multiply/direct-apply/direct-reaction
 path; DPO-R22 owner monster multiplication; DPO-R13/DPO-R26 event and queued-reaction order;
 IEP-R02/IEP-R03/IEP-R06/IEP-R07/IEP-R09a selector, invocation and numeric dispatch, with
 IEP-R04 integration unresolved; HRC-R04a/HRC-R05/HRC-R06/HRC-R14 priority, GH and speed/rate.
 HRC-R04b/HRC-R11/HRC-R15 retain their full avoidance/block/mode-effect limits.
-State-on routing/membership consumes NRF-R12a and
+State-on routing/membership consumes RLI-R03 and
 [state-timed-state-lifecycle](state-timed-state-lifecycle.md) STL-R07; its disguise/update
-effects retain STL-R07a/STL-Q07 and NRF-Q17 integration limits.
+effects retain STL-R07a/STL-Q07 and RLI-Q02 integration limits.
 
-**Depended on by:** SBA-R20, HRC-R01b/HRC-R04a, missile-hit-and-damage-calculation's handoff,
+**Depended on by:** SBA-R11, HRC-R01b/HRC-R04a, missile-hit-and-damage-calculation's handoff,
 and numeric foundations' seed-owner references. Supporting citations add no prerequisite.
 
 ## 10. Related specs
