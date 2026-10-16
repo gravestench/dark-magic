@@ -52,7 +52,7 @@ Named original-profile values used by vectors: CharStats.ManaRegen (Sorceress)=1
 
 ## 4. Rules (execution order)
 
-Consume NRF-R01 notation and NRF-R05 mulDiv. All addition/subtraction/negation keeps signed low32 bits; comparisons are signed and division truncates toward zero. No local RNG draw. Operation names impose no API or storage design.
+Consume the integer notation in [core-numeric-and-rng-foundations section 1](core-numeric-and-rng-foundations.md#1-scope) and NRF-R05 mulDiv. All addition/subtraction/negation keeps signed low32 bits; comparisons are signed and division truncates toward zero. No local RNG draw. Operation names impose no API or storage design.
 
 **PMR-R01a** Successor request [verified in 1.13c code (static)]. On handler entry request event type 3 for the same unit at wrapping frame+1, with no private callback and both original event arguments unchanged. Request it before null, suppression, type or mode tests. Scheduler effects for invalid targets/destruction are PMR-Q08/PMR-Q09.
 
@@ -127,7 +127,7 @@ Upper test precedes lower test. Negative delta requests subtraction. This is not
 | PMR-R03 | Getter selection | verified in 1.13c code (static) | none with supplied inputs | PMR-V01, PMR-V05, PMR-V13, PMR-V16 |
 | PMR-R04 | Class recovery and percent | verified in 1.13c code (static) | none with supplied inputs | PMR-V01..PMR-V04, PMR-V08, PMR-V09, PMR-V14 |
 | PMR-R05 | Flat add | verified in 1.13c code (static) | none with supplied inputs | PMR-V05, PMR-V14 |
-| PMR-R06a | Cleanup request condition/order | verified in 1.13c code (static) | none with supplied lookup | PMR-V06, PMR-V07, PMR-V15 |
+| PMR-R06a | Cleanup request condition/order | verified in 1.13c code (static) | none with supplied lookup | PMR-V06, PMR-V07, PMR-V13, PMR-V15 |
 | PMR-R06b | Cleanup stored effects | unresolved | PMR-Q03 | PMR-V06 gated effects |
 | PMR-R07a | Clamp and additive request | verified in 1.13c code (static) | none with supplied inputs | PMR-V01..PMR-V08, PMR-V14 |
 | PMR-R07b | Integrated mutation | unresolved | PMR-Q04 | supplied model only |
@@ -282,13 +282,13 @@ Dependencies log ordered requests. A synthetic AddStat also adds the requested d
   - Discriminates: (a)/(b) reject early gate; (f) reject ignored return; (g) reject swapped calls; (h) rejects treating monster mode 0 as eligible.
   - runtime_observed: no
 
-- **PMR-V13** Getter guards (PMR-R03; boundary: supplied-input stage)
+- **PMR-V13** Getter guards (PMR-R03, PMR-R06a; boundary: supplied-input stage)
   - Inputs: Cases (a) absent ManaTick unit; (b) unit without a stat list, valid class; (c) unit/list present, definition count 9, no definition 9, current getter 100, state 85 on, flat getter 0.
   - Seeds: no draw
   - Draws: none
-  - Trace: (a) return; (b) current/max 0, base floor 1, room clamp 0; (c) maxgetter 0, regen 0, room -100, lower -100.
-  - Outputs: (a) no reads/requests; (b) no write request; (c) AddStat(8, -100, 0), model balance 0, no cleanup.
-  - Discriminates: Reading missing definition 9 fails (c); early return merely because regen 0 incorrectly omits (c) clamp.
+  - Trace: (a) return; (b) current/max 0, state 85 absent, percent 0, base floor 1, regen mulDiv(100, 1, 100)=1, full 0<=0 with regen 1 requests the state 106 lookup, which returns absent for the missing list (RLI-R03), room clamp 0; (c) maxgetter 0, regen 0, room -100, lower -100.
+  - Outputs: (a) no reads/requests; (b) one state 106 list lookup returning absent, no Detach/Free, no write request; (c) AddStat(8, -100, 0), model balance 0, no cleanup.
+  - Discriminates: Reading missing definition 9 fails (c); early return merely because regen 0 incorrectly omits (c) clamp; skipping the cleanup lookup when maximum is 0 fails (b).
   - runtime_observed: no
 
 - **PMR-V14** Operand order and wrap (PMR-R04/R05/R07a; boundary: supplied-input stage)
@@ -331,7 +331,7 @@ Dependencies log ordered requests. A synthetic AddStat also adds the requested d
 
 Verified supplied-input acceptance: PMR-R01a, PMR-R02a/b, PMR-R03, PMR-R04, PMR-R05, PMR-R06a, PMR-R07a and their executable assertions in PMR-V01..PMR-V16. Synthetic balances/cleanup effects do not establish integrated parity. PMR-R01b, PMR-R06b and PMR-R07b require explicit gates resolved for full reproduction. PMR-O01..PMR-O03 define remaining observation scope.
 
-Consumed contracts: NRF-R01/R05/R08a/R09a arithmetic, units and frames; RLI-R03/RLI-R02a/RLI-R02b state/list/stat reads; GDA-R06a/GDF-R01, GDF-R02, GDF-R03, GDF-R05/GDF-R06 identities/fields; STL-R01/STL-R02 timer operations and STL-R05 lifecycle effects with their gates. Life/stamina internals are supplied at the handler boundary. Owners of the cited GDA, RLI ids: [core-game-data-table-records](core-game-data-table-records.md) (GDA); [core-record-layouts-and-ids](core-record-layouts-and-ids.md) (RLI).
+Consumed contracts: foundations section 1 integer notation and NRF-R05/R08a/R09a arithmetic, units and frames; RLI-R03/RLI-R02a/RLI-R02b state/list/stat reads; GDA-R06a/GDF-R01, GDF-R02, GDF-R03, GDF-R05a/GDF-R06a (player/monster death modes) identities/fields; STL-R01/STL-R02 timer operations and STL-R05 lifecycle effects with their gates. Life/stamina internals are supplied at the handler boundary. Owners of the cited GDA, RLI ids: [core-game-data-table-records](core-game-data-table-records.md) (GDA); [core-record-layouts-and-ids](core-record-layouts-and-ids.md) (RLI).
 
 Reverse consumers: regeneration, consumables and mana-spending behaviors can consume the tick. Shared caller relationships do not alone impose plan prerequisites.
 

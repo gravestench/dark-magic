@@ -129,7 +129,7 @@ storage or API on a new implementation.
 | Running/pending-removal frame event | flags bit 0 / bit 3 | OWD-R09c; removal `0x8E6F0` |
 | Game frame / queue | Game +0xA8 / +0xB8; heads +4, newest heads +0x504, immediate +0xA04, saved next +0xA18 | OWD-R13 candidate ordering |
 | State definitions/count/masks | DataTables +0xBC/+0xC4; mask k at +0xCC+4k; curse k11, exp k30, life k32 | OWD-R06/R08/R09b; GDA-R13 |
-| Monster definition eligibility | MonStats +0xC bit 8 npc; signed word +0x18 MonStatsEx; MonStats2 +4 bit 9 isAtt | OWD-R06a; GDA-R08/GDA-R09/GDA-R16 |
+| Monster definition eligibility | MonStats +0xC bit 8 npc; signed word +0x18 MonStatsEx; MonStats2 +4 bit 9 isAtt | OWD-R06a; GDA-R08a/GDA-R09a/GDA-R16 |
 | Final damage hand-off | total +0x4C; result +4 bit 2 lethal | OWD-R12; DPO/CSA |
 | Unit life replacing write | D2Common #10887 / `0x3A740` -> `0x3A280` | OWD-R09/R11; unit effects RLI-Q03 / OWD-Q12; list writer STL-R06c is separate |
 | Life-percent notification | D2Game `0x7A260` | OWD-R09d, unread OWD-Q08 |
@@ -213,7 +213,7 @@ checks support locators and existing request slices, not the unresolved equal-fr
 order or malformed-input domains. The old expiry-walk decoding limit is narrowed through
 STL-R04's complete traversal contract; actual free effects remain STL-R05.
 
-Fog #10259 is a data export at `0x26798`, not a function. Current GDA-R16 / NRF mask evidence
+Fog #10259 is a data export at `0x26798`, not a function. Current GDA-R16 / RLI mask evidence
 supplies the resolved original-image array identity; the data address is recorded in the table above. That lookup does not verify state-mask production.
 
 ## Named table cells
@@ -502,3 +502,70 @@ boundary, and the life-write/event integration gates OWD-Q12 and OWD-Q05/OWD-Q09
 ownership or gate changed after the third full review. The applicable reader stopping
 condition is met. Gameplay confirmation, resolution of the remaining evidence gaps and
 maintainer approval remain outstanding; this review does not promote the draft status.
+
+### Restructure reference check and reader passes 5-8 (2026-10-15)
+
+After the 2026-10-15 dependency restructure (record/stat/state material moved from NRF to
+core-record-layouts-and-ids, RLI; table-record fields moved from core-game-data-fields to
+core-game-data-table-records, GDA; shared name `aliveExclusionCondition`), every cited id was
+checked against the current dependency specs. Remap corrections: the stat-reader input row
+cited the old NRF section 3.8 and now cites RLI section 3.7; the Dependencies paragraph had a
+sentence spliced into it and now names each owning file; bare GDA-R08/GDA-R09 (families) are
+now GDA-R08a/GDA-R09a; GDF-R02/GDF-R03 are cited for the identity convention only; section 10
+lists the two new owners. Run 5 was a delta check of the remapped references, run 6 a delta
+check of its fixes, run 7 a full run (required after the OWD-R06a wording change), run 8 a
+delta check of the run-7 additions.
+
+New readings used in triage (LOD113C-D2GAME original disassembly, 2026-10-15):
+- Frame-event link step `0x8E680`, called from scheduler `0x8EA80`: the new entry's unit-chain
+  next is the unit's current chain head (+0xDC), the old head's previous points to it, its
+  previous is cleared, and the unit head is set to it. This is head insertion; the 8.1
+  preamble now states it instead of attributing a position to STL-R01, which gives none.
+- MonStatsEx helper `0x1320` and its call site in applier `0xA00B0`: class and signed-i16
+  link are each rejected when negative or at or above the respective count; the helper adds
+  no null test, and the caller rejects a null result before testing `isAtt`. OWD-R06a now
+  states the link bounds and the absent-record rejection explicitly (no behavior change).
+
+| Run | Kind | MISMATCH | GUESS | GAP | DISCRIM | Other |
+|---|---|---|---|---|---|---|
+| 5 | delta (remapped references) | 0 | 2 | 5 | 0 | GATED listed |
+| 6 | delta (run-5 fixes) | 0 | 2 | 4 | 4 | |
+| 7 | full | 0 | 5 | 4 | 8 | GATED 17, COVERAGE 14, HARDEST 3 |
+| 8 | delta (run-7 additions) | 0 | 0 | 0 | 0 | all ten listed findings confirmed resolved |
+
+| Finding | Outcome and reason |
+|---|---|
+| R5 GUESS: SetState's own update marking as a log entry | Spec edit: 8.1 preamble logs one entry per requested operation; requests made inside a dependency operation are not logged |
+| R5 GUESS: insertion position in the unit chain (V13(e),(f)) | Spec edit: preamble states head insertion, verified in the link step above |
+| R5 GAP: bare GDA-R08/GDA-R09 do not resolve | Spec edit: GDA-R08a/GDA-R09a (section 3, section 9, companion field table) |
+| R5 GAP: GDA-R16 does not define npc/isAtt | Spec edit: fields cited to GDA-R08a/GDA-R09a; GDA-R16 kept only for "a false flag tests 0" |
+| R5 GAP: GDF-R02/GDF-R03 do not list the specific ids | Spec edit: section 9 cites them for the row-index convention; specific ids are section 3 identities with named-cell records |
+| R5 GAP: RLI-Q03 wording versus "unit-write propagation" | No change: RLI-Q03 covers replacing stat-write integration and consumers requesting replacing writes cite it |
+| R5 GAP: no unexecutable vector | No change: nothing to resolve |
+| R6 GUESS 1-2: V10 replacement callback log and old-state inputs | Spec edit: V10 note leaves callback-internal requests and old event retention unasserted under OWD-R07b/OWD-Q09/OWD-Q12 |
+| R6 GAP 1 / DISCRIM 2: in-range link with absent record | Spec edit: OWD-R06a absent-record rejection (asm above); V09(g) added |
+| R6 GAP 2-3: V01(e), V09, V05 list requests by reference to R08/R07a; V05 expiry-set not a log entry | No change: outputs are fully determined by R08/R07a order and asserted expiry values |
+| R6 GAP 4: head insertion unverified | Resolved by the link-step reading above |
+| R6 DISCRIM 1: only negative link tested | Spec edit: V09(f) link equal to the count |
+| R6 DISCRIM 3: V10 callback log | Gated as above |
+| R6 DISCRIM 4: only V13(f) separates head from tail | No change: (f) asserts the exact chain |
+| R7 GUESS: V10 callback logging / old event 1100 | Spec edit: V10 note (as R6) |
+| R7 GUESS: R10 list selection and owner identity | No change: R10 states poison first, else state 62, and the selected list's owner |
+| R7 GUESS: R09d stat 352 layer | No change: section 3 gives layer 0; R09d is gated |
+| R7 GUESS: release of a pending-removal running entry | Spec edit: preamble states one release after the handler returns |
+| R7 GAP: PVP-R06 room/town predicate | No change: room and `isTown` are supplied inputs in section 3 |
+| R7 GAP: GDA-R16 for npc/isAtt | No change: cited only for false-flag result |
+| R7 GAP: default defender id; NewList allocation tag | No change: no output depends on them |
+| R7 DISCRIM: both specials true | Spec edit: V03(n) |
+| R7 DISCRIM: magnitude retention order | Spec edit: V05(b) |
+| R7 DISCRIM: `total>0`, negative-only hpregen | Spec edit: V11(f),(g) |
+| R7 DISCRIM: `>=` maximum (monster) | Spec edit: V13(g) |
+| R7 DISCRIM: `>=` maximum (player healthpot) | Spec edit: V08(h) |
+| R7 DISCRIM: `life<=256` guard; guard for nonnegative g | Spec edit: V07(d),(e) |
+| R7 DISCRIM: callback ignores event argument | Spec edit: V01(j) |
+| R7 DISCRIM: burning-list fallback / poison-only | Spec edit: V14(f),(g); no-list tail remains OWD-Q10 |
+| R7 COVERAGE (14 entries) | No change: remaining branches either share an existing null/no-request outcome, are gated (R09d, R10 no-list, R11b, R12/R13 candidates) or were covered by the DISCRIM additions above |
+| R7 HARDEST: V13 chain model; V10/V05(a) logging; V14 death tail | No change beyond the preamble and V10 note: the chains and gates are explicit |
+
+The applicable stopping condition is met by run 8 (MISMATCH 0, no unresolved GUESS, GAP or
+DISCRIM). No gameplay observation was made; status remains draft and approval is pending.

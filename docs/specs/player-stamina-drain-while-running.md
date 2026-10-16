@@ -36,10 +36,10 @@ Integer additions, products and negation retain low 32 bits as signed i32; signe
 | body page/allocations | prepared dimensions/slots; supplied successful allocation when required | logical page; dimensions u8 | 13 by 1; only slot 3 contributes; no safe allocator-failure fallback |
 | torso/class/record | body slot 3; prepared items collection | class u32; optional record | Out-of-range class gives absent record; valid class needs present collection |
 | speed | items record speed | i32 | Torso weight |
-| percent p | stat 154 item_staminadrainpct, layer 0 | i32 getter result | RLI-R02a/RLI-R02b result used unchanged |
-| post-add stamina | stat 10 stamina, layer 0 | i32 getter result | Read after addition request; positivity decides return |
+| percent p | stat 154 item_staminadrainpct, layer 0 | i32 getter result | RLI-R02a unit read `Stat(unit,154,0)` then RLI-R02b; result used unchanged |
+| post-add stamina | stat 10 stamina, layer 0 | i32 getter result | RLI-R02a unit read `Stat(unit,10,0)` then RLI-R02b, after addition request; positivity decides return |
 | inner replacement result | supplied result from the list replacement operation | i32 | Unit wrapper requests tracking exactly when nonzero and unit is player; this is distinct from the whole wrapper's ignored return |
-| stat definitions/arrays | RLI-R02a/RLI-R02b | existing ordered arrays/definitions | Select own/resolved arrays, without building/summing contributions |
+| stat definitions/arrays | RLI-R02a/RLI-R02b | existing ordered arrays/definitions | Both drain reads are the unit read (resolved array when the unit's list uses resolved stats, else own array), not the own-array list read; no building/summing contributions |
 | own stat list | supplied current-unit own-list presence/identity | logical list or absent | Mutation wrappers forward to this list; actual storage/propagation remains SDR-Q02 |
 | events/callbacks | lists, type, frame, target, A/B, direct callback, running/removal conditions | logical; type u8, frame i32 | Supplied frame-event traversal boundary |
 | handler result | selected mode handler | supplied i32 | Exactly 2 requests mode-end processing |
@@ -82,7 +82,7 @@ Named cells and profile limits are in the [companion](../research/spec-evidence/
 
 **SDR-R06** Weight [verified in 1.13c code (static)]. Look up present torso class by unsigned class<count. Out-of-range class gives absent record. Valid class requires present collection; missing collection is fatal rather than absent-record return. Present record: `m=low32(trunc(speed/10)+1)`; `w=low32(w*m)`. Absent item/record leaves w unchanged. Speeds 0/5 give multiplier 1, 10 gives 2, -10 gives 0.
 
-**SDR-R07** Percent [verified in 1.13c code (static)]. Read stat 154/layer 0. If p!=0, `product=i32(low32(p*w))`; `w=i32(low32(w+trunc(product/-100)))`. Otherwise skip adjustment. Product wraps before division; p>=100 does not universally imply floor after overflow.
+**SDR-R07** Percent [verified in 1.13c code (static)]. Read stat 154/layer 0 through the RLI-R02a unit read and RLI-R02b. If p!=0, `product=i32(low32(p*w))`; `w=i32(low32(w+trunc(product/-100)))`. Otherwise skip adjustment. Product wraps before division; p>=100 does not universally imply floor after overflow.
 
 **SDR-R08** Minimum [verified in 1.13c code (static)]. If signed w<1 set w=1. Final amount is at least one raw unit.
 
@@ -90,7 +90,7 @@ Named cells and profile limits are in the [companion](../research/spec-evidence/
 
 **SDR-R10** Post-add decision (subrules).
 
-- **SDR-R10a** Positive read [verified in 1.13c code (static)]. After R09 read stat 10/layer 0 through RLI-R02a/RLI-R02b. Supplied signed result>0 returns 1 without zero replacement.
+- **SDR-R10a** Positive read [verified in 1.13c code (static)]. After R09 read stat 10/layer 0 through the RLI-R02a unit read and RLI-R02b. Supplied signed result>0 returns 1 without zero replacement.
 - **SDR-R10b** Zero request [verified in 1.13c code (static)]. Supplied post-add result<=0 requests `(unit,stat 10,value 0,layer 0)`, ignores the whole unit-replacement wrapper's return and returns 0. At the separate wrapper-routing stage, forward the replacement to own list. If the supplied inner list-replacement result is any nonzero i32 and unit type is player, request changed-stat tracking for that list/stat/layer; otherwise do not. The wrapper's final numeric return is not used by the drain and is not equated to its inner result. Actual storage, the producer of the inner result, tracking effects and client delivery remain SDR-Q02/SDR-Q03; no notification default prescribed.
 
 **SDR-R11** Walking transition [unresolved]. R01f establishes mode-2 request. Transition consults town status to select Town Walk 6 or Walk 2, performs path/skill preparation and branches on continuation condition. Complete stop branch/mode setter/event removal/registration/path outcomes/messages remain SDR-Q04. Drain return 0 alone does not prove final mode. New Run refusal at zero belongs to player-mode transitions.
@@ -325,7 +325,7 @@ Each has a [companion procedure](../research/spec-evidence/player-stamina-drain-
 
 Partial acceptance requires verified arithmetic/supplied lookup/control/ordered requests in SDR-V01..SDR-V12 including every case. Fixture stamina is not original storage. SDR-R01d/SDR-R11 remain unresolved. Full reproduction needs SDR-Q01/SDR-Q02/SDR-Q03/SDR-Q04/SDR-Q07 integration, writer/scheduling relation SDR-Q06, profile qualification/matching observations SDR-Q05. A supplied subset/table read never establishes complete parity.
 
-**Depends on:** [NRF](core-numeric-and-rng-foundations.md) NRF-R08a units, NRF-R09a rate, RLI-R02a/RLI-R02b existing-array reads, RLI-Q03 writes; [GDF](core-game-data-fields.md) GDA-R06a/GDF-R02/GDF-R05a class/stat/mode names/fields; [STL](state-timed-state-lifecycle.md) STL-R06c write integration; [MIR](missile-initialization-and-registry.md) MIR-R01b fresh event association/MIR-Q01 limits. Complete player-mode/frame-event/additive/network contracts remain named gaps. Owners of the cited GDA, RLI ids: [core-game-data-table-records](core-game-data-table-records.md) (GDA); [core-record-layouts-and-ids](core-record-layouts-and-ids.md) (RLI).
+**Depends on:** [NRF](core-numeric-and-rng-foundations.md) NRF-R08a units, NRF-R09a rate, NRF-Q02 live rate; [RLI](core-record-layouts-and-ids.md) RLI-R02a unit read/RLI-R02b existing-array reads, RLI-Q03 writes; [GDF](core-game-data-fields.md) GDF-R02/GDF-R05a stat/mode identities; [GDA](core-game-data-table-records.md) GDA-R06a class fields; [STL](state-timed-state-lifecycle.md) STL-R06c write integration; [MIR](missile-initialization-and-registry.md) MIR-R01b fresh event association/MIR-Q01 limits. Complete player-mode/frame-event/additive/network contracts remain named gaps.
 
 **Depended on by:** candidate player-mode behavior consumes drain return/Walk request; candidate regeneration accounts for this consumer; candidate stat-update behavior consumes resulting changes. These are relationships, not delivery prerequisites/completed contracts.
 

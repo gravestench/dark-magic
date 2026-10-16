@@ -803,3 +803,54 @@ CSA-R13 owns; STL-R09's sentence "A changed expiry requests another type 12 even
 also requests type 12 at a retained expiry (CSA-R08); the movement/freeze spec restated the CSA cold-effect, routing, length and refresh
 rules in full rather than only consuming them (no value conflict found; resolved by the
 2026-10-15 restructure, which now cites CSA-R01, CSA-R02, CSA-R05 to CSA-R09 and CSA-R13); LSE cites CSA-Q06 for its own difficulty range.
+
+## Restructure delta checks (2026-10-15)
+
+Context: the 2026-10-15 restructure split core-numeric-and-rng-foundations (RLI), core-game-data-fields
+(GDA), renamed combat-leech-and-status-effects to combat-leech-and-drain (mana drain now LSE-R15) and
+renumbered the movement/freeze spec (freeze expiry callback now MMF-R09b). CSA rules did not change; only cross-spec
+citations were remapped. Before dispatch the remap was checked against the split maps and the current
+owning specs. Fixes made before the first reader run: section 9 "Depends on" had an owner sentence
+inserted mid-clause and listed GDA ids under the core-game-data-fields link (rewritten with separate
+RLI and GDA owner links); `NRF section 3.2` (damage record) and `NRF section 3.4` (unit types) were not
+remapped (now RLI sections 3.1 and 3.3); section 1 still placed stat reads and state routing in the
+foundations spec (now core-record-layouts-and-ids); section 10 gained the RLI and GDA entries. All
+were reference edits; no rule behavior, input or vector changed, so delta checks apply.
+
+Run D1 (delta, Sonnet, all 15 vectors / 113 cases recomputed against the current dependency specs):
+MISMATCH 0, GUESS 2, GAP 7, DISCRIM 0, GATED 6, HARDEST 3.
+
+| Entry | Outcome |
+|---|---|
+| GUESS: list flags 2 / attach mode 1 values not in STL | No change: CSA section 3 mapping table defines both as engine constants; vectors pass them as opaque arguments to supplied operations. |
+| GUESS / GAP / HARDEST: head-first node linking attributed to STL-R01, which does not state it | Spec edit: CSA-R11 prose and the section 8 Schedule fixture now attribute head-first linking to the original scheduler with a link to the CSA-R11 correction record above (asm `0x8E680`). Cross-spec: STL-R01 should state head-first linking; left to its owner. |
+| GAP: timer kinds 2/3 handlers attributed to STL-R01/STL-R03 | Spec edit: mapping row now says scheduling STL-R01, kind-12 handler STL-R03, kind-2/kind-3 handlers not specified by the lifecycle (DPO-R28b, DPO-Q13; DPO-R19c) and gated by CSA-Q02. |
+| GAP: GDA-R16 cited for `boss`/64 | Spec edit: MonStats row cites GDA-R08a; GDA-R16 (a correct remap of the old flag-test rule, which never covered `boss`) removed from the row and from section 9. recordGate's 64 stays a CSA engine constant. |
+| GAP: divisor table-record link pointed at the GDF companion | Spec edit: now `core-game-data-table-records.md#named-cell-records`. |
+| GAP: header "Foundations: NRF; names: GDF" stale | No change: the split map keeps header lines by convention; RLI and GDA are linked in sections 1, 9 and 10. |
+| GAP: bare family ids GDF-R05, GDF-R06, GDA-R08, GDA-R09 | Spec edit: GDF-R05a, GDF-R06a, GDA-R08a, GDA-R09a and GDA-R09b (index bounds). |
+| GAP: `ColdEffect` vs `coldeffect` case and signedness | Spec edit: MonStats row cites GDA-R03c (case-insensitive header comparison) and states the signed i8 reading is CSA's (GDA-R08a leaves signedness to the consumer). |
+| HARDEST: CSA-V03 seed chain; CSA-V11 (a)/V12 (c) chain walks | No change: recomputed without mismatch. |
+
+Run D2 (delta over the edits above; 87 cases recomputed): MISMATCH 0, GUESS 0, GAP 0, DISCRIM 1; all
+seven changes confirmed resolved.
+
+| Entry | Outcome |
+|---|---|
+| DISCRIM: CSA-V09 / CSA-R06: MonStats2 indexed by class id instead of `MonStatsEx` accepted (all vectors use class 0, `MonStatsEx` 0, count 1) | Spec edit: added CSA-V09 (p) (class 1, `MonStatsEx` 0, record 0 `deadCol` true, record 1 false: state 107 off) and (q) (out-of-range index: state 107 on), with Discriminates clauses. Values follow from the verified CSA-R06 (`0x13B0`, MonStats2 test through MonStatsEx). |
+
+Run D3 (delta, CSA-V09 (p)/(q)): MISMATCH 0, GUESS 0, GAP 0, DISCRIM 1.
+
+| Entry | Outcome |
+|---|---|
+| DISCRIM: CSA-V09 (q): class-id, clamp, modulo-wrap and record-0 fallbacks accepted (record 0 `deadCol` false); negative index unexercised | Spec edit: (q) now sets record 0 `deadCol` true; added (r) `MonStatsEx` -1 (state 107 on). |
+
+Run D4 (delta, CSA-V09 (p)/(q)/(r)): MISMATCH 0, GUESS 0, GAP 0, DISCRIM 1; both prior findings resolved.
+
+| Entry | Outcome |
+|---|---|
+| DISCRIM: CSA-V09 (r): unsigned reading of `MonStatsEx` accepted | No change to vectors (equivalent): -1 read unsigned is 65535, also out of range for any MonStats2 table of at most 32767 records; GDA-R08a owns the signed i16 reading. A Discriminates clause now states this equivalence (wording only). |
+
+Outcome: final run D4 has MISMATCH 0 and no unresolved GUESS, GAP or DISCRIM. Four reader runs were
+made in this task (the cap). Lint: 0 errors, 0 warnings.
+

@@ -250,3 +250,43 @@ Migration self-review on 2026-10-15 checked scope, semantic fields, one-label su
 After three full passes with MISMATCH 0, a fresh fourth reader checked all eight changed cases: V01(d), V10(a), V11(a), V12(o), and V13(a/d/l/m). Counts: MISMATCH 0, GUESS 0, GAP 0, DISCRIM 0. All named findings were resolved. The exact attacker-before-defender effect order, selector-zero suppression despite positive rates, fallback rate 252 versus 253 and event ordering, quantity cap across two ticks, skill no-scheduling and stack/no-qualification branches, and pre-draw guards were independently recomputed. Existing equal-maximum cases V13(i/j/k) remained unchanged.
 
 No rule, ownership, gate or acceptance boundary changed after FULL3. The final applicable reader condition is met; documented gates and observation limits remain, and status stays draft. A punctuation-only repair made the two arrows in V12(o) explicit after the reader without changing inputs, request order or outputs. No gameplay observation, implementation test, implementation plan or user approval is implied. The complete delta report is retained privately.
+
+### Post-restructure reference check, 2026-10-15 (DELTA5-DELTA8)
+
+The 2026-10-15 split of core-numeric-and-rng-foundations (new RLI owner) and core-game-data-fields (new GDA owner), and the skill-calc-expressions rename, remapped this spec's cross-references only. Every mechanical remap matched the split maps (stat reads→RLI-R02a/RLI-R02b, mode set and list processing→RLI-R04/RLI-R04a/RLI-R04b, replacing-write gate→RLI-Q03, calc fields→GDA-R11a, item-type identity/schema→GDF-R07/GDA-R14, SCX-R11 unchanged in skill-calc-expressions). Four delta reader runs (Sonnet, current dependency specs only) checked that each cited id resolves to the contract the citing text needs and that the vectors still execute. No rule behavior, input, ownership, gate or acceptance boundary changed, so delta checks applied. Pre-run reference fix: the section 3 "Neutral name" citation moved from RLI-R04 (which names no mode) to GDF-R05a, with the mode set cited as RLI-R04a.
+
+**DELTA5.** Counts: MISMATCH 5 (all citation contracts; 0 vector mismatches, every DUR-V01..V13 case recomputed to its stated value), GUESS 7, GAP 3, DISCRIM 6, GATED 16, COVERAGE 3, HARDEST 3.
+
+| Finding | Disposition |
+|---|---|
+| MISMATCH1: NRF-R06a owns only /100 and /128 idioms, not general truncation/wrapping | Spec edit: section 3 and Depends on cite the NRF section 1 notation conventions |
+| MISMATCH2: RLI-R04b is mode-bound list processing, not the DUR-R10 inventory scan | Spec edit: Depends on cites RLI-R04a (mode set) with its internal RLI-R04b and states the DUR-R10 scan is owned here, gated by DUR-Q07. Wording carried over from the pre-split citation; remap itself correct |
+| MISMATCH3: GDF-R07 identifies only Gold/Any Shield, not types 45/50 | Spec edit: GDF-R07 removed; 45/50 cited to DPO-R24a and engine code; GDA-R14 kept for Throwable. Carried over from the pre-split citation; remap itself correct |
+| MISMATCH4: SCD-R05a does not bind selector 7 | Spec edit (wording only): SCD-R05a cited for start-table dispatch; the selector 7 binding is this spec's evidence (DUR-Q03, Search records) |
+| MISMATCH5: GDA/RLI ids listed under GDF/NRF links | Spec edit: every id regrouped under its owning link |
+| GUESS1: R10 mode request versus RLI-R04a internals | No change: fixtures log the request only; mode effects are RLI-Q02/RLI-Q03 and DUR-Q07 |
+| GUESS2: RLI-R02b minimum adjustment on real stats | No change: vectors supply read results; the read contract is owned and discriminated by RLI-V02/RLI-V03 |
+| GUESS3: calc evaluation may draw | No change: section 2/R13a receive evaluated `calc2`/`calc3`; evaluation and draws are SCX-owned |
+| GUESS4: V10(b) entry point | No change: "independent fallback stage" with "Draws: none" is explicit; FULL1-FULL3 read it identically |
+| GUESS5: scan fixture defaults | No change: fixture defaults are stated in section 8 |
+| GUESS6: type tests as supplied booleans | No change: stated in R05; producer DUR-Q06 |
+| GUESS7: due ticks supplied by harness | No change: scheduler delivery gated by DUR-Q04 |
+| GAP1/GAP2: weapons/armor/misc fields and stat ids have no dependency owner | No change: they are this spec's section 3 inputs with companion table records; not changed by the restructure |
+| GAP3: selector 7 owner | Same as MISMATCH4 |
+| DISCRIM1: unconditional Neutral at scan start | Spec edit: V10(d) player scan with no match requires no mode/break request |
+| DISCRIM2: scan on non-player owner | Spec edit: V10(e) non-player owner scan requires no requests |
+| DISCRIM3: ignoring RLI-R02b or wrong layer | No change: owning contract's RLI-V02/RLI-V03 discriminate it |
+| DISCRIM4: wrong `calc` field or swap | Spec edit: V13(n) caller with distinct evaluated `calc1`..`calc4` |
+| DISCRIM5: throwable tested before armor; weapon threshold for armor+weapon | Spec edit: V05(c) Classic throwable, armor and weapon true, S12 → write 19, seed T12 |
+| DISCRIM6: saturating/64-bit frame sum | No change: NRF section 1 owns low-32 addition; DUR-V11(d) and DUR-V13(k) already reject widened/saturating sums in this spec; near-overflow normalization is scheduler-owned, DUR-Q04 |
+| GATED16 | No change: documented DUR-Q01..Q09, R08b/R09b/R13c/R15, RLI-Q02/Q03, NRF-Q07, DPO-R24b limits |
+| COVERAGE1-3 | No change: advisory; equal-mode branch is RLI-owned, armor+weapon now covered by V05(c), stat 254 cap covered by V11 |
+| HARDEST1-3 | Same as MISMATCH2, MISMATCH3, MISMATCH1 |
+
+**DELTA6.** Counts: MISMATCH 1, GUESS 0, GAP 1, DISCRIM 1. All V05(a-c), V10(a-e), V13(a-n) recomputed exactly. MISMATCH: NRF-R06a remained cited but unused → spec edit, removed. GAP: item-record columns unowned → no change (as GAP1 above). DISCRIM: V13(n) accepted `calc4`=8 as chance → spec edit, `calc4`=1 (rejects `calc4` as chance or amount, `calc1` as amount, swap).
+
+**DELTA7.** Counts: MISMATCH 0, GUESS 0, GAP 0, DISCRIM 1 (plus one non-defect note). DISCRIM: V10(e) accepted a guard excluding only monsters → spec edit, V10(e) adds an object-type (unit type 2) owner scan.
+
+**DELTA8.** Counts: MISMATCH 0, GUESS 0, GAP 0, DISCRIM 1, COVERAGE 1, HARDEST 1. All changed cases recomputed; all four listed findings resolved. Remaining after the four-run cap: DISCRIM — V10(e) still accepts a guard that excludes monster and object owners but admits missile/item/tile owners (types 3-5); a scan case with such an owner would reject it. Not edited because no further reader run is available in this task; recorded as open. COVERAGE (advisory): DUR-R10's weapon-type and qualification tests have no failing scan entry; no change in this task.
+
+Lint after the final edit: 0 errors, 0 warnings.

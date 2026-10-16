@@ -521,3 +521,29 @@ supplied notification boundary) and the build-equivalence entry (the evidence-bu
 not an open question).
 Their gap-assessment rows above remain as dated assessment records. No rule, vector, label or
 gate changed.
+
+## Blind-implementer DELTA5 and DELTA6 (dependency restructure, 2026-10-15)
+
+The dependency specs were split and renumbered. CBL rules, vectors and outputs did not change;
+only cross-spec citations were remapped. Before the reader ran, two remapping defects were
+corrected: the Depends-on paragraph had an owner sentence inserted mid-sentence, and the
+getter-inputs row still cited the removed NRF section 3.8 (now record-layouts section 3.7).
+
+DELTA5 (fresh reader, current dependency specs) checked every cited dependency id and
+re-executed all 50 cases. Counts: MISMATCH 3 (citations), vector MISMATCH 0, GUESS 1, GAP 2,
+DISCRIM 0, GATED 12.
+
+| List / entry | Outcome |
+|---|---|
+| MISMATCH: boss record cited GDA-R16 (flag-test returns only) | Spec edit: section 3, section 3.1 and Depends-on cite GDA-R08a (MonStats `boss` field, no record for negative/out-of-range index) |
+| MISMATCH: Depended-on-by cited IEP-R12b (recovered bindings) | Spec edit: cites IEP-R12a, whose verified callback catalog links selector 16 to this spec |
+| MISMATCH: Depended-on-by NRF-R04c/NRF-Q04 never name Crushing Blow | Spec edit: reworded as the per-handler draw contracts that include CBL-R03's single draw |
+| GUESS: CBL-R02a names vs DPO-R13a flag wording; outer gate re-test | No change: CBL-R02a states its gates and V13(g) fixes the order; reader confirmed outputs unchanged under either reading |
+| GAP: GDF-R02 does not list ids 136/178 | No change: GDF-R02 states ID equals row index for all rows; section 3.1 names the row/column cells with companion table records |
+| GAP: hireling membership test stated in DPO-R05, not cited | No change: CBL section 3/3.1 states the five-class test itself with its own code evidence; GDF-R08 supplies identities |
+| GATED (12) | No change: existing CBL-Q01/Q03/Q04/Q05/Q07/Q08/Q09/Q10/Q11/Q12 and owner gates (RLI-Q02/Q03, STL-R06b/c, IEP-Q01/Q03, DPO-Q23/Q30, LSE-Q03, NRF-Q04, IEP-Q08) |
+
+DELTA6 (fresh reader) checked the three citation edits, the restructured Depends-on paragraph
+and getter row, and re-executed CBL-V02 plus related boss cases V04/V07. Counts: MISMATCH 0,
+GUESS 0, GAP 0, DISCRIM 0; all three DELTA5 findings resolved. No rule behavior, input,
+ownership or gate changed, so no full run is required. The applicable stopping condition is met.

@@ -219,3 +219,29 @@ The fresh independent reader checked V08(k)/(l), their shared defaults/log notat
 All three HARDEST entries receive no change: V08(k) explicitly retains both persistent entries and continues to F despite direct D returning 2, with no ModeEnd/Remove; V08(l) supplies the mutation and observes J rather than stale F, ending with no saved successor; R01b and V08(g)/(k)/(l) specify callback-time running, post-callback clearing, removal conditions and traversal order. The one reviewed gate remains R01b/Q01: actual recurring population and arbitrary callback mutation producers are unestablished, while supplied-list consumer results are available. No callback fixture verifies its real producer.
 
 Root review read all three documents, all additions and every reader disposition; it separately checked the complete removal image, five-group pump call sequence, additive forwarding target and retained raw arithmetic. The resulting contract has no outstanding blocking reader finding. Document review is complete; draft status, original storage/lifecycle/transition/delivery/profile/observation gaps and maintainer approval remain. No gameplay, implementation tests or new implementation comparison ran. Publication repeats document checks on committed bytes.
+
+### Delta reader passes 5 and 6 after the dependency restructure, 2026-10-15
+
+The 2026-10-15 restructure moved no SDR rule; it remapped cross-spec ids: former GDF R14a to GDF-R05a, former GDF R03a to GDA-R06a, former GDF R11a to GDF-R02, former NRF R12b/R12c to RLI-R02a/RLI-R02b, former NRF Q20 to RLI-Q03, former NRF Q03 to NRF-Q02, former MCI R12b to MIR-R01b and former MCI Q03 to MIR-Q01 (split maps). Root review checked each target in the current dependency specs. Every remap matched the split maps and resolved to the needed contract; none was a renumbering collision. RLI-R02a/RLI-R02b text is identical to the former NRF R12b/R12c.
+
+**Delta pass 5** (fresh Sonnet reader; current SDR, NRF, GDF, GDA, RLI, STL, MIR specs). Counts: MISMATCH 0, GUESS 2, GAP 1, DISCRIM 3, GATED 4, COVERAGE advisory (missing-entry reads, resolved-versus-own selection, fMin on stat 10), HARDEST 3. All foreign ids resolved, including OWD-R11a, STL-R01 and RLI-R04a. All dependent vectors recomputed unchanged.
+
+| Finding | Outcome |
+|---|---|
+| GUESS 1: R07/R10a do not say unit read `Stat(unit,...)` or own-array list read `GetStat(list,...)` | Spec edit (wording/binding, no behavior change). SDR-R07, SDR-R10a and the percent, post-add and stat-array input rows now name the RLI-R02a unit read and then RLI-R02b. Verified 2026-10-15 by original-image disassembly: D2Common `0x38B70` (#10973) and `0x39430` (#10910) load the unit's list (+0x5C), check the id against the definition count, and call `0x38A80`. That function selects the +0x48 array when list flag bit 31 is set and the +0x24 array otherwise, then applies the fMin/owner-type/MinAccr replacement. This is RLI-R02a's unit read plus RLI-R02b |
+| GUESS 2: whether fMin/MinAccr apply to stat 10/154 | No change. The drain consumes the RLI-R02b result unchanged, and vectors supply getter results. Minimum behavior is owned by RLI-R02b/RLI-V03 |
+| GAP 1: GDF-R02's table does not list 154 item_staminadrainpct | No change. This predates the restructure (former GDF R11a had the same scope). GDF-R02 fixes ID = row index, and vectors use numeric 154. The name is a companion named cell, so it is naming only |
+| DISCRIM 1: own-array list read still passes | Resolved by the GUESS 1 edit. RLI-V02 discriminates the unit read from the list read in the owning contract |
+| DISCRIM 2: missing 154 entry treated as error | No change. Owned by RLI-R02a; RLI-V02 discriminates the missing entry (returns 0, no minimum) |
+| DISCRIM 3: R01d registration by reusing the MIR-R01b association | No change. SDR-R01d is unresolved under SDR-Q01, has no vector by design, and expressly says MIR-R01b does not establish recurring dispatch |
+| HARDEST 1-3 (unit/list read; minimum on stamina; reach of MIR-R01b) | First resolved by the edit; second and third as GUESS 2 and DISCRIM 3 |
+
+Also: the Depends-on line now links RLI, GDA and MIR ids to their owning specs and adds NRF-Q02 (link/wording only).
+
+**Delta pass 6** (fresh Sonnet reader on the edited contract). Counts: MISMATCH 0, GUESS 0, GAP 0, DISCRIM 1 advisory, GATED 7 questions plus R01d/R11, COVERAGE 2, HARDEST 3. The reader confirmed that all three no-change items and the GUESS 1/DISCRIM 1 resolution hold. It recomputed V01-V07 and V09-V12 with no difference. Outcomes:
+- Advisory DISCRIM (no SDR vector separates the unit read from the list read, or applies the minimum to stat 10): no change, because RLI-V02(a)/(c) and RLI-V03 discriminate these in the owning contract.
+- The stat-154 name note: as GAP 1 above.
+- COVERAGE (non-player stat-154 owner; class 7 with a present unit): no change, because they are outside the running-player consumer and V11 covers out-of-range classes.
+- HARDEST (V07c wrap, V05 tracking guard, V08 traversal): no change, because each is already stated and has a discriminating vector (FULL3 triage).
+
+Final applicable run: MISMATCH 0, with no unresolved GUESS, GAP or DISCRIM. Lint: 0 errors, 0 warnings.

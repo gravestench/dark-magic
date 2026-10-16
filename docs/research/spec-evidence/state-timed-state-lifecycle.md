@@ -422,3 +422,109 @@ Sonnet reader, same file set and restrictions, changed material STL-V04 only. Bo
 | DISCRIM V04 strict `<` due test accepted | No change: STL-V03 frees B with expiry 1050 at now 1050, which rejects a strict comparison |
 
 Outcome: the final applicable run (8) returned MISMATCH 0 and no unresolved GUESS, GAP or DISCRIM. The blind-implementer pass for the current contract is complete; COVERAGE entries and documented gates remain as recorded.
+
+### Restructure reference check and reader runs 9-12, 2026-10-15
+
+Trigger: the 2026-10-15 spec split remapped this spec's cross-spec references (NRF to RLI, GDF to GDF/GDA, MMF cold/freeze to CSA, skill-calc-expressions-and-synergies to skill-calc-expressions, the neutral death-condition name to the shared `aliveExclusionCondition`). Every remapped id was checked against the per-spec id maps and the owning specs before run 9; all mapped to the contract the rule needs. Citation-only fixes: section 9 Depends on links each id under its owning spec (RLI and GDA separately); the `removeOnModeChange` row names RLI; section 10 links core-record-layouts-and-ids.
+
+Original-code readings for triage (hash-matched 1.13c listings, read directly; no value taken from a reader report or memory):
+
+- D2Game+0x75350: the boss argument is the result of #10064/+0x1A550 on the class-bounds-checked MonStats record and the unit. The CSA companion identifies #10064 as `recordGate` (CSA-R02: 64 when `boss` is set, else 0). STL-R13a and STL-V19 state selector 0/64; player death passes 0.
+- D2Common+0x34150: the changed array is addressed from the active array's storage pointer plus the word count, so the two arrays are present or missing together (STL-R13b wording).
+- D2Common+0x3AD60: the owner test is an exact comparison with 4; STL-V19(e) added.
+- D2Game+0x29240: the duration evaluator receives the caster argument, the `auralencalc` reference, skill identity and level, before the state lookup; a missing caster is passed as null. Allocation passes list flags 2 (timed only). The attach result is discarded. State-on and forced-changed requests pass 1. The pet request follows passive refresh for a non-null type 0 target on both paths. STL-R10a wording, STL-V07(e) and evaluation logs, STL-V18(i) and level 3 added.
+- D2Game+0x769A0: event types 3..12 index a byte table whose entries for 3, 4, 5, 8 and 12 go directly to the type handler; other types first call an imported state test (state 1) and a further check that can drop the event. STL-R03 wording and STL-V16(g) added.
+- D2Game+0x8EBC0: in the slot loop only an event whose frame equals the game frame fires, and the record is released after the handler returns on both override and no-override paths (STL-V02 event 986, STL-V16(g)).
+- D2Game+0x8EA80 and +0x8E680 (requested by the coordinator for CSA-R11): requested frame -1 takes the immediate-path call and returns. Otherwise +0x8E680 allocates the node and links it at the head of the unit's event chain (node next = old head, old head previous = node, unit head = node); a null unit records type 6/id -1. A type 2 request for a type 1 unit holding state 54 makes one extra call first (CSA-Q02). STL-R01 states head-first linking; STL-V01(f) and (g) added.
+- D2Common+0x3AE60 (RLI-R04b) tests base-list flag bit 2, the bit the expiry setter sets as `timed`. Section 3 states `timed` is RLI's `expiryFlag` and `hasStateStorage` is RLI's `usesResolvedStats` (wording only).
+
+| Run | Kind | MISMATCH | GUESS | GAP | DISCRIM |
+|---|---|---|---|---|---|
+| 9 | delta (remapped references and the vectors that consume them) | 2 | 2 | 0 | 5 |
+| 10 | full (after STL-R11 cold ownership and STL-R13a selector edits) | 4 | 6 | 8 | 7 |
+| 11 | full (after STL-R03, STL-R10a, STL-R13a, STL-R13b edits and new cases) | 0 | 4 | 10 | 6 |
+| 12 | full (after the STL-R01 head-first edit) | 1 | 9 | 7 | 6 |
+
+Run 9 outcomes:
+
+| Entry | Outcome |
+|---|---|
+| MISMATCH NRF-R09a cited for frames | Spec edit: removed from Depends on; no rule consumes the frame-rate helper |
+| MISMATCH RLI-Q02 scope | Spec edit: gate text reads changed-state/update-queue effects |
+| GUESS cold callback steps | Spec edit: STL-R11 defers the cold callback to CSA-R13 (no timer cancellation, passive or pet request) |
+| GUESS boss raw value | Spec edit after the +0x75350 reading: selector 0/64 through CSA-R02 |
+| DISCRIM V07(c) strict comparison | No change: owned by CSA-R05 with CSA-V08 |
+| DISCRIM cold branch of STL-R11 | No change: owned by CSA-R13 with CSA-V15 |
+| DISCRIM lookup order and range | No change: owned by RLI-R03 with RLI-V05 |
+| DISCRIM boss column | Resolved by the recordGate citation; CSA-R02's vector reads `boss` |
+| DISCRIM V14 selector 1 for a player | No change: V14(h) shows precedence |
+| HARDEST (3) | No change |
+
+Run 10 outcomes:
+
+| Entry | Outcome |
+|---|---|
+| MISMATCH SCX-R11 versus SCX-R24 | No change: STL calls SCX-R11's skill front end; SCX-R24 covers nested column references |
+| MISMATCH CSA-R13 statement about STL-R05 | No change: CSA wording about gated STL-R05 (STL-Q07) |
+| MISMATCH hasStateStorage versus usesResolvedStats | Spec edit: naming note in section 3 |
+| MISMATCH unused RLI-R02a, NRF-R09a | Spec edit: removed from Depends on |
+| GUESS evaluation context | Spec edit: STL-R10a names (caster or null, skill, level) |
+| GUESS player partition false | Spec edit: selector 0 |
+| GUESS hasStateStorage name | Spec edit: as above |
+| GUESS STL-R07 update marking | No change: already stated |
+| GUESS nonterminating loop handling | No change: rule text and STL-Q05 |
+| GUESS secondary-chain hit in STL-R10a | No change: follows RLI-R03 |
+| GAP immediate-path details | No change: gated STL-R02a |
+| GAP removeOnModeChange unused locally | No change: consumed by RLI-R04b |
+| GAP missing skill record input | Spec edit: section 3 application inputs |
+| GAP STL-R06c old value | No change: gated |
+| GAP word layout | No change: membership words are the contract |
+| GAP stat 6 write | Spec edit: replacing unit-stat write, `hitpoints` by GDF-R02 |
+| GAP unit type numbering | Spec edit: RLI section 3.3 |
+| GAP monster validity test | Spec edit: STL-R03 |
+| DISCRIM evaluation after checks | Spec edit: V18 evaluation log |
+| DISCRIM attach result ignored | Spec edit: V18(i) |
+| DISCRIM monster bypass | Spec edit: V16(g) |
+| DISCRIM one array missing | No change: the arrays are one storage (+0x34150 reading) |
+| DISCRIM owner type 4 | Spec edit: V19(e) |
+| DISCRIM on=5 | No change: RLI-V05(l) |
+| DISCRIM removal after group handler | Spec edit: V16(g) |
+| HARDEST (3) | No change |
+
+Run 11 outcomes:
+
+| Entry | Outcome |
+|---|---|
+| GUESS initial list conditions | Spec edit: timed is the only allocation condition |
+| GUESS V07 evaluation | Spec edit: V07 evaluation log |
+| GUESS handler arguments | No change: not asserted by this contract |
+| GUESS player death type check | No change: operation chosen by its caller (stated) |
+| GAP sentinel 6/-1 | Spec edit: engine code |
+| GAP evaluation log not in section 5 | Spec edit |
+| GAP timed versus expiryFlag | Spec edit after run 12 (wording) |
+| GAP V05 gated model, V07(c), word view, monster gate condition, queue hook, V04 supplied list, types 13/14 | No change: gated, deliberate fixture capability, or outside this contract |
+| DISCRIM frame <= now | Spec edit: V02 event 986 |
+| DISCRIM skill/level swap | Spec edit: V18 level 3 |
+| DISCRIM pet request on existing-list path | Spec edit: V07(e) |
+| DISCRIM frame -1 | Spec edit: V01(f) |
+| DISCRIM V09 value/layer | No change: both 0, already stated |
+| DISCRIM on=5 | No change: RLI-V05(l) |
+| HARDEST (3) | No change |
+
+Run 12 outcomes:
+
+| Entry | Outcome |
+|---|---|
+| MISMATCH `timed` versus RLI `expiryFlag` | Spec edit, wording only (+0x3AE60 reading); exempt from a rerun |
+| GUESS countdown on untimed lists, negative duration, type 8/9 requests, item/missile dead, lookup without base, target without storage, mask length | No change: already stated in STL-R04, STL-R10a, STL-R13a, STL-R11, or owned by RLI-R03 |
+| GUESS immediate firing | No change: gated STL-R02a |
+| GUESS STL-R10a `on` value | Open: value 1 confirmed at +0x29240; edit not made after the final run |
+| GAP monster gate, handler tables, queue hook, target id, missing record, short masks | No change: outside this contract, fixture capability, or advisory |
+| DISCRIM V03, V09/V19 secondary chains | Open: add a due timed secondary list that is neither visited nor freed |
+| DISCRIM V07/V18 evaluation before lookup | Open: log the lookup and assert evaluation precedes it |
+| DISCRIM V13 successor save | Open: let release clear A's link |
+| DISCRIM V06 on=5 | No change: RLI-V05(l) |
+| DISCRIM V15/V08 | None found |
+| HARDEST (3) | No change |
+
+All executable vectors, including the new cases, recomputed without difference in runs 11 and 12. The four-run cap for this task was reached with the open items above, so the blind-implementer pass for the current contract is not complete. These need spec edits and a further reader run.

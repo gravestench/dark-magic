@@ -57,7 +57,7 @@ is a replacing unit-stat request, not an established stored effect (CBL-Q10/RLI-
 | Event id | Supplied item event | i32: 5 `domeleedamage`, 6 `domissiledamage` | only id 6 doubles divisor |
 | Defender type/class | Logical type and class | u32 type; i32 class | type 0 player, 1 monster |
 | Hireling membership | GDF-R08 class identities; engine membership test | boolean | monster classes 271 `roguehire`, 338 `act2hire`, 359 `act3hire`, 560 `act5hire1`, 561 `act5hire2`; false for non-monster |
-| Boss record/value | Loaded MonStats class record/count, GDA-R16/GDA-R04a | optional record, boolean `boss` | false for missing/out-of-range class record |
+| Boss record/value | Loaded MonStats class record/count, GDA-R08a/GDA-R04a | optional record, boolean `boss` | false for missing/out-of-range class record |
 | `monsterDivisorFlag` | Supplied monster-data condition | boolean | false for non-monster/absent monster data; assignment remains CBL-Q01 |
 | Player count | Defender stat 100 `monster_playercount`, layer 0 | signed i32 | caller floors to 1, no upper cap |
 | Bonus table | CBL-R05 engine constants | nine i32 entries indexed 0..8 | `{0,0,50,100,150,200,250,300,350}` |
@@ -69,7 +69,7 @@ is a replacing unit-stat request, not an established stored effect (CBL-Q10/RLI-
 | Registration/data | IEP-R01/R02/R03/R05/R07 and GDA-R12 | ordered entries, event/selector fields | item kind, identity, handler and callback values |
 | Overlay id/count | Fixed request id 147 (`0x93`); supplied `overlayCount` | signed i32 | LSE-R13 guard; original count identity remains CBL-Q04 |
 | Overlay list inputs | LSE-R13/STL-R06a | pool/type/id, optional base list, primary chain and conditions | selection/creation requests; stored effects remain CBL-Q09 |
-| Getter inputs | NRF section 3.8, RLI-R02a/RLI-R02b | definitions/minimum metadata, existing ordered arrays | missing definitions/entries/list follow getter guards |
+| Getter inputs | [record layouts](core-record-layouts-and-ids.md) section 3.7, RLI-R02a/RLI-R02b | definitions/minimum metadata, existing ordered arrays | missing definitions/entries/list follow getter guards |
 | Write operations | Replacing unit write; LSE-R13 attach/list-write/update operations | ordered requests | actual effects separately gated |
 
 ### 3.1 Origin and binding of mappings and constants
@@ -95,7 +95,7 @@ claimed here. Code consumers remain supported by the companion's source records.
 | Event names and ids | Table data for names/indices; engine code for dispatch | `events.txt`, column `event`, zero-based data rows excluding the header: 1 `damagedinmelee`, 2 `damagedbymissile`, 5 `domeleedamage`, 6 `domissiledamage`. R02a's dispatch selects these ids; R04a doubles the divisor for id 6. |
 | Event registration choices | Table data | `itemstatcost.txt`, row `Stat = item_crushingblow`: `itemevent1 = domeleedamage`, `itemevent2 = domissiledamage`; resolved through the event-name lookup (GDA-R12, IEP-R03). |
 | Crushing Blow handler selection | Table data selecting an engine-defined handler | Same row: `itemeventfunc1 = 16`, `itemeventfunc2 = 16`. Data selects 16; the engine handler mapping supplies its behavior (IEP-R02, IEP-R12). |
-| Class `boss` value | Table data | `monstats.txt`, defender class row identified by `Id`/`hcIdx`, column `boss` (GDF-R08, GDA-R16). Resolved from that record; R04a defines its divisor effect. |
+| Class `boss` value | Table data | `monstats.txt`, defender class row identified by `Id`/`hcIdx`, column `boss` (GDF-R08, GDA-R08a). Resolved from that record; R04a defines its divisor effect. |
 | Hireling classes | Table data for class identities; engine code for membership test | `monstats.txt`, rows `Id = roguehire`, `act2hire`, `act3hire`, `act5hire1`, `act5hire2`, column `hcIdx` (GDF-R08). The original helper recognizes the five listed class ids; a new class is not automatically a hireling. |
 | Divisors 4/8/10, missile factor 2, resistance ceiling 100 | Engine code | Fixed by R04a/R06, not loaded from game-table columns. |
 | Player-count bonus table and formula | Engine code | The constant table and `(n - 2) * 50` branch are fixed by R05; player count itself is an input. |
@@ -491,17 +491,19 @@ identify setup, measurements, original locations and limits.
 Passing verified subsets is partial reproduction. Full original-route reproduction needs its
 applicable integration/producers and observations; no user approval is inferred.
 
-**Depends on:** [numeric foundations](core-numeric-and-rng-foundations.md) NRF-R01/NRF-R05 for Owners of the cited GDA, RLI ids: [core-game-data-table-records](core-game-data-table-records.md) (GDA); [core-record-layouts-and-ids](core-record-layouts-and-ids.md) (RLI).
-RNG/arithmetic, NRF-R08a for units, RLI-R02a/RLI-R02b for existing reads; [game-data fields](core-game-data-fields.md)
-GDA-R12/GDF-R02/GDF-R08/GDA-R16/GDA-R04a for named values/record selection; [item events](combat-item-event-triggers-and-procs.md)
+**Depends on:** [numeric foundations](core-numeric-and-rng-foundations.md) NRF-R01/NRF-R05 for
+RNG/arithmetic, NRF-R08a for units; [record layouts](core-record-layouts-and-ids.md)
+RLI-R02a/RLI-R02b for existing reads; [game-data fields](core-game-data-fields.md)
+GDF-R02/GDF-R08 and [game-data table records](core-game-data-table-records.md)
+GDA-R12/GDA-R08a/GDA-R04a for named values/record selection; [item events](combat-item-event-triggers-and-procs.md)
 IEP-R01/R02/R03/R05/R07 for registration/dispatch; [damage pipeline](combat-damage-pipeline-order.md)
 DPO-R13a/DPO-R23 for placement; [leech/drain](combat-leech-and-drain.md) LSE-R13 for
 overlay requests, consuming STL-R06a/STL-R06b/STL-R06c and RLI-Q02 with their gates. Actual unit
 replacing writes remain RLI-Q03.
 
 **Depended on by:** [damage pipeline](combat-damage-pipeline-order.md) for Crushing Blow effects;
-[item events](combat-item-event-triggers-and-procs.md) IEP-R12b for selector 16's owned behavior;
-[numeric foundations](core-numeric-and-rng-foundations.md) NRF-R04c/NRF-Q04 for the local draw.
+[item events](combat-item-event-triggers-and-procs.md) IEP-R12a for selector 16's catalog entry;
+[numeric foundations](core-numeric-and-rng-foundations.md) NRF-R04c/NRF-Q04, whose per-handler draw contracts include this callback's single draw (CBL-R03).
 Reverse consumers/supporting citations are not automatic planning prerequisites.
 
 ## 10. Related specs

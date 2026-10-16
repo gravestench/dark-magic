@@ -158,3 +158,35 @@ negative-maximum clamp's -100 request all matched. Both targeted findings are re
 No contract change follows this check; the applicable blind-reader review is complete.
 Declared scheduling, cleanup, mutation and observation gaps remain. Synthetic balances
 are fixture results, not original integrated stat writes or gameplay confirmation.
+
+### Delta blind-reader pass 5, 2026-10-15 (after dependency restructure)
+
+Scope: cross-spec citations remapped after the foundations split (RLI) and game-data split
+(GDA); no PMR rule changed. The reader received the spec, both foundations and both game-data
+specs, core-record-layouts-and-ids and state-timed-state-lifecycle. Counts: RESOLVES 15,
+MISMATCH-REF 3, MISMATCH 0 (all V01–V16 cases recomputed against current contracts), GUESS 0,
+GAP 2, DISCRIM 2, GATED 6, HARDEST 3. Every remapped RLI/GDA/GDF/STL id resolves to the needed
+contract; no remap was wrong.
+
+| Finding | Outcome |
+|---|---|
+| MISMATCH-REF GDF-R02 lacks names for stats 9/26/27 | No change: GDF-R02 (pre-split stat-identity rule, same text) owns the row-index identity rule; the spec binds the explicit ids from the cited itemstatcost.txt rows. Pre-existing, unchanged by the remap |
+| MISMATCH-REF GDF-R03 lacks names for states 85/106 | No change: same reason for the states.txt row-index rule GDF-R03 (pre-split text unchanged) |
+| MISMATCH-REF PMR-R04 cites NRF-R01 for notation | Spec edit (citation only): PMR-R04 intro and section 9 cite foundations section 1 notation; NRF-R01 is the LCG rule |
+| GAP stat/state names not in dependency specs | No change: as the two GDF rows above |
+| GAP guarded maximum getter has no dependency analogue | No change: PMR-R03 owns that getter, re-read in full (D2Common 0x390A0) and stated completely |
+| DISCRIM V13(b) accepts skipping the cleanup lookup when maximum is 0 | Spec edit: V13(b) trace/outputs assert one state 106 lookup returning absent, no Detach/Free, no write; V13 cites PMR-R06a. Re-checked D2Game 0x77950 on 2026-10-15: the lookup is guarded only by `max <= current` and `regen > 0` (CMP/JG, TEST/JLE before PUSH 0x6A) |
+| DISCRIM V14(a)/(b) final clamp hides mulDiv branch | No change: the scaled intermediate 655000000 is already asserted |
+| HARDEST V14(c)–(e), V14(a), V06/V15(c) | No change: explicit wrapped, operand-order and captured-value assertions already discriminate them |
+
+Also tightened section 9's bare GDF-R05/GDF-R06 to GDF-R05a/GDF-R06a (death-mode identities).
+
+### Delta blind-reader pass 6, 2026-10-15
+
+The changed V13 expected output required a rerun; no rule behavior, ownership or gate changed,
+so a delta check applies. The fresh reader recomputed V13(a)–(c) and confirmed all three
+pass-5 edits. Counts: MISMATCH 0, GUESS 0, GAP 1, DISCRIM 0. The GAP (V13(b) does not restate
+that a missing list makes HasState 0 and the lookup absent) is no change: the trace now states
+it and RLI-R02a/RLI-R03 own those results. The reader also noted signed comparison appears in
+NRF-R05 rather than section 1; PMR-R04 states signed comparison itself, so no change. The
+applicable blind-reader review is complete for the restructured references.
