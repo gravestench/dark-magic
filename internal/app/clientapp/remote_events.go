@@ -304,6 +304,7 @@ func setSemanticEffect(
 	}
 
 	cue := event.Effect
+
 	_, err := store.Set(entity, map[string]any{
 		"kind":       cue.Kind,
 		"tick":       int64(event.Tick),
@@ -311,10 +312,10 @@ func setSemanticEffect(
 		"overlay_id": cue.OverlayID,
 		"sound":      cue.Sound,
 	})
-
 	if err != nil {
 		return err
 	}
+
 	return setMissileSoundOwner(world, entity, cue.SoundOwnerID)
 }
 
@@ -423,12 +424,16 @@ func setMissileSoundOwner(world *akara.World, entity akara.Entity, id string) er
 		if found {
 			store.Remove(entity)
 		}
+
 		return nil
 	}
+
 	if !found {
 		return fmt.Errorf("remote presentation: missile sound owner component is unavailable")
 	}
+
 	_, err := store.Set(entity, map[string]any{"projectile_id": id})
+
 	return err
 }
 

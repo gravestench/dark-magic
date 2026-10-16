@@ -121,6 +121,7 @@ func TestConnectedMissilesUsePresentationOnlyECSLifecycle(t *testing.T) {
 
 	updated.Position = playeradapter.HUDPosition{X: 11, Y: 20}
 	updated.SoundOwnerID = "projectile:42"
+
 	if err := client.reconcileMissiles(app, []playeradapter.WorldMissile{updated}); err != nil {
 		t.Fatal(err)
 	}
@@ -133,14 +134,17 @@ func TestConnectedMissilesUsePresentationOnlyECSLifecycle(t *testing.T) {
 	if !found {
 		t.Fatal("missile sound owner missing")
 	}
+
 	id, _ := owner.Get("projectile_id")
 	if id != updated.SoundOwnerID {
 		t.Fatalf("missile sound owner = %v", id)
 	}
+
 	updated.SoundOwnerID = ""
 	if err := client.reconcileMissiles(app, []playeradapter.WorldMissile{updated}); err != nil {
 		t.Fatal(err)
 	}
+
 	if owners.Len() != 0 {
 		t.Fatal("legacy correction retained a sound owner")
 	}
@@ -482,17 +486,24 @@ func TestConnectedSemanticEffectPreservesRecordOverlayAndSoundOnly(t *testing.T)
 			currentPosition(engine.World(), entity),
 		)
 	}
+
 	effect.ID, effect.Tick = 51, 12
-	effect.Effect = &playeradapter.SemanticEffectCue{Kind: "missile_spawn", Sound: "fireball", SoundOwnerID: "projectile:42"}
+
+	effect.Effect = &playeradapter.SemanticEffectCue{
+		Kind: "missile_spawn", Sound: "fireball", SoundOwnerID: "projectile:42",
+	}
 	if err := client.reconcileSemanticEvents(app, playeradapter.EventView{
 		Version: playeradapter.EventViewVersion, Tick: 12, FromTick: 0, Events: []playeradapter.SemanticEvent{effect},
 	}, 1); err != nil {
 		t.Fatal(err)
 	}
+
 	if owners.Len() != 1 {
 		t.Fatalf("spawn sound owners = %d", owners.Len())
 	}
+
 	owner, _ := owners.Get(store.Entities()[0])
+
 	id, _ := owner.Get("projectile_id")
 	if id != effect.Effect.SoundOwnerID {
 		t.Fatalf("effect sound owner = %v", id)
