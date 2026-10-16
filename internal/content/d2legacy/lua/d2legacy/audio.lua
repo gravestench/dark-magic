@@ -84,7 +84,8 @@ function M.play_record(name, seed)
     end
     local group = number(row, "Group Size", "GroupSize")
     if group > 1 then row = choose_group(rows, first, group, seed) end
-    return engine_audio.play(asset_path(row), options(row, name, seed))
+    local selected = options(row, name, seed)
+    return engine_audio.play(asset_path(row), selected), selected.loop
 end
 
 return M

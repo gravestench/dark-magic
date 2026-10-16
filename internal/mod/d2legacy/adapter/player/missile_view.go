@@ -5,10 +5,14 @@ import (
 	"math"
 	"sort"
 
+	"github.com/gravestench/akara"
 	gameecs "github.com/gravestench/dark-magic/internal/game/ecs"
 )
 
 const maxMissileAssetBytes = 512
+
+// Generated projectile IDs append cast, tick and instance suffixes to source identities.
+const maxMissileSoundOwnerBytes = 512
 
 // projectWorldMissiles joins live authority with its spatial components and
 // copies only presentation-safe fields. Returning false means the checkpoint
@@ -32,6 +36,11 @@ func projectWorldMissiles(
 	}
 
 	locationByEntity, ok := indexEventComponent(locations)
+	if !ok {
+		return nil, false
+	}
+
+	ownerByEntity, ok := projectMissileSoundOwners(snapshot)
 	if !ok {
 		return nil, false
 	}
@@ -85,6 +94,7 @@ func projectWorldMissiles(
 			}
 
 			entry := WorldMissile{
+				SoundOwnerID:     ownerByEntity[instance.Entity],
 				ID:               fmt.Sprintf("missile:%d", instance.Entity),
 				Kind:             source.kind,
 				MissileID:        stringField(fields, "missile_id"),
@@ -133,7 +143,7 @@ func projectWorldMissiles(
 func validateWorldMissile(missile WorldMissile) error {
 	validDirections := missile.Directions == 1 || missile.Directions == 4 || missile.Directions == 8 ||
 		missile.Directions == 16 || missile.Directions == 32
-	if !boundedRequired(missile.ID, maxWorldIDBytes) ||
+	if !bounded(missile.SoundOwnerID, maxMissileSoundOwnerBytes) || !boundedRequired(missile.ID, maxWorldIDBytes) ||
 		(missile.Kind != "projectile" && missile.Kind != "effect") ||
 		!boundedRequired(missile.MissileID, maxWorldKindBytes) || !boundedRequired(missile.DCC, maxMissileAssetBytes) ||
 		!bounded(missile.Palette, maxMissileAssetBytes) || missile.Act < 1 || missile.Act > maxEventAct ||
@@ -153,4 +163,28 @@ func validateWorldMissile(missile WorldMissile) error {
 	}
 
 	return nil
+}
+
+// projectMissileSoundOwners permits absent sidecars but rejects unreadable present schemas or values.
+func projectMissileSoundOwners(snapshot gameecs.Snapshot) (map[uint64]string, bool) {
+	component, found := findComponent(snapshot, "d2legacy.presentation.missile_sound_owner")
+	if !found {
+		return nil, true
+	}
+	if component.Version != 1 || len(component.Fields) != 1 || component.Fields[0].Name != "projectile_id" || component.Fields[0].Kind != akara.FieldString {
+		return nil, false
+	}
+	fields, ok := indexEventComponent(component)
+	if !ok {
+		return nil, false
+	}
+	owners := make(map[uint64]string, len(fields))
+	for entity, row := range fields {
+		value := row["projectile_id"]
+		if value.String == nil || value.Bool != nil || value.Int != nil || value.Uint != nil || value.Float != nil || value.Entity != nil || !boundedRequired(*value.String, maxMissileSoundOwnerBytes) {
+			return nil, false
+		}
+		owners[entity] = *value.String
+	}
+	return owners, true
 }

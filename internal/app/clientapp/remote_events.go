@@ -312,7 +312,10 @@ func setSemanticEffect(
 		"sound":      cue.Sound,
 	})
 
-	return err
+	if err != nil {
+		return err
+	}
+	return setMissileSoundOwner(world, entity, cue.SoundOwnerID)
 }
 
 // setSemanticMonsterDeath preserves the public death cue while zeroing private reward and loot
@@ -411,7 +414,22 @@ func (client *clientWorld) upsertMissile(
 		}
 	}
 
-	return nil
+	return setMissileSoundOwner(world, entity, missile.SoundOwnerID)
+}
+
+func setMissileSoundOwner(world *akara.World, entity akara.Entity, id string) error {
+	store, found := akara.GetDynamicStore(world, "d2legacy.presentation.missile_sound_owner")
+	if id == "" {
+		if found {
+			store.Remove(entity)
+		}
+		return nil
+	}
+	if !found {
+		return fmt.Errorf("remote presentation: missile sound owner component is unavailable")
+	}
+	_, err := store.Set(entity, map[string]any{"projectile_id": id})
+	return err
 }
 
 // missileComponents maps visual transform and animation data only. Damage, collision, ownership,

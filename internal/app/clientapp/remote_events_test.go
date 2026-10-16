@@ -112,15 +112,37 @@ func TestConnectedMissilesUsePresentationOnlyECSLifecycle(t *testing.T) {
 		t.Fatal("test schema unexpectedly gives connected presentation projectile authority")
 	}
 
+	owners, _ := akara.GetDynamicStore(engine.World(), "d2legacy.presentation.missile_sound_owner")
+	if owners.Len() != 0 {
+		t.Fatal("legacy missile acquired a sound owner")
+	}
+
 	updated := fireball
 
 	updated.Position = playeradapter.HUDPosition{X: 11, Y: 20}
+	updated.SoundOwnerID = "projectile:42"
 	if err := client.reconcileMissiles(app, []playeradapter.WorldMissile{updated}); err != nil {
 		t.Fatal(err)
 	}
 
 	if client.missileEntities[fireball.ID] != entity || currentPosition(engine.World(), entity) != updated.Position {
 		t.Fatalf("missile identity/position was not updated in place")
+	}
+
+	owner, found := owners.Get(entity)
+	if !found {
+		t.Fatal("missile sound owner missing")
+	}
+	id, _ := owner.Get("projectile_id")
+	if id != updated.SoundOwnerID {
+		t.Fatalf("missile sound owner = %v", id)
+	}
+	updated.SoundOwnerID = ""
+	if err := client.reconcileMissiles(app, []playeradapter.WorldMissile{updated}); err != nil {
+		t.Fatal(err)
+	}
+	if owners.Len() != 0 {
+		t.Fatal("legacy correction retained a sound owner")
 	}
 
 	if err := client.reconcileMissiles(app, nil); err != nil {
@@ -439,6 +461,11 @@ func TestConnectedSemanticEffectPreservesRecordOverlayAndSoundOnly(t *testing.T)
 		t.Fatalf("connected effect cues = %d, want 1", store.Len())
 	}
 
+	owners, _ := akara.GetDynamicStore(engine.World(), "d2legacy.presentation.missile_sound_owner")
+	if owners.Len() != 0 {
+		t.Fatal("unowned impact acquired a sound owner")
+	}
+
 	entity := store.Entities()[0]
 	instance, _ := store.Get(entity)
 	overlay, _ := instance.Get("overlay_id")
@@ -454,6 +481,21 @@ func TestConnectedSemanticEffectPreservesRecordOverlayAndSoundOnly(t *testing.T)
 			target,
 			currentPosition(engine.World(), entity),
 		)
+	}
+	effect.ID, effect.Tick = 51, 12
+	effect.Effect = &playeradapter.SemanticEffectCue{Kind: "missile_spawn", Sound: "fireball", SoundOwnerID: "projectile:42"}
+	if err := client.reconcileSemanticEvents(app, playeradapter.EventView{
+		Version: playeradapter.EventViewVersion, Tick: 12, FromTick: 0, Events: []playeradapter.SemanticEvent{effect},
+	}, 1); err != nil {
+		t.Fatal(err)
+	}
+	if owners.Len() != 1 {
+		t.Fatalf("spawn sound owners = %d", owners.Len())
+	}
+	owner, _ := owners.Get(store.Entities()[0])
+	id, _ := owner.Get("projectile_id")
+	if id != effect.Effect.SoundOwnerID {
+		t.Fatalf("effect sound owner = %v", id)
 	}
 }
 
