@@ -1,0 +1,33 @@
+# Gaps: combat-shield-block-and-avoidance
+
+Spec: [Shield block and avoidance](../../specs/combat-shield-block-and-avoidance.md)
+
+## Open evidence gaps
+
+| Gap | Kind | Affects | Blocked assertions / boundary | Missing evidence | Attempted (date, sources, result) | Would close it |
+|---|---|---|---|---|---|---|
+| Passive-stat producers | outside-boundary | SBA-Q01/SBA-R04d | none locally; upstream passive stacking/cap contract | Exact setters and producer policies | 2026-10-13 local D2Game avoidance consumers read; 2026-10-15 re-assessment confirms no local cap and adds supplied 101/99 vector; no complete producer search claimed | Producer contract for the requested passive source |
+| Weapon classifier | integration | SBA-Q02/SBA-R04b/SBA-R04e | Actual classification from equipment/mode; supplied classification 13 branch available | Complete classifier/helper paths | 2026-10-15 full D2Common + 0x43860 listing inspected after wrapper 0x441E0; multiple item/equipment helpers remain unresolved, not assumed defaults | Read exact classifier callees and data consumers |
+| Skill caller policies | outside-boundary | SBA-Q03/SBA-R07b | none locally; upstream skill skip/argument policies | Remaining caller root coverage | 2026-10-13 representative do 46 chain and 29 other callsites recorded; 2026-10-15 reused against updated skill-dispatch/SLD contracts; no global absence claim | Per-caller contracts for acceptance route |
+| PvP caller policies | outside-boundary | SBA-Q04/SBA-R09b | none locally; upstream hostility/PvP routing | Complete upstream policy/caller coverage | 2026-10-13 four local consumers have no extra PvP formula; 2026-10-15 retained supplied hostile/range boundary rather than infer full PvP behavior | Owned upstream hostile/caller contract |
+| Special monster eligibility | behavior | SBA-Q05/SBA-R01b/SBA-R01c | Special classification when NoShldBlock false; supplied result branch available | Complete class/definition selection | 2026-10-15 D2Common + 0x31680 full listing inspected; 0x84C70 token and 0x9240 definition-name lookup unresolved; NoShldBlock path remains independent | Resolve those producers and class-table identity |
+| Pending gameplay | observation | SBA-Q06/SBA-O01..SBA-O06/SBA-O07/SBA-R01d | Runtime confirmation only; all supplied-input checks available | Run/Walk, low Dex, passives, classic scaling and other unobserved branches | Historical 2026-10-12 successful narrow observations reused; 2026-10-13 dead character/prologue refusal preserved; 2026-10-15 migration performs no gameplay campaign | Separately authorized matching original-game observations |
+| Durability attribution | observation | SBA-Q07/SBA-O09 | Subsequent-stage attribution only, not local draw count | Trace identifying extra 3 defender steps | 2026-10-12 observed four total steps after failed block; 2026-10-13 blocked transition one step; 2026-10-15 retained correlation limit against DUR contract | Subsequent durability writer/seed trace |
+| Caller/precondition/owner integration | integration | SBA-Q08/SBA-R05/SBA-R06/SBA-R12/SBA-R13 | Actual remaining roots, hostility/range and owner table lookup; supplied gate/owner consumer results available | Complete missing root/callee contracts | 2026-10-13 dispatch/callsite records reused; 2026-10-15 full D2Game + 0xE0A20 wrapper read confirms valid-link then 0xE03A0; underlying lookup/range predicates remain explicit boundaries | Complete named upstream operation for chosen route |
+| Elemental missile | observation | SBA-Q09/SBA-O10/SBA-R06 | Runtime confirmation only; physical-zero supplied gate available | Physical-zero versus physical control observation | 2026-10-13 argument trace identifies physical field; 2026-10-15 reuses NRF/DPO damage-field contract and preserved vector, not gameplay confirmation | Matching elemental/physical contact observation |
+| Shield selection | integration | SBA-Q10/SBA-R01e/SBA-R01a/HIT-R01b | Actual shield result; supplied shield arithmetic/request available | Slot/candidate population and exclusion semantics | 2026-10-15 D2Common + 0x1FF40/0x23EF0 full listings inspected and original decoding recorded; equipment inputs remain supplied | Complete exact equipment/exclusion producer/consumer contract |
+| Item types/slots | integration | SBA-Q11/SBA-R01e/SBA-R04b | Actual item-type/slot results; supplied matching/fold available | Equivalence closure, secondary type and slot population | 2026-10-13 D2Common + 0x24430 consumer; 2026-10-15 original-image decoding and current GDF/NRF comparison; data producer not established | Exact type-equivalence/equipment contract |
+
+## Implementation gaps
+
+The following findings are preserved from the existing comparison and were not re-audited during behavioral regeneration.
+
+Gap list: original 1.13c behavior versus the implementation, as input for a future plan, not a plan. The Spec rule column names the current rule ids covering each historical subject; numbers quoted inside other cells are the historical numbering.
+
+Source: old section 2 ("What Dark Magic already has"), the "Matches the repo's implemented assumption" note in old 3.0, and old sections 6-7. Original status of all 1.13c rules below: verified in 1.13c code (static) unless noted.
+
+| # | Spec rule | Repo file/function/doc (as named in old spec) | Current repo behavior | Original (1.13c) behavior | Verified/gated |
+|---|-----------|-----------------------------------------------|-----------------------|---------------------------|----------------|
+| 5 | SBA-R01a–SBA-R06 (block/avoid outcomes) | `d2legacy.combat.attack_result`; `docs/research/COMBAT_DAMAGE_AND_DEATH.md` section "Hit chance, block, dodge, and avoidance" | Melee impacts compose `attack_result` with outcomes `hit`, RNG `miss`, `invalidated`. No `block` / `avoid` outcome yet; record is the intended home for them. | Block and avoid are separate outcomes, mutually exclusive, ordered after the hit roll (spec rules 5-9). | Verified (static) |
+| 6 | Section 6 observation matrix / vectors | `internal/dev/tools/defense_outcome_probe`; template `docs/research/probes/defense-outcome-lod-114d-expansion.template.json` | Matched controls, outcome/reaction/health consistency, Wilson intervals; accepts only patch `1.14d`; rejects 1.13c, so 1.13c observations cannot be recorded until 1.13c is added as an accepted patch (see README). | n/a (tooling constraint) | n/a |
+| 7 | Old section 6 "Done" checklist and old header | Issue #381 (ordering part of #383); README conventions | Checklist items: observation matrix populated (open), one boundary vector per rule verified at runtime (open), #381 links spec and lists ready-to-implement rules vs 1.14d checks (open; all rules 1.13c-only). | n/a (process content) | n/a |
