@@ -21,6 +21,7 @@ return test.suite({
                             },
                             {
                                 Sound = "menu_alt",
+                                Loop = "1",
                                 FileName = "ui/two.wav",
                                 IsUI = "1",
                                 ["Volume Min"] = "255",
@@ -40,7 +41,8 @@ return test.suite({
                         return played
                     end,
                 }, { "exists", "play" })
-                require("d2legacy.audio").play_record("menu", 2)
+                local sound, loop = require("d2legacy.audio").play_record("menu", 2)
+                test.assert(sound == played and loop == true, "loop metadata follows the selected group variant")
                 test.assert(
                     played.path == "data/global/sfx/ui/two.wav"
                         and played.options.volume == 1

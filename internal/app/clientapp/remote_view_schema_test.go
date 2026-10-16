@@ -88,6 +88,7 @@ func remotePlayerAndPresentationTestSchemas() []akara.Schema {
 			remoteTestFields(akara.FieldFloat64, "seconds")),
 		remoteTestSchema("d2legacy.presentation.overlay_anchor",
 			remoteTestFields(akara.FieldInt64, "height")),
+		remoteTestSchema("d2legacy.presentation.missile_sound_owner", remoteTestFields(akara.FieldString, "projectile_id")),
 		remoteTestSchema("d2legacy.presentation.missile", remoteMissileTestFields()),
 		remoteTestSchema("d2legacy.presentation.state",
 			remoteTestFields(akara.FieldEntity, "target"),

@@ -312,6 +312,13 @@ function M.register()
         },
     })
 
+    -- The same stable identity joins a travel cue to its live projectile without changing either schema.
+    ecs.component({
+        name = "d2legacy.presentation.missile_sound_owner",
+        version = 1,
+        fields = { { name = "projectile_id", type = "string" } },
+    })
+
     -- One cast/target contact lock is its own ECS entity. Radial rays share a
     -- cast ID, so overlap policy composes without a Nova-specific hit path.
     ecs.component({

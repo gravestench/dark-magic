@@ -3,6 +3,7 @@ package player
 import (
 	"encoding/json"
 	"math"
+	"strings"
 	"testing"
 
 	"github.com/gravestench/akara"
@@ -14,6 +15,12 @@ import (
 // missile fields cross the boundary while distant authority stays private.
 func TestProjectWorldViewCopiesOnlyNearbyMissilePresentation(t *testing.T) {
 	checkpoint := missileCheckpoint()
+	owner := strings.Repeat("p", maxMissileSoundOwnerBytes)
+	checkpoint.Snapshot.Components = append(checkpoint.Snapshot.Components, gameecs.ComponentSnapshot{
+		Name: "d2legacy.presentation.missile_sound_owner", Version: 1,
+		Fields:    []gameecs.FieldSnapshot{{Name: "projectile_id", Kind: akara.FieldString}},
+		Instances: []gameecs.InstanceSnapshot{{Entity: 2, Values: []gameecs.ValueSnapshot{{String: &owner}}}},
+	})
 
 	payload, err := ProjectWorldView("alice", checkpoint)
 	if err != nil {
@@ -34,7 +41,7 @@ func TestProjectWorldViewCopiesOnlyNearbyMissilePresentation(t *testing.T) {
 	}
 
 	missile := view.Missiles[0]
-	if missile.ID != "missile:2" || missile.Kind != "projectile" || missile.MissileID != "fireball" ||
+	if missile.SoundOwnerID != owner || missile.ID != "missile:2" || missile.Kind != "projectile" || missile.MissileID != "fireball" ||
 		missile.DCC != "data/global/missiles/Fireball.dcc" || missile.Position != (HUDPosition{X: 12, Y: 10}) ||
 		missile.Velocity != (HUDPosition{X: 1, Y: 0}) || missile.LogicalDirection != -1 ||
 		missile.Directions != 16 || missile.FramesPerSecond != 16 || missile.TransparencyMode != 1 {
@@ -55,8 +62,9 @@ func TestValidateWorldViewRejectsUntrustedMissileShape(t *testing.T) {
 	}
 
 	for name, mutate := range map[string]func(*WorldMissile){
-		"authority kind": func(value *WorldMissile) { value.Kind = "damage" },
-		"bad directions": func(value *WorldMissile) { value.Directions = 3 },
+		"oversized sound owner": func(value *WorldMissile) { value.SoundOwnerID = strings.Repeat("a", maxMissileSoundOwnerBytes+1) },
+		"authority kind":        func(value *WorldMissile) { value.Kind = "damage" },
+		"bad directions":        func(value *WorldMissile) { value.Directions = 3 },
 		"projectile pins frame": func(value *WorldMissile) {
 			value.Kind, value.LogicalDirection = "projectile", 0
 		},
@@ -170,4 +178,56 @@ func missileCheckpoint() simulation.Checkpoint {
 				gameecs.InstanceSnapshot{Entity: invisible, Values: missileValues("helper", "", 0)}),
 		},
 	}}
+}
+
+func TestMissileSoundOwnerProjectionRejectsMalformedPresentSidecars(t *testing.T) {
+	for _, source := range []struct {
+		name       string
+		checkpoint func() simulation.Checkpoint
+		project    func(simulation.Checkpoint) error
+	}{
+		{"world", missileCheckpoint, func(checkpoint simulation.Checkpoint) error {
+			_, err := ProjectWorldView("alice", checkpoint)
+			return err
+		}},
+		{"event", semanticCheckpoint, func(checkpoint simulation.Checkpoint) error {
+			_, err := ProjectEventView("alice", checkpoint)
+			return err
+		}},
+	} {
+		t.Run(source.name, func(t *testing.T) {
+			if err := source.project(source.checkpoint()); err != nil {
+				t.Fatalf("absent optional sidecar: %v", err)
+			}
+			for name, mutate := range map[string]func(*gameecs.ComponentSnapshot){
+				"wrong version":    func(c *gameecs.ComponentSnapshot) { c.Version = 2 },
+				"missing field":    func(c *gameecs.ComponentSnapshot) { c.Fields = nil },
+				"wrong field":      func(c *gameecs.ComponentSnapshot) { c.Fields[0].Name = "owner" },
+				"wrong type":       func(c *gameecs.ComponentSnapshot) { c.Fields[0].Kind = akara.FieldInt64 },
+				"missing value":    func(c *gameecs.ComponentSnapshot) { c.Instances[0].Values = nil },
+				"non-string value": func(c *gameecs.ComponentSnapshot) { c.Instances[0].Values[0] = gameecs.ValueSnapshot{} },
+				"empty owner":      func(c *gameecs.ComponentSnapshot) { empty := ""; c.Instances[0].Values[0].String = &empty },
+				"oversized owner": func(c *gameecs.ComponentSnapshot) {
+					value := strings.Repeat("a", maxMissileSoundOwnerBytes+1)
+					c.Instances[0].Values[0].String = &value
+				},
+				"duplicate entity": func(c *gameecs.ComponentSnapshot) { c.Instances = append(c.Instances, c.Instances[0]) },
+			} {
+				t.Run(name, func(t *testing.T) {
+					checkpoint := source.checkpoint()
+					owner := "projectile:2"
+					component := gameecs.ComponentSnapshot{
+						Name: "d2legacy.presentation.missile_sound_owner", Version: 1,
+						Fields:    []gameecs.FieldSnapshot{{Name: "projectile_id", Kind: akara.FieldString}},
+						Instances: []gameecs.InstanceSnapshot{{Entity: 2, Values: []gameecs.ValueSnapshot{{String: &owner}}}},
+					}
+					mutate(&component)
+					checkpoint.Snapshot.Components = append(checkpoint.Snapshot.Components, component)
+					if err := source.project(checkpoint); err == nil {
+						t.Fatal("malformed present sidecar accepted")
+					}
+				})
+			}
+		})
+	}
 }

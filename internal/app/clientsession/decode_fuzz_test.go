@@ -37,6 +37,59 @@ func TestDecodeViewRejectsUnknownFieldsAndOversizedCollections(t *testing.T) {
 	}
 }
 
+// TestDecodeViewVersionsMissileSoundOwners preserves optional ownership within the current schema.
+func TestDecodeViewVersionsMissileSoundOwners(t *testing.T) {
+	view := validNetworkView(9)
+	view.World.Missiles = []playeradapter.WorldMissile{{
+		ID: "missile:1", Kind: "projectile", MissileID: "fireball", SoundOwnerID: "projectile:1",
+		Act: 1, LevelID: 1, DCC: "fireball.dcc", LogicalDirection: -1, Directions: 16, FramesPerSecond: 16,
+	}}
+
+	view.Events.Events = []playeradapter.SemanticEvent{{
+		ID: 2, Type: "effect", Tick: 9, Act: 1, LevelID: 1,
+		Effect: &playeradapter.SemanticEffectCue{Kind: "missile_spawn", Sound: "fireball", SoundOwnerID: "projectile:1"},
+	}}
+
+	for _, owner := range []string{"projectile:1", ""} {
+		view.World.Missiles[0].SoundOwnerID = owner
+		view.Events.Events[0].Effect.SoundOwnerID = owner
+
+		payload, err := json.Marshal(view)
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		decoded, err := decodeView(gameserver.Snapshot{Tick: 9, Payload: payload})
+		if err != nil {
+			t.Fatalf("current schema with owner %q: %v", owner, err)
+		}
+
+		if decoded.World.Missiles[0].SoundOwnerID != owner || decoded.Events.Events[0].Effect.SoundOwnerID != owner {
+			t.Fatal("sound ownership changed during decoding")
+		}
+	}
+
+	for name, mutate := range map[string]func(*playeradapter.ClientView){
+		"previous envelope": func(v *playeradapter.ClientView) { v.Version-- },
+		"previous world":    func(v *playeradapter.ClientView) { v.World.Version-- },
+		"previous events":   func(v *playeradapter.ClientView) { v.Events.Version-- },
+	} {
+		t.Run(name, func(t *testing.T) {
+			candidate := view
+			mutate(&candidate)
+
+			payload, err := json.Marshal(candidate)
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			if _, err := decodeView(gameserver.Snapshot{Tick: 9, Payload: payload}); err == nil {
+				t.Fatal("obsolete projection version accepted")
+			}
+		})
+	}
+}
+
 // FuzzDecodeClientView requires arbitrary payloads to fail safely or produce a validated bounded view.
 func FuzzDecodeClientView(f *testing.F) {
 	valid, _ := json.Marshal(validNetworkView(3))

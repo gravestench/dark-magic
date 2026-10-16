@@ -512,10 +512,17 @@ return test.suite({
                 test.expect(projectile:get("transparency_mode")):equals(1)
                 local cues = ecs.query({ all = { "d2legacy.presentation.effect_cue" } })
                 test.assert(#cues == 2, [=[the ranged reaction emits its overlay and missile travel sound]=])
+                local owner = ecs.get(projectiles[1], "d2legacy.presentation.missile_sound_owner"):get("projectile_id")
                 local saw_overlay = false
                 local saw_travel_sound = false
                 for _, entity in ipairs(cues) do
                     local cue = ecs.get(entity, "d2legacy.presentation.effect_cue")
+                    local sound_owner = ecs.get(entity, "d2legacy.presentation.missile_sound_owner")
+                    if cue:get("kind") == "missile_spawn" then
+                        test.expect(sound_owner:get("projectile_id")):equals(owner)
+                    else
+                        test.assert(sound_owner == nil, "reaction overlay does not own the return missile sound")
+                    end
                     saw_overlay = saw_overlay or cue:get("overlay_id") == "chillingarmor_hit"
                     saw_travel_sound = saw_travel_sound or cue:get("sound") == "sorceress_icebolt_1"
                 end

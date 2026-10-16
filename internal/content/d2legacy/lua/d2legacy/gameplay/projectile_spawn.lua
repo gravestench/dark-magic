@@ -100,6 +100,9 @@ function M.components(source, definition, values)
             offset_z = definition.offset_z,
         },
     }
+    if values.sound_owner_id then
+        components["d2legacy.presentation.missile_sound_owner"] = { projectile_id = values.sound_owner_id }
+    end
     local resident = population.resident_at(
         values.projectile_id or values.cast_id,
         location:get("level_id"),
@@ -112,11 +115,11 @@ function M.components(source, definition, values)
     return components
 end
 
-function M.sound_cue(target, tick, kind, sound)
+function M.sound_cue(target, tick, kind, sound, projectile_id)
     if not sound or sound == "" then
         return nil
     end
-    return {
+    local components = {
         ["d2legacy.presentation.effect_cue"] = {
             kind = kind,
             tick = tick,
@@ -125,6 +128,10 @@ function M.sound_cue(target, tick, kind, sound)
             sound = sound,
         },
     }
+    if projectile_id then
+        components["d2legacy.presentation.missile_sound_owner"] = { projectile_id = projectile_id }
+    end
+    return components
 end
 
 return M
