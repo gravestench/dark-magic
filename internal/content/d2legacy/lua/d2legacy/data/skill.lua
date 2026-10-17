@@ -30,7 +30,14 @@ end
 
 local function descriptions_by_name()
     local result = {}
-    for _, row in ipairs(records.load("data/global/excel/skilldesc.txt")) do
+    for _, row in
+        ipairs(
+            records.load(
+                "data/global/excel/skilldesc.txt",
+                { "skilldesc", "IconCel", "ListRow", "str name", "str short" }
+            )
+        )
+    do
         local name = row.skilldesc
         if name and name ~= "" then
             result[name] = row
@@ -41,7 +48,7 @@ end
 
 local function class_starting_skill(class)
     local wanted = string.lower(assert(class, "class is required"))
-    for _, row in ipairs(records.load("data/global/excel/charstats.txt")) do
+    for _, row in ipairs(records.load("data/global/excel/charstats.txt", { "class", "StartSkill" })) do
         if string.lower(row.class or "") == wanted then
             return row.StartSkill or ""
         end
@@ -71,12 +78,23 @@ end
 
 -- load returns presentation facts for one numeric skill identifier.
 function M.load(id)
-    local skill = find(records.load("data/global/excel/skills.txt"), "Id", tostring(id))
+    local skill = find(
+        records.load(
+            "data/global/excel/skills.txt",
+            { "Id", "skill", "skilldesc", "charclass", "leftskill", "passive", "weapsel", "general" }
+        ),
+        "Id",
+        tostring(id)
+    )
     if not skill then
         return nil
     end
 
-    local description = find(records.load("data/global/excel/skilldesc.txt"), "skilldesc", skill.skilldesc)
+    local description = find(
+        records.load("data/global/excel/skilldesc.txt", { "skilldesc", "IconCel", "ListRow", "str name", "str short" }),
+        "skilldesc",
+        skill.skilldesc
+    )
     if not description then
         return nil
     end
@@ -107,7 +125,14 @@ function M.starting_for_class(class)
     local descriptions = descriptions_by_name()
     local result = {}
 
-    for _, skill in ipairs(records.load("data/global/excel/skills.txt")) do
+    for _, skill in
+        ipairs(
+            records.load(
+                "data/global/excel/skills.txt",
+                { "Id", "skill", "skilldesc", "charclass", "leftskill", "passive", "weapsel", "general" }
+            )
+        )
+    do
         if is_initial_skill(skill, starting_skill) then
             local learned = learned_skill(skill, descriptions[skill.skilldesc])
             if learned then
@@ -130,7 +155,14 @@ function M.learned_for_ids(ids, level)
     level = level or 1
     assert(level >= 1 and level == math.floor(level), "skill level must be a positive integer")
     local skills_by_id = {}
-    for _, skill in ipairs(records.load("data/global/excel/skills.txt")) do
+    for _, skill in
+        ipairs(
+            records.load(
+                "data/global/excel/skills.txt",
+                { "Id", "skill", "skilldesc", "charclass", "leftskill", "passive", "weapsel", "general" }
+            )
+        )
+    do
         local id = tonumber(skill.Id)
         if id then
             skills_by_id[id] = skill
