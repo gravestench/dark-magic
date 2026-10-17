@@ -100,6 +100,7 @@ function M.register()
                         -- PLAYERSTATS_LevelUp fills stamina after increasing max.
                         current = maximum
                     elseif maximum ~= previous then
+                        -- Stat-point allocation must use allocate_vitality_stamina once instead of this source-change callback.
                         current = movement_rules.rescale_stamina(current, previous, maximum)
                     end
                     basis:set("vitality", base_vitality + bonus_vitality)
