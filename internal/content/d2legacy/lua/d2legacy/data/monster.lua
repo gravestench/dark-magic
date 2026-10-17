@@ -34,8 +34,8 @@ local component_names = {
 -- complete legacy tables for every monster considered during population.
 local catalog
 
-local function load_records(path)
-    local rows, err = records.load(path)
+local function load_records(path, columns)
+    local rows, err = records.load(path, columns)
     assert(rows, "load " .. path .. ": " .. tostring(err))
     return rows
 end
@@ -60,9 +60,135 @@ local function monster_catalog()
         return catalog
     end
     catalog = {
-        stats = index_by(load_records("data/global/excel/monstats.txt"), "Id"),
-        graphics = index_by(load_records("data/global/excel/monstats2.txt"), "Id"),
-        levels = index_by(load_records("data/global/excel/monlvl.txt"), "Level"),
+        stats = index_by(
+            load_records("data/global/excel/monstats.txt", {
+                "Id",
+                "BaseId",
+                "NameStr",
+                "AI",
+                "Align",
+                "Code",
+                "MonStatsEx",
+                "Velocity",
+                "aidel",
+                "aidist",
+                "boss",
+                "primeevil",
+                "MinGrp",
+                "MaxGrp",
+                "Rarity",
+                "enabled",
+                "isSpawn",
+                "npc",
+                "noRatio",
+                "minHP",
+                "minHP(N)",
+                "minHP(H)",
+                "maxHP",
+                "maxHP(N)",
+                "maxHP(H)",
+                "AC",
+                "AC(N)",
+                "AC(H)",
+                "A1TH",
+                "A1TH(N)",
+                "A1TH(H)",
+                "A1MinD",
+                "A1MinD(N)",
+                "A1MinD(H)",
+                "A1MaxD",
+                "A1MaxD(N)",
+                "A1MaxD(H)",
+                "Exp",
+                "Exp(N)",
+                "Exp(H)",
+                "Level",
+                "Level(N)",
+                "Level(H)",
+                "Drain",
+                "Drain(N)",
+                "Drain(H)",
+                "TreasureClass1",
+                "TreasureClass1(N)",
+                "TreasureClass1(H)",
+            }),
+            "Id"
+        ),
+        graphics = index_by(
+            load_records("data/global/excel/monstats2.txt", {
+                "Id",
+                "SizeX",
+                "SizeY",
+                "OverlayHeight",
+                "BaseW",
+                "MeleeRng",
+                "mKB",
+                "small",
+                "large",
+                "corpseSel",
+                "revive",
+                "HD",
+                "HDv",
+                "TR",
+                "TRv",
+                "LG",
+                "LGv",
+                "RA",
+                "RAv",
+                "LA",
+                "LAv",
+                "RH",
+                "RHv",
+                "LH",
+                "LHv",
+                "SH",
+                "SHv",
+                "S1",
+                "S1v",
+                "S2",
+                "S2v",
+                "S3",
+                "S3v",
+                "S4",
+                "S4v",
+                "S5",
+                "S5v",
+                "S6",
+                "S6v",
+                "S7",
+                "S7v",
+                "S8",
+                "S8v",
+            }),
+            "Id"
+        ),
+        levels = index_by(
+            load_records("data/global/excel/monlvl.txt", {
+                "Level",
+                "HP",
+                "HP(N)",
+                "HP(H)",
+                "AC",
+                "AC(N)",
+                "AC(H)",
+                "TH",
+                "TH(N)",
+                "TH(H)",
+                "DM",
+                "DM(N)",
+                "DM(H)",
+                "XP",
+                "XP(N)",
+                "XP(H)",
+                "L-AC",
+                "L-AC(N)",
+                "L-AC(H)",
+                "L-TH",
+                "L-TH(N)",
+                "L-TH(H)",
+            }),
+            "Level"
+        ),
     }
     return catalog
 end
@@ -331,7 +457,7 @@ end
 function M.all(...)
     assert(select("#", ...) == 0, "monster difficulty comes from immutable game rules")
     local result = {}
-    for _, row in ipairs(records.load("data/global/excel/monstats.txt")) do
+    for _, row in ipairs(records.load("data/global/excel/monstats.txt", { "Id" })) do
         local valid, value = pcall(M.load, row.Id)
         if valid and next(value.components) then
             value.components = encoded_components(value.components)
