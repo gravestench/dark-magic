@@ -9,6 +9,44 @@ import (
 	"github.com/gravestench/dark-magic/internal/audio"
 )
 
+func TestScopedSoundsBoundCleanupAcrossCompletedCues(t *testing.T) {
+	var mixer audio.Mixer
+
+	var ownership scopedSounds
+
+	scope := &Scope{}
+
+	for i := 0; i < 1000; i++ {
+		id, err := mixer.Play(".wav", []byte("wave"))
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		sound := &ownedSound{mixer: &mixer, id: id}
+		if err := ownership.add(scope, sound); err != nil {
+			t.Fatal(err)
+		}
+
+		if len(scope.releases) != 1 || len(ownership.scopes[scope]) != 1 {
+			t.Fatal("per-cue cleanup accumulated")
+		}
+
+		mixer.Release(id)
+
+		if err := mixer.Drain(&recordingAudioBackend{}); err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	if err := scope.Close(); err != nil {
+		t.Fatal(err)
+	}
+
+	if len(ownership.scopes) != 0 || mixer.Diagnostics().Active != 0 {
+		t.Fatal("scope retained sounds")
+	}
+}
+
 // TestAudioHandlesBelongToLuaComponentScope verifies that handle mutations reach the mixer and scope teardown
 // contributes the final stop command.
 func TestAudioHandlesBelongToLuaComponentScope(t *testing.T) {

@@ -67,6 +67,7 @@ type ebitRenderer struct {
 	composer *render.Composer
 	backend  *ebitComposition
 	mixer    *audio.Mixer
+	audio    *ebitAudioBackend
 
 	currentScreen *ebiten.Image
 
@@ -157,6 +158,11 @@ func (r *ebitRenderer) Stop(context.Context) error {
 		r.backend.close()
 	}
 
+	if r.audio != nil {
+		r.audio.close()
+		r.diagnostics.audioAttached.Store(false)
+	}
+
 	return nil
 }
 
@@ -224,8 +230,7 @@ func (r *ebitRenderer) AttachComposer(composer *render.Composer) error {
 	return nil
 }
 
-// AttachAudio accepts one mixer and drains commands into the muted adapter every frame. Draining is still required to
-// advance mixer ownership even though this backend currently emits no native sound.
+// AttachAudio installs the platform player adapter or the explicitly muted command sink.
 func (r *ebitRenderer) AttachAudio(mixer *audio.Mixer) error {
 	if mixer == nil {
 		return errors.New("ebitengine backend: nil audio mixer")
@@ -236,11 +241,10 @@ func (r *ebitRenderer) AttachAudio(mixer *audio.Mixer) error {
 	}
 
 	r.mixer = mixer
-	r.SubscribeFrame(func() {
-		if err := mixer.Drain(discardAudioBackend{}); err != nil {
-			r.logger.Error("draining muted Ebitengine audio", "error", err)
-		}
-	})
+	if r.options.NativeAudio {
+		r.audio = newEbitAudioBackend(mixer, r.logger)
+		r.diagnostics.audioAttached.Store(true)
+	}
 
 	return nil
 }
@@ -380,6 +384,19 @@ func (g *ebitGame) Update() error {
 	delta := now.Sub(g.lastUpdate)
 	g.lastUpdate = now
 	g.renderer.frames.run()
+	if mixer := g.renderer.mixer; mixer != nil {
+		mixer.Advance(delta)
+		var backend audio.Backend = discardAudioBackend{}
+		if g.renderer.audio != nil {
+			backend = g.renderer.audio
+		}
+		if err := mixer.Drain(backend); err != nil {
+			g.renderer.logger.Error("draining Ebitengine audio", "error", err)
+		}
+		if g.renderer.audio != nil {
+			g.renderer.audio.update()
+		}
+	}
 
 	if g.renderer.backend != nil {
 		g.renderer.backend.advance(delta)
@@ -451,6 +468,7 @@ func (g *ebitGame) DrawFinalScreen(
 }
 
 type ebitDiagnosticsCounters struct {
+	audioAttached      atomic.Bool
 	frames             atomic.Uint64
 	drawCalls          atomic.Uint64
 	nodesVisited       atomic.Uint64
@@ -483,6 +501,10 @@ type EbitengineDiagnostics struct {
 // snapshot loads every atomic counter independently and samples Ebitengine rates at call time, producing a detached
 // diagnostics value suitable for logging without sharing counter ownership.
 func (d *ebitDiagnosticsCounters) snapshot() EbitengineDiagnostics {
+	output := "muted"
+	if d.audioAttached.Load() {
+		output = "native"
+	}
 	return EbitengineDiagnostics{
 		Frames:                  d.frames.Load(),
 		DrawCalls:               d.drawCalls.Load(),
@@ -501,7 +523,7 @@ func (d *ebitDiagnosticsCounters) snapshot() EbitengineDiagnostics {
 		TextureUploadNS:         d.textureUploadNS.Load(),
 		ActualFPS:               ebiten.ActualFPS(),
 		ActualTPS:               ebiten.ActualTPS(),
-		Audio:                   "muted",
+		Audio:                   output,
 	}
 }
 
