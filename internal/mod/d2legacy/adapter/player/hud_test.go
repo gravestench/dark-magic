@@ -15,6 +15,15 @@ import (
 // TestProjectHUDSelectsAuthenticatedPlayerAndAllowlistedFields verifies that
 // owner selection and the explicit HUD allowlist share one checkpoint.
 func TestProjectHUDSelectsAuthenticatedPlayerAndAllowlistedFields(t *testing.T) {
+	resistanceFields := []string{
+		"fire_resist", "cold_resist", "lightning_resist",
+		"max_fire_resist", "max_cold_resist", "max_lightning_resist",
+	}
+	defenses := intsComponent("d2legacy.combat.defense", resistanceFields, 1, 90, -100, 31, 75, 80, 85)
+	defenses.Instances = append(
+		defenses.Instances,
+		intsComponent("d2legacy.combat.defense", resistanceFields, 2, 999, 999, 999, 999, 999, 999).Instances[0],
+	)
 	snapshot := gameecs.Snapshot{
 		Version: gameecs.SnapshotVersion,
 		Tick:    9,
@@ -41,6 +50,7 @@ func TestProjectHUDSelectsAuthenticatedPlayerAndAllowlistedFields(t *testing.T) 
 				1, 7, 1234, 2,
 			),
 			intsComponent("d2legacy.player.combat_stats", []string{"attack_rating", "defense"}, 1, 44, 21),
+			defenses,
 			floatsComponent("d2legacy.world.position", []string{"x", "y"}, 1, 10.5, 20.25),
 			intsComponent("d2legacy.world.location", []string{"act", "level_id"}, 1, 1, 40),
 			stringsComponent("d2legacy.player.belt", []string{"slot_1"}, []any{uint64(1), "secret-item"}),
@@ -66,6 +76,24 @@ func TestProjectHUDSelectsAuthenticatedPlayerAndAllowlistedFields(t *testing.T) 
 
 	if view.Belt.Slots[0] != "secret-item" {
 		t.Fatalf("owner-private belt was not projected: %#v", view.Belt)
+	}
+	var wire struct {
+		Resistances map[string]int64 `json:"resistances"`
+	}
+	if err := json.Unmarshal(payload, &wire); err != nil {
+		t.Fatal(err)
+	}
+	wantResistances := map[string]int64{
+		"fire_resist": 90, "cold_resist": -100, "lightning_resist": 31,
+		"max_fire_resist": 75, "max_cold_resist": 80, "max_lightning_resist": 85,
+	}
+	if len(wire.Resistances) != len(wantResistances) {
+		t.Fatalf("HUD resistance schema = %v, want %v", wire.Resistances, wantResistances)
+	}
+	for key, want := range wantResistances {
+		if wire.Resistances[key] != want {
+			t.Fatalf("HUD resistance %s = %d, want %d", key, wire.Resistances[key], want)
+		}
 	}
 
 	if strings.Contains(string(payload), "Bob") {

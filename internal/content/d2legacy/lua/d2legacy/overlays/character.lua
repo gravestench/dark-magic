@@ -50,7 +50,7 @@ local function displayed_value(character, field)
 end
 
 -- Redraw a resistance only when it changes. Values are absent until the player
--- is admitted, and on a connected client, which has no authoritative defense.
+-- is admitted and the local authority or connected projection supplies them.
 local function refresh_resistances(self)
     local live = resistances.local_player() or {}
     for _, entry in ipairs(self.resistance_boxes or {}) do
@@ -104,7 +104,7 @@ return {
             text.create(self.root, screen.value_style, displayed_value(character, value.field), value.x + offset_x, value.y + offset_y, 100)
         end
 
-        -- Resistances come from live authority, not the save, because the session's
+        -- Resistances come from the live session, not the save, because the
         -- difficulty penalty applies only in game. update() fills the value nodes.
         self.resistance_boxes = {}
         for _, box in ipairs(screen.resistances) do
