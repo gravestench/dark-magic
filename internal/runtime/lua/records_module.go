@@ -42,9 +42,9 @@ func RecordsModule(records recordsGateway) Module {
 						return 2
 					}
 
-					result := state.NewTable()
+					result := state.CreateTable(len(rows), 0)
 					for _, row := range rows {
-						entry := state.NewTable()
+						entry := state.CreateTable(0, len(row))
 						for key, value := range row {
 							entry.RawSetString(key, lua.LString(value))
 						}
