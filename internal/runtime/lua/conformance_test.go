@@ -78,7 +78,7 @@ func TestVersionedCapabilityConformance(t *testing.T) {
 			"set_bus_volume",
 			"stop_group",
 		},
-		"engine.records/v1":        {"load", "reload", "loaded"},
+		"engine.records/v1":        {"load", "reload", "loaded", "revision"},
 		"engine.settings/v1":       {"get", "save", "set", "status"},
 		"engine.video/v1":          {"available", "play"},
 		"engine.locale/v1":         {"text"},

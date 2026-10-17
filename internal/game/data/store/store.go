@@ -18,6 +18,7 @@ type Store struct {
 	cache        map[string][]map[string]string
 	canonical    map[string]string
 	generationID string
+	revision     uint64
 	provenance   map[string]Provenance
 }
 
@@ -249,6 +250,7 @@ func (s *Store) Invalidate(path string) {
 	path = s.canonicalPath(path)
 	s.mu.Lock()
 	delete(s.cache, path)
+	s.revision++
 	s.mu.Unlock()
 }
 
@@ -257,6 +259,7 @@ func (s *Store) Invalidate(path string) {
 func (s *Store) InvalidateAll() {
 	s.mu.Lock()
 	s.cache = make(map[string][]map[string]string)
+	s.revision++
 	s.mu.Unlock()
 }
 
@@ -268,4 +271,13 @@ func (s *Store) Loaded(path string) bool {
 	s.mu.RUnlock()
 
 	return exists
+}
+
+// Revision changes whenever cached records are invalidated. It is unrelated to
+// the immutable content identity returned by GenerationID.
+func (s *Store) Revision() uint64 {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+
+	return s.revision
 }

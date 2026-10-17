@@ -73,3 +73,36 @@ func TestRecordsModuleLoadsAndInvalidatesLayeredTSV(t *testing.T) {
 		t.Fatalf("invalidations = %v", records.invalidated)
 	}
 }
+
+type revisionRecordsGateway struct {
+	recordsGateway
+	revision uint64
+}
+
+func (g revisionRecordsGateway) Revision() uint64 { return g.revision }
+
+type unversionedRecordsGateway struct{ recordsGateway }
+
+func TestRecordsModuleRevisionToken(t *testing.T) {
+	store := recordstore.New(fstest.MapFS{})
+	for _, c := range []struct {
+		name     string
+		gateway  recordsGateway
+		expected string
+	}{
+		{"large opaque token", revisionRecordsGateway{recordsGateway: store, revision: 1<<63 + 1}, `"9223372036854775809"`},
+		{"unversioned source", unversionedRecordsGateway{recordsGateway: store}, "nil"},
+	} {
+		t.Run(c.name, func(t *testing.T) {
+			state := lua.NewState()
+			defer state.Close()
+
+			module := RecordsModule(c.gateway)
+			state.PreloadModule(module.Name, module.Loader)
+
+			if err := state.DoString(`assert(require("engine.records/v1").revision()==` + c.expected + `)`); err != nil {
+				t.Fatal(err)
+			}
+		})
+	}
+}
