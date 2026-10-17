@@ -4,10 +4,29 @@ return test.suite({
     profile = "authority",
     tier = "fast",
     covers = { "internal/game/item" },
+    records = {
+        ["data/global/excel/monstats.txt"] = {
+            { Id = "akara", Code = "PS", MonStatsEx = "akara", npc = "1", NameStr = "Akara" },
+        },
+        ["data/global/excel/monstats2.txt"] = {
+            { Id = "akara", BaseW = "hth", TR = "1", TRv = "lit", OverlayHeight = "2" },
+        },
+        ["data/global/excel/monlvl.txt"] = { { Level = "1" } },
+    },
     initial_data = {
         ["d2legacy.interactions"] = {
             owner = "alice",
             targets = {
+                {
+                    id = "act1-akara",
+                    npc = "Akara",
+                    x = 21,
+                    y = 46,
+                    radius = 4,
+                    act = 1,
+                    level_id = 1,
+                    selectable = true,
+                },
                 {
                     id = "room-object",
                     npc = "Room Object",
@@ -62,6 +81,32 @@ return test.suite({
         },
     },
     cases = {
+        test.case("guide_model_and_selection_share_one_target_lifetime", {
+            test.run(function()
+                local ecs = require("engine.ecs/v1")
+                local targets = ecs.query({ all = { "d2legacy.interaction.target", "d2legacy.world.selectable" } })
+                test.expect(#targets):equals(1)
+                local entity = targets[1]
+                local target = ecs.get(entity, "d2legacy.interaction.target")
+                local position = ecs.get(entity, "d2legacy.world.position")
+                local location = ecs.get(entity, "d2legacy.world.location")
+                test.expect(target:get("id")):equals("act1-akara")
+                test.expect(position:get("x")):equals(target:get("x"))
+                test.expect(position:get("y")):equals(target:get("y"))
+                test.expect(location:get("act")):equals(1)
+                test.expect(location:get("level_id")):equals(1)
+                local appearance = ecs.get(entity, "d2legacy.monster.appearance")
+                test.expect(appearance:get("token")):equals("PS")
+                test.expect(appearance:get("mode")):equals("NU")
+                test.expect(appearance:get("components")):equals("TR=LIT")
+                test.expect(appearance:get("overlay_height")):equals(2)
+                local selected = require("d2legacy.gameplay.targeting").selectable_at(21, 46, 1)
+                test.expect(selected.id):equals("act1-akara")
+                require("d2legacy.items.bootstrap").ensure_player("alice")
+                test.expect(#ecs.query({ all = { "d2legacy.world.selectable", "d2legacy.interaction.target" } }))
+                    :equals(1)
+            end),
+        }),
         test.case("materializes_initial_items_into_lua_owned_ecs", {
             test.run(function()
                 local ecs = require("engine.ecs/v1")

@@ -1,11 +1,14 @@
 package clientapp
 
 import (
+	"encoding/json"
 	"testing"
 
 	"github.com/gravestench/akara"
+	gameecs "github.com/gravestench/dark-magic/internal/game/ecs"
 	gameworld "github.com/gravestench/dark-magic/internal/game/world"
 	d2mapgen "github.com/gravestench/dark-magic/internal/mod/d2legacy/adapter/mapgen"
+	playeradapter "github.com/gravestench/dark-magic/internal/mod/d2legacy/adapter/player"
 	d2save "github.com/gravestench/dark-magic/internal/mod/d2legacy/adapter/save"
 	"github.com/gravestench/dark-magic/internal/presentation/maprender"
 )
@@ -19,6 +22,81 @@ func TestCreatedCharacterEntersGeneratedActOneTown(t *testing.T) {
 	character := createSelectedAcceptanceCharacter(t, fixture)
 	fixture.advanceOffline(t, 10)
 	assertCharacterEnteredTown(t, fixture, character)
+}
+
+func TestOwnedAkaraProjectsVisibleConnectedMirror(t *testing.T) {
+	fixture := newRealD2LegacyFixture(t, realD2LegacyFixtureConfig{})
+	createSelectedAcceptanceCharacter(t, fixture)
+	fixture.advanceOffline(t, 10)
+
+	var x, y float64
+
+	found := false
+
+	for _, object := range fixture.app.gameWorlds[1].Objects {
+		if object.Resolved && object.Type == gameworld.ObjectTypeDynamic && object.Class == "akara" {
+			x, y = float64(object.X), float64(object.Y)
+			found = true
+		}
+	}
+
+	if !found {
+		t.Fatal("owned town has no decoded Akara")
+	}
+
+	checkpoint, err := fixture.app.offlineSession.CanonicalCheckpoint()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	payload, err := playeradapter.ProjectWorldView("local-player", checkpoint)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	var view playeradapter.WorldView
+	if err := json.Unmarshal(payload, &view); err != nil {
+		t.Fatal(err)
+	}
+
+	var guide *playeradapter.WorldEntity
+
+	for index := range view.Entities {
+		if view.Entities[index].ID == "act1-akara" {
+			guide = &view.Entities[index]
+			break
+		}
+	}
+
+	if guide == nil || guide.Position.X != x || guide.Position.Y != y || guide.Radius != 4 ||
+		guide.Token != "PS" || guide.Mode != "NU" || guide.WeaponClass != "HTH" ||
+		guide.Components != "TR=LIT" || guide.OverlayHeight != 2 {
+		t.Fatalf("owned Akara connected projection = %#v, authored point = (%v,%v)", guide, x, y)
+	}
+
+	engine := gameecs.New()
+
+	t.Cleanup(func() { _ = engine.Close() })
+	registerRemoteViewSchemas(t, engine)
+
+	client := &application{clientSimulation: engine}
+	location := playeradapter.HUDLocation{Act: 1, LevelID: 1}
+
+	if err := client.syncRemoteMirrors([]playeradapter.WorldEntity{*guide}, location); err != nil {
+		t.Fatal(err)
+	}
+
+	appearances, _ := akara.GetDynamicStore(engine.World(), "d2legacy.monster.appearance")
+
+	appearance, found := appearances.Get(client.remoteMirrors[guide.ID])
+	if !found {
+		t.Fatal("connected Akara mirror has no appearance")
+	}
+
+	token, _ := appearance.Get("token")
+	if token != "PS" {
+		t.Fatalf("connected Akara mirror token = %v", token)
+	}
 }
 
 // assertBloodMoorPresentation checks both semantic world realization and renderer resource policy,

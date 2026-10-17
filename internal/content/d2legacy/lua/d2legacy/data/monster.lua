@@ -328,6 +328,23 @@ local function encoded_components(values)
     return table.concat(result, ",")
 end
 
+-- NPC presentation uses authored graphics without admitting an ordinary combat spawn.
+function M.npc_appearance(id)
+    local indexed = monster_catalog()
+    local stats = assert(indexed.stats[id], "missing MonStats row")
+    assert(truth(stats, "npc"), "monster is not an NPC")
+    local graphics = assert(indexed.graphics[graphics_id(stats)], "missing MonStats2 row")
+    local overlay_height = integer(graphics, "OverlayHeight", 0)
+    assert(overlay_height >= 0 and overlay_height <= 4, "MonStats2 OverlayHeight must be in 0..4")
+    return {
+        token = string.upper(stats.Code or ""),
+        weapon_class = string.upper(graphics.BaseW or "HTH"),
+        components = encoded_components(graphics_components(graphics)),
+        name_key = stats.NameStr or stats.Id,
+        overlay_height = overlay_height,
+    }
+end
+
 function M.all(...)
     assert(select("#", ...) == 0, "monster difficulty comes from immutable game rules")
     local result = {}
