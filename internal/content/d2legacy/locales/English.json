@@ -114,6 +114,7 @@
   "d2legacy.overlay.close": "CLOSE OVERLAY",
   "d2legacy.npc.talk": "TALK",
   "d2legacy.npc.gossip": "GOSSIP",
+  "d2legacy.npc.speech_unavailable": "Dialogue text is unavailable.",
   "d2legacy.overlay.shell_status": "Presentation shell — authoritative state is not bound yet",
   "d2legacy.shell.quick_skills": "QUICK SKILL SELECTION",
   "d2legacy.shell.belt": "BELT",

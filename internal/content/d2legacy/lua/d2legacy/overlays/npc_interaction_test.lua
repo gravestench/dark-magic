@@ -1,8 +1,8 @@
 local test = require("d2legacy.tests/v1")
 
-local function fixture()
+local function fixture(speech_failure)
     local state = { active = true, npc = "Fixture NPC", target_id = "fixture:npc", page = "menu", revision = 1 }
-    local calls = { choices = {}, pops = 0, controls = {}, destroyed = 0 }
+    local calls = { choices = {}, pops = 0, controls = {}, destroyed = 0, rendered_text = {} }
     local pressed = false
     local function node()
         return {
@@ -37,8 +37,15 @@ local function fixture()
     })
     test.mock_module("d2legacy.quest_catalog/v1", {
         dialog = function(line)
-            test.expect(line):equals("fixture:caption")
             calls.caption_reads = (calls.caption_reads or 0) + 1
+            if speech_failure then
+                test.expect(line):equals("missing-speech")
+                if speech_failure == "error" then
+                    error("fixture localization unavailable")
+                end
+                return nil
+            end
+            test.expect(line):equals("fixture:caption")
             return { text = "Synthetic caption" }
         end,
     })
@@ -48,7 +55,8 @@ local function fixture()
         end,
     })
     test.mock_module("d2legacy.ui.text", {
-        set_font = function()
+        set_font = function(_, _, value)
+            calls.rendered_text[#calls.rendered_text + 1] = value
             return 100, 16
         end,
     })
@@ -90,6 +98,28 @@ return test.suite({
     profile = "module",
     tier = "fast",
     cases = {
+        test.case("unknown_connected_speech_displays_unavailable_text_and_keeps_back_control", function(t)
+            t:run(function()
+                local overlay, instance, state, calls = fixture("missing")
+                state.page, state.revision, state.line = "text", 2, "missing-speech"
+                overlay.update(instance)
+                test.expect(calls.rendered_text[#calls.rendered_text - 1]):equals("d2legacy.npc.speech_unavailable")
+                calls.controls.back.on_activate()
+                test.expect(calls.choices[1].choice):equals("back")
+                test.expect(calls.pops):equals(0)
+            end)
+        end),
+        test.case("catalog_failure_keeps_escape_available", function(t)
+            t:run(function()
+                local overlay, instance, state, calls, cancel = fixture("error")
+                state.page, state.revision, state.line = "text", 2, "missing-speech"
+                overlay.update(instance)
+                cancel(true)
+                overlay.update(instance)
+                test.expect(calls.caption_reads):equals(1)
+                test.expect(calls.choices[1].choice):equals("back")
+            end)
+        end),
         test.case("menu_and_topic_controls_submit_choices_without_inventing_authority", function(t)
             t:run(function()
                 local overlay, instance, state, calls = fixture()

@@ -45,10 +45,12 @@ local function refresh(self, snapshot)
     local width, height = 120, 28 + #snapshot.choices * 22
     local center_x, top = manifest.resolution.width / 2 + 64, 100
     if snapshot.page == "text" then
-        local speech = assert(require("d2legacy.quest_catalog/v1").dialog(snapshot.line), "dialogue speech is unavailable")
+        -- A connected view may select speech absent from the local catalog.
+        local resolved, speech = pcall(require("d2legacy.quest_catalog/v1").dialog, snapshot.line)
+        local caption = resolved and speech and speech.text or locale.text("d2legacy.npc.speech_unavailable")
         width, center_x, top = 420, manifest.resolution.width / 2, 8
         local body = render.create("modal", self.content)
-        local _, body_height = text.set_font(body, "font16", speech.text, width - 24, "left", { text_color = "white" })
+        local _, body_height = text.set_font(body, "font16", caption, width - 24, "left", { text_color = "white" })
         height = math.max(130, body_height + 42)
         panel(self.content, center_x - width / 2, top, width, height)
         body:set_position(center_x, top + 12 + body_height / 2)
