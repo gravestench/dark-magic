@@ -875,6 +875,10 @@ return {
         if self.hud then
             game_hud.set_item_cursor_visible(self.hud, input_allowed)
         end
+        -- Hover labels belong only to the frame that resolves world pointer input.
+        if self.world_hover_tip then
+            self.world_hover_tip:set_visible(false)
+        end
 
         if not input_allowed then
             return
