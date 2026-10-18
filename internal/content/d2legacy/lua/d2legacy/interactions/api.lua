@@ -40,6 +40,32 @@ function M.close()
     intents.submit("interaction.close", {})
 end
 
+function M.choose(snapshot, choice)
+    intents.submit("interaction.choose", {
+        target = snapshot.target_id,
+        revision = snapshot.revision,
+        choice = choice,
+    })
+end
+
+function M.dialogue()
+    local context, target = require("d2legacy.interactions.context").active(local_owner())
+    local dialogue = require("d2legacy.interactions.dialogue")
+    if not context or not dialogue.supports(target:get("npc")) then return { active = false } end
+    local page = context:get("dialogue_page")
+    if page == "" then return { active = false } end
+    local result = {
+        active = true,
+        target_id = target:get("id"),
+        npc = target:get("npc"),
+        page = page,
+        revision = context:get("dialogue_revision"),
+        line = context:get("dialogue_line"),
+        choices = dialogue.choices(target:get("npc"), page),
+    }
+    return result
+end
+
 function M.snapshot()
     for _, entity in
         ipairs(ecs.query({

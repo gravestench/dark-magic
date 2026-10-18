@@ -244,6 +244,10 @@ func validatePrivateView(private PrivateView) error {
 	}
 
 	target := private.Interaction.Target
+	if !bounded(private.Interaction.DialoguePage, maxWorldKindBytes) ||
+		!bounded(private.Interaction.DialogueLine, maxViewTokenBytes) || private.Interaction.DialogueRevision < 0 {
+		return ErrClientView
+	}
 	if private.Interaction.Active != (target != nil) {
 		return ErrClientView
 	}
@@ -251,7 +255,7 @@ func validatePrivateView(private PrivateView) error {
 	if target != nil && (!boundedRequired(target.ID, maxViewIdentityBytes) ||
 		!bounded(target.NPC, maxWorldKindBytes) || !bounded(target.Vendor, maxWorldKindBytes) ||
 		!bounded(target.Categories, maxViewTokenBytes) || !bounded(target.Services, maxViewTokenBytes) ||
-		!finiteView(target.X, target.Y, target.Radius) || target.Radius < 0) {
+		!finiteView(target.X, target.Y, target.Radius) || target.Radius < 0 || target.Act < 0 || target.LevelID < 0) {
 		return ErrClientView
 	}
 

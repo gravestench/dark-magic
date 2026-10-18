@@ -310,6 +310,32 @@ Dialogue logic should not block authoritative game simulation on local audio pla
 
 ## Suggested implementation slices
 
+### Bounded Akara text interaction
+
+The current text-only slice uses `d2legacy.interaction.context` for the selected
+page, logical speech ID and a choice revision. `interaction.choose` revalidates
+the owner, current target, revision, range, level and residency before applying a
+supported choice. Invalidated dialogue pages stay closed until a new interaction.
+The connected private view carries these same facts; it does not choose dialogue.
+
+The supported subset is Talk/Cancel, then Gossip/Cancel. Gossip selects
+`akara_act1_gossip_8`, joined by the existing recovered speech catalog to
+`AkaraGossip9` and owned localized text. The caption is loaded when the displayed
+page changes, not on every frame. No original caption is embedded in the mod.
+
+The [native text/UI reference](https://pub-ee18c3c0efd64ad5967c2972fae3edd3.r2.dev/akara-talk-native-20261018/index.html)
+observed that Gossip text dismisses to Akara's main menu with Escape, Cancel
+closes the interaction, and a same-session repeat interaction opens the menu.
+The reference used 1.14d with sound disabled, so it does not establish audio or
+sound-enabled completion timing. This slice displays a static caption with an
+explicit pointer-accessible Cancel affordance; exact native scrolling is deferred.
+
+This is one representative gossip result, not the native gossip-selection policy.
+Trade, Introduction and quest topics are not offered as inert menu choices.
+Commerce, automatic first-meeting behavior, quest effects, audio and durable
+introduction/heard state remain separate work. Focused synthetic tests belong in
+the normal test harness; observation and demo tooling remain outside the mod.
+
 ### NPC1 — typed capability/dialogue snapshot
 
 Generalize current interaction context to expose an ordered server-derived list of semantic capabilities/options for one NPC.

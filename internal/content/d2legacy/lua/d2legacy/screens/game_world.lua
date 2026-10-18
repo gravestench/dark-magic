@@ -880,6 +880,12 @@ return {
             return
         end
 
+        if self.interaction and self.interaction.dialogue().active then
+            self.pending_interaction = nil
+            scenes.push("npc_interaction")
+            return
+        end
+
         -- Overlay routing happens even before the session player has finished
         -- binding. UI should remain responsive while a fixed tick admits player state.
         if input.pressed("inventory") then

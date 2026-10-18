@@ -2,6 +2,7 @@ package player
 
 import (
 	"math"
+	"strings"
 	"testing"
 )
 
@@ -35,7 +36,11 @@ func TestValidateClientViewRejectsUnboundedOrInvalidNetworkState(t *testing.T) {
 		"excess private items": func(view *ClientView) {
 			view.Private.Items.Items = make([]ItemEntityView, MaxPrivateItems+1)
 		},
-		"inconsistent interaction": func(view *ClientView) { view.Private.Interaction.Active = true },
+		"inconsistent interaction":   func(view *ClientView) { view.Private.Interaction.Active = true },
+		"negative dialogue revision": func(view *ClientView) { view.Private.Interaction.DialogueRevision = -1 },
+		"excess dialogue line": func(view *ClientView) {
+			view.Private.Interaction.DialogueLine = strings.Repeat("x", maxViewTokenBytes+1)
+		},
 		"duplicate party player": func(view *ClientView) {
 			view.Party.Roster = append(view.Party.Roster, view.Party.Roster[0])
 		},
