@@ -20,7 +20,9 @@ local function choose(tick, choice, revision, target, player, sequence)
 end
 
 local function context(owner)
-    return assert(require("d2legacy.interactions.context").for_owner(owner or "alice"))
+    local value = require("d2legacy.interactions.context").for_owner(owner or "alice")
+    test.expect(value ~= nil, "owner has an interaction context"):is_true()
+    return value
 end
 
 local function player()
