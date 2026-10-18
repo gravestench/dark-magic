@@ -12,6 +12,9 @@ local M = {}
 local interaction_data = {}
 local item_types_by_code
 
+-- Cain and ambient actors need their own quest or behavior contracts.
+local initial_town_npcs = { akara = true, charsi = true, gheed = true, kashya = true, warriv1 = true }
+
 local function item_type_index()
     if item_types_by_code then
         return item_types_by_code
@@ -194,10 +197,17 @@ local function create_target(target)
             return entity
         end
     end
+    local npc_class = target.class or (wanted == "act1-akara" and "akara")
+    local appearance
+    if target.level_id == 1 and initial_town_npcs[npc_class] then
+        appearance = require("d2legacy.data.monster").npc_appearance(npc_class)
+        appearance.mode, appearance.death_sound = "NU", ""
+    end
+    local label = appearance and appearance.name_key or target.npc
     local components = {
         ["d2legacy.interaction.target"] = {
             id = wanted,
-            npc = target.npc,
+            npc = label,
             vendor = target.vendor or "",
             categories = target.categories or "",
             services = target.services or "",
@@ -206,18 +216,17 @@ local function create_target(target)
             radius = target.radius,
         },
     }
-    if target.selectable then
-        assert(type(target.act) == "number" and target.act > 0, "selectable act is required")
+    if target.selectable or appearance then
+        local act = appearance and 1 or target.act
+        assert(type(act) == "number" and act > 0, "selectable act is required")
         assert(type(target.level_id) == "number" and target.level_id > 0, "selectable level is required")
         components["d2legacy.world.position"] = { x = target.x, y = target.y }
-        components["d2legacy.world.location"] = { act = target.act, level_id = target.level_id }
+        components["d2legacy.world.location"] = { act = act, level_id = target.level_id }
         components["d2legacy.world.selectable"] = {
-            id = wanted, kind = "dynamic-object", label = target.npc,
+            id = wanted, kind = "dynamic-object", label = label,
             radius = target.radius, priority = 20,
         }
-        if wanted == "act1-akara" then
-            local appearance = require("d2legacy.data.monster").npc_appearance("akara")
-            appearance.mode, appearance.death_sound = "NU", ""
+        if appearance then
             components["d2legacy.monster.appearance"] = appearance
         end
     end
