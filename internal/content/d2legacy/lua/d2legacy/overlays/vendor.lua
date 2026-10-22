@@ -61,6 +61,7 @@ end
 
 local function tab_label(root, value, x, y, width)
     local node = render.create("modal", root)
+    node:set_z(1)
     local _, height = text.set_font(node, "font16", value, width, "center", {text_color="white"})
     node:set_position(x + width / 2, y + height / 2)
 end
@@ -78,6 +79,7 @@ local function refresh(self)
 
         if visible and drawing == nil and item.inventory_dc6 ~= "" then
             local node = render.create("modal", self.root)
+            node:set_z(2)
             local width, height = node:set_dc6(item.inventory_dc6, manifest.palettes.units, 0, 0)
             drawing = {node=node, width=width, height=height}
             self.item_nodes[item.id] = drawing
@@ -149,6 +151,9 @@ return {
         local palette = manifest.palettes[screen.palette]
 		self.palette = palette
         local panel = render.create("modal", self.root)
+        -- Freed node slots are reused, so allocation order is not painter order.
+        -- Keep the panel below tabs, text/controls, and item pictures explicitly.
+        panel:set_z(-1)
         local panel_width, panel_height = panel:set_dc6_combined(screen.sheet, palette, 0, 0)
         panel:set_position(screen.x + panel_width / 2, screen.y + panel_height / 2)
 
@@ -164,6 +169,7 @@ return {
 		self.tabs = {}
         for index, category in ipairs(screen.tabs.categories) do
             local node = render.create("modal", self.root)
+            node:set_z(0)
 			self.tabs[index] = node
             local width, height = node:set_dc6(screen.tabs.sheet, palette, 0, index - 1)
             node:set_position(tab_x + width / 2, screen.y + height / 2)
@@ -192,16 +198,19 @@ return {
             end
         end
 
-		text.create(self.root, "panel_heading", locale.text("d2legacy.vendor.carried_gold"), screen.x + 110, screen.y + panel_height - 73, 180, "left")
+		local gold_label = text.create(self.root, "panel_heading", locale.text("d2legacy.vendor.carried_gold"), screen.x + 110, screen.y + panel_height - 73, 180, "left")
+        gold_label:set_z(1)
         self.price_text = render.create("modal", self.root)
+        self.price_text:set_z(1)
         self.price_text:set_position(screen.x + panel_width / 2, screen.y + panel_height - 95)
         self.gold_text = render.create("modal", self.root)
+        self.gold_text:set_z(1)
         self.gold_text:set_position(screen.x + 110, screen.y + panel_height - 65)
 
-        local close = {sheet="data/global/ui/PANEL/buysellbtn.DC6", palette="sky", up_frame=10, down_frame=11,
+        local close_art = {sheet="data/global/ui/PANEL/buysellbtn.DC6", palette="sky", up_frame=10, down_frame=11,
             x=screen.x + screen.close.x, y=screen.y + panel_height - screen.close.bottom_inset - 32, width=32, height=32}
-        button.create(self.root, self.controls, "close", close, locale.text(screen.close.label), {
-            layer="modal", show_label=false, tooltip=locale.text(screen.close.label),
+        button.create(self.root, self.controls, "close", close_art, locale.text(screen.close.label), {
+            layer="modal", z=1, show_label=false, tooltip=locale.text(screen.close.label),
             on_activate=function()
                 if self.ordinary_trade then close(self)
                 else self.interaction.close(); scenes.toggle_overlay("vendor", "left") end
