@@ -23,13 +23,13 @@ local function spawn_event_target_monster(overrides)
         -- not damage formulas or resistances.
         ["d2legacy.monster.stats"] = {
             level = 1,
-            health = 4096,
-            max_health = 4096,
+            health = overrides.health or 4096,
+            max_health = overrides.health or 4096,
             defense = 0,
             attack_rating = 0,
             physical_min = 0,
             physical_max = 0,
-            experience = 0,
+            experience = overrides.experience or 0,
         },
         -- Position the monster at a fixed world coordinate the player will target.
         ["d2legacy.world.position"] = { x = overrides.x or 12, y = overrides.y or 12 },
@@ -367,7 +367,7 @@ return test.suite({
                 for _, source in ipairs({
                     { stat = "poisonmindam", value = 128 },
                     { stat = "poisonmaxdam", value = 128 },
-                    { stat = "poisonlength", value = 20 },
+                    { stat = "poisonlength", value = 40 },
                 }) do
                     ecs.create({
                         ["d2legacy.stat.source"] = {
@@ -380,7 +380,7 @@ return test.suite({
                         },
                     })
                 end
-                local monster = spawn_event_target_monster({ level_id = 2 })
+                local monster = spawn_event_target_monster({ level_id = 2, health = 2048, experience = 10 })
                 ecs.set(monster, "d2legacy.combat.defense", {
                     base_poison_resist = 50,
                     poison_resist = 50,
@@ -395,13 +395,13 @@ return test.suite({
                 local bundle = ecs.get(resolved[1], "d2legacy.combat.damage_bundle")
                 test.expect(bundle:get("poison_rolled_raw")):equals(128)
                 test.expect(bundle:get("poison_mitigated_raw")):equals(64)
-                test.expect(bundle:get("poison_length_frames")):equals(20)
+                test.expect(bundle:get("poison_length_frames")):equals(40)
                 local states = ecs.query({ all = { "d2legacy.state.instance" } })
                 test.expect(#states):equals(1)
                 local state = ecs.get(states[1], "d2legacy.state.instance")
                 test.expect(state:get("stat_value")):equals(-64)
                 test.expect(state:get("source_attacker_id")):equals("player:alice")
-                test.expect(state:get("expires_tick") - state:get("applied_tick")):equals(20)
+                test.expect(state:get("expires_tick") - state:get("applied_tick")):equals(40)
                 local monster = ecs.query({ all = { "d2legacy.monster.identity" } })[1]
                 poison_sample_health = ecs.get(monster, "d2legacy.monster.stats"):get("health")
             end),
@@ -412,10 +412,24 @@ return test.suite({
                 local health = ecs.get(monster, "d2legacy.monster.stats"):get("health")
                 test.expect(health):equals(poison_sample_health - 3 * 64)
             end),
-            test.step(20),
+            test.step(40),
             test.run(function()
                 local ecs = require("engine.ecs/v1")
                 test.expect(#ecs.query({ all = { "d2legacy.state.instance" } })):equals(0)
+                local monster = ecs.query({ all = { "d2legacy.monster.identity" } })[1]
+                local death = ecs.get(monster, "d2legacy.monster.death")
+                test.assert(death ~= nil, "melee-applied poison did not kill the monster")
+                test.expect(death:get("credited_id")):equals("player:alice")
+                local player = player_entity()
+                test.expect(ecs.get(player, "d2legacy.player.progress"):get("experience")):equals(10)
+                local deaths = 0
+                for _, entity in ipairs(ecs.query({ all = { "d2legacy.combat.event" } })) do
+                    local event = ecs.get(entity, "d2legacy.combat.event")
+                    if event:get("kind") == "unit_died" and event:get("source_kind") == "poison" then
+                        deaths = deaths + 1
+                    end
+                end
+                test.expect(deaths):equals(1)
             end),
         }),
         test.case("weapon_attacks_consume_generic_outgoing_damage_percentage_sources", {
