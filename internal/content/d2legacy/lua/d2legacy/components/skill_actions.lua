@@ -373,6 +373,7 @@ function M.register()
             { name = "magic_mitigated_raw", type = "i64" },
             { name = "poison_rolled_raw", type = "i64" },
             { name = "poison_mitigated_raw", type = "i64" },
+            { name = "poison_length_frames", type = "i64" },
         },
     })
 

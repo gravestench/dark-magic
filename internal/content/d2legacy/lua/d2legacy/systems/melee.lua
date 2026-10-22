@@ -41,7 +41,7 @@ local function combat_values(entity, entities)
     return progress:get("level"), stats:get("attack_rating"), stats:get("defense")
 end
 
-local function event(structural, values, damage)
+local function event(structural, values, damage, poison_length_frames)
     local components = {
         ["d2legacy.combat.melee_event"] = values,
         ["d2legacy.combat.attack_result"] = {
@@ -67,7 +67,8 @@ local function event(structural, values, damage)
             damage_raw = damage.damage_raw,
             remaining_health_raw = damage.remaining_health_raw,
         }
-        components["d2legacy.combat.damage_bundle"] = damage_bundle.stage_component(damage.rolled, damage.mitigated)
+        components["d2legacy.combat.damage_bundle"] =
+            damage_bundle.stage_component(damage.rolled, damage.mitigated, poison_length_frames)
     end
     structural:create(components)
 end
@@ -91,7 +92,16 @@ local function weapon_damage(attacker, profile, hand, entities)
     if fire_maximum > 0 then
         result.fire = policy.damage(fire_minimum, fire_maximum)
     end
-    return damage_bundle.normalize(result)
+    local poison_minimum = stat_sources.resolve(entities, attacker, "poisonmindam", 0)
+    local poison_maximum = stat_sources.resolve(entities, attacker, "poisonmaxdam", 0)
+    local poison_length = stat_sources.resolve(entities, attacker, "poisonlength", 0)
+    assert(poison_minimum >= 0 and poison_maximum >= poison_minimum, "invalid weapon poison-damage range")
+    assert(poison_length >= 0, "invalid weapon poison length")
+    if poison_maximum > 0 and poison_length > 0 then
+        result.poison = policy.damage(poison_minimum, poison_maximum)
+        return damage_bundle.normalize(result), poison_length
+    end
+    return damage_bundle.normalize(result), 0
 end
 
 local function hand_attack_rating(profile, total, hand)
@@ -162,6 +172,7 @@ function M.register()
                         outcome = "invalidated",
                     }
                     local result
+                    local poison_length_frames = 0
                     if target then
                         local attacker_level, attack_rating = combat_values(attacker, entities)
                         local defender_level, _, defense = combat_values(target, entities)
@@ -171,11 +182,10 @@ function M.register()
                         base.hit_chance = policy.hit_chance(attacker_level, defender_level, attack_rating, defense)
                         base.outcome = "miss"
                         if policy.hits(attacker_level, defender_level, attack_rating, defense) then
-                            result = damage_policy.resolve(
-                                target,
-                                weapon_damage(attacker, profile, request:get("hand"), entities),
-                                ecs
-                            )
+                            local rolled
+                            rolled, poison_length_frames =
+                                weapon_damage(attacker, profile, request:get("hand"), entities)
+                            result = damage_policy.resolve(target, rolled, ecs)
                             leech.apply(attacker, target, result, entities, ecs, structural, context.tick)
                             base.hit = true
                             base.outcome = "hit"
@@ -183,7 +193,7 @@ function M.register()
                             base.damage_raw = result.damage_raw
                         end
                     end
-                    event(structural, base, result)
+                    event(structural, base, result, poison_length_frames)
                 end
             end
         end,
