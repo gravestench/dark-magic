@@ -290,7 +290,7 @@ function M.register(state_policy)
     ecs.system({
         id = "d2legacy.skill.aura_periodic_effect",
         phase = "pre_simulation",
-        after = { "d2legacy.skill.selected_party_aura" },
+        after = { "d2legacy.skill.selected_party_aura", "d2legacy.combat.poison_tick" },
         query = {
             any = {
                 "d2legacy.skill.aura_pulse",

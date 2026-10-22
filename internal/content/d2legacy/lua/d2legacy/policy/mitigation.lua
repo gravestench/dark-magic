@@ -5,6 +5,7 @@ local elemental_resistance = {
     fire = { resistance = "fire_resist", maximum = "max_fire_resist" },
     cold = { resistance = "cold_resist", maximum = "max_cold_resist" },
     lightning = { resistance = "lightning_resist", maximum = "max_lightning_resist" },
+    poison = { resistance = "poison_resist", maximum = "max_poison_resist" },
 }
 
 local function percent(value, resistance)
@@ -20,10 +21,15 @@ function M.apply(raw, channel, defense, monster_target)
         local resistance = math.max(-100, math.min(100, defense:get("physical_resist")))
         return math.max(0, percent(raw, resistance) - defense:get("physical_reduction_raw"))
     end
+    if monster_target and channel == "magic" then
+        local resistance = math.max(-100, math.min(100, defense:get("magic_resist")))
+        return math.max(0, percent(raw, resistance))
+    end
     local element = elemental_resistance[channel]
     if element then
-        if monster_target and defense:get(element.resistance) >= 100 then
-            return 0
+        if monster_target then
+            local resistance = math.max(-100, math.min(100, defense:get(element.resistance)))
+            return math.max(0, percent(raw, resistance))
         end
         local maximum = math.max(0, math.min(95, defense:get(element.maximum)))
         local resistance = math.max(-100, math.min(maximum, defense:get(element.resistance)))

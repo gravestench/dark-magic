@@ -74,7 +74,7 @@ The renderer-independent `d2legacy` Lua authority now owns:
   checkpoint continuation;
 - a reusable `missile.radial` family that composes one targetless cast into
   ordinary projectile entities sharing a cast identity plus independent ECS
-  cast-target contact locks;
+  target contact locks shared by `NextHit` missiles;
 - a reusable straight-missile area-impact family that separates the damaging
   radius transaction from a presentation-only ECS aftermath entity;
 - a reusable straight-missile on-hit state family that snapshots duration and
@@ -193,9 +193,9 @@ level, 15 base mana plus 1 per level, all five elemental damage growth bands,
 24 velocity, 13-tick lifetime, presentation fields, and four-tick next-hit
 delay in a reusable immutable definition. The generic materializer creates one
 ECS projectile per direction with a shared deterministic cast ID. The contact
-system represents each cast/target suppression window as its own checkpointed
-`d2legacy.missile.contact_lock` entity, so radial repeat policy composes with
-the shared direct-damage path rather than becoming a Nova special case. A
+system represents each target suppression window shared by `NextHit` missiles
+as its own checkpointed `d2legacy.missile.contact_lock` entity, so radial repeat
+policy composes with the shared direct-damage path rather than becoming a Nova special case. A
 synthetic second record fixture proves family reuse, and authority coverage
 checks level-one mana, twelve rays, one lightning result during the lock,
 checkpoint parity, and lifetime cleanup.
@@ -1405,12 +1405,23 @@ well as unit contact; its presentation aftermath remains non-damaging.
 
 Owned 1.14d records preserve Inferno Sentry's heterogeneous elemental formula:
 Fire Trauma and Death Sentry hard levels use `Param7`, while Wake of Fire Sentry
-uses `Param8`. Blade Fury preserves its SQ action, three-mana start threshold,
-one-mana per accepted blade, and held-input re-admission after each completed
-authoritative action. Blade Shield uses an ordinary timed state plus a
+uses `Param8`. Blade Fury reads its six-mana starting threshold from
+`startmana`, separately from the rank-one one-mana payment per accepted blade.
+The current SQ action readmits held input after each completed authoritative
+action. Blade Shield uses an ordinary timed state plus a
 checkpointed periodic weapon transaction. Synthetic family tests cover all ten
 IDs and the six shapes; focused system tests cover arrival impact, corpse
 ordering, return patrol, replacement facts, and checkpoint parity.
+
+The [Blade Sentinel/Fury spec](https://github.com/gravestench/dark-magic/blob/8e6769f7eea7d18b164ac3b080ae8b45faf8bc3e/docs/specs/skill-assassin-blade-sentinel-and-fury.md#4-rules-execution-order)
+BSF-R04 identifies shared target suppression for `NextHit` missiles across casts.
+The checkpointed contact lock preserves that scope. Ordinary missiles neither
+check nor arm it. BSF-R06b distinguishes `startmana` from `Param3` while leaving
+full Fury start/repeat behavior unresolved. The initial `startmana << 8` guard
+is corroborated by the reconstructed 1.10f
+[D2MOO start routine](https://github.com/ThePhrozenKeep/D2MOO/blob/1fe7444dc2cfb6bf1c2934b8901e5699a4c36913/source/D2Game/src/SKILLS/SkillAss.cpp#L1829-L1867).
+The engine checks establish successful-contact suppression and the decoded
+starting threshold, not the original timed-list or held-channel lifecycle.
 
 Owned sentry lifecycle coverage also proves that inactive-room filtering pauses
 autonomous fire without spending a shot, reactivation resumes the checkpointed

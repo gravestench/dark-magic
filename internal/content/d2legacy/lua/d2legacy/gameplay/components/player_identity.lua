@@ -35,6 +35,7 @@ function M.register()
         version = 1,
         fields = {
             { name = "health", type = "i64" },
+            { name = "poison_remainder_raw", type = "i64" },
             { name = "max_health", type = "i64" },
             { name = "mana", type = "i64" },
             { name = "max_mana", type = "i64" },

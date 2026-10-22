@@ -16,8 +16,53 @@ const audioSoundType = "engine.audio.sound/v1"
 type ownedSound struct {
 	mixer *audio.Mixer
 	id    audio.SoundID
-	once  sync.Once
-	err   error
+}
+
+type scopedSounds struct {
+	mu     sync.Mutex
+	scopes map[*Scope]map[audio.SoundID]*ownedSound
+}
+
+// add keeps one cleanup per scope and forgets completed sounds before retaining another.
+func (s *scopedSounds) add(scope *Scope, sound *ownedSound) error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	if s.scopes == nil {
+		s.scopes = make(map[*Scope]map[audio.SoundID]*ownedSound)
+	}
+
+	sounds := s.scopes[scope]
+	if sounds == nil {
+		sounds = make(map[audio.SoundID]*ownedSound)
+
+		if err := scope.Add(func() error {
+			s.mu.Lock()
+			defer s.mu.Unlock()
+
+			for _, entry := range sounds {
+				entry.mixer.Release(entry.id)
+			}
+
+			delete(s.scopes, scope)
+
+			return nil
+		}); err != nil {
+			return err
+		}
+
+		s.scopes[scope] = sounds
+	}
+
+	for id, entry := range sounds {
+		if !entry.mixer.Active(id) {
+			delete(sounds, id)
+		}
+	}
+
+	sounds[sound.id] = sound
+
+	return nil
 }
 
 // luaPlayOptions translates the optional Lua table into mixer defaults. Missing fields deliberately retain the
@@ -43,14 +88,16 @@ func luaPlayOptions(state *lua.LState, index int) audio.PlayOptions {
 	return options
 }
 
-// release stops a scoped sound at most once and preserves the first stop error for repeated Lua or scope cleanup.
+// release tolerates natural completion and group stops before scope teardown.
 func (s *ownedSound) release() error {
-	s.once.Do(func() { s.err = s.mixer.Stop(s.id) })
-	return s.err
+	s.mixer.Release(s.id)
+	return nil
 }
 
 // AudioModule exposes scoped archive-backed sound playback.
 func AudioModule(runtime *Runtime, mixer *audio.Mixer, source fs.FS) Module {
+	var ownership scopedSounds
+
 	return Module{
 		Name: "engine.audio/v1",
 		Help: documentedModule(
@@ -153,7 +200,7 @@ func AudioModule(runtime *Runtime, mixer *audio.Mixer, source fs.FS) Module {
 					}
 
 					sound := &ownedSound{mixer: mixer, id: id}
-					if err := scope.Add(sound.release); err != nil {
+					if err := ownership.add(scope, sound); err != nil {
 						_ = sound.release()
 
 						state.RaiseError("owning sound %q: %v", fileName, err)

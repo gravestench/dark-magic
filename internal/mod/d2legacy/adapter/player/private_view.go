@@ -63,8 +63,11 @@ type ItemEntityView struct {
 }
 
 type InteractionView struct {
-	Active bool                   `json:"active"`
-	Target *InteractionTargetView `json:"target,omitempty"`
+	Active           bool                   `json:"active"`
+	Target           *InteractionTargetView `json:"target,omitempty"`
+	DialoguePage     string                 `json:"dialogue_page,omitempty"`
+	DialogueLine     string                 `json:"dialogue_line,omitempty"`
+	DialogueRevision int64                  `json:"dialogue_revision,omitempty"`
 }
 
 type InteractionTargetView struct {
@@ -76,6 +79,8 @@ type InteractionTargetView struct {
 	X          float64 `json:"x"`
 	Y          float64 `json:"y"`
 	Radius     float64 `json:"radius"`
+	Act        int64   `json:"act,omitempty"`
+	LevelID    int64   `json:"level_id,omitempty"`
 }
 
 // ProjectPrivateView selects inventory and interaction state owned by the
@@ -130,8 +135,11 @@ func projectInteraction(snapshot gameecs.Snapshot, playerID string) InteractionV
 		return InteractionView{}
 	}
 
-	return InteractionView{
-		Active: true,
+	view := InteractionView{
+		Active:           true,
+		DialoguePage:     stringField(fields, "dialogue_page"),
+		DialogueLine:     stringField(fields, "dialogue_line"),
+		DialogueRevision: intField(fields, "dialogue_revision"),
 		Target: &InteractionTargetView{
 			ID:         stringField(target, "id"),
 			NPC:        stringField(target, "npc"),
@@ -143,6 +151,14 @@ func projectInteraction(snapshot gameecs.Snapshot, playerID string) InteractionV
 			Radius:     floatField(target, "radius"),
 		},
 	}
+	if locations, found := findComponent(snapshot, "d2legacy.world.location"); found {
+		if location, present := findInstance(locations, entityField(fields, "target")); present {
+			view.Target.Act = intField(location, "act")
+			view.Target.LevelID = intField(location, "level_id")
+		}
+	}
+
+	return view
 }
 
 // itemLayout copies only the bounded presentation dimensions and balances; raw

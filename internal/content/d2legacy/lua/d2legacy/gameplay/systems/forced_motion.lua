@@ -27,11 +27,11 @@ local function emit_rejection(context, entity, request, position, outcome, struc
     })
 end
 
-local function emit_replacement(context, entity, active, position, structural)
+local function emit_displacement(context, entity, active, position, outcome, structural)
     structural:create({
         ["d2legacy.world.forced_motion_event"] = {
             kind = active:get("kind"),
-            outcome = "replaced",
+            outcome = outcome,
             tick = context.tick,
             target_id = entity_identity.semantic_id(entity),
             start_x = active:get("start_x"),
@@ -64,7 +64,7 @@ local function admit(context, entity, request, position, active, structural)
         -- A target can own only one spatial transaction. Preserve the existing
         -- deterministic replacement behavior as an explicit semantic outcome
         -- before the newer admitted request becomes authoritative.
-        emit_replacement(context, entity, active, position, structural)
+        emit_displacement(context, entity, active, position, "replaced", structural)
     end
     structural:set(entity, "d2legacy.world.forced_motion", {
         kind = request:get("kind"),
@@ -78,6 +78,20 @@ local function admit(context, entity, request, position, active, structural)
         start_tick = context.tick,
     })
     structural:remove(entity, "d2legacy.world.forced_motion_request")
+end
+
+-- Another system can end an active transaction before movement finishes it,
+-- such as death. Record the progress made so far as its one outcome, then drop
+-- it. The caller's system must read position, selectable, and forced_motion,
+-- and write forced_motion and forced_motion_event.
+function M.interrupt(context, entity, structural)
+    local active = ecs.get(entity, "d2legacy.world.forced_motion")
+    if not active then
+        return
+    end
+    local position = ecs.get(entity, "d2legacy.world.position")
+    emit_displacement(context, entity, active, position, "interrupted", structural)
+    structural:remove(entity, "d2legacy.world.forced_motion")
 end
 
 function M.register()

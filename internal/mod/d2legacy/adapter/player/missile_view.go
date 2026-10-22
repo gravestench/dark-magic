@@ -171,20 +171,27 @@ func projectMissileSoundOwners(snapshot gameecs.Snapshot) (map[uint64]string, bo
 	if !found {
 		return nil, true
 	}
-	if component.Version != 1 || len(component.Fields) != 1 || component.Fields[0].Name != "projectile_id" || component.Fields[0].Kind != akara.FieldString {
+
+	if component.Version != 1 || len(component.Fields) != 1 ||
+		component.Fields[0].Name != "projectile_id" || component.Fields[0].Kind != akara.FieldString {
 		return nil, false
 	}
+
 	fields, ok := indexEventComponent(component)
 	if !ok {
 		return nil, false
 	}
+
 	owners := make(map[uint64]string, len(fields))
 	for entity, row := range fields {
 		value := row["projectile_id"]
-		if value.String == nil || value.Bool != nil || value.Int != nil || value.Uint != nil || value.Float != nil || value.Entity != nil || !boundedRequired(*value.String, maxMissileSoundOwnerBytes) {
+		if value.String == nil || value.Bool != nil || value.Int != nil || value.Uint != nil || value.Float != nil ||
+			value.Entity != nil || !boundedRequired(*value.String, maxMissileSoundOwnerBytes) {
 			return nil, false
 		}
+
 		owners[entity] = *value.String
 	}
+
 	return owners, true
 }

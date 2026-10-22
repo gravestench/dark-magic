@@ -11,7 +11,6 @@ local function fixture()
         "d2legacy.gameplay.monster_composite",
         "d2legacy.gameplay.cast_presentation",
         "d2legacy.gameplay.held_skill_input",
-        "d2legacy.gameplay.state_overlay_presentation",
         "d2legacy.gameplay.interaction_approach",
         "d2legacy.data.skill",
         "d2legacy.ui.tooltip",
@@ -24,6 +23,7 @@ local function fixture()
             set_visible = function() end,
             set_position = function() end,
             set_z = function() end,
+            set_tint = function() end,
             destroy = function() end,
             exists = function()
                 return true
@@ -51,6 +51,11 @@ local function fixture()
             return nil
         end,
     })
+    test.mock_module("d2legacy.gameplay.state_overlay_presentation", {
+        resolve = function()
+            return nil
+        end,
+    })
     test.mock_module("d2legacy.gameplay.aura_overlay_cycle", {
         select = function()
             return {}, {}
@@ -63,6 +68,9 @@ local function fixture()
         end,
     })
     test.mock_module("engine.records/v1", {
+        revision = function()
+            return nil
+        end,
         load = function()
             return {
                 { Sound = "travel", FileName = "loop.wav", Loop = "1", ["Volume Min"] = "255" },
@@ -132,6 +140,7 @@ local function fixture()
             destroy = function() end,
             player_snapshots = empty,
             monster_snapshots = empty,
+            npc_snapshots = empty,
             warp_snapshots = empty,
             state_snapshots = empty,
             missile_snapshots = function()

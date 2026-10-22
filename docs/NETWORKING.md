@@ -77,7 +77,7 @@ assignment-owned and separate from this direct-game trust store.
 Join and reconnect return versioned per-player semantic projections plus a
 canonical tick and checksum. They do not expose raw ECS snapshots or hidden
 server facts. The client treats even a pinned host as an untrusted decoder
-boundary: `ClientView/v13` rejects unknown fields, inconsistent nested ticks,
+boundary: `ClientView/v14` rejects unknown fields, inconsistent nested ticks,
 non-finite numbers, duplicate identities, invalid private interaction shapes,
 and collections or strings beyond their schema limits. Reconnect rotates the
 bearer credential so a successfully used old credential cannot be replayed.
@@ -90,7 +90,7 @@ be group/world accessible. A realm and its allocated worker share this key to
 sign and consume short-lived, session-bound, one-use admission tickets. The
 standalone server does not expose a ticket-minting endpoint.
 
-The current `d2legacy` remote projection is `PlayerHUD/v6`. It derives from the
+The current `d2legacy` remote projection is `PlayerHUD/v8`. It derives from the
 canonical checkpoint rather than rereading the live ECS and selects the entity
 bound to the authenticated player. Its field allowlist includes identity,
 vitals, progression, combat display values, position, location, movement mode,
@@ -101,8 +101,8 @@ server facts. Realm admission must load and lease the durable
 character and submit the trusted player-entry command before join; a client
 credential never materializes authoritative character state.
 
-`ClientView/v13` envelopes `PlayerHUD/v6`, `PrivateView/v1`, `PartyView/v1`,
-`EventView/v5`, and `WorldView/v6` at one canonical tick. Missile visuals and
+`ClientView/v14` envelopes `PlayerHUD/v8`, `PrivateView/v1`, `PartyView/v1`,
+`EventView/v5`, and `WorldView/v7` at one canonical tick. Missile visuals and
 spawn effects may carry an optional `sound_owner_id` for projectile-scoped audio
 cleanup. Strict decoding rejects other schema versions. Connected peers must use
 the same projection versions. The world projection includes explicitly public
@@ -206,7 +206,7 @@ accepts only a canonical host/port endpoint, validates the advertised runtime
 identity locally, performs normal X.509 verification against an explicit trust
 configuration, and additionally pins the leaf certificate to the realm's
 `sha256:` fingerprint before sending the one-use ticket. It then verifies the
-server admission session/runtime and decodes exactly `ClientView/v13`. Reconnect
+server admission session/runtime and decodes exactly `ClientView/v14`. Reconnect
 rotates the session credential and atomically replaces the correction view. An
 unexpected transport loss suspends the membership for a ten-second lease,
 rejects commands on the disconnected credential, and permits a fresh pinned
@@ -277,7 +277,7 @@ hosting player's ordinary `clientsession.Session`. This makes the host a real
 network member. Transport starts only after character selection. Connected
 presentation uses an entity-empty, schema-compatible client ECS rather than the
 frozen offline authority: authenticated HUD state creates the local entity,
-`WorldView/v6` creates nearby public entities and presentation-only missile/
+`WorldView/v7` creates nearby public entities and presentation-only missile/
 persistent-state relationships, owner-private projections rebuild
 the local inventory/interaction graph, and Lua binds to the authenticated
 session player ID. Input is sampled on the 25 Hz simulation clock, scheduled

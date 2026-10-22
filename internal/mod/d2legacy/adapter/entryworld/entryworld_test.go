@@ -163,3 +163,35 @@ func TestInitialDataUsesSharedInteractionAndTransitionContracts(t *testing.T) {
 		t.Fatalf("game rules = %#v", rules)
 	}
 }
+
+func TestInteractionDataPreservesAuthoredTownNPCPlacements(t *testing.T) {
+	town, err := gameworld.NewOpenMap(100, 100)
+	if err != nil {
+		t.Fatal(err)
+	}
+	town.Objects = []gameworld.Object{
+		{Type: gameworld.ObjectTypeDynamic, ID: 2, X: 21, Y: 46, Class: "akara", Resolved: true},
+		{Type: gameworld.ObjectTypeStatic, ID: 12, X: 11, Y: 16, Description: "Chest", Resolved: true},
+		{Type: gameworld.ObjectTypeDynamic, ID: 8, X: 31, Y: 56, Class: "charsi", Resolved: true},
+	}
+	data := InteractionData(map[int]*gameworld.Map{1: town}, nil, "alice", "")
+	targets := data["targets"].([]any)
+	if len(targets) != 3 {
+		t.Fatalf("Akara must have one target, got %#v", targets)
+	}
+	guide := targets[0].(map[string]any)
+	if guide["id"] != "act1-akara" || guide["x"] != float64(21) || guide["y"] != float64(46) ||
+		guide["act"] != float64(1) ||
+		guide["level_id"] != float64(1) || guide["selectable"] != true || guide["radius"] != float64(4) {
+		t.Fatalf("authored Akara target = %#v", guide)
+	}
+	if other := targets[1].(map[string]any); other["npc"] != "Chest" || other["x"] != float64(11) || other["y"] != float64(16) {
+		t.Fatalf("DS1 Akara must not be a second target: %#v", other)
+	}
+
+	charsi := targets[2].(map[string]any)
+	if charsi["class"] != "charsi" || charsi["level_id"] != float64(1) ||
+		charsi["x"] != float64(31) || charsi["y"] != float64(56) {
+		t.Fatalf("authored NPC facts = %#v", charsi)
+	}
+}

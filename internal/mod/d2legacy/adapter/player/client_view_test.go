@@ -2,6 +2,7 @@ package player
 
 import (
 	"math"
+	"strings"
 	"testing"
 )
 
@@ -11,6 +12,10 @@ func TestValidateClientViewRejectsUnboundedOrInvalidNetworkState(t *testing.T) {
 	valid := validClientView(7)
 	if err := ValidateClientView(valid, 7); err != nil {
 		t.Fatalf("valid view: %v", err)
+	}
+	valid.World.States = []WorldState{{TargetID: "player:player", StateID: "poison", Aura: false}}
+	if err := ValidateClientView(valid, 7); err != nil {
+		t.Fatalf("valid poison state: %v", err)
 	}
 
 	tests := map[string]func(*ClientView){
@@ -26,16 +31,26 @@ func TestValidateClientViewRejectsUnboundedOrInvalidNetworkState(t *testing.T) {
 			view.World.States = make([]WorldState, MaxWorldViewStates+1)
 		},
 		"invalid persistent state period": func(view *ClientView) {
-			view.World.States = []WorldState{{TargetID: "player:player", StateID: "might"}}
+			view.World.States = []WorldState{{TargetID: "player:player", StateID: "might", Aura: true}}
+		},
+		"poison with aura period": func(view *ClientView) {
+			view.World.States = []WorldState{{TargetID: "player:player", StateID: "poison", PeriodTicks: 50}}
+		},
+		"nonpoison timed state": func(view *ClientView) {
+			view.World.States = []WorldState{{TargetID: "player:player", StateID: "frozenarmor"}}
 		},
 		"duplicate persistent state": func(view *ClientView) {
-			state := WorldState{TargetID: "player:player", StateID: "might", PeriodTicks: 50}
+			state := WorldState{TargetID: "player:player", StateID: "might", Aura: true, PeriodTicks: 50}
 			view.World.States = []WorldState{state, state}
 		},
 		"excess private items": func(view *ClientView) {
 			view.Private.Items.Items = make([]ItemEntityView, MaxPrivateItems+1)
 		},
-		"inconsistent interaction": func(view *ClientView) { view.Private.Interaction.Active = true },
+		"inconsistent interaction":   func(view *ClientView) { view.Private.Interaction.Active = true },
+		"negative dialogue revision": func(view *ClientView) { view.Private.Interaction.DialogueRevision = -1 },
+		"excess dialogue line": func(view *ClientView) {
+			view.Private.Interaction.DialogueLine = strings.Repeat("x", maxViewTokenBytes+1)
+		},
 		"duplicate party player": func(view *ClientView) {
 			view.Party.Roster = append(view.Party.Roster, view.Party.Roster[0])
 		},

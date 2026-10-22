@@ -528,7 +528,8 @@ func validStateCue(cue SemanticStateCue) bool {
 // validEffectCue requires at least one visual or audio asset, avoiding empty
 // effect events that consume bounded history without presenting anything.
 func validEffectCue(cue SemanticEffectCue) bool {
-	return bounded(cue.SoundOwnerID, maxMissileSoundOwnerBytes) && boundedRequired(cue.Kind, maxEventKindBytes) && bounded(cue.OverlayID, maxEventSourceBytes) &&
+	return bounded(cue.SoundOwnerID, maxMissileSoundOwnerBytes) && boundedRequired(cue.Kind, maxEventKindBytes) &&
+		bounded(cue.OverlayID, maxEventSourceBytes) &&
 		bounded(cue.Sound, maxEventSourceBytes) && (cue.OverlayID != "" || cue.Sound != "")
 }
 

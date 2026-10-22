@@ -18,6 +18,7 @@ function M.register()
     })
     component("d2legacy.player.vitals", {
         { name = "health", type = "i64" },
+        { name = "poison_remainder_raw", type = "i64" },
         { name = "max_health", type = "i64" },
         { name = "mana", type = "i64" },
         { name = "max_mana", type = "i64" },
@@ -382,18 +383,34 @@ function M.register()
     })
     component("d2legacy.combat.defense", {
         { name = "base_physical_resist", type = "i64" },
+        { name = "base_magic_resist", type = "i64" },
         { name = "base_fire_resist", type = "i64" },
         { name = "base_cold_resist", type = "i64" },
         { name = "base_lightning_resist", type = "i64" },
+        { name = "base_poison_resist", type = "i64" },
         { name = "physical_resist", type = "i64" },
+        { name = "magic_resist", type = "i64" },
         { name = "fire_resist", type = "i64" },
         { name = "cold_resist", type = "i64" },
         { name = "lightning_resist", type = "i64" },
+        { name = "poison_resist", type = "i64" },
         { name = "max_fire_resist", type = "i64" },
         { name = "max_cold_resist", type = "i64" },
         { name = "max_lightning_resist", type = "i64" },
+        { name = "max_poison_resist", type = "i64" },
         { name = "physical_reduction_raw", type = "i64" },
         { name = "fire_absorb_percent", type = "i64", default = 0 },
+    })
+    -- Connected clients mirror only the values drawn by the character panel.
+    component("d2legacy.presentation.character_resistances", {
+        { name = "fire_resist", type = "i64" },
+        { name = "cold_resist", type = "i64" },
+        { name = "lightning_resist", type = "i64" },
+        { name = "poison_resist", type = "i64" },
+        { name = "max_fire_resist", type = "i64" },
+        { name = "max_cold_resist", type = "i64" },
+        { name = "max_lightning_resist", type = "i64" },
+        { name = "max_poison_resist", type = "i64" },
     })
     component("d2legacy.stat.source", {
         { name = "target", type = "entity" },
@@ -443,6 +460,7 @@ function M.register()
         { name = "target", type = "entity" },
         { name = "state_id", type = "string" },
         { name = "source_id", type = "string" },
+        { name = "source_attacker_id", type = "string" },
         { name = "duration", type = "i64" },
         { name = "policy", type = "string" },
         { name = "stat", type = "string" },
@@ -479,6 +497,7 @@ function M.register()
         { name = "target", type = "entity" },
         { name = "state_id", type = "string" },
         { name = "source_id", type = "string" },
+        { name = "source_attacker_id", type = "string" },
         { name = "applied_tick", type = "i64" },
         { name = "expires_tick", type = "i64" },
         { name = "policy", type = "string" },

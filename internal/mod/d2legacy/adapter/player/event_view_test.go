@@ -20,6 +20,7 @@ func TestProjectEventViewReturnsBoundedNearbySemanticTail(t *testing.T) {
 		Fields:    []gameecs.FieldSnapshot{{Name: "projectile_id", Kind: akara.FieldString}},
 		Instances: []gameecs.InstanceSnapshot{{Entity: 24, Values: []gameecs.ValueSnapshot{{String: &owner}}}},
 	})
+
 	view, err := ProjectEventView("alice", checkpoint)
 	if err != nil {
 		t.Fatal(err)
@@ -75,7 +76,9 @@ func TestValidateEventViewRejectsUntrustedUnionAndOrdering(t *testing.T) {
 	for name, mutate := range map[string]func(*EventView){
 		"oversized sound owner": func(view *EventView) {
 			view.Events[1].Type, view.Events[1].State = "effect", nil
-			view.Events[1].Effect = &SemanticEffectCue{Kind: "missile_spawn", Sound: "fireball", SoundOwnerID: strings.Repeat("a", maxMissileSoundOwnerBytes+1)}
+			view.Events[1].Effect = &SemanticEffectCue{
+				Kind: "missile_spawn", Sound: "fireball", SoundOwnerID: strings.Repeat("a", maxMissileSoundOwnerBytes+1),
+			}
 		},
 		"duplicate id": func(view *EventView) { view.Events[1].ID = 1 },
 		"wrong union": func(view *EventView) {

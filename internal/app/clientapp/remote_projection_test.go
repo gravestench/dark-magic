@@ -34,6 +34,104 @@ func TestConnectedProjectionCreatesDistinctAuthenticatedAndPeerPlayers(t *testin
 	assertConnectedOwnerPartyView(t, engine)
 }
 
+// TestConnectedProjectionUpdatesOnlyOwnerResistances catches a stale or peer-visible
+// mirror when successive authority HUDs carry different effective values.
+func TestConnectedProjectionUpdatesOnlyOwnerResistances(t *testing.T) {
+	engine := gameecs.New()
+
+	t.Cleanup(func() { _ = engine.Close() })
+	registerRemoteViewSchemas(t, engine)
+	app := &application{clientSimulation: engine}
+	connected := connectedProjectionFixture()
+	hud := connected.HUD
+	client := newClientWorld()
+	hud.Resistances = &playeradapter.HUDResistances{
+		FireResist: 90, ColdResist: -100, LightningResist: 31,
+		PoisonResist:  105,
+		MaxFireResist: 75, MaxColdResist: 80, MaxLightningResist: 85,
+		MaxPoisonResist: 80,
+	}
+
+	presentation := &clientsession.PresentationSnapshot{
+		HUD: hud, World: connected.World, Private: connected.Private, Party: connected.Party, Revision: 1,
+	}
+	if _, err := client.installCanonicalPresentation(app, presentation); err != nil {
+		t.Fatal(err)
+	}
+
+	if err := app.syncRemoteMirrors(connected.World.Entities, hud.Location); err != nil {
+		t.Fatal(err)
+	}
+
+	store, found := akara.GetDynamicStore(engine.World(), "d2legacy.presentation.character_resistances")
+	if !found {
+		t.Fatal("connected resistance schema is unavailable")
+	}
+
+	owner, err := authenticatedHero(engine.World(), "player-2")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if _, found := store.Get(app.remoteMirrors["player:player-1"]); found {
+		t.Fatal("peer received owner-only resistances")
+	}
+
+	assertResistance := func(field string, want int64) {
+		t.Helper()
+
+		values, found := store.Get(owner)
+		if !found {
+			t.Fatal("owner has no resistance mirror")
+		}
+
+		got, err := values.Get(field)
+		if err != nil || got != want {
+			t.Fatalf("owner %s = %v, %v; want %d", field, got, err, want)
+		}
+	}
+	assertResistance("fire_resist", 90)
+	assertResistance("max_fire_resist", 75)
+	assertResistance("cold_resist", -100)
+	assertResistance("max_cold_resist", 80)
+	assertResistance("lightning_resist", 31)
+	assertResistance("max_lightning_resist", 85)
+	assertResistance("poison_resist", 105)
+	assertResistance("max_poison_resist", 80)
+
+	updated := *hud.Resistances
+	updated.FireResist = -40
+	updated.MaxFireResist = 95
+	updated.PoisonResist = -100
+	hud.Resistances = &updated
+	presentation.HUD = hud
+
+	presentation.Revision = 2
+	if _, err := client.installCanonicalPresentation(app, presentation); err != nil {
+		t.Fatal(err)
+	}
+
+	assertResistance("fire_resist", -40)
+	assertResistance("max_fire_resist", 95)
+	assertResistance("poison_resist", -100)
+
+	if _, found := store.Get(app.remoteMirrors["player:player-1"]); found {
+		t.Fatal("peer received owner-only resistances after refresh")
+	}
+
+	hud.Resistances = nil
+	presentation.HUD = hud
+
+	presentation.Revision = 3
+	if _, err := client.installCanonicalPresentation(app, presentation); err != nil {
+		t.Fatal(err)
+	}
+
+	if _, found := store.Get(owner); found {
+		t.Fatal("stale resistance mirror survived a HUD without resistance values")
+	}
+}
+
 // connectedProjectionFixture keeps owner-private HUD facts separate from the peer's public world projection.
 func connectedProjectionFixture() *clientsession.Session {
 	return &clientsession.Session{

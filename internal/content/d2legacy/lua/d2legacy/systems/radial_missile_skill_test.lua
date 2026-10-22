@@ -180,6 +180,7 @@ return test.suite({
                     test.expect(projectile:get("damage_channel")):equals("lightning")
                     test.expect(projectile:get("destroy_on_contact")):equals(false)
                     test.expect(projectile:get("next_hit_delay")):equals(4)
+                    test.expect(projectile:get("next_hit")):equals(true)
                     local resident = ecs.get(entity, "d2legacy.world.room_resident")
                     if resident then
                         test.assert(
@@ -216,7 +217,7 @@ return test.suite({
                 )
                 test.assert(
                     #ecs.query({ all = { "d2legacy.missile.contact_lock" } }) == 1,
-                    [=[the cast-target repeat-contact lock is checkpointed as an ECS entity]=]
+                    [=[the shared target repeat-contact lock is checkpointed as an ECS entity]=]
                 )
             end),
             test.step(10),

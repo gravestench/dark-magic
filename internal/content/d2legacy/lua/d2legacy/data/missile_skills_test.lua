@@ -24,6 +24,8 @@ local function missile(name, skill_name, velocity, knockback)
         pSrvDoFunc = "1",
         CollideType = "3",
         CollideKill = "1",
+        NextHit = "1",
+        NextDelay = "7",
         Vel = tostring(velocity),
         Range = "40",
         Size = "2",
@@ -133,6 +135,8 @@ return test.suite({
                 test.expect(definitions[36].missile_id):equals("firebolt")
                 test.expect(definitions[36].damage_channel):equals("fire")
                 test.expect(definitions[36].knockback_value):equals(0)
+                test.expect(definitions[36].next_hit):equals(true)
+                test.expect(definitions[36].next_hit_delay):equals(7)
                 test.expect(definitions[36].damage_synergy_skill_ids[1]):equals(47)
                 test.expect(definitions[36].damage_synergy_skill_ids[2]):equals(56)
                 test.expect(definitions[36].damage_synergy_percent_per_level):equals(16)

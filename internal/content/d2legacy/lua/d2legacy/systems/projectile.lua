@@ -49,10 +49,6 @@ local function target_snapshot(entity)
     }
 end
 
-local function contact_key(projectile, target_id)
-    return projectile:get("cast_id") .. "\0" .. target_id
-end
-
 local function first_contact(projectile_entity, projectile, position, location, targets, locks)
     local best, best_along
     for _, target in ipairs(targets) do
@@ -61,7 +57,7 @@ local function first_contact(projectile_entity, projectile, position, location, 
             and target.id ~= projectile:get("owner_id")
             and target.act == location:get("act")
             and target.level_id == location:get("level_id")
-            and not locks[contact_key(projectile, target.id)]
+            and not (projectile:get("next_hit") and locks[target.entity:id()])
         then
             local distance, along = geometry.segment_distance(
                 projectile:get("previous_x"),
@@ -237,10 +233,10 @@ local function resolve_contacts(context, entities, structural)
         end
         local lock = ecs.get(entity, "d2legacy.missile.contact_lock")
         if lock then
-            if context.tick >= lock:get("expires_tick") then
+            if context.tick >= lock:get("expires_tick") or not lock:get("target"):exists() then
                 structural:destroy(entity)
             else
-                locks[lock:get("cast_id") .. "\0" .. lock:get("target_id")] = true
+                locks[lock:get("target"):id()] = true
             end
         end
     end
@@ -279,15 +275,12 @@ local function resolve_contacts(context, entities, structural)
                 if projectile:get("impact_missile_id") ~= "" then
                     emit_impact(context, projectile, target.id, location, impact_x, impact_y, structural)
                 end
-                local delay = projectile:get("next_hit_delay")
-                if delay > 0 then
-                    local key = contact_key(projectile, target.id)
-                    locks[key] = true
+                if projectile:get("next_hit") then
+                    locks[target.entity:id()] = true
                     structural:create({
                         ["d2legacy.missile.contact_lock"] = {
-                            cast_id = projectile:get("cast_id"),
-                            target_id = target.id,
-                            expires_tick = context.tick + delay,
+                            target = target.entity,
+                            expires_tick = context.tick + projectile:get("next_hit_delay"),
                         },
                     })
                 end

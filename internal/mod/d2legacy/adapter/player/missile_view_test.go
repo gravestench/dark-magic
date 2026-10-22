@@ -41,7 +41,8 @@ func TestProjectWorldViewCopiesOnlyNearbyMissilePresentation(t *testing.T) {
 	}
 
 	missile := view.Missiles[0]
-	if missile.SoundOwnerID != owner || missile.ID != "missile:2" || missile.Kind != "projectile" || missile.MissileID != "fireball" ||
+	if missile.SoundOwnerID != owner || missile.ID != "missile:2" || missile.Kind != "projectile" ||
+		missile.MissileID != "fireball" ||
 		missile.DCC != "data/global/missiles/Fireball.dcc" || missile.Position != (HUDPosition{X: 12, Y: 10}) ||
 		missile.Velocity != (HUDPosition{X: 1, Y: 0}) || missile.LogicalDirection != -1 ||
 		missile.Directions != 16 || missile.FramesPerSecond != 16 || missile.TransparencyMode != 1 {
@@ -62,9 +63,11 @@ func TestValidateWorldViewRejectsUntrustedMissileShape(t *testing.T) {
 	}
 
 	for name, mutate := range map[string]func(*WorldMissile){
-		"oversized sound owner": func(value *WorldMissile) { value.SoundOwnerID = strings.Repeat("a", maxMissileSoundOwnerBytes+1) },
-		"authority kind":        func(value *WorldMissile) { value.Kind = "damage" },
-		"bad directions":        func(value *WorldMissile) { value.Directions = 3 },
+		"oversized sound owner": func(value *WorldMissile) {
+			value.SoundOwnerID = strings.Repeat("a", maxMissileSoundOwnerBytes+1)
+		},
+		"authority kind": func(value *WorldMissile) { value.Kind = "damage" },
+		"bad directions": func(value *WorldMissile) { value.Directions = 3 },
 		"projectile pins frame": func(value *WorldMissile) {
 			value.Kind, value.LogicalDirection = "projectile", 0
 		},
@@ -199,6 +202,7 @@ func TestMissileSoundOwnerProjectionRejectsMalformedPresentSidecars(t *testing.T
 			if err := source.project(source.checkpoint()); err != nil {
 				t.Fatalf("absent optional sidecar: %v", err)
 			}
+
 			for name, mutate := range map[string]func(*gameecs.ComponentSnapshot){
 				"wrong version":    func(c *gameecs.ComponentSnapshot) { c.Version = 2 },
 				"missing field":    func(c *gameecs.ComponentSnapshot) { c.Fields = nil },
@@ -223,6 +227,7 @@ func TestMissileSoundOwnerProjectionRejectsMalformedPresentSidecars(t *testing.T
 					}
 					mutate(&component)
 					checkpoint.Snapshot.Components = append(checkpoint.Snapshot.Components, component)
+
 					if err := source.project(checkpoint); err == nil {
 						t.Fatal("malformed present sidecar accepted")
 					}

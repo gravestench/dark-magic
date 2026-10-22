@@ -234,8 +234,11 @@ func installPrivateInteraction(
 
 	contextStore, _ := akara.GetDynamicStore(world, "d2legacy.interaction.context")
 	_, err = contextStore.Set(contextEntity, map[string]any{
-		"owner":  owner,
-		"target": target,
+		"owner":             owner,
+		"target":            target,
+		"dialogue_page":     interaction.DialoguePage,
+		"dialogue_line":     interaction.DialogueLine,
+		"dialogue_revision": interaction.DialogueRevision,
 	})
 
 	return err
@@ -286,6 +289,17 @@ func installPrivateInteractionTarget(
 	})
 	if err != nil {
 		return 0, err
+	}
+
+	if target.LevelID > 0 {
+		locations, found := akara.GetDynamicStore(world, "d2legacy.world.location")
+		if !found {
+			return 0, fmt.Errorf("remote presentation: interaction location store is unavailable")
+		}
+
+		if _, err := locations.Set(entity, map[string]any{"act": target.Act, "level_id": target.LevelID}); err != nil {
+			return 0, err
+		}
 	}
 
 	return entity, nil

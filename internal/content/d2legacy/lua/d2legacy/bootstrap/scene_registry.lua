@@ -130,7 +130,7 @@ local function register_simple_overlays(manifest)
     -- These files already return a fully configured overlay or are simple enough
     -- not to need the shared route metadata above. `ipairs` preserves the list's
     -- written order, although registration itself does not depend on it.
-    for _, name in ipairs({"stash", "cube", "hireling", "vendor", "waypoint", "death"}) do
+    for _, name in ipairs({"stash", "cube", "hireling", "vendor", "waypoint", "death", "npc_interaction"}) do
         -- String concatenation (`..`) lets one short loop load six predictable
         -- module names without six near-identical lines.
         local overlay = require("d2legacy.overlays." .. name)
