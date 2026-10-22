@@ -1,7 +1,6 @@
 package d2legacy
 
 import (
-	"fmt"
 	"os"
 	"testing"
 
@@ -81,24 +80,34 @@ func TestOwnedMonsterResistances(t *testing.T) {
 				},
 			})
 			err := fixture.authority.Runtime.Run(t.Context(), func(state *lua.LState) error {
-				return state.DoString(fmt.Sprintf(`
-                    local definition = require("d2legacy.data.monster").load("skeleton2")
-                    local command = { tick = 1, payload = {
-                        spawn_id = "skeleton2", seed = 1, x = 0, y = 0, act = 1, level_id = 1,
-                        definition = definition,
-                    } }
-                    local components = require("d2legacy.commands.spawn_monster").components(command, 1)
-                    local defense = components["d2legacy.combat.defense"]
-                    assert(defense.poison_resist == %d, "spawned poison resistance differs from owned MonStats")
-                    assert(defense.base_poison_resist == %d, "spawned base poison resistance differs from owned MonStats")
-                    assert(defense.physical_resist == %d, "spawned physical resistance differs from owned MonStats")
-
-                    command.payload.spawn_id = "skeleton5"
-                    command.payload.definition = require("d2legacy.data.monster").load("skeleton5")
-                    local second = require("d2legacy.commands.spawn_monster").components(command, 1)["d2legacy.combat.defense"]
-                    assert(second.magic_resist == %d, "spawned magic resistance differs from owned MonStats")
-                    assert(second.lightning_resist == %d, "spawned lightning resistance differs from owned MonStats")
-                `, wantPoison, wantPoison, wantPhysical, wantMagic, wantLightning))
+				module, err := requireLuaModule(state, "d2legacy.tests.support.monster_resistance_real")
+				if err != nil {
+					return err
+				}
+				check := module.RawGetString("check")
+				for _, sample := range []struct {
+					id     string
+					values map[string]int
+				}{
+					{"skeleton2", map[string]int{
+						"poison_resist":      wantPoison,
+						"base_poison_resist": wantPoison,
+						"physical_resist":    wantPhysical,
+					}},
+					{"skeleton5", map[string]int{
+						"magic_resist":     wantMagic,
+						"lightning_resist": wantLightning,
+					}},
+				} {
+					expected := state.NewTable()
+					for name, value := range sample.values {
+						expected.RawSetString(name, lua.LNumber(value))
+					}
+					if err := state.CallByParam(lua.P{Fn: check, Protect: true}, lua.LString(sample.id), expected); err != nil {
+						return err
+					}
+				}
+				return nil
 			})
 			if err != nil {
 				t.Fatal(err)

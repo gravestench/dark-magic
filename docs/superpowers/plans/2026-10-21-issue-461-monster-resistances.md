@@ -28,7 +28,7 @@
 
 ### Task 1: Decode and materialize MonStats resistances
 
-**Files:** Modify `internal/content/d2legacy/lua/d2legacy/data/monster.lua`, `commands/spawn_monster.lua`, and `components/shared.lua`. Add `data/monster_resistances_test.lua` and `commands/spawn_monster_resistances_test.lua`.
+**Files:** Modify `internal/content/d2legacy/lua/d2legacy/data/monster.lua`, `commands/spawn_monster.lua`, `components/shared.lua`, and `bootstrap/population.lua`. Add `data/monster_resistances_test.lua` and `commands/spawn_monster_resistances_test.lua`.
 
 **Interfaces:** `monster.load(id, area)` produces six `*_resist` numeric fields. `spawn_monster.components(command, game_player_count)` stores six matching base/current fields on `d2legacy.combat.defense`, including a new authority-only `magic_resist` field.
 
@@ -52,7 +52,7 @@
 
 ### Task 3: Pin owned 1.14d data and verify the submitted feature
 
-**Files:** Add `internal/mod/d2legacy/monster_resistances_real_test.go` and update only issue-scoped tests if the real table exposes a fixture mistake.
+**Files:** Add `internal/mod/d2legacy/monster_resistances_real_test.go` and `internal/content/d2legacy/lua/d2legacy/tests/support/monster_resistance_real.lua`. Update only issue-scoped tests if the real table exposes a fixture mistake.
 
 **Interfaces:** The owned-MPQ test loads `data/global/excel/monstats.txt` when `DARK_MAGIC_TEST_MPQ_DIRECTORY` is set and pins representative columns for all three difficulties, including a Hell poison-immune row.
 
