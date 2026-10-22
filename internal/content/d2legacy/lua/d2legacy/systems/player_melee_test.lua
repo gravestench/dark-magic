@@ -2,7 +2,7 @@ local test = require("d2legacy.tests/v1")
 
 -- Reusable fixtures keep test data in one place and explain what each value means.
 local fixtures = require("d2legacy.tests.support.fixtures")
-local active_barrier, active_target
+local active_barrier, active_target, poison_sample_health
 
 -- Spawn a stationary hostile monster exactly where the player can target it.
 -- This helper explains each component so the test case itself stays readable.
@@ -351,6 +351,71 @@ return test.suite({
                 test.expect(event:get("rolled_damage_raw")):equals(bundle:get("physical_rolled_raw"))
                 test.expect(ecs.get(monster, "d2legacy.monster.stats"):get("health"))
                     :equals(4096 - bundle:get("physical_mitigated_raw"))
+            end),
+        }),
+        test.case("melee_poison_resistance_admits_one_timed_rate_and_spends_it_per_frame", {
+            test.submit_system({
+                tick = 1,
+                sequence = 1,
+                kind = "system.player.enter",
+                payload = fixtures.player_entry({ level_id = 2 }),
+            }),
+            test.step(1),
+            test.run(function()
+                local ecs = require("engine.ecs/v1")
+                local player = player_entity()
+                for _, source in ipairs({
+                    { stat = "poisonmindam", value = 128 },
+                    { stat = "poisonmaxdam", value = 128 },
+                    { stat = "poisonlength", value = 20 },
+                }) do
+                    ecs.create({
+                        ["d2legacy.stat.source"] = {
+                            target = player,
+                            source_id = "test:poison:" .. source.stat,
+                            stat = source.stat,
+                            operation = "add",
+                            value = source.value,
+                            order = 300,
+                        },
+                    })
+                end
+                local monster = spawn_event_target_monster({ level_id = 2 })
+                ecs.set(monster, "d2legacy.combat.defense", {
+                    base_poison_resist = 50,
+                    poison_resist = 50,
+                })
+            end),
+            submit_attack(),
+            test.step(10),
+            test.run(function()
+                local ecs = require("engine.ecs/v1")
+                local resolved = resolved_melee_events()
+                test.expect(#resolved):equals(1)
+                local bundle = ecs.get(resolved[1], "d2legacy.combat.damage_bundle")
+                test.expect(bundle:get("poison_rolled_raw")):equals(128)
+                test.expect(bundle:get("poison_mitigated_raw")):equals(64)
+                test.expect(bundle:get("poison_length_frames")):equals(20)
+                local states = ecs.query({ all = { "d2legacy.state.instance" } })
+                test.expect(#states):equals(1)
+                local state = ecs.get(states[1], "d2legacy.state.instance")
+                test.expect(state:get("stat_value")):equals(-64)
+                test.expect(state:get("source_attacker_id")):equals("player:alice")
+                test.expect(state:get("expires_tick") - state:get("applied_tick")):equals(20)
+                local monster = ecs.query({ all = { "d2legacy.monster.identity" } })[1]
+                poison_sample_health = ecs.get(monster, "d2legacy.monster.stats"):get("health")
+            end),
+            test.step(3),
+            test.run(function()
+                local ecs = require("engine.ecs/v1")
+                local monster = ecs.query({ all = { "d2legacy.monster.identity" } })[1]
+                local health = ecs.get(monster, "d2legacy.monster.stats"):get("health")
+                test.expect(health):equals(poison_sample_health - 3 * 64)
+            end),
+            test.step(20),
+            test.run(function()
+                local ecs = require("engine.ecs/v1")
+                test.expect(#ecs.query({ all = { "d2legacy.state.instance" } })):equals(0)
             end),
         }),
         test.case("weapon_attacks_consume_generic_outgoing_damage_percentage_sources", {
