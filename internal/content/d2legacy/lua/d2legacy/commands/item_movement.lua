@@ -98,8 +98,6 @@ function M.apply_move(command)
     if destination.container == "world" then
         world.place(
             item_entity,
-            layout:get("owner"),
-            item:get("id"),
             assert(player_location(owner.resolve(command))),
             destination.x,
             destination.y

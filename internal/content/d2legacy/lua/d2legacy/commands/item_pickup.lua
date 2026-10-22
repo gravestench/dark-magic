@@ -33,6 +33,10 @@ function M.apply(command)
             and world.can_pick_up(player, entity)
         then
             local item = ecs.get(entity, "d2legacy.item.identity")
+            local conflict = find.item(layout, item:get("id"), entities)
+            if conflict and conflict:id() ~= entity:id() then
+                return
+            end
             local destination = placement.first_free(layout, entity, item, entities)
             if not destination then
                 return

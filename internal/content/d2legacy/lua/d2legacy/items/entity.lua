@@ -97,8 +97,8 @@ function M.components(layout, item)
     if item.generation then
         components["d2legacy.item.generation"] = item.generation
     end
-    local layout_value = assert(ecs.get(layout, "d2legacy.items.layout"))
-    for name, values in pairs(world.initial_components(layout_value:get("owner"), item)) do
+    assert(ecs.get(layout, "d2legacy.items.layout"))
+    for name, values in pairs(world.initial_components(item)) do
         components[name] = values
     end
     return components

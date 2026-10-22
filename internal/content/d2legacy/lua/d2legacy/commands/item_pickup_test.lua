@@ -1,6 +1,7 @@
 local test = require("d2legacy.tests/v1")
 local fixtures = require("d2legacy.tests.support.fixtures")
 local ground_item, player, barrier, before, modifier_id
+local retired_entity
 
 local function state()
     local ecs = require("engine.ecs/v1")
@@ -65,7 +66,7 @@ local function pickup(tick, sequence, owner, target)
         sequence = sequence or 1,
         player = owner or "alice",
         kind = "item.pickup",
-        payload = { target_id = target or "item:ground-source:sword" },
+        payload = { target_id = target or "item:1" },
     })
 end
 
@@ -108,6 +109,59 @@ local function refused_case(name, change, target)
 end
 
 local cases = {
+    test.case("retired_selector_cannot_alias_a_reallocated_entity_after_restore", {
+        entered(),
+        test.step(1),
+        test.run(prepare),
+        test.run(function()
+            retired_entity = ground_item:id()
+            local ecs = require("engine.ecs/v1")
+            test.expect(ecs.get(ground_item, "d2legacy.world.selectable"):get("id")):equals("item:1")
+            ecs.destroy(ground_item)
+        end),
+        test.step(1),
+        test.expect_checkpoint_parity(1),
+        test.restore_checkpoint(),
+        test.run(function()
+            local ecs = require("engine.ecs/v1")
+            ground_item =
+                require("d2legacy.items.entity").create(require("d2legacy.items.find").layout("ground-source"), {
+                    id = "sword",
+                    code = "ssd",
+                    width = 1,
+                    height = 3,
+                    container = "world",
+                    x = 12,
+                    y = 12,
+                    act = 1,
+                    level_id = 1,
+                    generation = { quality = "normal", level = 1, facts = "new-rolled-facts" },
+                })
+            test.expect(ground_item:id()):equals(retired_entity)
+            test.expect(ecs.get(ground_item, "d2legacy.world.selectable"):get("id")):equals("item:2")
+            require("d2legacy.gameplay.collision").set(1, {
+                line_clear = function()
+                    return true
+                end,
+                integrate_velocity = function(_, x, y)
+                    return x, y
+                end,
+            })
+            before = state()
+        end),
+        pickup(4, 1, "alice", "item:1"),
+        test.step(1),
+        test.run(function()
+            test.expect(state()):deep_equals(before)
+        end),
+        pickup(5, 2, "alice", "item:2"),
+        test.step(1),
+        test.run(function()
+            local ecs = require("engine.ecs/v1")
+            test.expect(ecs.get(ground_item, "d2legacy.item.placement"):get("container")):equals("inventory")
+            test.expect(state().generation):deep_equals(before.generation)
+        end),
+    }),
     test.case("departed_killer_cannot_delete_session_item_or_modifier", {
         entered(),
         test.submit_system({
@@ -201,9 +255,9 @@ local cases = {
             local actor = world.player("bob")
             test.assert(actor, "restored Bob is not healthy active actor")
             test.assert(world.can_pick_up(actor, ground_item), "restored Bob cannot reach item")
-            test.expect(ecs.get(ground_item, "d2legacy.world.selectable"):get("id")):equals("item::sword")
+            test.expect(ecs.get(ground_item, "d2legacy.world.selectable"):get("id")):equals("item:1")
         end),
-        pickup(5, 1, "bob", "item::sword"),
+        pickup(5, 1, "bob", "item:1"),
         test.step(1),
         test.run(function()
             local ecs = require("engine.ecs/v1")

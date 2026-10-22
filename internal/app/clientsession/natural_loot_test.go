@@ -171,12 +171,12 @@ func connectedNaturalLoot(t *testing.T, seed uint64) {
 	monster := naturalMonsterID(t, host, target.ID)
 	actor.walk(gameworld.Point{X: target.Position.X, Y: target.Position.Y}, 3.5)
 
-	var itemID, code string
+	var itemID, code, targetID string
 
 	for attempt := 0; attempt < 100; attempt++ {
 		actor.refresh()
 
-		itemID, code = naturalDeathItem(t, host, monster)
+		itemID, code, targetID = naturalDeathItem(t, host, monster)
 		if itemID != "" {
 			break
 		}
@@ -198,8 +198,6 @@ func connectedNaturalLoot(t *testing.T, seed uint64) {
 	if itemID == "" {
 		t.Fatal("ordinary connected attack did not commit a supported drop")
 	}
-
-	targetID := "item::" + itemID
 
 	checkpoint, err := host.Session.CanonicalCheckpoint()
 	if err != nil {
@@ -555,7 +553,7 @@ func naturalMonsterID(t *testing.T, host *gameserver.Host, target string) akara.
 
 	return 0
 }
-func naturalDeathItem(t *testing.T, host *gameserver.Host, monster akara.Entity) (string, string) {
+func naturalDeathItem(t *testing.T, host *gameserver.Host, monster akara.Entity) (string, string, string) {
 	t.Helper()
 
 	engine := lootSnapshot(t, host)
@@ -563,7 +561,7 @@ func naturalDeathItem(t *testing.T, host *gameserver.Host, monster akara.Entity)
 
 	death, ok := lootStore(t, engine, "d2legacy.monster.death").Get(monster)
 	if !ok {
-		return "", ""
+		return "", "", ""
 	}
 
 	raw, _ := death.Get("drops")
@@ -590,11 +588,18 @@ func naturalDeathItem(t *testing.T, host *gameserver.Host, monster akara.Entity)
 				t.Fatal("materialized item differs from committed drop")
 			}
 
-			return id, code.(string)
+			selected, ok := lootStore(t, engine, "d2legacy.world.selectable").Get(entity)
+			if !ok {
+				t.Fatal("generated item has no public selector")
+			}
+
+			selector, _ := selected.Get("id")
+
+			return id, code.(string), selector.(string)
 		}
 	}
 
 	t.Fatal("committed death lacks exact generated item")
 
-	return "", ""
+	return "", "", ""
 }
