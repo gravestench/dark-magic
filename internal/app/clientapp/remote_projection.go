@@ -197,9 +197,11 @@ func remoteHeroComponents(
 			"fire_resist":          values.FireResist,
 			"cold_resist":          values.ColdResist,
 			"lightning_resist":     values.LightningResist,
+			"poison_resist":        values.PoisonResist,
 			"max_fire_resist":      values.MaxFireResist,
 			"max_cold_resist":      values.MaxColdResist,
 			"max_lightning_resist": values.MaxLightningResist,
+			"max_poison_resist":    values.MaxPoisonResist,
 		}
 	}
 

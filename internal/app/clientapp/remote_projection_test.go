@@ -47,7 +47,9 @@ func TestConnectedProjectionUpdatesOnlyOwnerResistances(t *testing.T) {
 	client := newClientWorld()
 	hud.Resistances = &playeradapter.HUDResistances{
 		FireResist: 90, ColdResist: -100, LightningResist: 31,
+		PoisonResist:  105,
 		MaxFireResist: 75, MaxColdResist: 80, MaxLightningResist: 85,
+		MaxPoisonResist: 80,
 	}
 
 	presentation := &clientsession.PresentationSnapshot{
@@ -94,10 +96,13 @@ func TestConnectedProjectionUpdatesOnlyOwnerResistances(t *testing.T) {
 	assertResistance("max_cold_resist", 80)
 	assertResistance("lightning_resist", 31)
 	assertResistance("max_lightning_resist", 85)
+	assertResistance("poison_resist", 105)
+	assertResistance("max_poison_resist", 80)
 
 	updated := *hud.Resistances
 	updated.FireResist = -40
 	updated.MaxFireResist = 95
+	updated.PoisonResist = -100
 	hud.Resistances = &updated
 	presentation.HUD = hud
 
@@ -108,6 +113,7 @@ func TestConnectedProjectionUpdatesOnlyOwnerResistances(t *testing.T) {
 
 	assertResistance("fire_resist", -40)
 	assertResistance("max_fire_resist", 95)
+	assertResistance("poison_resist", -100)
 
 	if _, found := store.Get(app.remoteMirrors["player:player-1"]); found {
 		t.Fatal("peer received owner-only resistances after refresh")

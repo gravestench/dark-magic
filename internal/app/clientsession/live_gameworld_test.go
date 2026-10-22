@@ -232,7 +232,7 @@ func assertLiveNormalResistances(t *testing.T, hud playeradapter.HUD) {
 	t.Helper()
 
 	want := playeradapter.HUDResistances{
-		MaxFireResist: 75, MaxColdResist: 75, MaxLightningResist: 75,
+		MaxFireResist: 75, MaxColdResist: 75, MaxLightningResist: 75, MaxPoisonResist: 75,
 	}
 	if hud.Resistances == nil || *hud.Resistances != want {
 		t.Fatalf("live owner resistances = %#v, want %#v", hud.Resistances, want)
