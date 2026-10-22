@@ -99,6 +99,10 @@ func appendSelectableTargets(
 		}
 
 		target := selectableTarget(selected, name)
+		target["level_id"] = float64(levelID)
+		if object.Type == gameworld.ObjectTypeDynamic {
+			target["class"] = object.Class
+		}
 		if roomID, found := RoomIDAt(zone, selected.X, selected.Y); found {
 			target["resident_id"] = fmt.Sprintf("level:%d:%s", levelID, selected.ID)
 			target["level_id"] = float64(levelID)

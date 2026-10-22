@@ -7,9 +7,11 @@ return test.suite({
     records = {
         ["data/global/excel/monstats.txt"] = {
             { Id = "akara", Code = "PS", MonStatsEx = "akara", npc = "1", NameStr = "Akara" },
+            { Id = "charsi", Code = "SI", MonStatsEx = "charsi", npc = "1", NameStr = "Charsi" },
         },
         ["data/global/excel/monstats2.txt"] = {
             { Id = "akara", BaseW = "hth", TR = "1", TRv = "lit", OverlayHeight = "2" },
+            { Id = "charsi", BaseW = "hth", TR = "1", TRv = "lit", OverlayHeight = "3" },
         },
         ["data/global/excel/monlvl.txt"] = { { Level = "1" } },
     },
@@ -26,6 +28,33 @@ return test.suite({
                     act = 1,
                     level_id = 1,
                     selectable = true,
+                },
+                {
+                    id = "town-charsi",
+                    class = "charsi",
+                    npc = "charsi",
+                    x = 40,
+                    y = 50,
+                    radius = 4,
+                    level_id = 1,
+                },
+                {
+                    id = "town-cain",
+                    class = "cain5",
+                    npc = "cain5",
+                    x = 60,
+                    y = 50,
+                    radius = 4,
+                    level_id = 1,
+                },
+                {
+                    id = "other-act-charsi",
+                    class = "charsi",
+                    npc = "charsi",
+                    x = 70,
+                    y = 50,
+                    radius = 4,
+                    level_id = 40,
                 },
                 {
                     id = "room-object",
@@ -85,8 +114,13 @@ return test.suite({
             test.run(function()
                 local ecs = require("engine.ecs/v1")
                 local targets = ecs.query({ all = { "d2legacy.interaction.target", "d2legacy.world.selectable" } })
-                test.expect(#targets):equals(1)
-                local entity = targets[1]
+                test.expect(#targets):equals(2)
+                local entity
+                for _, candidate in ipairs(targets) do
+                    if ecs.get(candidate, "d2legacy.interaction.target"):get("id") == "act1-akara" then
+                        entity = candidate
+                    end
+                end
                 local target = ecs.get(entity, "d2legacy.interaction.target")
                 local position = ecs.get(entity, "d2legacy.world.position")
                 local location = ecs.get(entity, "d2legacy.world.location")
@@ -104,7 +138,28 @@ return test.suite({
                 test.expect(selected.id):equals("act1-akara")
                 require("d2legacy.items.bootstrap").ensure_player("alice")
                 test.expect(#ecs.query({ all = { "d2legacy.world.selectable", "d2legacy.interaction.target" } }))
-                    :equals(1)
+                    :equals(2)
+            end),
+        }),
+        test.case("initial_town_residents_share_appearance_selection_and_admission_lifetime", {
+            test.run(function()
+                local ecs = require("engine.ecs/v1")
+                local snapshots = require("d2legacy.gameplay.world").npc_snapshots()
+                test.expect(#snapshots):equals(2)
+                local selected = require("d2legacy.gameplay.targeting").selectable_at(40, 50, 1)
+                test.expect(selected.id):equals("town-charsi")
+                test.expect(selected.label):equals("Charsi")
+                for _, snapshot in ipairs(snapshots) do
+                    if snapshot.spawn_id == "town-charsi" then
+                        test.expect(snapshot.token):equals("SI")
+                        test.expect(snapshot.mode):equals("NU")
+                        test.expect(snapshot.x):equals(40)
+                        test.expect(snapshot.y):equals(50)
+                        test.expect(snapshot.overlay_height):equals(3)
+                    end
+                end
+                require("d2legacy.items.bootstrap").ensure_player("bob")
+                test.expect(#require("d2legacy.gameplay.world").npc_snapshots()):equals(2)
             end),
         }),
         test.case("materializes_initial_items_into_lua_owned_ecs", {

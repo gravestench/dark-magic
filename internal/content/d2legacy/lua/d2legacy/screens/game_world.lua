@@ -482,7 +482,7 @@ local function update_monsters(self, elapsed)
     self.monsters = self.monsters or {}
     local seen = {}
     local snapshots = self.gameplay_world.monster_snapshots()
-    for _, snapshot in ipairs(self.gameplay_world.akara_snapshots()) do
+    for _, snapshot in ipairs(self.gameplay_world.npc_snapshots()) do
         snapshots[#snapshots + 1] = snapshot
     end
     for _, snapshot in ipairs(snapshots) do

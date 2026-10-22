@@ -2,11 +2,13 @@ package clientapp
 
 import (
 	"encoding/json"
+	"fmt"
 	"testing"
 
 	"github.com/gravestench/akara"
 	gameecs "github.com/gravestench/dark-magic/internal/game/ecs"
 	gameworld "github.com/gravestench/dark-magic/internal/game/world"
+	"github.com/gravestench/dark-magic/internal/mod/d2legacy/adapter/entryworld"
 	d2mapgen "github.com/gravestench/dark-magic/internal/mod/d2legacy/adapter/mapgen"
 	playeradapter "github.com/gravestench/dark-magic/internal/mod/d2legacy/adapter/player"
 	d2save "github.com/gravestench/dark-magic/internal/mod/d2legacy/adapter/save"
@@ -24,7 +26,7 @@ func TestCreatedCharacterEntersGeneratedActOneTown(t *testing.T) {
 	assertCharacterEnteredTown(t, fixture, character)
 }
 
-func TestOwnedAkaraProjectsVisibleConnectedMirror(t *testing.T) {
+func TestOwnedTownNPCsProjectVisibleConnectedMirrors(t *testing.T) {
 	fixture := newRealD2LegacyFixture(t, realD2LegacyFixtureConfig{})
 	createSelectedAcceptanceCharacter(t, fixture)
 	fixture.advanceOffline(t, 10)
@@ -96,6 +98,113 @@ func TestOwnedAkaraProjectsVisibleConnectedMirror(t *testing.T) {
 	token, _ := appearance.Get("token")
 	if token != "PS" {
 		t.Fatalf("connected Akara mirror token = %v", token)
+	}
+
+	rows, err := fixture.app.records.Load("data/global/excel/monstats.txt")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	wanted := map[string]string{"Akara": "", "Charsi": "", "Gheed": "", "Kashya": "", "Warriv": ""}
+
+	classes := map[string]bool{"akara": true, "charsi": true, "gheed": true, "kashya": true, "warriv1": true}
+	for _, row := range rows {
+		if classes[row["Id"]] && row["npc"] == "1" {
+			wanted[row["NameStr"]] = row["Code"]
+		}
+	}
+
+	var residents []playeradapter.WorldEntity
+
+	seen := map[string]bool{}
+
+	for _, entity := range view.Entities {
+		if token, ok := wanted[entity.Label]; ok {
+			if seen[entity.Label] {
+				t.Fatalf("duplicate town NPC %s", entity.Label)
+			}
+
+			if entity.Token != token || entity.Mode != "NU" || entity.WeaponClass != "HTH" || entity.Components == "" {
+				t.Fatalf("town NPC appearance = %#v", entity)
+			}
+
+			residents = append(residents, entity)
+			seen[entity.Label] = true
+		}
+	}
+
+	if len(seen) != len(wanted) {
+		t.Fatalf("town NPCs = %v, want %v", seen, wanted)
+	}
+
+	if err := client.syncRemoteMirrors(residents, location); err != nil {
+		t.Fatal(err)
+	}
+
+	if len(client.remoteMirrors) != 5 {
+		t.Fatalf("connected town has %d mirrors, want 5", len(client.remoteMirrors))
+	}
+
+	for _, resident := range residents {
+		mirror, found := appearances.Get(client.remoteMirrors[resident.ID])
+		if !found {
+			t.Fatalf("connected %s mirror has no appearance", resident.Label)
+		}
+
+		if token, _ := mirror.Get("token"); token != resident.Token {
+			t.Fatalf("connected %s token = %v, want %s", resident.Label, token, resident.Token)
+		}
+	}
+}
+
+func TestOwnedTownLayoutsPreserveNPCPlacementFacts(t *testing.T) {
+	fixture := newRealD2LegacyFixture(t, realD2LegacyFixtureConfig{})
+	for _, direction := range []string{"N", "E", "S", "W"} {
+		t.Run(direction, func(t *testing.T) {
+			// This checks placement transport only; the admission test covers actor appearance.
+			path := fmt.Sprintf("data/global/tiles/act1/town/town%s1.ds1", direction)
+
+			town, err := gameworld.Load(fixture.options.Content, path, nil, fixture.app.worldObjectResolver)
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			data := entryworld.InteractionData(map[int]*gameworld.Map{1: town}, nil, "local-player", "")
+
+			wanted := map[string]bool{"akara": true, "charsi": true, "gheed": true, "kashya": true, "warriv1": true}
+			for _, object := range town.Objects {
+				if !wanted[object.Class] {
+					continue
+				}
+
+				matches := 0
+
+				for _, value := range data["targets"].([]any) {
+					target := value.(map[string]any)
+
+					matchesClass := target["class"] == object.Class || (object.Class == "akara" && target["id"] == "act1-akara")
+					if !matchesClass {
+						continue
+					}
+
+					matches++
+
+					if target["x"] != float64(object.X) || target["y"] != float64(object.Y) || target["level_id"] != float64(1) {
+						t.Fatalf("%s placement = %#v, authored = %#v", object.Class, target, object)
+					}
+				}
+
+				if matches != 1 {
+					t.Fatalf("%s has %d interaction targets, want 1", object.Class, matches)
+				}
+
+				delete(wanted, object.Class)
+			}
+
+			if len(wanted) != 0 {
+				t.Fatalf("town layout is missing %v", wanted)
+			}
+		})
 	}
 }
 

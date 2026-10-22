@@ -4,18 +4,18 @@ return test.suite({
     profile = "ecs",
     tier = "fast",
     cases = {
-        test.case("akara_snapshot_reuses_target_position_and_filters_inactive_lifetime", {
+        test.case("npc_snapshot_reuses_target_position_and_filters_inactive_lifetime", {
             test.run(function()
                 local ecs = require("engine.ecs/v1")
                 require("d2legacy.components.items").register()
                 local world = require("d2legacy.gameplay.world")
                 local actor = ecs.create({
-                    ["d2legacy.interaction.target"] = { id = "act1-akara", npc = "Akara", x = 12, y = 8, radius = 4 },
+                    ["d2legacy.interaction.target"] = { id = "town-charsi", npc = "Charsi", x = 12, y = 8, radius = 4 },
                     ["d2legacy.monster.appearance"] = {
-                        token = "PS",
+                        token = "SI",
                         mode = "NU",
                         weapon_class = "HTH",
-                        name_key = "Akara",
+                        name_key = "Charsi",
                         components = "TR=LIT",
                         death_sound = "",
                         overlay_height = 2,
@@ -23,31 +23,31 @@ return test.suite({
                     ["d2legacy.world.position"] = { x = 12, y = 8 },
                     ["d2legacy.world.location"] = { act = 1, level_id = 1 },
                     ["d2legacy.world.selectable"] = {
-                        id = "act1-akara",
+                        id = "town-charsi",
                         kind = "dynamic-object",
-                        label = "Akara",
+                        label = "Charsi",
                         radius = 4,
                         priority = 20,
                     },
                 })
-                local snapshots = world.akara_snapshots()
+                local snapshots = world.npc_snapshots()
                 test.expect(#snapshots):equals(1)
-                test.expect(snapshots[1].token):equals("PS")
+                test.expect(snapshots[1].token):equals("SI")
                 test.expect(snapshots[1].components):equals("TR=LIT")
                 test.expect(snapshots[1].entity_id):equals(actor:id())
                 test.expect(snapshots[1].x):equals(12)
                 test.expect(snapshots[1].y):equals(8)
                 snapshots[1].x = 999
-                test.expect(world.akara_snapshots()[1].x):equals(12)
+                test.expect(world.npc_snapshots()[1].x):equals(12)
                 local selected = require("d2legacy.gameplay.targeting").selectable_at(12, 8, 1)
-                test.expect(selected.id):equals("act1-akara")
-                test.expect(selected.x):equals(world.akara_snapshots()[1].x)
+                test.expect(selected.id):equals("town-charsi")
+                test.expect(selected.x):equals(world.npc_snapshots()[1].x)
                 ecs.set(actor, "d2legacy.world.inactive", {})
-                test.expect(#world.akara_snapshots()):equals(0)
+                test.expect(#world.npc_snapshots()):equals(0)
                 ecs.remove(actor, "d2legacy.world.inactive")
-                test.expect(#world.akara_snapshots()):equals(1)
+                test.expect(#world.npc_snapshots()):equals(1)
                 ecs.destroy(actor)
-                test.expect(#world.akara_snapshots()):equals(0)
+                test.expect(#world.npc_snapshots()):equals(0)
             end),
         }),
         test.case("semantic_cues_tolerate_absent_optional_events", {
