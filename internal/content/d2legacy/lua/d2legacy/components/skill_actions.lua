@@ -100,6 +100,7 @@ function M.register()
             { name = "source_id", type = "string" },
             { name = "mana_cost_raw", type = "i64" },
             { name = "period_ticks", type = "i64" },
+            { name = "aura", type = "bool" },
             { name = "next_tick", type = "i64" },
             -- Target enumeration is durable schedule policy. Party-member and
             -- world-corpse pulses share timing without pretending they share
@@ -373,6 +374,7 @@ function M.register()
             { name = "magic_mitigated_raw", type = "i64" },
             { name = "poison_rolled_raw", type = "i64" },
             { name = "poison_mitigated_raw", type = "i64" },
+            { name = "poison_length_frames", type = "i64" },
         },
     })
 
@@ -381,6 +383,12 @@ function M.register()
     -- markers without centralizing all proc policy in one event dispatcher.
     ecs.component({
         name = "d2legacy.combat.death_observed",
+        version = 1,
+        fields = {},
+    })
+
+    ecs.component({
+        name = "d2legacy.combat.poison_observed",
         version = 1,
         fields = {},
     })

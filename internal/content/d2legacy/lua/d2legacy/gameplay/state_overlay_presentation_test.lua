@@ -85,5 +85,16 @@ return test.suite({
                 test.assert(resolved.applied == nil and resolved.removed == nil, [=[no overlay recipe is invented]=])
             end),
         }),
+        test.case("green_flag_is_read_from_the_owned_state_row", {
+            test.run(function()
+                local adapter = require("d2legacy.gameplay.state_overlay_presentation")
+                local states = {
+                    { state = "poison", green = "1" },
+                    { state = "might", green = "0" },
+                }
+                test.expect(adapter.from_rows(states, {}, "poison").green):is_true()
+                test.expect(adapter.from_rows(states, {}, "might").green):is_false()
+            end),
+        }),
     },
 })

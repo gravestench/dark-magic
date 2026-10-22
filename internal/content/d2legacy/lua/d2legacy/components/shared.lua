@@ -18,6 +18,7 @@ function M.register()
     })
     component("d2legacy.player.vitals", {
         { name = "health", type = "i64" },
+        { name = "poison_remainder_raw", type = "i64" },
         { name = "max_health", type = "i64" },
         { name = "mana", type = "i64" },
         { name = "max_mana", type = "i64" },
@@ -459,6 +460,7 @@ function M.register()
         { name = "target", type = "entity" },
         { name = "state_id", type = "string" },
         { name = "source_id", type = "string" },
+        { name = "source_attacker_id", type = "string" },
         { name = "duration", type = "i64" },
         { name = "policy", type = "string" },
         { name = "stat", type = "string" },
@@ -495,6 +497,7 @@ function M.register()
         { name = "target", type = "entity" },
         { name = "state_id", type = "string" },
         { name = "source_id", type = "string" },
+        { name = "source_attacker_id", type = "string" },
         { name = "applied_tick", type = "i64" },
         { name = "expires_tick", type = "i64" },
         { name = "policy", type = "string" },

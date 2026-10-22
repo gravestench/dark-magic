@@ -13,6 +13,10 @@ func TestValidateClientViewRejectsUnboundedOrInvalidNetworkState(t *testing.T) {
 	if err := ValidateClientView(valid, 7); err != nil {
 		t.Fatalf("valid view: %v", err)
 	}
+	valid.World.States = []WorldState{{TargetID: "player:player", StateID: "poison", Aura: false}}
+	if err := ValidateClientView(valid, 7); err != nil {
+		t.Fatalf("valid poison state: %v", err)
+	}
 
 	tests := map[string]func(*ClientView){
 		"wrong nested tick": func(view *ClientView) { view.Private.Tick++ },
@@ -27,10 +31,16 @@ func TestValidateClientViewRejectsUnboundedOrInvalidNetworkState(t *testing.T) {
 			view.World.States = make([]WorldState, MaxWorldViewStates+1)
 		},
 		"invalid persistent state period": func(view *ClientView) {
-			view.World.States = []WorldState{{TargetID: "player:player", StateID: "might"}}
+			view.World.States = []WorldState{{TargetID: "player:player", StateID: "might", Aura: true}}
+		},
+		"poison with aura period": func(view *ClientView) {
+			view.World.States = []WorldState{{TargetID: "player:player", StateID: "poison", PeriodTicks: 50}}
+		},
+		"nonpoison timed state": func(view *ClientView) {
+			view.World.States = []WorldState{{TargetID: "player:player", StateID: "frozenarmor"}}
 		},
 		"duplicate persistent state": func(view *ClientView) {
-			state := WorldState{TargetID: "player:player", StateID: "might", PeriodTicks: 50}
+			state := WorldState{TargetID: "player:player", StateID: "might", Aura: true, PeriodTicks: 50}
 			view.World.States = []WorldState{state, state}
 		},
 		"excess private items": func(view *ClientView) {

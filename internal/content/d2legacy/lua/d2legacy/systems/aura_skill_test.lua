@@ -756,6 +756,8 @@ return test.suite({
                 local bob_vitals = ecs.get(bob, "d2legacy.player.vitals")
                 bob_vitals:set("max_health", 50)
                 bob_vitals:set("health", 40)
+                ecs.get(alice, "d2legacy.world.location"):set("level_id", 2)
+                ecs.get(bob, "d2legacy.world.location"):set("level_id", 2)
                 local function add_state(target, state_id, expires)
                     ecs.create({
                         ["d2legacy.state.instance"] = {
@@ -765,6 +767,8 @@ return test.suite({
                             applied_tick = 2,
                             expires_tick = expires,
                             policy = "refresh_same_source",
+                            stat = state_id == "poison" and "hpregen" or "",
+                            stat_value = state_id == "poison" and -1 or 0,
                         },
                     })
                 end
@@ -823,6 +827,8 @@ return test.suite({
                 test.expect(ecs.get(bob, "d2legacy.player.vitals"):get("health")):equals(44)
                 test.expect(timed_state(alice, "poison"):get("expires_tick")):equals(149)
                 test.expect(timed_state(bob, "poison"):get("expires_tick")):equals(149)
+                test.expect(ecs.get(alice, "d2legacy.player.vitals"):get("poison_remainder_raw")):equals(49)
+                test.expect(ecs.get(bob, "d2legacy.player.vitals"):get("poison_remainder_raw")):equals(49)
                 test.expect(timed_state(alice, "amplifydamage"):get("expires_tick")):equals(100)
                 test.expect(timed_state(bob, "amplifydamage"):get("expires_tick")):equals(100)
                 test.expect(timed_state(alice, "battlecry"):get("expires_tick")):equals(151)
@@ -842,6 +848,7 @@ return test.suite({
                 test.expect(ecs.get(bob, "d2legacy.player.vitals"):get("health")):equals(30)
                 test.expect(timed_state(alice, "poison"):get("expires_tick")):equals(124)
                 test.expect(timed_state(bob, "poison"):get("expires_tick")):equals(124)
+                test.expect(ecs.get(alice, "d2legacy.player.vitals"):get("poison_remainder_raw")):equals(99)
                 test.assert(timed_state(alice, "amplifydamage") == nil)
                 test.assert(timed_state(bob, "amplifydamage") == nil)
                 test.expect(timed_state(alice, "battlecry"):get("expires_tick")):equals(151)
@@ -861,6 +868,14 @@ return test.suite({
                 local alice = player_named("alice")
                 test.assert(ecs.get(alice, "d2legacy.skill.aura_pulse") == nil)
                 test.expect(#pulse_effects(alice)):equals(0)
+            end),
+            test.step(46),
+            test.run(function()
+                local ecs = require("engine.ecs/v1")
+                local alice = player_named("alice")
+                local bob = player_named("bob")
+                test.expect(ecs.get(alice, "d2legacy.player.vitals"):get("poison_remainder_raw")):equals(122)
+                test.expect(ecs.get(bob, "d2legacy.player.vitals"):get("poison_remainder_raw")):equals(122)
             end),
         }),
         test.case("meditation_composes_mana_recovery_with_the_owners_learned_prayer_effect", {
