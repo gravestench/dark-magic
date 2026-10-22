@@ -64,6 +64,7 @@ local function register_item_location()
 end
 
 local function register_item_views()
+    register("d2legacy.item.origin", { { name = "key", type = "string" } })
     register("d2legacy.item.generation", {
         { name = "quality", type = "string" },
         { name = "level", type = "i64" },

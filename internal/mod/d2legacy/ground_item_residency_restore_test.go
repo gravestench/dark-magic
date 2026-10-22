@@ -108,12 +108,12 @@ func TestGroundItemResidencyRestoresAcrossInactiveRoom(t *testing.T) {
 	assertInactiveRoom(t, authority, "a", groundTarget)
 	inactive := groundItemResidencySnapshot(t, engine, item)
 
-	replay, err := session.Replay()
+	recovery, err := session.RecoveryCheckpoint()
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	checkpoint := replay.Checkpoints[len(replay.Checkpoints)-1]
+	checkpoint := recovery.State
 
 	private, err := playeradapter.ProjectPrivateView("alice", checkpoint)
 	if err != nil {
@@ -125,6 +125,9 @@ func TestGroundItemResidencyRestoresAcrossInactiveRoom(t *testing.T) {
 	}
 
 	restored, restoredEngine, restoredSession := startGroundItemFixture(t, &checkpoint, "ground-potion", "world")
+	if err := restoredSession.RestoreRecoveryCheckpoint(recovery); err != nil {
+		t.Fatal(err)
+	}
 	t.Cleanup(func() {
 		_ = restored.Stop(ctx)
 		_ = restoredSession.Close()
@@ -139,13 +142,13 @@ func TestGroundItemResidencyRestoresAcrossInactiveRoom(t *testing.T) {
 
 	returnTick := checkpoint.Tick + 1
 	submitMoveCommand(t, session, returnTick, "alice", 3, -1)
-	submitMoveCommand(t, restoredSession, returnTick, "alice", 1, -1)
+	submitGroundContinuation(t, restoredSession, returnTick, 3, "player.move", map[string]any{"x": -1, "y": 0, "running": false})
 	stepSession(t, session, 75)
 	stepSession(t, restoredSession, 75)
 
 	stopTick = returnTick + 75
 	submitMoveCommand(t, session, stopTick, "alice", 4, 0)
-	submitMoveCommand(t, restoredSession, stopTick, "alice", 2, 0)
+	submitGroundContinuation(t, restoredSession, stopTick, 4, "player.move", map[string]any{"x": 0, "y": 0, "running": false})
 	stepSession(t, session, 2)
 	stepSession(t, restoredSession, 2)
 	assertResidentActivation(t, engine, item, true, false)
@@ -156,7 +159,9 @@ func TestGroundItemResidencyRestoresAcrossInactiveRoom(t *testing.T) {
 	}
 
 	moveItem(t, session, engine.Tick()+1, 5, "held", 0, 0)
-	moveItem(t, restoredSession, restoredEngine.Tick()+1, 3, "held", 0, 0)
+	submitGroundContinuation(t, restoredSession, restoredEngine.Tick()+1, 5, "item.move", map[string]any{
+		"item_id": "ground-potion", "destination": map[string]any{"container": "held", "x": 0, "y": 0},
+	})
 	stepSession(t, session, 1)
 	stepSession(t, restoredSession, 1)
 	assertGroundItemWorldState(t, engine, item, "held", false)
@@ -164,7 +169,9 @@ func TestGroundItemResidencyRestoresAcrossInactiveRoom(t *testing.T) {
 	assertEqualLatestChecksums(t, session, restoredSession, "picked-up ground item")
 
 	moveItem(t, session, engine.Tick()+1, 6, "world", 2, 1)
-	moveItem(t, restoredSession, restoredEngine.Tick()+1, 4, "world", 2, 1)
+	submitGroundContinuation(t, restoredSession, restoredEngine.Tick()+1, 6, "item.move", map[string]any{
+		"item_id": "ground-potion", "destination": map[string]any{"container": "world", "x": 2, "y": 1},
+	})
 	stepSession(t, session, 1)
 	stepSession(t, restoredSession, 1)
 	assertGroundItemWorldState(t, engine, item, "world", true)
@@ -191,30 +198,31 @@ func TestGroundItemMaximumIdentityDropPickupAndRestore(t *testing.T) {
 	}
 	checkedGroundItemView(t, session, "alice")
 	callGroundIdentityFixture(t, authority, "assert_selected", selector)
-	checkpoint, err := session.CanonicalCheckpoint()
+	recovery, err := session.RecoveryCheckpoint()
 	if err != nil {
 		t.Fatal(err)
 	}
+	checkpoint := recovery.State
 	restored, restoredEngine, restoredSession := startGroundItemFixture(t, &checkpoint, id, "inventory")
+	if err := restoredSession.RestoreRecoveryCheckpoint(recovery); err != nil {
+		t.Fatal(err)
+	}
 	t.Cleanup(func() { _ = restored.Stop(t.Context()); _ = restoredSession.Close(); _ = restoredEngine.Close() })
 	for _, timeline := range []struct {
 		engine  *gameecs.Engine
 		session *gamesession.Session
 	}{{engine, session}, {restoredEngine, restoredSession}} {
-		sequence := uint64(0)
-		if timeline.engine == engine {
-			sequence = 1
-		}
+		sequence := uint64(1)
 		if got := componentSnapshot(t, timeline.engine, item, "d2legacy.world.selectable")["id"]; got != selector {
 			t.Fatalf("restored selector = %v, want %s", got, selector)
 		}
-		submitPartyCommand(t, timeline.session, timeline.engine.Tick()+1, "alice", sequence+1, "item.pickup", map[string]any{"target_id": selector})
+		submitGroundContinuation(t, timeline.session, timeline.engine.Tick()+1, sequence+1, "item.pickup", map[string]any{"target_id": selector})
 		stepSession(t, timeline.session, 1)
 		view := checkedGroundItemView(t, timeline.session, "alice")
 		if len(view.Private.Items.Items) != 1 || view.Private.Items.Items[0].ID != id {
 			t.Fatal("pickup shortened or lost the durable item identity")
 		}
-		submitPartyCommand(t, timeline.session, timeline.engine.Tick()+1, "alice", sequence+2, "item.move", map[string]any{
+		submitGroundContinuation(t, timeline.session, timeline.engine.Tick()+1, sequence+2, "item.move", map[string]any{
 			"item_id": id, "destination": map[string]any{"container": "world", "x": 1, "y": 1},
 		})
 		stepSession(t, timeline.session, 1)
@@ -223,12 +231,12 @@ func TestGroundItemMaximumIdentityDropPickupAndRestore(t *testing.T) {
 			t.Fatal("redrop reused the retired selector or exceeded the public bound")
 		}
 		before := groundItemResidencySnapshot(t, timeline.engine, item)
-		submitPartyCommand(t, timeline.session, timeline.engine.Tick()+1, "alice", sequence+3, "item.pickup", map[string]any{"target_id": selector})
+		submitGroundContinuation(t, timeline.session, timeline.engine.Tick()+1, sequence+3, "item.pickup", map[string]any{"target_id": selector})
 		stepSession(t, timeline.session, 1)
 		if !reflect.DeepEqual(before, groundItemResidencySnapshot(t, timeline.engine, item)) {
 			t.Fatal("stale selector picked up a later ground incarnation")
 		}
-		submitPartyCommand(t, timeline.session, timeline.engine.Tick()+1, "alice", sequence+4, "item.pickup", map[string]any{"target_id": next})
+		submitGroundContinuation(t, timeline.session, timeline.engine.Tick()+1, sequence+4, "item.pickup", map[string]any{"target_id": next})
 		stepSession(t, timeline.session, 1)
 		checkedGroundItemView(t, timeline.session, "alice")
 		if componentSnapshot(t, timeline.engine, item, "d2legacy.item.placement")["container"] != "inventory" {
@@ -283,6 +291,28 @@ func TestGroundItemPickupPreservesOwnerLocalIdentities(t *testing.T) {
 			}
 			if !reflect.DeepEqual(unrelatedBefore, groundItemResidencySnapshot(t, engine, unrelated)) {
 				t.Fatal("pickup mutated the unrelated destination item")
+			}
+			if existingID == "other" {
+				submitPartyCommand(t, session, engine.Tick()+1, "bob", 3, "item.move", map[string]any{
+					"item_id": "sword", "destination": map[string]any{"container": "world", "x": 4, "y": 1},
+				})
+				stepSession(t, session, 1)
+				redropped := groundItemResidencySnapshot(t, engine, item)
+				fresh := redropped["d2legacy.world.selectable"]["id"].(string)
+				if fresh == selector {
+					t.Fatal("ownership transfer and redrop reused the old target")
+				}
+				submitPartyCommand(t, session, engine.Tick()+1, "alice", 1, "item.pickup", map[string]any{"target_id": selector})
+				stepSession(t, session, 1)
+				if !reflect.DeepEqual(redropped, groundItemResidencySnapshot(t, engine, item)) {
+					t.Fatal("retired source-owner target collected the transferred redrop")
+				}
+				submitPartyCommand(t, session, engine.Tick()+1, "bob", 4, "item.pickup", map[string]any{"target_id": fresh})
+				stepSession(t, session, 1)
+				checkedGroundItemView(t, session, "bob")
+				if componentSnapshot(t, engine, item, "d2legacy.item.placement")["container"] != "inventory" {
+					t.Fatal("current owner could not pick up the transferred redrop")
+				}
 			}
 		})
 	}
@@ -435,6 +465,7 @@ func groundItemResidencySnapshot(
 		"d2legacy.item.placement",
 		"d2legacy.item.presentation",
 		"d2legacy.item.generation",
+		"d2legacy.item.origin",
 		"d2legacy.world.selectable",
 		"d2legacy.world.position",
 		"d2legacy.world.location",

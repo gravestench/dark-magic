@@ -258,6 +258,7 @@ function M.register(experience_thresholds)
             "d2legacy.item.melee",
             "d2legacy.item.armor",
             "d2legacy.item.generation",
+            "d2legacy.item.origin",
             "d2legacy.world.position",
             "d2legacy.world.location",
             "d2legacy.world.room_attach",

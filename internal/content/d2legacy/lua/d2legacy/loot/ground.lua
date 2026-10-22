@@ -23,6 +23,7 @@ function M.spawn(context, entities, structural, monster, drops)
     local layout = source_layout(entities)
     local position = ecs.get(monster, "d2legacy.world.position")
     local location = ecs.get(monster, "d2legacy.world.location")
+    local identity = ecs.get(monster, "d2legacy.monster.identity")
     if not layout or not position or not location then
         return
     end
@@ -37,6 +38,7 @@ function M.spawn(context, entities, structural, monster, drops)
                 item[key] = value
             end
             item.id = "loot:" .. context.tick .. ":" .. monster:id() .. ":" .. index
+            item.origin = generation.encode({ "monster", identity:get("spawn_id"), context.tick, index })
             item.container = "world"
             item.x, item.y = math.floor(position:get("x")), math.floor(position:get("y"))
             item.act, item.level_id = location:get("act"), location:get("level_id")

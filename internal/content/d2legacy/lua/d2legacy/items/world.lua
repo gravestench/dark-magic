@@ -8,6 +8,7 @@ local ecs = require("engine.ecs/v1")
 local population = require("d2legacy.bootstrap.population")
 local collision = require("d2legacy.gameplay.collision")
 local state = require("engine.authority_state/v1")
+local deterministic = require("engine.deterministic/v1")
 
 local M = {}
 
@@ -18,7 +19,16 @@ function M.initialize()
     state.register(TARGET_STATE, TARGET_SCHEMA, { last = 0 })
 end
 
-local function selectable(item)
+local function framed(values)
+    local result = {}
+    for _, value in ipairs(values) do
+        value = tostring(value)
+        result[#result + 1] = #value .. ":" .. value
+    end
+    return table.concat(result)
+end
+
+local function selectable(owner, item, incarnation)
     local sequence = assert(state.read(TARGET_STATE), "ground target state is not initialized")
     -- Retired selectors must not alias a redrop or an ECS ID reused after restore.
     assert(sequence.last >= 0 and sequence.last < 9007199254740991
@@ -26,7 +36,10 @@ local function selectable(item)
     sequence.last = sequence.last + 1
     state.replace(TARGET_STATE, TARGET_SCHEMA, sequence)
     local label = item.name_key and item.name_key ~= "" and item.name_key or item.code
-    return { id = "item:" .. string.format("%.0f", sequence.last), kind = "item", label = label,
+    -- Replay may assign this sequence to another item; bind its namespace, provenance and incarnation too.
+    local binding = deterministic.digest(framed({ owner, item.id, item.code, item.origin or "",
+        item.generation and item.generation.facts or "", incarnation }))
+    return { id = "item:" .. string.format("%.0f", sequence.last) .. ":" .. binding, kind = "item", label = label,
         owner = "", priority = 15, radius = 3.5 }
 end
 
@@ -67,13 +80,13 @@ function M.can_pick_up(player, item)
         position:get("x"), position:get("y")) or false
 end
 
-function M.initial_components(item)
+function M.initial_components(owner, item)
     if item.container ~= "world" or type(item.level_id) ~= "number" or item.level_id <= 0 then
         return {}
     end
     assert(type(item.act) == "number" and item.act > 0, "world item act is required")
     assert(type(item.x) == "number" and type(item.y) == "number", "world item position is required")
-    local selected = selectable(item)
+    local selected = selectable(owner, item, "creation")
     return {
         ["d2legacy.world.selectable"] = selected,
         ["d2legacy.world.position"] = { x = item.x, y = item.y },
@@ -82,11 +95,22 @@ function M.initial_components(item)
     }
 end
 
-function M.place(entity, location, x, y)
+function M.place(entity, location, x, y, command)
     assert(location, "world item owner location is required")
     local level_id = location:get("level_id")
     local identity = assert(ecs.get(entity, "d2legacy.item.identity"))
-    local selected = selectable({ code = identity:get("code") })
+    for _, value in ipairs({ command.tick, command.sequence }) do
+        assert(value >= 0 and value <= 9007199254740991 and value == math.floor(value),
+            "ground command identity exceeds exact integer range")
+    end
+    local owner = assert(ecs.get(identity:get("owner"), "d2legacy.items.layout")):get("owner")
+    local origin = ecs.get(entity, "d2legacy.item.origin")
+    local generation = ecs.get(entity, "d2legacy.item.generation")
+    local selected = selectable(owner, {
+        id = identity:get("id"), code = identity:get("code"), origin = origin and origin:get("key") or "",
+        generation = generation and { facts = generation:get("facts") } or nil,
+    }, framed({ command.authority, command.player, string.format("%.0f", command.tick),
+        string.format("%.0f", command.sequence) }))
     local id = selected.id
     ecs.set(entity, "d2legacy.world.selectable", selected)
     ecs.set(entity, "d2legacy.world.position", { x = x, y = y })

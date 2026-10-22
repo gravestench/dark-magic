@@ -2,6 +2,15 @@ local test = require("d2legacy.tests/v1")
 local fixtures = require("d2legacy.tests.support.fixtures")
 local ground_item, player, barrier, before, modifier_id
 local retired_entity
+local pickup_payloads = {}
+
+local function assign_pickup_target(target, phase)
+    for _, pending in ipairs(pickup_payloads) do
+        if pending.phase == (phase or "original") then
+            pending.payload.target_id = target
+        end
+    end
+end
 
 local function state()
     local ecs = require("engine.ecs/v1")
@@ -13,6 +22,9 @@ local function state()
         placement = ecs.get(ground_item, "d2legacy.item.placement"):snapshot(),
         generation = ecs.get(ground_item, "d2legacy.item.generation"):snapshot(),
         selectable = ecs.get(ground_item, "d2legacy.world.selectable") ~= nil,
+        target = ecs.get(ground_item, "d2legacy.world.selectable")
+                and ecs.get(ground_item, "d2legacy.world.selectable"):get("id")
+            or "",
     }
 end
 
@@ -58,15 +70,20 @@ local function prepare()
         end,
     })
     before = state()
+    assign_pickup_target(before.target)
 end
 
 local function pickup(tick, sequence, owner, target)
+    local payload = { target_id = target or "" }
+    if not target or target == "fresh" then
+        pickup_payloads[#pickup_payloads + 1] = { payload = payload, phase = target or "original" }
+    end
     return test.submit({
         tick = tick or 2,
         sequence = sequence or 1,
         player = owner or "alice",
         kind = "item.pickup",
-        payload = { target_id = target or "item:1" },
+        payload = payload,
     })
 end
 
@@ -116,7 +133,7 @@ local cases = {
         test.run(function()
             retired_entity = ground_item:id()
             local ecs = require("engine.ecs/v1")
-            test.expect(ecs.get(ground_item, "d2legacy.world.selectable"):get("id")):equals("item:1")
+            test.expect(ecs.get(ground_item, "d2legacy.world.selectable"):get("id")):equals(before.target)
             ecs.destroy(ground_item)
         end),
         test.step(1),
@@ -138,7 +155,9 @@ local cases = {
                     generation = { quality = "normal", level = 1, facts = "new-rolled-facts" },
                 })
             test.expect(ground_item:id()):equals(retired_entity)
-            test.expect(ecs.get(ground_item, "d2legacy.world.selectable"):get("id")):equals("item:2")
+            local fresh = ecs.get(ground_item, "d2legacy.world.selectable"):get("id")
+            test.assert(fresh ~= before.target, "retired selector was reused")
+            assign_pickup_target(fresh, "fresh")
             require("d2legacy.gameplay.collision").set(1, {
                 line_clear = function()
                     return true
@@ -149,12 +168,12 @@ local cases = {
             })
             before = state()
         end),
-        pickup(4, 1, "alice", "item:1"),
+        pickup(4, 1, "alice"),
         test.step(1),
         test.run(function()
             test.expect(state()):deep_equals(before)
         end),
-        pickup(5, 2, "alice", "item:2"),
+        pickup(5, 2, "alice", "fresh"),
         test.step(1),
         test.run(function()
             local ecs = require("engine.ecs/v1")
@@ -209,6 +228,7 @@ local cases = {
                 end,
             })
             before = state()
+            assign_pickup_target(before.target)
         end),
         test.submit_system({ tick = 2, sequence = 3, kind = "system.player.leave", payload = { player = "alice" } }),
         test.step(1),
@@ -255,9 +275,9 @@ local cases = {
             local actor = world.player("bob")
             test.assert(actor, "restored Bob is not healthy active actor")
             test.assert(world.can_pick_up(actor, ground_item), "restored Bob cannot reach item")
-            test.expect(ecs.get(ground_item, "d2legacy.world.selectable"):get("id")):equals("item:1")
+            test.expect(ecs.get(ground_item, "d2legacy.world.selectable"):get("id")):equals(before.target)
         end),
-        pickup(5, 1, "bob", "item:1"),
+        pickup(5, 1, "bob"),
         test.step(1),
         test.run(function()
             local ecs = require("engine.ecs/v1")

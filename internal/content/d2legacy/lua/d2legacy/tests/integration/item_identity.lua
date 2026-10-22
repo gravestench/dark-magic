@@ -22,4 +22,16 @@ function M.create_destination_item(id)
     assert(world.can_pick_up(world.player("bob"), item), "fixture cannot reach the ground item")
 end
 
+function M.create_late_drop_item(id)
+    require("d2legacy.items.entity").create(find.layout("aaron"), {
+        id = id,
+        code = "hp1",
+        width = 1,
+        height = 1,
+        container = "inventory",
+        x = 0,
+        y = 0,
+    })
+end
+
 return M

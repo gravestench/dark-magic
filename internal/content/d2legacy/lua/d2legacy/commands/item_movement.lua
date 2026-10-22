@@ -100,7 +100,8 @@ function M.apply_move(command)
             item_entity,
             assert(player_location(owner.resolve(command))),
             destination.x,
-            destination.y
+            destination.y,
+            command
         )
     else
         world.clear(item_entity)
