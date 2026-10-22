@@ -72,6 +72,9 @@ function M.for_owner(owner)
             for key, field in pairs(placement) do
                 value[key] = field
             end
+            local offer = ecs.get(entity, "d2legacy.vendor.offer")
+            value.vendor = offer and offer:get("vendor") or ""
+            value.buy_price = offer and offer:get("price") or 0
             result.items[#result.items + 1] = value
         end
     end

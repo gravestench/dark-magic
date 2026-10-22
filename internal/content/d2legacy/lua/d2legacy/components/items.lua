@@ -99,6 +99,11 @@ local function register_item_views()
 end
 
 local function register_vendor_terms()
+    register("d2legacy.vendor.offer", {
+        { name = "vendor", type = "string" },
+        { name = "price", type = "i64" },
+        { name = "purchases", type = "i64" },
+    })
     register("d2legacy.vendor.terms", {
         { name = "vendor", type = "string" },
         { name = "buy_multiplier", type = "i64" },
@@ -130,6 +135,7 @@ local function register_interactions()
         { name = "dialogue_page", type = "string", default = "" },
         { name = "dialogue_line", type = "string", default = "" },
         { name = "dialogue_revision", type = "i64", default = 0 },
+        { name = "trade_available", type = "bool", default = false },
     })
     -- Each context owns one explicit null-object while no interaction is open.
     -- Marking it makes lifecycle cleanup exact; untyped empty entities are

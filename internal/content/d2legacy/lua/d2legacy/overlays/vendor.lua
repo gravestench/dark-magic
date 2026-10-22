@@ -30,7 +30,7 @@ end
 
 local function item_at(snapshot, category, page, column, row)
     for _, item in ipairs(snapshot.items) do
-        if item.container == "vendor" and item.category == category and item.page == page
+        if item.container == "vendor" and item.slot == category and item.page == page
             and column >= item.x and column < item.x + item.width
             and row >= item.y and row < item.y + item.height then
             return item
@@ -74,7 +74,7 @@ local function refresh(self)
     for _, item in ipairs(self.snapshot.items) do
         local drawing = self.item_nodes[item.id]
         local visible = item.container == "held" or (item.container == "vendor"
-            and item.category == self.category and item.page == self.page)
+            and item.slot == self.category and item.page == self.page)
 
         if visible and drawing == nil and item.inventory_dc6 ~= "" then
             local node = render.create("modal", self.root)
@@ -96,15 +96,38 @@ local function refresh(self)
         end
     end
 
-    text.set(self.gold_text, "panel_heading", tostring(self.snapshot.stashed_gold), 180, "right")
+    text.set(self.gold_text, "panel_heading", tostring(self.snapshot.carried_gold), 180, "right")
+    local hovered = item_at(self.snapshot, self.category, self.page,
+        math.floor((cursor_x - self.grid_left) / self.cell_width),
+        math.floor((cursor_y - self.grid_top) / self.cell_height))
+    local quote = hovered and hovered.vendor ~= "" and hovered.buy_price
+    text.set(self.price_text, "panel_heading", quote and (locale.text("d2legacy.vendor.price") .. " " .. tostring(quote)) or "", 240, "center")
 end
 
 local function activate_cell(self, column, row)
     -- Buying while another item is held is invalid. Authority would reject it,
     -- but avoiding a doomed command also gives the UI predictable behavior.
-    if held_item(self.snapshot) ~= nil then return end
+    if self.closing or held_item(self.snapshot) ~= nil then return end
     local item = item_at(self.snapshot, self.category, self.page, column, row)
-    if item ~= nil then self.items.buy_to_held(item.id, self.context.vendor) end
+    if item ~= nil then
+        if item.vendor and item.vendor ~= "" then
+            self.items.buy_to_inventory(item.id, self.context.vendor)
+        else
+            self.items.buy_to_held(item.id, self.context.vendor)
+        end
+    end
+end
+
+local function close(self)
+    if self.closing then return end
+    if self.interaction then self.interaction.close() end
+    if self.ordinary_trade then
+        -- Keep the panel until the admitted close is reflected. Otherwise the
+        -- world screen would reopen the still-active Trade interaction.
+        self.closing = true
+    else
+        scenes.pop()
+    end
 end
 
 return {
@@ -120,6 +143,7 @@ return {
         self.items = require("d2legacy.items.api")
         self.interaction = require("d2legacy.interactions.api")
         self.context = assert(self.interaction.snapshot())
+        self.ordinary_trade = self.interaction.dialogue().page == "trade"
         assert(self.context.active and self.context.vendor ~= "", "vendor overlay requires an active vendor interaction")
 
         local palette = manifest.palettes[screen.palette]
@@ -168,7 +192,9 @@ return {
             end
         end
 
-		text.create(self.root, "panel_heading", locale.text("stash"), screen.x + 110, screen.y + panel_height - 73, 180, "left")
+		text.create(self.root, "panel_heading", locale.text("d2legacy.vendor.carried_gold"), screen.x + 110, screen.y + panel_height - 73, 180, "left")
+        self.price_text = render.create("modal", self.root)
+        self.price_text:set_position(screen.x + panel_width / 2, screen.y + panel_height - 95)
         self.gold_text = render.create("modal", self.root)
         self.gold_text:set_position(screen.x + 110, screen.y + panel_height - 65)
 
@@ -176,17 +202,24 @@ return {
             x=screen.x + screen.close.x, y=screen.y + panel_height - screen.close.bottom_inset - 32, width=32, height=32}
         button.create(self.root, self.controls, "close", close, locale.text(screen.close.label), {
             layer="modal", show_label=false, tooltip=locale.text(screen.close.label),
-            on_activate=function() self.interaction.close(); scenes.toggle_overlay("vendor", "left") end,
+            on_activate=function()
+                if self.ordinary_trade then close(self)
+                else self.interaction.close(); scenes.toggle_overlay("vendor", "left") end
+            end,
         })
         refresh(self)
     end,
 
     update = function(self)
+        if self.ordinary_trade and self.interaction.dialogue().page ~= "trade" then
+            scenes.pop()
+            return
+        end
         if self.items then refresh(self) end
+        if self.closing then return end
         self.controls:update()
         if input.pressed("cancel") then
-            if self.interaction then self.interaction.close() end
-            scenes.pop()
+            close(self)
         end
     end,
 }

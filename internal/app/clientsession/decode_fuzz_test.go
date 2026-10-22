@@ -37,6 +37,51 @@ func TestDecodeViewRejectsUnknownFieldsAndOversizedCollections(t *testing.T) {
 	}
 }
 
+// TestDecodeViewCommerceSchema makes old projections fail closed rather than
+// silently dropping the Trade availability and authoritative price facts.
+func TestDecodeViewCommerceSchema(t *testing.T) {
+	view := validNetworkView(9)
+	view.Private.Interaction.TradeAvailable = true
+	view.Private.Items.Items = []playeradapter.ItemEntityView{{
+		ID: "akara-offer:tsc", Code: "tsc", Container: "vendor", Slot: "misc", Vendor: "akara", BuyPrice: 100,
+	}}
+
+	payload, err := json.Marshal(view)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	decoded, err := decodeView(gameserver.Snapshot{Tick: 9, Payload: payload})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if !decoded.Private.Interaction.TradeAvailable || decoded.Private.Items.Items[0].BuyPrice != 100 ||
+		decoded.Private.Items.Items[0].Vendor != "akara" {
+		t.Fatal("commerce facts lost in strict decode")
+	}
+
+	for _, version := range []string{"private", "client"} {
+		t.Run(version, func(t *testing.T) {
+			old := validNetworkView(9)
+			if version == "private" {
+				old.Private.Version = 1
+			} else {
+				old.Version = 12
+			}
+
+			payload, err := json.Marshal(old)
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			if _, err := decodeView(gameserver.Snapshot{Tick: 9, Payload: payload}); err == nil {
+				t.Fatal("pre-commerce projection was accepted")
+			}
+		})
+	}
+}
+
 // FuzzDecodeClientView requires arbitrary payloads to fail safely or produce a validated bounded view.
 func FuzzDecodeClientView(f *testing.F) {
 	valid, _ := json.Marshal(validNetworkView(3))

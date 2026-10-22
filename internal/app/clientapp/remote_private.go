@@ -165,6 +165,19 @@ func installPrivateItems(
 		if _, err := presentationStore.Set(entity, privateItemPresentation(item)); err != nil {
 			return err
 		}
+
+		if item.Vendor != "" {
+			offerStore, ok := akara.GetDynamicStore(world, "d2legacy.vendor.offer")
+			if !ok {
+				return fmt.Errorf("remote presentation: vendor offer store is unavailable")
+			}
+
+			if _, err := offerStore.Set(entity, map[string]any{
+				"vendor": item.Vendor, "price": item.BuyPrice, "purchases": int64(0),
+			}); err != nil {
+				return err
+			}
+		}
 	}
 
 	return nil
@@ -239,6 +252,7 @@ func installPrivateInteraction(
 		"dialogue_page":     interaction.DialoguePage,
 		"dialogue_line":     interaction.DialogueLine,
 		"dialogue_revision": interaction.DialogueRevision,
+		"trade_available":   interaction.TradeAvailable,
 	})
 
 	return err

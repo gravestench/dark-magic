@@ -150,5 +150,8 @@
   "d2legacy.character_panel.fire_resistance": "Fire\nResistance",
   "d2legacy.character_panel.cold_resistance": "Cold\nResistance",
   "d2legacy.character_panel.lightning_resistance": "Lightning\nResistance",
-  "d2legacy.character_panel.poison_resistance": "Poison\nResistance"
+  "d2legacy.character_panel.poison_resistance": "Poison\nResistance",
+  "d2legacy.npc.trade": "Trade",
+  "d2legacy.vendor.carried_gold": "Carried gold",
+  "d2legacy.vendor.price": "Price:"
 }

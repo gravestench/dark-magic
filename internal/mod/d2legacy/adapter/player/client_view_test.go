@@ -15,8 +15,10 @@ func TestValidateClientViewRejectsUnboundedOrInvalidNetworkState(t *testing.T) {
 	}
 
 	tests := map[string]func(*ClientView){
-		"wrong nested tick": func(view *ClientView) { view.Private.Tick++ },
-		"non-finite owner":  func(view *ClientView) { view.HUD.Position.X = math.NaN() },
+		"pre-commerce private schema": func(view *ClientView) { view.Private.Version = 1 },
+		"pre-commerce client schema":  func(view *ClientView) { view.Version = 12 },
+		"wrong nested tick":           func(view *ClientView) { view.Private.Tick++ },
+		"non-finite owner":            func(view *ClientView) { view.HUD.Position.X = math.NaN() },
 		"excess entities": func(view *ClientView) {
 			view.World.Entities = make([]WorldEntity, MaxWorldViewEntities+1)
 		},
@@ -38,6 +40,9 @@ func TestValidateClientViewRejectsUnboundedOrInvalidNetworkState(t *testing.T) {
 		},
 		"inconsistent interaction":   func(view *ClientView) { view.Private.Interaction.Active = true },
 		"negative dialogue revision": func(view *ClientView) { view.Private.Interaction.DialogueRevision = -1 },
+		"negative vendor quote": func(view *ClientView) {
+			view.Private.Items.Items = []ItemEntityView{{ID: "offer", Code: "tsc", BuyPrice: -1}}
+		},
 		"excess dialogue line": func(view *ClientView) {
 			view.Private.Interaction.DialogueLine = strings.Repeat("x", maxViewTokenBytes+1)
 		},

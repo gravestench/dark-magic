@@ -56,6 +56,7 @@ function M.validate_move(command)
     local entities = item_entities()
     local layout_entity = assert(find.layout(owner.resolve(command), entities))
     local item_entity = assert(find.item(layout_entity, payload.item_id, entities))
+    assert(not ecs.get(item_entity, "d2legacy.vendor.offer"), "vendor offers require a purchase")
     assert(not ecs.get(item_entity, "d2legacy.world.inactive"), "item is unavailable")
 end
 

@@ -40,6 +40,10 @@ function M.buy_to_held(item_id, vendor)
     })
 end
 
+function M.buy_to_inventory(item_id, vendor)
+    intents.submit("item.vendor_buy", { item_id = item_id, vendor = vendor, to_inventory = true })
+end
+
 function M.complete_service(service)
     intents.submit("item.service_complete", { service = service })
 end

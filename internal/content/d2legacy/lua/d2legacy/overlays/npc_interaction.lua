@@ -94,6 +94,12 @@ return {
             if focused ~= false then scenes.pop() end
             return
         end
+        if snapshot.page == "trade" then
+            if focused == false then return end
+            scenes.pop()
+            scenes.toggle_overlay("vendor", "left")
+            return
+        end
         if not self.snapshot or snapshot.revision ~= self.snapshot.revision or snapshot.target_id ~= self.snapshot.target_id then
             refresh(self, snapshot)
         end
