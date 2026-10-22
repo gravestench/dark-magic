@@ -51,6 +51,41 @@ return test.suite({
         },
     },
     cases = {
+        test.case("summon_resist_keeps_monstats_base_and_skips_fire_when_absorbing", {
+            test.run(function()
+                local ecs = require("engine.ecs/v1")
+                ecs.create({
+                    ["d2legacy.monster.stats"] = { level = 1, health = 100, max_health = 100 },
+                    ["d2legacy.combat.defense"] = {
+                        base_physical_resist = 12,
+                        base_magic_resist = 18,
+                        magic_resist = 18,
+                        base_fire_resist = 20,
+                        base_cold_resist = 30,
+                        base_lightning_resist = 40,
+                        base_poison_resist = 50,
+                        summon_resist_bonus = 34,
+                        fire_absorb_percent = 50,
+                    },
+                })
+            end),
+            test.step(1),
+            test.run(function()
+                local ecs = require("engine.ecs/v1")
+                local mitigation = require("d2legacy.policy.mitigation")
+                local monster = ecs.query({ all = { "d2legacy.monster.stats" } })[1]
+                local defense = ecs.get(monster, "d2legacy.combat.defense")
+                test.expect(defense:get("physical_resist")):equals(12)
+                test.expect(defense:get("magic_resist")):equals(18)
+                test.expect(defense:get("base_fire_resist")):equals(20)
+                test.expect(defense:get("fire_resist")):equals(20)
+                test.expect(defense:get("cold_resist")):equals(64)
+                test.expect(defense:get("lightning_resist")):equals(74)
+                test.expect(defense:get("poison_resist")):equals(84)
+                test.expect(mitigation.apply(100, "fire", defense, true)):equals(80)
+                test.expect(mitigation.apply(100, "poison", defense, true)):equals(16)
+            end),
+        }),
         test.case("selected_row_follows_immutable_game_difficulty", {
             test.run(function()
                 local levels = require("d2legacy.data.difficulty_levels")

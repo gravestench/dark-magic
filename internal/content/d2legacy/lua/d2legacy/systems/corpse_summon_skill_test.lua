@@ -282,6 +282,12 @@ return test.suite({
                 Velocity = "13",
                 aidel = "15",
                 aidist = "35",
+                ResDm = "13",
+                ResMa = "17",
+                ResFi = "22",
+                ResLi = "31",
+                ResCo = "43",
+                ResPo = "59",
             },
             {
                 Id = "fixturemage",
@@ -324,6 +330,12 @@ return test.suite({
                 Velocity = "10",
                 aidel = "10",
                 aidist = "35",
+                ResDm = "12",
+                ResMa = "18",
+                ResFi = "24",
+                ResLi = "36",
+                ResCo = "42",
+                ResPo = "80",
             },
         },
         ["data/global/excel/monstats2.txt"] = {
@@ -674,6 +686,19 @@ return test.suite({
                 test.expect(stats:get("physical_min")):equals(665)
                 test.expect(stats:get("physical_max")):equals(1331)
                 test.expect(brain:get("speed")):equals(15)
+                local defense = ecs.get(summon, "d2legacy.combat.defense")
+                test.expect(defense:get("base_physical_resist")):equals(12)
+                test.expect(defense:get("base_magic_resist")):equals(18)
+                test.expect(defense:get("base_fire_resist")):equals(24)
+                test.expect(defense:get("base_lightning_resist")):equals(36)
+                test.expect(defense:get("base_cold_resist")):equals(42)
+                test.expect(defense:get("base_poison_resist")):equals(80)
+                test.expect(defense:get("fire_resist")):equals(58)
+                test.expect(defense:get("lightning_resist")):equals(70)
+                test.expect(defense:get("cold_resist")):equals(76)
+                test.expect(defense:get("poison_resist")):equals(114)
+                local mitigation = require("d2legacy.policy.mitigation")
+                test.expect(mitigation.apply(100, "poison", defense, true)):equals(0)
                 test.assert(ecs.get(summon, "d2legacy.monster.revivable") == nil)
                 test.expect(#ecs.query({ all = { "d2legacy.monster.death" } })):equals(0)
             end),
@@ -706,7 +731,14 @@ return test.suite({
                     { tick = 3, sequence = 2, player = "alice" }
                 )
             ),
-            test.step(3),
+            test.step(2),
+            test.run(function()
+                local ecs = require("engine.ecs/v1")
+                local summon = ecs.query({ all = { "d2legacy.owned_unit", "d2legacy.combat.defense" } })[1]
+                test.assert(summon ~= nil, "summon was not materialized at the effect tick")
+                test.expect(ecs.get(summon, "d2legacy.combat.defense"):get("fire_resist")):equals(56)
+            end),
+            test.step(1),
             test.run(function()
                 local ecs = require("engine.ecs/v1")
                 local summons = ecs.query({ all = { "d2legacy.owned_unit", "d2legacy.monster.stats" } })
@@ -722,7 +754,16 @@ return test.suite({
                 test.expect(stats:get("max_health")):equals(223 * 256)
                 test.expect(stats:get("attack_rating")):equals(550)
                 test.expect(stats:get("defense")):equals(450)
-                test.expect(defense:get("fire_resist")):equals(34)
+                test.expect(defense:get("base_physical_resist")):equals(13)
+                test.expect(defense:get("base_magic_resist")):equals(17)
+                test.expect(defense:get("base_fire_resist")):equals(22)
+                test.expect(defense:get("base_lightning_resist")):equals(31)
+                test.expect(defense:get("base_cold_resist")):equals(43)
+                test.expect(defense:get("base_poison_resist")):equals(59)
+                test.expect(defense:get("fire_resist")):equals(56)
+                test.expect(defense:get("lightning_resist")):equals(65)
+                test.expect(defense:get("cold_resist")):equals(77)
+                test.expect(defense:get("poison_resist")):equals(93)
                 test.expect(#ecs.query({ all = { "d2legacy.monster.death" } })):equals(0)
                 local events = ecs.query({ all = { "d2legacy.skill.summon_event" } })
                 test.expect(ecs.get(events[1], "d2legacy.skill.summon_event"):get("outcome")):equals("summoned")

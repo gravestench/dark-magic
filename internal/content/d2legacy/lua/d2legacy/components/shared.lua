@@ -400,6 +400,7 @@ function M.register()
         { name = "max_poison_resist", type = "i64" },
         { name = "physical_reduction_raw", type = "i64" },
         { name = "fire_absorb_percent", type = "i64", default = 0 },
+        { name = "summon_resist_bonus", type = "i64", default = 0 },
     })
     -- Connected clients mirror only the values drawn by the character panel.
     component("d2legacy.presentation.character_resistances", {

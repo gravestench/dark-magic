@@ -22,6 +22,15 @@ type ironGolemItem struct {
 func (scenario *spellLabScenario) assertGolemFamilies(t *testing.T) {
 	t.Helper()
 
+	learned, _ := akara.GetDynamicStore(scenario.fixture.app.entitySimulation.World(), "d2legacy.player.learned_skill")
+
+	entity := scenario.fixture.app.entitySimulation.World().MustCreateEntity()
+	if _, err := learned.Set(entity, map[string]any{
+		"owner": scenario.player, "skill_id": int64(89), "level": int64(2),
+	}); err != nil {
+		t.Fatal(err)
+	}
+
 	scenario.assertClayGolem(t)
 	scenario.assertBloodGolem(t)
 	scenario.assertFireGolem(t)
@@ -169,7 +178,60 @@ func (scenario *spellLabScenario) onlyGolem(t *testing.T, definition string) aka
 		)
 	}
 
+	scenario.assertGolemResistances(t, entity, definition)
+
 	return entity
+}
+
+// assertGolemResistances checks the owned 1.14d MonStats cells and the level-two
+// Summon Resist snapshot after normal derived-stat rebuilding.
+func (scenario *spellLabScenario) assertGolemResistances(t *testing.T, entity akara.Entity, definition string) {
+	t.Helper()
+
+	want := map[string]map[string]int64{
+		"claygolem": {
+			"base_physical_resist": 25, "base_magic_resist": 0, "base_fire_resist": 0,
+			"base_lightning_resist": 20, "base_cold_resist": 50, "base_poison_resist": 0,
+			"fire_resist": 34, "lightning_resist": 54, "cold_resist": 84, "poison_resist": 34,
+			"fire_absorb_percent": 0,
+		},
+		"bloodgolem": {
+			"base_physical_resist": 0, "base_magic_resist": 20, "base_fire_resist": 0,
+			"base_lightning_resist": 0, "base_cold_resist": 0, "base_poison_resist": 20,
+			"fire_resist": 34, "lightning_resist": 34, "cold_resist": 34, "poison_resist": 54,
+			"fire_absorb_percent": 0,
+		},
+		"firegolem": {
+			"base_physical_resist": 0, "base_magic_resist": 0, "base_fire_resist": 100,
+			"base_lightning_resist": 0, "base_cold_resist": 0, "base_poison_resist": 0,
+			"fire_resist": 100, "lightning_resist": 34, "cold_resist": 34, "poison_resist": 34,
+			"fire_absorb_percent": 88,
+		},
+		"irongolem": {
+			"base_physical_resist": 0, "base_magic_resist": 0, "base_fire_resist": 0,
+			"base_lightning_resist": 50, "base_cold_resist": 0, "base_poison_resist": 100,
+			"fire_resist": 34, "lightning_resist": 84, "cold_resist": 34, "poison_resist": 134,
+			"fire_absorb_percent": 0,
+		},
+	}[definition]
+	defenses, _ := akara.GetDynamicStore(scenario.fixture.app.entitySimulation.World(), "d2legacy.combat.defense")
+
+	defense, found := defenses.Get(entity)
+	if !found {
+		t.Fatalf("Spell Lab %s has no combat defense", definition)
+	}
+
+	for field, expected := range want {
+		actual, _ := defense.Get(field)
+		if actual != expected {
+			t.Errorf("Spell Lab %s %s = %v, want %d", definition, field, actual, expected)
+		}
+	}
+
+	bonus, _ := defense.Get("summon_resist_bonus")
+	if bonus != int64(34) {
+		t.Errorf("Spell Lab %s Summon Resist = %v, want 34", definition, bonus)
+	}
 }
 
 // lastGolemOutcome exposes the newest authoritative summon event only for diagnostics when ownership
