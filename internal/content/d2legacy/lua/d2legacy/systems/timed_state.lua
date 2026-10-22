@@ -159,6 +159,7 @@ local function update_instance(instance, request, expires)
     instance:set("expires_tick", expires)
     for _, field in ipairs({
         "stat",
+        "source_attacker_id",
         "stat_operation",
         "stat_value",
         "stat_order",
@@ -188,6 +189,7 @@ local function instance_values(request, tick, expires)
         target = request:get("target"),
         state_id = request:get("state_id"),
         source_id = request:get("source_id"),
+        source_attacker_id = request:get("source_attacker_id"),
         applied_tick = tick,
         expires_tick = expires,
         policy = refresh_policy,
@@ -218,7 +220,7 @@ function M.register()
     ecs.system({
         id = "d2legacy.state.timed_instances",
         phase = "effects",
-        after = { "d2legacy.state.react_to_combat" },
+        after = { "d2legacy.combat.apply_poison" },
         query = {
             any = {
                 "d2legacy.state.request",

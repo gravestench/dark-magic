@@ -386,6 +386,12 @@ function M.register()
         fields = {},
     })
 
+    ecs.component({
+        name = "d2legacy.combat.poison_observed",
+        version = 1,
+        fields = {},
+    })
+
     -- Empty independent consumer marker. Player-death policy can observe the
     -- same generic result as monster death without either consumer retiring or
     -- mutating the other's view of the event.
