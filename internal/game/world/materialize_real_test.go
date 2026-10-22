@@ -1,6 +1,7 @@
 package world_test
 
 import (
+	"context"
 	"io/fs"
 	"os"
 	"testing"
@@ -179,8 +180,9 @@ func openMapgenRuntime(
 		t.Fatal(err)
 	}
 	// Cleanup owns the Lua runtime independently from the content source registered by openRealWorldContent.
+	// t.Context is canceled before Cleanup runs, so Close needs a context that outlives it.
 	t.Cleanup(func() {
-		if err := runtime.Close(t.Context()); err != nil {
+		if err := runtime.Close(context.WithoutCancel(t.Context())); err != nil {
 			t.Errorf("close mapgen runtime: %v", err)
 		}
 	})
