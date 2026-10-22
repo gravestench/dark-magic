@@ -48,7 +48,9 @@ local graphics = {
     corpseSel = "1",
     revive = "1",
 }
-for _, name in ipairs({ "HD", "TR", "LG", "RA", "LA", "RH", "LH", "SH", "S1", "S2", "S3", "S4", "S5", "S6", "S7", "S8" }) do
+local component_names =
+    { "HD", "TR", "LG", "RA", "LA", "RH", "LH", "SH", "S1", "S2", "S3", "S4", "S5", "S6", "S7", "S8" }
+for _, name in ipairs(component_names) do
     graphics[name], graphics[name .. "v"] = "1", "lit"
 end
 local levels = {}
