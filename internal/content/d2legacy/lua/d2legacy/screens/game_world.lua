@@ -30,6 +30,7 @@ local missile_presentation = require("d2legacy.gameplay.missile_presentation")
 local cast_presentation = require("d2legacy.gameplay.cast_presentation")
 local held_skill_input = require("d2legacy.gameplay.held_skill_input")
 local state_overlay_presentation = require("d2legacy.gameplay.state_overlay_presentation")
+local state_tint_presentation = require("d2legacy.gameplay.state_tint_presentation")
 local aura_overlay_cycle = require("d2legacy.gameplay.aura_overlay_cycle")
 local interaction_approach = require("d2legacy.gameplay.interaction_approach")
 local skill_data = require("d2legacy.data.skill")
@@ -623,9 +624,20 @@ local function update_state_overlays(self, elapsed)
     end
     self.state_overlays = self.state_overlays or {}
     self.state_overlay_effects = self.state_overlay_effects or {}
-    local snapshots
-    snapshots, self.aura_overlay_cycles =
-        aura_overlay_cycle.select(self.gameplay_world.state_snapshots(), self.aura_overlay_cycles, elapsed)
+    local snapshots = self.gameplay_world.state_snapshots()
+    local actors = {}
+    if self.hero then
+        local hero_id = self.gameplay and self.gameplay.hero and tostring(self.gameplay.hero:id()) or "unbound:hero"
+        actors[hero_id] = self.hero
+    end
+    for key, player in pairs(self.remote_players or {}) do
+        actors[key] = player.node
+    end
+    for key, monster in pairs(self.monsters or {}) do
+        actors[key] = monster.node
+    end
+    state_tint_presentation.apply(actors, snapshots, state_overlay_presentation.resolve, self.world_level_id)
+    snapshots, self.aura_overlay_cycles = aura_overlay_cycle.select(snapshots, self.aura_overlay_cycles, elapsed)
     local seen = {}
     for _, snapshot in ipairs(snapshots) do
         if snapshot.level_id == self.world_level_id then
