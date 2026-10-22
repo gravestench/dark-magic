@@ -2808,14 +2808,14 @@ func (r *RenderCapability) Module() Module {
 						return 2
 					}
 
-					result := state.NewTable()
+					result := state.CreateTable(0, 6)
 					result.RawSetString("directions", lua.LNumber(asset.NumberOfDirections))
 					result.RawSetString("frames", lua.LNumber(asset.FramesPerDirection))
 					result.RawSetString("speed", lua.LNumber(asset.Speed))
 
-					layers := state.NewTable()
+					layers := state.CreateTable(len(asset.CofLayers), 0)
 					for _, layer := range asset.CofLayers {
-						entry := state.NewTable()
+						entry := state.CreateTable(0, 6)
 						entry.RawSetString("type", lua.LString(layer.Type.String()))
 						entry.RawSetString("shadow", lua.LNumber(layer.Shadow))
 						entry.RawSetString("selectable", lua.LBool(layer.Selectable))
@@ -2827,18 +2827,18 @@ func (r *RenderCapability) Module() Module {
 
 					result.RawSetString("layers", layers)
 
-					events := state.NewTable()
+					events := state.CreateTable(len(asset.AnimationFrames), 0)
 					for _, event := range asset.AnimationFrames {
 						events.Append(lua.LNumber(event))
 					}
 
 					result.RawSetString("events", events)
 
-					priority := state.NewTable()
+					priority := state.CreateTable(len(asset.Priority), 0)
 					for _, direction := range asset.Priority {
-						directionTable := state.NewTable()
+						directionTable := state.CreateTable(len(direction), 0)
 						for _, frame := range direction {
-							frameTable := state.NewTable()
+							frameTable := state.CreateTable(len(frame), 0)
 							for _, layer := range frame {
 								frameTable.Append(lua.LString(layer.String()))
 							}
