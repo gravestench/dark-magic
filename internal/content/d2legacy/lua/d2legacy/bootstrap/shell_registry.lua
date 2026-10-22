@@ -31,7 +31,6 @@ local definitions = {
     belt={title="engine.shell.belt",x=250,y=430,width=300,height=100,blocks_update_below=false,layer="hud"},
     messages={title="engine.shell.messages",x=120,y=100,width=560,height=380,blocks_update_below=false,passes_input_below=true,world_view="center",layer="hud",slot="full"},
     move_gold={title="engine.shell.move_gold",sheet="data/global/ui/MENU/dialogbackground.DC6",x=270,y=175},
-    npc_interaction={title="engine.shell.npc_interaction",x=250,y=180,width=300,height=260},
     npc_dialogue={title="engine.shell.npc_dialogue",x=100,y=390,width=600,height=130,blocks_update_below=false},
     item_tooltip={title="engine.shell.item_tooltip",x=250,y=140,width=300,height=320,blocks_update_below=false},
     ground_items={title="engine.shell.ground_items",x=170,y=120,width=460,height=340,blocks_update_below=false,layer="hud"},

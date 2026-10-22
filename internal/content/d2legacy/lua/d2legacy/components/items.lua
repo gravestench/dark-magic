@@ -127,6 +127,9 @@ local function register_interactions()
     register("d2legacy.interaction.context", {
         { name = "owner", type = "string" },
         { name = "target", type = "entity" },
+        { name = "dialogue_page", type = "string", default = "" },
+        { name = "dialogue_line", type = "string", default = "" },
+        { name = "dialogue_revision", type = "i64", default = 0 },
     })
     -- Each context owns one explicit null-object while no interaction is open.
     -- Marking it makes lifecycle cleanup exact; untyped empty entities are

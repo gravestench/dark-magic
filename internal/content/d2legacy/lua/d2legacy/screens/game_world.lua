@@ -875,8 +875,18 @@ return {
         if self.hud then
             game_hud.set_item_cursor_visible(self.hud, input_allowed)
         end
+        -- Hover labels belong only to the frame that resolves world pointer input.
+        if self.world_hover_tip then
+            self.world_hover_tip:set_visible(false)
+        end
 
         if not input_allowed then
+            return
+        end
+
+        if self.interaction and self.interaction.dialogue().active then
+            self.pending_interaction = nil
+            scenes.push("npc_interaction")
             return
         end
 

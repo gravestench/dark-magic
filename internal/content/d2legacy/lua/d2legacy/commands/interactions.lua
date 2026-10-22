@@ -7,6 +7,8 @@
 local commands = require("engine.authority_command/v1")
 local ecs = require("engine.ecs/v1")
 local operations = require("d2legacy.interactions.operations")
+local contexts = require("d2legacy.interactions.context")
+local dialogue = require("d2legacy.interactions.dialogue")
 
 local M = {}
 
@@ -27,17 +29,7 @@ local function command_owner(command)
 end
 
 local function interaction_context(owner)
-    for _, entity in
-        ipairs(ecs.query({
-            all = { "d2legacy.interaction.context" },
-        }))
-    do
-        local value = ecs.get(entity, "d2legacy.interaction.context")
-        if value:get("owner") == owner then
-            return value
-        end
-    end
-    error("unknown interaction owner")
+    return assert(contexts.for_owner(owner), "unknown interaction owner")
 end
 
 local function destroy_null_target(context)
@@ -64,42 +56,10 @@ local function target_by_id(id)
     return nil, nil
 end
 
-local function player_entity(owner)
-    for _, entity in
-        ipairs(ecs.query({
-            all = {
-                "d2legacy.player.identity",
-                "d2legacy.world.position",
-            },
-        }))
-    do
-        local identity = ecs.get(entity, "d2legacy.player.identity")
-        if identity:get("player") == owner then
-            return entity
-        end
-    end
-    return nil
-end
-
 local function squared_distance(x1, y1, x2, y2)
     local x = x1 - x2
     local y = y1 - y2
     return x * x + y * y
-end
-
-local function in_range(owner, entity, target)
-    local player = player_entity(owner)
-    if not player then
-        return true
-    end
-    local position = ecs.get(player, "d2legacy.world.position")
-    local player_location = ecs.get(player, "d2legacy.world.location")
-    local target_location = ecs.get(entity, "d2legacy.world.location")
-    if player_location and target_location and player_location:get("level_id") ~= target_location:get("level_id") then
-        return false
-    end
-    local distance = squared_distance(position:get("x"), position:get("y"), target:get("x"), target:get("y"))
-    return distance <= target:get("radius") * target:get("radius")
 end
 
 local function target_at(owner, x, y)
@@ -117,7 +77,7 @@ local function target_at(owner, x, y)
         local distance = squared_distance(x, y, target:get("x"), target:get("y"))
         if
             distance <= POINTER_RADIUS_SQUARED
-            and in_range(owner, entity, target)
+            and contexts.in_range(owner, entity, target)
             and (not best_distance or distance < best_distance)
         then
             best_entity = entity
@@ -149,7 +109,7 @@ function M.open(command)
     -- stale by the time this admitted command applies. Reject that attempt as
     -- a no-op; malformed payloads remain validation errors, but ordinary
     -- latency must never terminate the authoritative session.
-    if not entity or not in_range(owner, entity, target) then
+    if not entity or not contexts.in_range(owner, entity, target) then
         return
     end
     if operations.apply(owner, entity) then
@@ -158,15 +118,54 @@ function M.open(command)
     local context = interaction_context(owner)
     destroy_null_target(context)
     context:set("target", entity)
+    context:set("dialogue_page", "menu")
+    context:set("dialogue_line", "")
+    context:set("dialogue_revision", context:get("dialogue_revision") + 1)
 end
 
 function M.close(command)
     local context = interaction_context(command_owner(command))
     destroy_null_target(context)
     context:set("target", ecs.create({ ["d2legacy.interaction.null_target"] = {} }))
+    context:set("dialogue_page", "")
+    context:set("dialogue_line", "")
+    context:set("dialogue_revision", context:get("dialogue_revision") + 1)
+end
+
+function M.validate_choice(command)
+    command_owner(command)
+    local payload = command.payload
+    assert(type(payload.target) == "string" and payload.target ~= "", "dialogue target is required")
+    assert(type(payload.choice) == "string" and payload.choice ~= "", "dialogue choice is required")
+    assert(type(payload.revision) == "number" and payload.revision >= 0 and payload.revision % 1 == 0,
+        "dialogue revision must be a non-negative integer")
+end
+
+function M.choose(command)
+    local owner = command_owner(command)
+    local context, target = contexts.active(owner)
+    local payload = command.payload
+    if not context or target:get("id") ~= payload.target or context:get("dialogue_revision") ~= payload.revision then
+        return
+    end
+    local page, line = dialogue.select(target:get("npc"), context:get("dialogue_page"), payload.choice)
+    if not page then return end
+    if page == "closed" then
+        M.close(command)
+        return
+    end
+    context:set("dialogue_page", page)
+    context:set("dialogue_line", line)
+    context:set("dialogue_revision", context:get("dialogue_revision") + 1)
 end
 
 function M.register()
+    commands.register({
+        kind = "interaction.choose",
+        authorities = { "player", "administrator" },
+        validate = M.validate_choice,
+        apply = M.choose,
+    })
     commands.register({
         kind = "interaction.open",
         authorities = { "player", "administrator" },
