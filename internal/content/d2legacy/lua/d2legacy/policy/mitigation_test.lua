@@ -55,5 +55,36 @@ return test.suite({
                 )
             end),
         }),
+        test.case("monster_uses_six_resistances_without_player_cap", {
+            test.run(function()
+                local mitigation = require("d2legacy.policy.mitigation")
+                local defense = {
+                    values = {
+                        physical_resist = 25,
+                        physical_reduction_raw = 0,
+                        magic_resist = 50,
+                        fire_resist = 80,
+                        max_fire_resist = 75,
+                        cold_resist = 100,
+                        max_cold_resist = 75,
+                        lightning_resist = 125,
+                        max_lightning_resist = 75,
+                        poison_resist = -25,
+                        max_poison_resist = 75,
+                    },
+                    get = function(self, name)
+                        return self.values[name]
+                    end,
+                }
+                test.expect(mitigation.apply(1000, "physical", defense, true)):equals(750)
+                test.expect(mitigation.apply(1000, "magic", defense, true)):equals(500)
+                test.expect(mitigation.apply(1000, "fire", defense, true)):equals(200)
+                test.expect(mitigation.apply(1000, "cold", defense, true)):equals(0)
+                test.expect(mitigation.apply(1000, "lightning", defense, true)):equals(0)
+                test.expect(mitigation.apply(1000, "poison", defense, true)):equals(1250)
+                test.expect(mitigation.apply(1000, "fire", defense, false)):equals(250)
+                test.expect(mitigation.apply(1000, "magic", defense, false)):equals(1000)
+            end),
+        }),
     },
 })
