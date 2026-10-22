@@ -106,6 +106,24 @@ func (m *Mixer) Stop(id SoundID) error {
 	return nil
 }
 
+// Release retires a completed or abandoned sound without affecting a reused slot.
+func (m *Mixer) Release(id SoundID) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+
+	if m.validateSoundLocked(id) == nil {
+		m.retireSlotLocked(id.Slot)
+	}
+}
+
+// Active reports whether a checked handle still owns a mixer slot.
+func (m *Mixer) Active(id SoundID) bool {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+
+	return m.validateSoundLocked(id) == nil
+}
+
 // Drain applies commands in queue order and retains the failed command plus its successors for a later retry.
 func (m *Mixer) Drain(backend Backend) error {
 	if backend == nil {
