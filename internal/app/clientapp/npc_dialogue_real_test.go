@@ -21,6 +21,7 @@ func TestOwnedAkaraDialogueProjectsSelectedLocalizedSpeech(t *testing.T) {
 	if err := fixture.app.saves.UpdateSelected(character); err != nil {
 		t.Fatal(err)
 	}
+
 	fixture.advanceOffline(t, 10)
 	targets := requireRealStore(t, fixture, "d2legacy.interaction.target", "interaction targets missing")
 	positions := requireRealStore(t, fixture, "d2legacy.world.position", "positions missing")

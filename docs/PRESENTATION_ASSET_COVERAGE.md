@@ -16,9 +16,9 @@ The deterministic JSON report joins three sources:
 The current baseline contains 173 manifest-owned paths: 99 have verified catalog
 and fixture coverage and 74 remain explicitly unverified. Fourteen older catalog
 paths are not currently selected by the presentation manifest. The Lua scan also
-identifies 86 static paths still owned directly by compatibility, overlay, or
-record-driven gameplay code and eight dynamic record/content prefixes. These are
-migration inventory, not proof that an asset is absent from a supplied
+identifies 95 static paths still owned directly by compatibility, overlay,
+record-driven gameplay, or test code and nine dynamic record/content prefixes.
+These are migration inventory, not proof that an asset is absent from a supplied
 installation. The game-world manifest owns the exact blue/red warp COF and
 component paths; authoritative warp state selects only the declared appearance
 token. The Fire Ball impact tranche adds the owned ExpArrowExplode DCC under the
@@ -31,9 +31,20 @@ fingerprint, so adding, removing, or moving a static path requires running the
 report and deliberately classifying the change. Path comparison is
 case-insensitive to match Diablo archive lookup behavior.
 
+The decoded vendor and inventory rendering fixtures add two code-owned static
+references. Both remain under the existing dynamic `data/global/items/` prefix
+used by record-selected production item pictures; neither changes manifest
+ownership or promotes catalog/structural-fixture verification:
+
+| Path | Classification | Consumer |
+| --- | --- | --- |
+| `data/global/items/invbsc.dc6` | Code-owned test reference | `tests/support/vendor_render.lua`, `tests/support/inventory_render.lua` |
+| `data/global/items/invhp1.dc6` | Code-owned test reference | `tests/support/vendor_render.lua`, `tests/support/inventory_render.lua` |
+
 The remaining M15 catalog work is therefore measurable:
 
-1. move the 86 code-owned static paths into versioned manifest data;
+1. move production-owned paths from the 95 static references into versioned
+   manifest data while keeping test-only references explicitly classified;
 2. verify the 74 manifest paths against supported archive profiles and add their
    redistributable structural fixtures;
 3. retain dynamic prefixes only where record-driven lookup makes enumeration
