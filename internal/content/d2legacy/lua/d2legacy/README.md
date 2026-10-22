@@ -400,10 +400,12 @@ the scroll, and uses the shared warp/transition path. Portal ownership, return
 side and expiry are ECS state. Expired inactive endpoints remain registered room
 residents until activation clears their references, then collision-phase cleanup
 retires them. In-session checkpoint continuation is supported, not save/rejoin.
-Public endpoint IDs use canonical item entity identity rather than concatenating
-owner/item labels, keeping maximum-length valid labels within projection bounds.
+Public endpoint IDs combine a registered checkpointed cast generation with item
+entity identity rather than owner/item labels. The generation outlives retired
+pairs, so allocator reuse after restoration cannot revive an expired target.
+Maximum-length valid labels remain within projection bounds.
 
-The supported `tsc` binding is qualified by owned 1.14d Misc `type=scro`,
+The supported `tsc` binding is qualified by mounted Misc `type=scro`,
 `useable=1`, `pSpell=2` and Books `ScrollSpellCode=tsc`, `pSpell=2` in
 `internal/mod/d2legacy/item_use_real_test.go`. Handler 2 is the recovered portal
 dispatch, not a claim that all usable-item spells are implemented.

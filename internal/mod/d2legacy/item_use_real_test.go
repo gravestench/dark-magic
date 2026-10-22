@@ -12,7 +12,7 @@ import (
 func TestOwnedTownPortalScrollSpellBinding(t *testing.T) {
 	directory := os.Getenv("DARK_MAGIC_TEST_MPQ_DIRECTORY")
 	if directory == "" {
-		t.Skip("set DARK_MAGIC_TEST_MPQ_DIRECTORY to the expansion 1.14d MPQ directory")
+		t.Skip("set DARK_MAGIC_TEST_MPQ_DIRECTORY to the mounted expansion MPQ directory")
 	}
 
 	t.Setenv("MPQ_DIRECTORY", directory)

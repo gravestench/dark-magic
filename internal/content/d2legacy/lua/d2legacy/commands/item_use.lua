@@ -2,6 +2,7 @@
 local commands = require("engine.authority_command/v1")
 local ecs = require("engine.ecs/v1")
 local initial = require("engine.initial_data/v1")
+local state = require("engine.authority_state/v1")
 local owner = require("d2legacy.items.command_owner")
 local find = require("d2legacy.items.find")
 local consume = require("d2legacy.items.consume")
@@ -10,6 +11,8 @@ local population = require("d2legacy.bootstrap.population")
 local warp = require("d2legacy.systems.world_warp")
 local seams = require("d2legacy.systems.world_transition")
 local M = {}
+local GENERATION_ID = "d2legacy.portal.generation"
+local GENERATION_SCHEMA = "d2legacy.portal.generation/v1"
 
 local function player(player_id)
     for _, entity in
@@ -124,9 +127,11 @@ function M.apply(command)
     if not fx then
         return
     end
-    -- Canonical entity identity is session-unique and checkpointed. Public IDs
-    -- must not grow with otherwise valid owner/item labels or truncate them.
-    local id = "town-portal:item:" .. item_entity:id()
+    -- Retired entity IDs can be allocated again after checkpoint restoration.
+    -- The registered cast generation outlives every pair and bounds public IDs
+    -- independently of owner/item label lengths without reusing expired targets.
+    local generation = state.read(GENERATION_ID).serial + 1
+    local id = "town-portal:cast:" .. generation .. ":item:" .. item_entity:id()
     local field_id, town_id = id .. ":field", id .. ":town"
     local field = { level_id = 2, x = fx, y = fy, width = bounds:get("width"), height = bounds:get("height") }
     local destination = { level_id = 1, x = tx, y = ty, width = town.width, height = town.height }
@@ -140,10 +145,12 @@ function M.apply(command)
     end
     warp.create(endpoint(field_id, town_id, player_id, 2, fx, fy, destination, false))
     warp.create(endpoint(town_id, field_id, player_id, 1, tx, ty, field, true))
+    state.replace(GENERATION_ID, GENERATION_SCHEMA, { serial = generation })
     consume.destroy(item_entity)
 end
 
 function M.register()
+    state.register(GENERATION_ID, GENERATION_SCHEMA, { serial = 0 })
     commands.register({
         kind = "item.use",
         authorities = { "player" },

@@ -5,11 +5,152 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/gravestench/akara"
 	"github.com/gravestench/dark-magic/internal/content"
 	"github.com/gravestench/dark-magic/internal/game/simulation"
 	playeradapter "github.com/gravestench/dark-magic/internal/mod/d2legacy/adapter/player"
 	lua "github.com/yuin/gopher-lua"
 )
+
+// TestPortalRetiredIdentityCannotNameLaterCastAfterRestore covers allocator reuse after pair retirement.
+func TestPortalRetiredIdentityCannotNameLaterCastAfterRestore(t *testing.T) {
+	fixture := portalProjectionFixture(t)
+	owner := strings.Repeat("p", 121)
+	first := projectedPortal(t, fixture, owner)
+	submitPortalInteraction(t, fixture, owner, first.ID, 2)
+	town := projectedPortal(t, fixture, owner)
+	submitPortalInteraction(t, fixture, owner, town.ID, 3)
+
+	before := clonePortalScroll(t, fixture, "before-checkpoint")
+	castPortalScroll(t, fixture, owner, "before-checkpoint", 4)
+	oldField := projectedPortal(t, fixture, owner)
+	submitPortalInteraction(t, fixture, owner, oldField.ID, 5)
+	oldTown := projectedPortal(t, fixture, owner)
+	submitPortalInteraction(t, fixture, owner, oldTown.ID, 6)
+
+	if err := restoreLuaSuiteCheckpoint(t, fixture); err != nil {
+		t.Fatal(err)
+	}
+
+	if err := runLuaAction(t, fixture, portalProjectionActions(t, fixture).RawGetInt(3).(*lua.LTable)); err != nil {
+		t.Fatal(err)
+	}
+
+	// Reuse pressure allocates ordinary entities, not portal outcomes.
+	for {
+		allocated, err := fixture.engine.World().CreateEntity()
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		if allocated+1 == before {
+			break
+		}
+
+		if allocated >= before {
+			t.Fatalf("expected retired allocator suffix: allocated=%d retired=%d", allocated, before)
+		}
+	}
+
+	after := clonePortalScroll(t, fixture, "after-checkpoint")
+	if after != before {
+		t.Fatalf("reuse pressure did not reproduce item identity: %d != %d", after, before)
+	}
+
+	castPortalScroll(t, fixture, owner, "after-checkpoint", 1)
+	newField := projectedPortal(t, fixture, owner)
+	t.Logf("item entity %d reused as %d; expired=%s current=%s", before, after, oldField.ID, newField.ID)
+	submitPortalInteraction(t, fixture, owner, oldField.ID, 2)
+
+	remaining := projectedPortal(t, fixture, owner)
+	if remaining.LevelID != 2 || remaining.ID != newField.ID {
+		t.Fatalf("expired target operated a later pair: level=%d target=%s", remaining.LevelID, remaining.ID)
+	}
+
+	if newField.ID == oldField.ID {
+		t.Fatal("new cast reused an expired public identity")
+	}
+
+	submitPortalInteraction(t, fixture, owner, newField.ID, 3)
+
+	arrival := projectedPortal(t, fixture, owner)
+	if arrival.LevelID != 1 {
+		t.Fatal("current projected target did not travel to town")
+	}
+}
+
+// clonePortalScroll supplies later item work through canonical ECS creation with complete item components.
+func clonePortalScroll(t *testing.T, fixture *luaSuiteFixture, id string) akara.Entity {
+	t.Helper()
+
+	world := fixture.engine.World()
+	identities, _ := akara.GetDynamicStore(world, "d2legacy.item.identity")
+
+	var source akara.Entity
+
+	for _, entity := range identities.Entities() {
+		value, _ := identities.Get(entity)
+		if current, _ := value.Get("id"); current == strings.Repeat("s", 127)+"b" {
+			source = entity
+			break
+		}
+	}
+
+	if source == 0 {
+		t.Fatal("retained fixture scroll missing")
+	}
+
+	created, err := world.CreateEntity()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	for _, store := range akara.DynamicStores(world) {
+		value, ok := store.Get(source)
+		if !ok {
+			continue
+		}
+
+		fields, err := value.Snapshot()
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		if store.Schema().Name == "d2legacy.item.identity" {
+			fields["id"] = id
+		}
+
+		if store.Schema().Name == "d2legacy.item.placement" {
+			fields["x"] = int64(0)
+		}
+
+		if _, err := store.Set(created, fields); err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	return created
+}
+
+func castPortalScroll(t *testing.T, fixture *luaSuiteFixture, owner, item string, sequence uint64) {
+	t.Helper()
+
+	payload, err := json.Marshal(map[string]any{"item_id": item})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if err := fixture.session.Submit(simulation.Command{
+		Tick: fixture.engine.Tick() + 1, Sequence: sequence, Player: owner,
+		Authority: simulation.AuthorityPlayer, Kind: "item.use", Payload: payload,
+	}); err != nil {
+		t.Fatal(err)
+	}
+
+	if err := fixture.session.Step(); err != nil {
+		t.Fatal(err)
+	}
+}
 
 // TestPortalLongIdentityProjectsAndInteracts exercises public bounds after real scroll consumption.
 func TestPortalLongIdentityProjectsAndInteracts(t *testing.T) {
