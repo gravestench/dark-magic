@@ -6,6 +6,7 @@ import (
 	"errors"
 	"testing"
 
+	"github.com/gravestench/akara"
 	"github.com/gravestench/dark-magic/internal/content"
 	gameecs "github.com/gravestench/dark-magic/internal/game/ecs"
 	gamesession "github.com/gravestench/dark-magic/internal/game/session"
@@ -65,19 +66,26 @@ func TestMonsterScalingFollowsPopulationUntilExplicitlyOverridden(t *testing.T) 
 	submit(4, "system.monster.spawn", playerCountMonsterPayload(t, "two-players", 11))
 	assertMonsterPlayerCount(t, engine, "two-players", 2)
 
+	lowerOverride, _ := json.Marshal(map[string]any{"count": 1})
+	submit(5, "game.player_count.override", lowerOverride)
+	submit(6, "system.monster.spawn", playerCountMonsterPayload(t, "lower-override", 12))
+	assertMonsterPlayerCount(t, engine, "lower-override", 2)
+	assertMonsterHealthAndExperience(t, engine, "lower-override", 6*256, 150)
+
+	follow, _ := json.Marshal(map[string]any{})
+	submit(7, "game.player_count.follow_population", follow)
 	leave, _ := json.Marshal(map[string]any{"player": "bob"})
-	submit(5, "system.player.leave", leave)
-	submit(6, "system.monster.spawn", playerCountMonsterPayload(t, "after-leave", 12))
+	submit(8, "system.player.leave", leave)
+	submit(9, "system.monster.spawn", playerCountMonsterPayload(t, "after-leave", 13))
 	assertMonsterPlayerCount(t, engine, "after-leave", 1)
 
 	override, _ := json.Marshal(map[string]any{"count": 8})
-	submit(7, "game.player_count.override", override)
-	submit(8, "system.monster.spawn", playerCountMonsterPayload(t, "overridden", 13))
+	submit(10, "game.player_count.override", override)
+	submit(11, "system.monster.spawn", playerCountMonsterPayload(t, "overridden", 14))
 	assertMonsterPlayerCount(t, engine, "overridden", 8)
 
-	follow, _ := json.Marshal(map[string]any{})
-	submit(9, "game.player_count.follow_population", follow)
-	submit(10, "system.monster.spawn", playerCountMonsterPayload(t, "following-again", 14))
+	submit(12, "game.player_count.follow_population", follow)
+	submit(13, "system.monster.spawn", playerCountMonsterPayload(t, "following-again", 15))
 	assertMonsterPlayerCount(t, engine, "following-again", 1)
 }
 
@@ -174,7 +182,7 @@ func playerCountMonsterPayload(t *testing.T, spawnID string, seed int) json.RawM
 		"definition": map[string]any{
 			"id": "fallen", "base_id": "fallen", "graphics_id": "fallen", "name_key": "Fallen",
 			"ai": "fallen", "token": "FA", "weapon_class": "HTH", "components": map[string]string{},
-			"life_min": 256, "life_max": 256, "level": 1, "defense": 0, "attack_rating": 0,
+			"life_min": 4 * 256, "life_max": 4 * 256, "level": 1, "defense": 0, "attack_rating": 0,
 			"physical_min": 0, "physical_max": 0, "experience": 100, "treasure_class": "",
 			"collider_radius": 1, "select_radius": 1, "velocity": 0, "think_interval": 100,
 			"aggro_radius": 0, "attack_range": 1, "evil": true,
@@ -185,4 +193,32 @@ func playerCountMonsterPayload(t *testing.T, spawnID string, seed int) json.RawM
 	}
 
 	return payload
+}
+
+func assertMonsterHealthAndExperience(t *testing.T, engine *gameecs.Engine, spawnID string, wantHealth, wantExperience int64) {
+	t.Helper()
+
+	identities, _ := akara.GetDynamicStore(engine.World(), "d2legacy.monster.identity")
+	stats, _ := akara.GetDynamicStore(engine.World(), "d2legacy.monster.stats")
+	for _, entity := range identities.Entities() {
+		identity, _ := identities.Get(entity)
+		current, _ := identity.Get("spawn_id")
+		if current != spawnID {
+			continue
+		}
+		values, found := stats.Get(entity)
+		if !found {
+			t.Fatalf("monster %s has no stats", spawnID)
+		}
+		for field, want := range map[string]int64{
+			"health": wantHealth, "max_health": wantHealth, "experience": wantExperience,
+		} {
+			got, _ := values.Get(field)
+			if got != want {
+				t.Fatalf("monster %s %s = %v, want %d", spawnID, field, got, want)
+			}
+		}
+		return
+	}
+	t.Fatalf("monster %s was not created", spawnID)
 }

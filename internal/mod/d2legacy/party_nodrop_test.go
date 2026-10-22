@@ -49,6 +49,14 @@ func TestMonsterDeathUsesCreditedPlayersLivingSameLevelPartyForNoDrop(t *testing
 	stepPartySession(t, session)
 	submitPartyCommand(t, session, 3, "bob", 1, "party.accept", map[string]any{"inviter": "alice"})
 	stepPartySession(t, session)
+	override, _ := json.Marshal(map[string]any{"count": 1})
+	if err := session.Submit(simulation.Command{
+		Tick: 4, Player: "system", Authority: simulation.AuthoritySystem,
+		Sequence: 3, Kind: "game.player_count.override", Payload: override,
+	}); err != nil {
+		t.Fatal(err)
+	}
+	stepPartySession(t, session)
 
 	cast, _ := json.Marshal(map[string]any{
 		"side": "left", "target_x": 4, "target_y": 0,
@@ -61,7 +69,7 @@ func TestMonsterDeathUsesCreditedPlayersLivingSameLevelPartyForNoDrop(t *testing
 		}
 
 		if err := session.Submit(simulation.Command{
-			Tick: 4 + 8*attempt, Player: "alice", Authority: simulation.AuthorityPlayer,
+			Tick: 5 + 8*attempt, Player: "alice", Authority: simulation.AuthorityPlayer,
 			Sequence: 2 + attempt, Kind: "player.use_skill", Payload: cast}); err != nil {
 			t.Fatal(err)
 		}

@@ -247,9 +247,11 @@ an effective gameplay player count.
 `policy/player_count.lua` owns the separate `d2legacy.player_count/v1` state.
 Without an override, monster and reward consumers use the number of present
 authoritative player entities at the moment their policy runs. The privileged
-`game.player_count.override` command forces `/players X` behavior from 1 through
-8 without changing admission; `game.player_count.follow_population` returns to
-live join/leave behavior. Monsters snapshot this as `spawn_player_count`, while
+`game.player_count.override` command sets a `/players X` floor from 1 through
+8 without changing admission; it cannot reduce the effective count below the
+live population. `game.player_count.follow_population` returns to live join/leave
+behavior. This floor follows the 1.13c MSD-R05 static evidence and remains an
+inference for 1.14d. Monsters snapshot this as `spawn_player_count`, while
 death/NoDrop facts retain live, effective, nearby-party, spawn, and final
 eligible counts separately.
 

@@ -55,7 +55,7 @@ function M.effective(game_player_count)
     integer(game_player_count, "game player count", 1, rules.maximum_players)
     local overridden = current().override
     if overridden ~= nil then
-        return integer(overridden, "player-count override", 1, MAXIMUM_GAMEPLAY_COUNT)
+        return math.max(game_player_count, integer(overridden, "player-count override", 1, MAXIMUM_GAMEPLAY_COUNT))
     end
     return game_player_count
 end
