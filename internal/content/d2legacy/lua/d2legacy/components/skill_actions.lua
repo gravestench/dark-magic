@@ -182,7 +182,7 @@ function M.register()
 
     ecs.component({
         name = "d2legacy.missile.projectile",
-        version = 7,
+        version = 8,
         fields = {
             { name = "owner_id", type = "string" },
             { name = "cast_id", type = "string" },
@@ -196,6 +196,7 @@ function M.register()
             { name = "collision_radius", type = "f64" },
             { name = "destroy_on_contact", type = "bool" },
             { name = "impact_on_expiry", type = "bool" },
+            { name = "next_hit", type = "bool" },
             { name = "next_hit_delay", type = "i64" },
             { name = "impact_radius", type = "f64" },
             { name = "impact_missile_id", type = "string" },
@@ -312,14 +313,12 @@ function M.register()
         },
     })
 
-    -- One cast/target contact lock is its own ECS entity. Radial rays share a
-    -- cast ID, so overlap policy composes without a Nova-specific hit path.
+    -- NextHit missiles share one checkpointed suppression window per target.
     ecs.component({
         name = "d2legacy.missile.contact_lock",
-        version = 1,
+        version = 2,
         fields = {
-            { name = "cast_id", type = "string" },
-            { name = "target_id", type = "string" },
+            { name = "target", type = "entity" },
             { name = "expires_tick", type = "i64" },
         },
     })
