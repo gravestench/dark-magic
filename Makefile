@@ -24,8 +24,9 @@ test-race:
 	# Race instrumentation makes the Lua-heavy integration packages and their
 	# t.Parallel cases contend for fixed startup deadlines. Keep complete package
 	# and test coverage while making the gate deterministic on CI and developer
-	# machines with constrained cores or memory.
-	go test -race -p 1 -parallel 1 ./...
+	# machines with constrained cores or memory. The Lua package can exceed
+	# Go's default ten-minute package deadline on hosted macOS runners.
+	go test -race -p 1 -parallel 1 -timeout 20m ./...
 
 NETWORK_SOAK_TICKS ?= 80
 
