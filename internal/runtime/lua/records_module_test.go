@@ -74,6 +74,69 @@ func TestRecordsModuleLoadsAndInvalidatesLayeredTSV(t *testing.T) {
 	}
 }
 
+func TestExperimentRecordProjectionPreservesOwnershipAndReload(t *testing.T) {
+	source := fstest.MapFS{"items.txt": &fstest.MapFile{Data: []byte("code\tname\tblank\na\tAlpha\t\nb\tBeta\t\n")}}
+	records := recordstore.New(source)
+	runtime := New()
+
+	if err := runtime.RegisterModule(RecordsModule(records)); err != nil {
+		t.Fatal(err)
+	}
+
+	if err := runtime.Start(t.Context()); err != nil {
+		t.Fatal(err)
+	}
+	defer func() { _ = runtime.Stop(context.Background()) }()
+
+	run := func(script string) {
+		t.Helper()
+
+		if err := runtime.Run(t.Context(), func(L *lua.LState) error { return L.DoString(script) }); err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	run(`
+		r = require("engine.records/v1")
+		revision = r.revision()
+		for _, columns in ipairs({{[0]="code"}, {[-1]="code"}, {[1.5]="code"}, {[1]="code",[3]="name"}}) do
+			assert(not pcall(r.load, "items.txt", columns))
+		end
+		assert(next(r.load("items.txt", {})[1]) == nil)
+		assert(not pcall(r.load, "items.txt", true))
+		assert(not pcall(r.load, "items.txt", {123}))
+		assert(not pcall(r.load, "items.txt", {named="code"}))
+		first = r.load("items.txt", {"code", "blank", "unknown", "code"})
+		full = r.load("items.txt")
+		assert(#first == 2 and first[1].code == "a" and first[2].code == "b")
+		assert(first[1].blank == "" and first[1].unknown == nil and first[1].name == nil)
+		first[1].code = "mutated"
+		full[1].name = "mutated"
+		assert(r.load("items.txt", {"code"})[1].code == "a")
+		assert(r.load("items.txt")[1].name == "Alpha")
+		assert(r.load("items.txt", nil)[2].name == "Beta")
+		assert(r.revision() == revision and r.loaded("items.txt"))
+	`)
+
+	source["items.txt"].Data = []byte("code\tname\tblank\nc\tGamma\t\n")
+
+	run(`
+		assert(r.load("items.txt", {"code"})[1].code == "a")
+		assert(r.load("items.txt")[1].name == "Alpha")
+		assert(r.revision() == revision)
+		assert(r.reload("items.txt") and not r.loaded("items.txt"))
+		assert(r.revision() ~= revision)
+		revision = r.revision()
+		assert(r.load("items.txt", {"code", "blank"})[1].code == "c")
+		assert(r.load("items.txt", {"blank"})[1].blank == "")
+		assert(#r.load("items.txt") == 1 and r.load("items.txt")[1].name == "Gamma")
+		assert(r.revision() == revision)
+		assert(first[1].code == "mutated" and full[2].code == "b")
+		local missing, message = r.load("absent.txt", {"code"})
+		assert(missing == nil and type(message) == "string")
+	`)
+}
+
 type revisionRecordsGateway struct {
 	recordsGateway
 	revision uint64
