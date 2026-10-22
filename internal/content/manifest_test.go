@@ -544,7 +544,8 @@ func TestD2LegacyPresentationAssetCoverageBaseline(t *testing.T) {
 	// dependency.
 	// The monster-loot and divergent skill-ID fixtures add static references
 	// under the existing item and spell presentation prefixes.
-	const auditedFingerprint = "78f087ab274b551c19489777de712b9442502674f6c166f57aaad35cbb5c7b14"
+	// The decoded inventory fixture references potion art under the existing item prefix.
+	const auditedFingerprint = "07490f03146740d1c4e7f3c9bb37d67a02f54e2d648fdc6c1d32698396bb2fc8"
 	if coverage.Fingerprint != auditedFingerprint {
 		t.Fatalf(
 			"presentation asset coverage changed: got %s, want audited %s; "+
