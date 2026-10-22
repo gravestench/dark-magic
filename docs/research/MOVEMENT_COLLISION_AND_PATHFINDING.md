@@ -407,12 +407,12 @@ The archive and declarative record identities are target-locked to Expansion
 1.14d. Arithmetic is corroborated by recovered executable structure and
 independent community measurements. Remaining target work is owned-runtime
 boundary vectors for chill/freeze classification and immunity/duration policy,
-the Tainted Sun environment transition, and a direct base-Vitality allocation/
-max-callback ordering vector.
+the Tainted Sun environment transition, and allocation-command integration of
+the one-point transition below.
 
 The remaining player locomotion model needs:
 
-- base-Vitality allocation ordering and the Tainted Sun eclipse transition;
+- live stat allocation and the Tainted Sun eclipse transition;
 - owned 1.14d extreme-modifier and cold/freeze target vectors;
 - cold/freeze resistance, immunity, duration, difficulty, and action-rate effects;
 - terrain/skill-specific movement modifiers if present.
@@ -466,6 +466,123 @@ position correction or collision-shortened displacement does not retime it;
 FRW or chill does. Rate changes preserve current frame phase rather than
 retroactively applying the new rate to all time since mode start.
 
+## Owned one-point Vitality allocation observations
+
+Issue #377's arithmetic boundary was measured on 2026-10-11 in unchanged owned
+Windows LoD 1.14d, under Wine 11.18 Staging. The reference `Game.exe` SHA-256 is
+`631066c1649c4ea9ffe48bf97e24c00bca1f7a6759c21150f1a79982589adaaf`.
+Ordinary mouse/keyboard input spent each point. Passive `ReadProcessMemory`
+observations retained raw 8.8 values, base/effective vectors, position, mode,
+UTC, and executable/tool identities. Saves, screenshots, and raw recordings
+remain in the private corpus. The immutable allocation-index receipt has
+SHA-256 `f2fc3d22abe843c9a87625a8b83b9ed48ab27fc11b3d19915d33a84f28328b44`;
+it identifies the five completed watches and their observed point transitions.
+
+The local client quantizes stamina and updates it less frequently. A second
+player-unit candidate, independently found in committed writable memory,
+matched the player identity, progression, position and mode, and exposed the
+ordinary per-frame 40-unit run drain. Its server role is a strong inference,
+not a proved structure label. Stat records were read twice and headers
+rechecked; these observations are not an atomic instruction trace.
+
+These are observed adjacent samples, not pre-adjusted test operands:
+
+| Case | Vitality / unspent points | Current raw, before → after | Maximum raw, before → after | Sampling qualification |
+| --- | --- | --- | --- | --- |
+| Full, normal life | 25/3 → 26/2 | 23552 → 23808 | 23552 → 23808 | stationary in town |
+| Partial | 26/9 → 27/8 | 18168 → 18619 | 23808 → 24064 | same position and running mode |
+| Zero | 27/8 → 28/7 | 0 → 303 | 24064 → 24320 | walking; next samples 350, 397 |
+| Zero, normal life | 27/1 → 28/0 | 0 → 256 | 24064 → 24320 | walking; next frame 303, then 350 |
+| Partial, 30% passive | 25/10 → 26/9 | 29154 → 29652 | 34278 → 34611 | one running frame between positions |
+| Partial, normal life | 26/2 → 27/1 | 20855 → 21294 | 23808 → 24064 | one running frame between positions |
+| Partial, Assassin | 22/1 → 23/0 | 23340 → 23959 | 24960 → 25280 | same position and running mode |
+| Full, Assassin | 20/3 → 21/2 | 24320 → 24640 | 24320 → 24640 | same position and mode |
+
+Fixtures added unearned points to a clone of an owned save. The first partial
+and zero cases also used synthetic high life to isolate movement. The passive
+case used a synthetic level-12 Barbarian with Increased Stamina rank one.
+The normal-life holdout preserved the stock level, life, mana, and equipment,
+and independently repeated full, partial, and literal-zero allocation. A second
+class holdout loaded an edited level-one Assassin with its authored starting
+attributes/resources and three unearned points, retaining the stock Barbarian
+equipment/quest tail as a declared synthetic-fixture confound. Its full and
+partial cases confirm the 5-quarter class gain (320 raw), including
+`trunc(23340 / 24960 * 25280) + 320 = 23959` at an unchanged position.
+Loading a save with depleted stamina refilled it; those nominal depleted-save
+trials are excluded from the allocation evidence. Depletion above came from
+ordinary wilderness running.
+
+An additional class cohort has immutable evidence-index SHA-256
+`c11bd3c20fe4f6b8c71c91ac7fbd60d2a156e53038c79d97ec960e605f939794`.
+Its level-one fixtures likewise add three unearned points and preserve the
+stock Barbarian equipment/quest tail. All seven classes now have observed full
+allocation cases, combining this cohort with the earlier Barbarian and Assassin.
+
+| Class / case | Vitality / unspent points | Current raw, before → after | Maximum raw, before → after |
+| --- | --- | --- | --- |
+| Amazon, full | 20/3 → 21/2 | 21504 → 21760 | 21504 → 21760 |
+| Amazon, partial | 21/2 → 22/1 | 16210 → 16656 | 21760 → 22016 |
+| Amazon, zero | 22/1 → 23/0 | 0 → 256 | 22016 → 22272 |
+| Sorceress, full | 10/3 → 11/2 | 18944 → 19200 | 18944 → 19200 |
+| Necromancer, full | 15/3 → 16/2 | 20224 → 20480 | 20224 → 20480 |
+| Paladin, full | 25/3 → 26/2 | 22784 → 23040 | 22784 → 23040 |
+| Druid, full | 25/3 → 26/2 | 21504 → 21760 | 21504 → 21760 |
+
+The Amazon rows use adjacent samples from a separately found player candidate,
+at unchanged positions and modes. Its server role remains inferred. The partial
+case distinguishes `trunc(16210 * 22016 / 21760) + 256 = 16656` from adding
+before rescaling, which produces 16659. The zero watch observes 256 before later
+walking recovery. Wider before/after action receipts include drain or recovery
+and do not supply these exact arithmetic operands. The other four full cases
+use repeated reads of the same active client unit, followed until current and
+maximum settle together. They are not independent authority observations.
+
+The partial same-position Barbarian, Amazon, and Assassin vectors distinguish
+the inferred arithmetic order without adjusting for an intervening drain:
+
+```text
+rescale only:             trunc(18168 / 23808 * 24064)       = 18363
+rescale, then class gain: trunc(18168 / 23808 * 24064) + 256 = 18619
+class gain, then rescale: trunc((18168 + 256) / 23808 * 24064) = 18622
+```
+
+The resulting one-point transition is:
+
+```text
+newMaximum = maximum_stamina(new base Vitality, active sources)
+rescaled = rescale_stamina(oldCurrent, oldMaximum, newMaximum)
+newCurrent = min(newMaximum, rescaled + CharStats.StaminaPerVitality * 64)
+```
+
+Maximum changes therefore retain the existing ratio/truncation callback, then
+allocation adds the class's unmodified quarter-point gain. The passive case
+changes maximum by 333 raw but grants 256. Inferring that the 40-raw running
+drain precedes allocation gives
+`trunc(29114 / 34278 * 34611) + 256 = 29652`. The normal-life partial similarly
+uses 20815 under that timing inference. Drain after allocation would instead
+produce 29653 and 21295, respectively. The zero case's first observed 303 is
+consistent with a 256 allocation gain followed by one 47-unit walking recovery
+frame, then the observed +47 sequence. The normal-life zero holdout directly
+observed the intermediate 256 before the next walking frame produced 303.
+Full stamina caps at the new maximum.
+
+The production `d2legacy.movement_rules/v1.allocate_vitality_stamina` rule
+applies the inferred ordering after the caller calculates the new maximum.
+Its evidence suite checks all seven full cases,
+the recorded partial/zero cases, class rounding, and the passive-bonus ordering.
+Generic equipment/source changes remain on `rescale_stamina`, where zero stays
+zero. The existing calculations remain correct for those roles.
+A future allocation transaction must call that rule exactly once, commit
+maximum and current together, and avoid applying the generic callback again.
+This is a reusable rule for future feature parity, not a live allocation
+transaction, earning policy, command, or UI.
+
+The arithmetic order is inferred from distinguishing observed vectors for these
+cases. Exact CPU instruction
+order, simultaneous allocation/equipment changes, and bulk allocations remain
+separate holdouts. Partial and zero cases for Sorceress, Necromancer, Paladin,
+and Druid, and literal zero for Assassin, remain unmeasured.
+
 ## Knockback
 
 The original path system has distinct server and client knockback path types. Knockback should therefore be a semantic forced-motion transaction, not `position += vector` inside damage code.
@@ -476,9 +593,15 @@ policy-owned distance, speed, and request tick. The pre-simulation admission
 system derives a destination away from the source; the movement phase advances
 that destination through the same static collision, dynamic occupancy, bounds,
 and stable entity ordering as ordinary locomotion. Durable events distinguish
-completed, partial, blocked, invalid, and replaced outcomes. A newer admitted
-request deterministically replaces one active transaction only after recording
-the displaced request's exact progress. Forced motion owns velocity while
+completed, partial, blocked, invalid, replaced, and interrupted outcomes. A
+newer admitted request deterministically replaces one active transaction only
+after recording the displaced request's exact progress. Player death and a
+completed point relocation (Teleport) end an active transaction the same way,
+as `interrupted`, recording where it stopped before the relocation moves the
+unit. Whether the original 1.14d game also stops knockback at death or on
+Teleport is unverified; these outcomes record Dark Magic's current behavior.
+Only players carry `world.bounds` today, so admission cannot start forced
+motion on a monster yet. Forced motion owns velocity while
 active, clears it on completion, and ordinary locomotion resumes only from
 fresh input. Active progress survives a checkpoint, and presentation may
 observe the event without authoring position. Every outcome uses the target's

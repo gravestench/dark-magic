@@ -1,10 +1,150 @@
 local test = require("d2legacy.tests/v1")
 
+local function stats(id, spawn)
+    local row = {
+        Id = id,
+        BaseId = "base",
+        NameStr = "name",
+        AI = "ai",
+        Align = "1",
+        Code = "xx",
+        MonStatsEx = "graphics",
+        Velocity = "6",
+        aidel = "4",
+        aidist = "33",
+        boss = "0",
+        primeevil = "0",
+        MinGrp = "2",
+        MaxGrp = "4",
+        Rarity = "3",
+        enabled = "1",
+        isSpawn = spawn,
+        npc = "0",
+        noRatio = "0",
+    }
+    for difficulty, suffix in ipairs({ "", "(N)", "(H)" }) do
+        for index, name in ipairs({ "minHP", "maxHP", "AC", "A1TH", "A1MinD", "A1MaxD", "Exp", "Drain" }) do
+            row[name .. suffix] = tostring(10 * difficulty + index)
+        end
+        for index, name in ipairs({ "ResDm", "ResMa", "ResFi", "ResLi", "ResCo", "ResPo" }) do
+            row[name .. suffix] = tostring(40 * index + difficulty - 50)
+        end
+        row["Level" .. suffix] = tostring(difficulty)
+        row["TreasureClass1" .. suffix] = "reward" .. difficulty
+    end
+    return row
+end
+
+local graphics = {
+    Id = "graphics",
+    SizeX = "3",
+    SizeY = "4",
+    OverlayHeight = "2",
+    BaseW = "hth",
+    MeleeRng = "3",
+    mKB = "1",
+    small = "1",
+    large = "0",
+    corpseSel = "1",
+    revive = "1",
+}
+for _, name in ipairs({ "HD", "TR", "LG", "RA", "LA", "RH", "LH", "SH", "S1", "S2", "S3", "S4", "S5", "S6", "S7", "S8" }) do
+    graphics[name], graphics[name .. "v"] = "1", "lit"
+end
+local levels = {}
+for level = 1, 5 do
+    local row = { Level = tostring(level) }
+    for _, suffix in ipairs({ "", "(N)", "(H)" }) do
+        for index, name in ipairs({ "HP", "AC", "TH", "DM", "XP", "L-AC", "L-TH" }) do
+            row[name .. suffix] = tostring(100 * level + index)
+        end
+    end
+    levels[#levels + 1] = row
+end
+local npc = stats("npc", "0")
+npc.npc = "1"
+
 return test.suite({
     name = "monster catalog indexing",
     profile = "module",
     tier = "fast",
+    records = {
+        ["data/global/excel/monstats.txt"] = { stats("ordinary", "1"), stats("pet", "0"), npc },
+        ["data/global/excel/monstats2.txt"] = { graphics },
+        ["data/global/excel/monlvl.txt"] = levels,
+    },
     cases = {
+        test.case("selected_columns_preserve_full_consumer_results", function(t)
+            t:run(function()
+                local records = require("engine.records/v1")
+                local function snapshot(difficulty, selected)
+                    test.mock_module("engine.records/v1", {
+                        load = function(path, columns)
+                            if selected then
+                                return records.load(path, columns)
+                            end
+                            return records.load(path)
+                        end,
+                    }, { "load" })
+                    test.mock_module("d2legacy.policy.game_rules", {
+                        difficulty = function()
+                            return difficulty
+                        end,
+                    }, { "difficulty" })
+                    test.unload_module("d2legacy.data.monster")
+                    local monster = require("d2legacy.data.monster")
+                    return {
+                        ordinary = monster.load("ordinary"),
+                        area = monster.load("ordinary", { MonLvl2Ex = "4", MonLvl3Ex = "5" }),
+                        summoned = monster.summon("pet", 5),
+                        revived = monster.revive("ordinary", 4),
+                        npc = monster.npc_appearance("npc"),
+                        all = monster.all(),
+                    }
+                end
+                for value = 0, 2 do
+                    local full = snapshot(value, false)
+                    local projected = snapshot(value, true)
+                    test.expect(projected):deep_equals(full)
+                    for index, name in ipairs({
+                        "physical_resist",
+                        "magic_resist",
+                        "fire_resist",
+                        "lightning_resist",
+                        "cold_resist",
+                        "poison_resist",
+                    }) do
+                        test.expect(projected.ordinary[name]):equals(40 * index + value - 49)
+                    end
+                    projected.ordinary.components.HD = "changed"
+                    test.expect(full.ordinary.components.HD):equals("LIT")
+                    test.expect(snapshot(value, true)):deep_equals(full)
+                end
+            end)
+        end),
+        test.case("npc_appearance_rejects_invalid_overlay_height", function(t)
+            t:run(function()
+                test.mock_module("engine.records/v1", {
+                    load = function(path)
+                        if string.find(path, "monstats2", 1, true) then
+                            return { { Id = "akara", OverlayHeight = "5" } }
+                        end
+                        if string.find(path, "monlvl", 1, true) then
+                            return { { Level = "1" } }
+                        end
+                        return { { Id = "akara", MonStatsEx = "akara", npc = "1" } }
+                    end,
+                }, { "load" })
+                test.mock_module("d2legacy.policy.game_rules", {
+                    difficulty = function()
+                        return 0
+                    end,
+                }, { "difficulty" })
+                local ok, message = pcall(require("d2legacy.data.monster").npc_appearance, "akara")
+                test.expect(ok):equals(false)
+                test.expect(string.find(message, "OverlayHeight must be in 0..4", 1, true) ~= nil):equals(true)
+            end)
+        end),
         test.case("legacy_tables_are_loaded_once_per_vm", function(t)
             t:run(function()
                 local loads = {}

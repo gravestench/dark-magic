@@ -610,6 +610,7 @@ func (client *clientWorld) upsertPersistentState(
 		"target":       target,
 		"state_id":     projected.StateID,
 		"period_ticks": projected.PeriodTicks,
+		"aura":         projected.Aura,
 	})
 	if err != nil {
 		return fmt.Errorf(
@@ -639,10 +640,11 @@ func persistentStateChanged(
 	currentTarget, _ := component.Get("target")
 	currentState, _ := component.Get("state_id")
 	currentPeriod, _ := component.Get("period_ticks")
+	currentAura, _ := component.Get("aura")
 
 	return currentTarget != target ||
 		currentState != projected.StateID ||
-		currentPeriod != projected.PeriodTicks
+		currentPeriod != projected.PeriodTicks || currentAura != projected.Aura
 }
 
 // removeStalePersistentStates requires both state projection and target mirror to remain present.

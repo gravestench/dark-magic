@@ -86,6 +86,7 @@ return test.suite({
                 test.expect(nova.minimum_damage_per_level_raw[5]):equals(10 * 256)
                 test.expect(nova.maximum_damage_per_level_raw[5]):equals(12 * 256)
                 test.expect(nova.next_hit_delay):equals(4)
+                test.expect(nova.next_hit):equals(true)
                 test.expect(nova.destroy_on_contact):equals(false)
 
                 local fixture = definitions[900]

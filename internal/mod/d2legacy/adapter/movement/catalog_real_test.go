@@ -2,6 +2,7 @@ package movement
 
 import (
 	"os"
+	"strings"
 	"testing"
 
 	"github.com/gravestench/dark-magic/internal/content"
@@ -66,25 +67,34 @@ func mustLoadMovementRows(t *testing.T, store *recordstore.Store, path string) [
 	return rows
 }
 
+var ownedClassRatesByName = map[string]ClassRates{
+	"Amazon":      ownedClassRates(20, 84, 20, 4, 4),
+	"Sorceress":   ownedClassRates(10, 74, 20, 4, 4),
+	"Necromancer": ownedClassRates(15, 79, 20, 4, 4),
+	"Paladin":     ownedClassRates(25, 89, 20, 4, 4),
+	"Barbarian":   ownedClassRates(25, 92, 20, 4, 4),
+	"Druid":       ownedClassRates(25, 84, 20, 4, 4),
+	"Assassin":    ownedClassRates(20, 95, 15, 5, 5),
+}
+
 // assertOwnedClassRates verifies every playable class fact consumed by the immutable movement catalog.
 func assertOwnedClassRates(t *testing.T, catalog Catalog) {
 	t.Helper()
 
-	want := map[string]ClassRates{
-		"Amazon":      ownedClassRates(20, 84, 20, 4, 4),
-		"Sorceress":   ownedClassRates(10, 74, 20, 4, 4),
-		"Necromancer": ownedClassRates(15, 79, 20, 4, 4),
-		"Paladin":     ownedClassRates(25, 89, 20, 4, 4),
-		"Barbarian":   ownedClassRates(25, 92, 20, 4, 4),
-		"Druid":       ownedClassRates(25, 84, 20, 4, 4),
-		"Assassin":    ownedClassRates(20, 95, 15, 5, 5),
-	}
-	for class, expected := range want {
+	for class, expected := range ownedClassRatesByName {
 		rates, found := catalog.Rates(class)
 		if !found || rates != expected {
 			t.Fatalf("owned expansion 1.14d %s movement rates = %+v, %v", class, rates, found)
 		}
 	}
+}
+
+func ownedClassCatalog() Catalog {
+	catalog := Catalog{byClass: make(map[string]ClassRates, len(ownedClassRatesByName))}
+	for class, rates := range ownedClassRatesByName {
+		catalog.byClass[strings.ToLower(class)] = rates
+	}
+	return catalog
 }
 
 // ownedClassRates keeps the universally pinned walk/run rates visible while naming class-specific stamina facts.

@@ -239,6 +239,35 @@ function M.monster_snapshots()
     return result
 end
 
+-- Each NPC's interaction entity owns its presentation position and lifetime.
+function M.npc_snapshots()
+    local result = {}
+    for _, entity in
+        ipairs(ecs.query({
+            all = {
+                "d2legacy.interaction.target",
+                "d2legacy.monster.appearance",
+                "d2legacy.world.selectable",
+                "d2legacy.world.position",
+                "d2legacy.world.location",
+            },
+            none = { "d2legacy.world.inactive" },
+        }))
+    do
+        local target = ecs.get(entity, "d2legacy.interaction.target")
+        local snapshot = ecs.get(entity, "d2legacy.monster.appearance"):snapshot()
+        local position = ecs.get(entity, "d2legacy.world.position")
+        local location = ecs.get(entity, "d2legacy.world.location")
+        snapshot.entity_id, snapshot.spawn_id = entity:id(), target:get("id")
+        snapshot.x, snapshot.y = position:get("x"), position:get("y")
+        snapshot.act, snapshot.level_id = location:get("act"), location:get("level_id")
+        snapshot.direction = 0
+        snapshot.velocity_x, snapshot.velocity_y = 0, 0
+        result[#result + 1] = snapshot
+    end
+    return result
+end
+
 function M.player_snapshots(local_player, include_local, excluded_entity)
     local result = {}
     local excluded_id = excluded_entity and excluded_entity:id() or nil
@@ -299,7 +328,6 @@ function M.state_snapshots()
         local aura = optional_component(entity, "d2legacy.skill.aura_effect")
         local projected = optional_component(entity, "d2legacy.presentation.state")
         local relationship = assert(instance or aura or projected, "state snapshot entity has no state relationship")
-        local aura_relationship = aura or projected
         local target = relationship:get("target")
         if target and target:exists() and not optional_component(target, "d2legacy.world.inactive") then
             local position = optional_component(target, "d2legacy.world.position")
@@ -310,7 +338,7 @@ function M.state_snapshots()
                     entity_id = entity:id(),
                     target_entity_id = target:id(),
                     state_id = relationship:get("state_id"),
-                    aura = aura_relationship ~= nil,
+                    aura = aura ~= nil or projected ~= nil and projected:get("aura"),
                     aura_period_ticks = aura and aura:get("refresh_delay") or projected and projected:get(
                         "period_ticks"
                     ) or 0,

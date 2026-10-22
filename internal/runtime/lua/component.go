@@ -391,7 +391,7 @@ func goToLua(state *lua.LState, value any, depth int) (lua.LValue, error) {
 	case uint64:
 		return lua.LNumber(value), nil
 	case []any:
-		table := state.NewTable()
+		table := state.CreateTable(len(value), 0)
 		for _, entry := range value {
 			converted, err := goToLua(state, entry, depth+1)
 			if err != nil {
@@ -403,7 +403,7 @@ func goToLua(state *lua.LState, value any, depth int) (lua.LValue, error) {
 
 		return table, nil
 	case map[string]any:
-		table := state.NewTable()
+		table := state.CreateTable(0, len(value))
 		for key, entry := range value {
 			converted, err := goToLua(state, entry, depth+1)
 			if err != nil {

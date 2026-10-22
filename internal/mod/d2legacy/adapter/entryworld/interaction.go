@@ -18,7 +18,17 @@ func InteractionData(
 	owner string,
 	initial string,
 ) map[string]any {
-	targets := []any{actOneGuideTarget()}
+	guide := actOneGuideTarget()
+	if town := worlds[1]; town != nil {
+		for _, object := range town.Objects {
+			if isAuthoredAkara(object) {
+				guide["x"], guide["y"] = float64(object.X), float64(object.Y)
+				guide["level_id"], guide["selectable"], guide["radius"] = float64(1), true, float64(4)
+				break
+			}
+		}
+	}
+	targets := []any{guide}
 
 	for _, levelID := range sortedLevelIDs(worlds) {
 		targets = appendSelectableTargets(targets, levelID, worlds[levelID], zones[levelID])
@@ -35,6 +45,7 @@ func InteractionData(
 func actOneGuideTarget() map[string]any {
 	return map[string]any{
 		"id":         "act1-akara",
+		"act":        float64(1),
 		"npc":        "Akara",
 		"vendor":     "Akara",
 		"categories": "armo,misc,weap",
@@ -43,6 +54,10 @@ func actOneGuideTarget() map[string]any {
 		"y":          float64(4096),
 		"radius":     float64(160),
 	}
+}
+
+func isAuthoredAkara(object gameworld.Object) bool {
+	return object.Resolved && object.Type == gameworld.ObjectTypeDynamic && object.Class == "akara"
 }
 
 // sortedLevelIDs makes target publication independent of Go map iteration, preserving stable initial-state snapshots
@@ -70,6 +85,9 @@ func appendSelectableTargets(
 
 	for _, selected := range gameMap.Selectables() {
 		object := objects[selected.ID]
+		if levelID == 1 && isAuthoredAkara(object) {
+			continue
+		}
 
 		name := strings.TrimSpace(object.Description)
 		if name == "" {
@@ -81,6 +99,10 @@ func appendSelectableTargets(
 		}
 
 		target := selectableTarget(selected, name)
+		target["level_id"] = float64(levelID)
+		if object.Type == gameworld.ObjectTypeDynamic {
+			target["class"] = object.Class
+		}
 		if roomID, found := RoomIDAt(zone, selected.X, selected.Y); found {
 			target["resident_id"] = fmt.Sprintf("level:%d:%s", levelID, selected.ID)
 			target["level_id"] = float64(levelID)

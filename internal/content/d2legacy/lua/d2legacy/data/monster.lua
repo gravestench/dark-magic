@@ -90,6 +90,24 @@ local function monster_catalog()
                 "AC",
                 "AC(N)",
                 "AC(H)",
+                "ResDm",
+                "ResDm(N)",
+                "ResDm(H)",
+                "ResMa",
+                "ResMa(N)",
+                "ResMa(H)",
+                "ResFi",
+                "ResFi(N)",
+                "ResFi(H)",
+                "ResLi",
+                "ResLi(N)",
+                "ResLi(H)",
+                "ResCo",
+                "ResCo(N)",
+                "ResCo(H)",
+                "ResPo",
+                "ResPo(N)",
+                "ResPo(H)",
                 "A1TH",
                 "A1TH(N)",
                 "A1TH(H)",
@@ -346,6 +364,12 @@ local function runtime_definition(stats, graphics, values, difficulty, level)
         life_max = values.life_max * RAW_SCALE,
         level = level or monster_level(stats, difficulty),
         defense = values.defense,
+        physical_resist = difficulty_value(stats, columns("ResDm"), difficulty),
+        magic_resist = difficulty_value(stats, columns("ResMa"), difficulty),
+        fire_resist = difficulty_value(stats, columns("ResFi"), difficulty),
+        lightning_resist = difficulty_value(stats, columns("ResLi"), difficulty),
+        cold_resist = difficulty_value(stats, columns("ResCo"), difficulty),
+        poison_resist = difficulty_value(stats, columns("ResPo"), difficulty),
         attack_rating = values.attack,
         physical_min = values.damage_min * RAW_SCALE,
         physical_max = values.damage_max * RAW_SCALE,
@@ -452,6 +476,23 @@ local function encoded_components(values)
     end
     table.sort(result)
     return table.concat(result, ",")
+end
+
+-- NPC presentation uses authored graphics without admitting an ordinary combat spawn.
+function M.npc_appearance(id)
+    local indexed = monster_catalog()
+    local stats = assert(indexed.stats[id], "missing MonStats row")
+    assert(truth(stats, "npc"), "monster is not an NPC")
+    local graphics = assert(indexed.graphics[graphics_id(stats)], "missing MonStats2 row")
+    local overlay_height = integer(graphics, "OverlayHeight", 0)
+    assert(overlay_height >= 0 and overlay_height <= 4, "MonStats2 OverlayHeight must be in 0..4")
+    return {
+        token = string.upper(stats.Code or ""),
+        weapon_class = string.upper(graphics.BaseW or "HTH"),
+        components = encoded_components(graphics_components(graphics)),
+        name_key = stats.NameStr or stats.Id,
+        overlay_height = overlay_height,
+    }
 end
 
 function M.all(...)

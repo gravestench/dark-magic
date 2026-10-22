@@ -121,3 +121,29 @@ func TestStoreLogsEachLoadedGenerationWithProvenance(t *testing.T) {
 		t.Fatalf("cache hit produced another load event: %q", logged)
 	}
 }
+
+func TestStoreRevisionTracksInvalidation(t *testing.T) {
+	store := New(fstest.MapFS{"rows.txt": &fstest.MapFile{Data: []byte("name\nalpha\n")}})
+
+	initial := store.Revision()
+	if _, err := store.Load("rows.txt"); err != nil {
+		t.Fatal(err)
+	}
+
+	if store.Revision() != initial {
+		t.Fatal("load changed invalidation revision")
+	}
+
+	store.Invalidate("rows.txt")
+
+	afterPath := store.Revision()
+	if afterPath == initial {
+		t.Fatal("path invalidation did not change revision")
+	}
+
+	store.InvalidateAll()
+
+	if store.Revision() == afterPath {
+		t.Fatal("catalog invalidation did not change revision")
+	}
+}

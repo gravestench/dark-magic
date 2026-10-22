@@ -538,9 +538,9 @@ Keep criticals, elemental damage, states, leech, and advanced modifiers deferred
 
 Add elemental/magic/physical resistance and verified cap/pierce ordering using table-driven vectors.
 
-Current implementation note: the typed bundle now preserves six direct-damage
-channels and applies the already-supported physical/fire mitigation per channel;
-unsupported channel mitigation remains passthrough. Resistance breadth, caps,
+Current implementation note: the typed bundle preserves six direct-damage
+channels. Player physical/fire/cold/lightning/poison mitigation is applied per
+channel; unsupported channel mitigation remains passthrough. Monster resistance,
 pierce, absorb, conversion, drain, and durations are still future verified
 stages rather than implied compatibility.
 

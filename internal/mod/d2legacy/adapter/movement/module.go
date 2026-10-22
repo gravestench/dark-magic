@@ -30,6 +30,10 @@ func movementRulesHelp() modruntime.ModuleHelp {
 	return modruntime.ModuleHelp{
 		Summary: "Resolve d2legacy movement intent with the production walk, run, diagonal, and arrival rules.",
 		Commands: map[string]modruntime.CommandHelp{
+			"allocate_vitality_stamina": {
+				Usage:   "d2legacy.movement_rules.allocate_vitality_stamina(class, current, previous_maximum, new_maximum)",
+				Summary: "Rescale current stamina, then grant the class's one-point Vitality gain.",
+			},
 			"animation_rate": {
 				Usage:   "d2legacy.movement_rules.animation_rate(class, running, velocitypercent?, item_frw?)",
 				Summary: "Return the Expansion walk/run animation rate after the shared velocity ordering.",
@@ -76,17 +80,28 @@ func movementRulesHelp() modruntime.ModuleHelp {
 // load registers every callback on one table, preserving the module's established Lua names and return arities.
 func (bridge movementRulesBridge) load(state *lua.LState) int {
 	module := state.SetFuncs(state.NewTable(), map[string]lua.LGFunction{
-		"animation_rate":     bridge.animationRate,
-		"by_time_adjustment": bridge.byTimeAdjustment,
-		"class_facts":        bridge.classFacts,
-		"is_town":            bridge.isTown,
-		"maximum_stamina":    bridge.maximumStamina,
-		"rates":              bridge.rates,
-		"rescale_stamina":    bridge.rescaleStamina,
-		"stamina":            bridge.stamina,
-		"velocity":           bridge.velocity,
+		"allocate_vitality_stamina": bridge.allocateVitalityStamina,
+		"animation_rate":            bridge.animationRate,
+		"by_time_adjustment":        bridge.byTimeAdjustment,
+		"class_facts":               bridge.classFacts,
+		"is_town":                   bridge.isTown,
+		"maximum_stamina":           bridge.maximumStamina,
+		"rates":                     bridge.rates,
+		"rescale_stamina":           bridge.rescaleStamina,
+		"stamina":                   bridge.stamina,
+		"velocity":                  bridge.velocity,
 	})
 	state.Push(module)
+
+	return 1
+}
+
+// allocateVitalityStamina uses the pinned class rate and returns the one-point allocation result.
+func (bridge movementRulesBridge) allocateVitalityStamina(state *lua.LState) int {
+	rates := bridge.ratesOrRaise(state, 1, "d2legacy movement: class has no pinned CharStats stamina facts")
+	state.Push(lua.LNumber(AllocateVitalityStamina(
+		rates, int64(state.CheckInt(2)), int64(state.CheckInt(3)), int64(state.CheckInt(4)),
+	)))
 
 	return 1
 }

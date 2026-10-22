@@ -4,6 +4,52 @@ return test.suite({
     profile = "ecs",
     tier = "fast",
     cases = {
+        test.case("npc_snapshot_reuses_target_position_and_filters_inactive_lifetime", {
+            test.run(function()
+                local ecs = require("engine.ecs/v1")
+                require("d2legacy.components.items").register()
+                local world = require("d2legacy.gameplay.world")
+                local actor = ecs.create({
+                    ["d2legacy.interaction.target"] = { id = "town-charsi", npc = "Charsi", x = 12, y = 8, radius = 4 },
+                    ["d2legacy.monster.appearance"] = {
+                        token = "SI",
+                        mode = "NU",
+                        weapon_class = "HTH",
+                        name_key = "Charsi",
+                        components = "TR=LIT",
+                        death_sound = "",
+                        overlay_height = 2,
+                    },
+                    ["d2legacy.world.position"] = { x = 12, y = 8 },
+                    ["d2legacy.world.location"] = { act = 1, level_id = 1 },
+                    ["d2legacy.world.selectable"] = {
+                        id = "town-charsi",
+                        kind = "dynamic-object",
+                        label = "Charsi",
+                        radius = 4,
+                        priority = 20,
+                    },
+                })
+                local snapshots = world.npc_snapshots()
+                test.expect(#snapshots):equals(1)
+                test.expect(snapshots[1].token):equals("SI")
+                test.expect(snapshots[1].components):equals("TR=LIT")
+                test.expect(snapshots[1].entity_id):equals(actor:id())
+                test.expect(snapshots[1].x):equals(12)
+                test.expect(snapshots[1].y):equals(8)
+                snapshots[1].x = 999
+                test.expect(world.npc_snapshots()[1].x):equals(12)
+                local selected = require("d2legacy.gameplay.targeting").selectable_at(12, 8, 1)
+                test.expect(selected.id):equals("town-charsi")
+                test.expect(selected.x):equals(world.npc_snapshots()[1].x)
+                ecs.set(actor, "d2legacy.world.inactive", {})
+                test.expect(#world.npc_snapshots()):equals(0)
+                ecs.remove(actor, "d2legacy.world.inactive")
+                test.expect(#world.npc_snapshots()):equals(1)
+                ecs.destroy(actor)
+                test.expect(#world.npc_snapshots()):equals(0)
+            end),
+        }),
         test.case("semantic_cues_tolerate_absent_optional_events", {
             test.run(function()
                 local ecs = require("engine.ecs/v1")
@@ -42,6 +88,7 @@ return test.suite({
                         { name = "target", type = "entity" },
                         { name = "state_id", type = "string" },
                         { name = "period_ticks", type = "i64" },
+                        { name = "aura", type = "bool" },
                     },
                 })
                 local world = require("d2legacy.gameplay.world")
@@ -77,6 +124,15 @@ return test.suite({
                         target = target,
                         state_id = "prayer",
                         period_ticks = 50,
+                        aura = true,
+                    },
+                })
+                local projected_poison = ecs.create({
+                    ["d2legacy.presentation.state"] = {
+                        target = target,
+                        state_id = "poison",
+                        period_ticks = 0,
+                        aura = false,
                     },
                 })
                 ecs.create({
@@ -91,7 +147,7 @@ return test.suite({
                     },
                 })
                 local snapshots = world.state_snapshots()
-                test.assert(#snapshots == 3, [=[#snapshots == 3]=])
+                test.assert(#snapshots == 4, [=[#snapshots == 4]=])
                 local by_state = {}
                 for _, snapshot in ipairs(snapshots) do
                     by_state[snapshot.state_id] = snapshot
@@ -124,6 +180,14 @@ return test.suite({
                         and projected_snapshot.aura
                         and projected_snapshot.aura_period_ticks == 50,
                     [=[connected semantic state uses the aura presentation contract]=]
+                )
+                local poison_snapshot = by_state.poison
+                test.assert(
+                    poison_snapshot.entity_id == projected_poison:id()
+                        and poison_snapshot.target_entity_id == target:id()
+                        and not poison_snapshot.aura
+                        and poison_snapshot.aura_period_ticks == 0,
+                    [=[connected poison remains outside aura rotation]=]
                 )
                 local cues = world.semantic_cues()
                 local cue = cues[#cues]

@@ -4,6 +4,7 @@ local ecs = require("engine.ecs/v1")
 local collision = require("d2legacy.gameplay.collision")
 local entity_identity = require("d2legacy.policy.entity_identity")
 local player_motion = require("d2legacy.gameplay.player_motion")
+local forced_motion = require("d2legacy.gameplay.systems.forced_motion")
 
 local M = {}
 
@@ -59,13 +60,14 @@ local function relocate(context, entity, cast, definition, units, structural)
     local start_x, start_y = position:get("x"), position:get("y")
     local result = outcome(entity, cast, definition, units)
     if result == "completed" then
+        -- Record where an active knockback stopped before the relocation moves the unit.
+        forced_motion.interrupt(context, entity, structural)
         position:set("x", cast:get("target_x"))
         position:set("y", cast:get("target_y"))
         local velocity = ecs.get(entity, "d2legacy.world.velocity")
         velocity:set("x", 0)
         velocity:set("y", 0)
         player_motion.stop(entity)
-        structural:remove(entity, "d2legacy.world.forced_motion")
     end
     structural:create({
         ["d2legacy.world.relocation_event"] = {
@@ -102,6 +104,7 @@ function M.register(definitions)
             "d2legacy.world.selectable",
             "d2legacy.player.death",
             "d2legacy.world.inactive",
+            "d2legacy.world.forced_motion",
         },
         write = {
             "d2legacy.skill.cast",
@@ -109,6 +112,7 @@ function M.register(definitions)
             "d2legacy.world.velocity",
             "d2legacy.player.motion",
             "d2legacy.world.forced_motion",
+            "d2legacy.world.forced_motion_event",
             "d2legacy.world.relocation_event",
         },
         update = function(context, entities, structural)

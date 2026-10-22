@@ -566,7 +566,10 @@ func TestTransformFrameUpdatesKnownEntitiesWithoutInventingLifecycle(t *testing.
 // new revisions, never mutable storage shared with the network worker.
 func TestPresentationSnapshotsAreImmutableAtomicRevisions(t *testing.T) {
 	session := &Session{
-		HUD: playeradapter.HUD{Version: playeradapter.HUDVersion, Tick: 10},
+		HUD: playeradapter.HUD{
+			Version: playeradapter.HUDVersion, Tick: 10,
+			Resistances: &playeradapter.HUDResistances{FireResist: 30, MaxFireResist: 75},
+		},
 		World: playeradapter.WorldView{
 			Version: playeradapter.WorldViewVersion, Tick: 10,
 			Entities: []playeradapter.WorldEntity{{ID: "known", Position: playeradapter.HUDPosition{X: 1}}},
@@ -581,10 +584,28 @@ func TestPresentationSnapshotsAreImmutableAtomicRevisions(t *testing.T) {
 		},
 		Admission: gameserver.JoinResponse{Snapshot: gameserver.Snapshot{Tick: 10, StepNanos: int64(40 * time.Millisecond)}},
 	}
+	view, _ := session.View()
+
+	view.Resistances.FireResist = 40
+	if session.HUD.Resistances.FireResist != 30 {
+		t.Fatal("View returned a mutable resistance alias")
+	}
+
+	presentation, _, _ := session.PresentationView()
+
+	presentation.Resistances.FireResist = 50
+	if session.HUD.Resistances.FireResist != 30 {
+		t.Fatal("PresentationView returned a mutable resistance alias")
+	}
 
 	before := session.PresentationSnapshot()
 	if again := session.PresentationSnapshot(); again != before {
 		t.Fatal("unchanged presentation allocated a new snapshot")
+	}
+
+	session.HUD.Resistances.FireResist = 60
+	if before.HUD.Resistances.FireResist != 30 {
+		t.Fatal("published HUD aliases mutable session resistance state")
 	}
 
 	session.Events.Events[0].Cast.Kind = "mutated"

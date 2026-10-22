@@ -209,6 +209,8 @@ func assertInitialLiveProjection(t *testing.T, connected *Session) {
 	if !containsWorldEntity(connected.World.Entities, "monster:level:2:room:blood-moor-network:monster:1", "hostile") {
 		t.Fatalf("live generated hostile missing from world view: %#v", connected.World.Entities)
 	}
+
+	assertLiveNormalResistances(t, connected.HUD)
 }
 
 // assertSecondLiveIdentity proves repeated profile admission receives a distinct player membership
@@ -219,6 +221,21 @@ func assertSecondLiveIdentity(t *testing.T, second *Session) {
 	if second.HUD.Player.PlayerID != "alice-2" ||
 		second.HUD.Player.CharacterID != "barbarian" || second.HUD.Player.Class != "Barbarian" {
 		t.Fatalf("second client HUD identity = %#v", second.HUD.Player)
+	}
+
+	assertLiveNormalResistances(t, second.HUD)
+}
+
+// assertLiveNormalResistances checks the real authority-to-QUIC HUD, including
+// the maxima needed by the connected character panel.
+func assertLiveNormalResistances(t *testing.T, hud playeradapter.HUD) {
+	t.Helper()
+
+	want := playeradapter.HUDResistances{
+		MaxFireResist: 75, MaxColdResist: 75, MaxLightningResist: 75, MaxPoisonResist: 75,
+	}
+	if hud.Resistances == nil || *hud.Resistances != want {
+		t.Fatalf("live owner resistances = %#v, want %#v", hud.Resistances, want)
 	}
 }
 
@@ -286,6 +303,8 @@ func assertLivePeerProjections(t *testing.T, ctx context.Context, connected, sec
 		if _, err := connected.Refresh(ctx); err != nil {
 			t.Fatal(err)
 		}
+
+		assertLiveNormalResistances(t, connected.PresentationSnapshot().HUD)
 
 		_, firstWorld := connected.View()
 		if peer, found := findWorldEntity(firstWorld.Entities, "player:alice-2", "player"); found {

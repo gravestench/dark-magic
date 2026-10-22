@@ -105,6 +105,8 @@ return test.suite({
                 pSrvDoFunc = "1",
                 CollideType = "3",
                 CollideKill = "1",
+                NextHit = "0",
+                NextDelay = "7",
                 Vel = "18",
                 Range = "25",
                 Size = "1",
@@ -142,6 +144,8 @@ return test.suite({
                 test.expect(definitions[50].reaction_duration_per_level[2]):equals(25)
                 test.expect(definitions[60].reaction):equals("missile_hit_return")
                 test.expect(definitions[60].reaction_missile.missile_id):equals("chillingarmorbolt")
+                test.expect(definitions[60].reaction_missile.next_hit):equals(false)
+                test.expect(definitions[60].reaction_missile.next_hit_delay):equals(7)
                 test.expect(definitions[60].reaction_missile.speed_per_tick):equals(27 / 32)
                 test.expect(definitions[60].reaction_missile.maximum_range):equals(675 / 32)
                 test.expect(definitions[60].reaction_missile.directions):equals(16)

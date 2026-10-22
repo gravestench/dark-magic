@@ -98,6 +98,7 @@ func TestOwnedTargetAssassinTrapFamilyRecords(t *testing.T) {
 		t.Fatal(err)
 	}
 	for name, fields := range map[string]map[string]string{
+		"blade creeper":       {"Id": "392", "NextHit": "1", "NextDelay": "25"},
 		"sentrylightningbolt": {"Id": "526", "Vel": "30", "MaxVel": "30", "Range": "10", "pSrvDoFunc": "1"},
 		"sentrychargedbolt":   {"Id": "495", "Vel": "12", "MaxVel": "12", "Range": "98", "pSrvDoFunc": "1"},
 		"bladefragment1":      {"Id": "506", "Vel": "22", "MaxVel": "22", "Range": "40", "pSrvDoFunc": "1"},

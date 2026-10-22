@@ -37,6 +37,7 @@ return test.suite({
                 passive = "0",
                 leftskill = "1",
                 charclass = "sor",
+                weapsel = "2",
             },
         },
         ["data/global/excel/skilldesc.txt"] = {
@@ -44,7 +45,13 @@ return test.suite({
             { skilldesc = "firebolt", ListRow = "1", IconCel = "1" },
             { skilldesc = "warmth", ListRow = "2", IconCel = "2" },
             { skilldesc = "unrelated-description", ListRow = "3", IconCel = "3" },
-            { skilldesc = "divergent-description", ListRow = "4", IconCel = "17", ["str name"] = "divergent-name" },
+            {
+                skilldesc = "divergent-description",
+                ListRow = "4",
+                IconCel = "17",
+                ["str name"] = "divergent-name",
+                ["str short"] = "divergent-short",
+            },
         },
         ["data/global/excel/charstats.txt"] = {
             {
@@ -61,6 +68,37 @@ return test.suite({
         },
     },
     cases = {
+        test.case("selected_columns_preserve_full_consumer_results", {
+            test.run(function()
+                local records = require("engine.records/v1")
+                local function snapshot(selected)
+                    test.mock_module("engine.records/v1", {
+                        load = function(path, columns)
+                            if selected then
+                                return records.load(path, columns)
+                            end
+                            return records.load(path)
+                        end,
+                    }, { "load" })
+                    test.unload_module("d2legacy.data.skill")
+                    local skill = require("d2legacy.data.skill")
+                    return {
+                        display = skill.load(1),
+                        missing = skill.load(999),
+                        starting = skill.starting_for_class("Sorceress"),
+                        learned = skill.learned_for_ids({ 1, 36 }, 3),
+                    }
+                end
+                local full = snapshot(false)
+                local projected = snapshot(true)
+                test.expect(projected):deep_equals(full)
+                projected.display.icon = 999
+                test.expect(full.display.icon):equals(17)
+                test.expect(full.display.weapon_selection):equals(2)
+                test.expect(full.display.short_key):equals("divergent-short")
+                test.expect(snapshot(true)):deep_equals(full)
+            end),
+        }),
         test.case("resolves_numeric_id_and_symbolic_description_instead_of_row_positions", {
             test.run(function()
                 local skill = require("d2legacy.data.skill")
