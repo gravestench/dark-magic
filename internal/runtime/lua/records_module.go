@@ -1,6 +1,9 @@
 package modruntime
 
-import lua "github.com/yuin/gopher-lua"
+import (
+	lua "github.com/yuin/gopher-lua"
+	"strconv"
+)
 
 type recordsGateway interface {
 	Load(string) ([]map[string]string, error)
@@ -22,6 +25,10 @@ func RecordsModule(records recordsGateway) Module {
 				"reload": commandHelp(
 					"engine.records.reload()",
 					"Invalidate and reload the record catalog.",
+				),
+				"revision": commandHelp(
+					"engine.records.revision()",
+					"Return an opaque equality token changed by any record invalidation, or nil for an unversioned source.",
 				),
 				"loaded": commandHelp(
 					"engine.records.loaded()",
@@ -60,6 +67,15 @@ func RecordsModule(records recordsGateway) Module {
 					path := state.CheckString(1)
 					records.Invalidate(path)
 					state.Push(lua.LTrue)
+
+					return 1
+				},
+				"revision": func(state *lua.LState) int {
+					if source, ok := records.(interface{ Revision() uint64 }); ok {
+						state.Push(lua.LString(strconv.FormatUint(source.Revision(), 10)))
+					} else {
+						state.Push(lua.LNil)
+					}
 
 					return 1
 				},
