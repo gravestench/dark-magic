@@ -11,7 +11,9 @@ import (
 	gameecs "github.com/gravestench/dark-magic/internal/game/ecs"
 	gamesession "github.com/gravestench/dark-magic/internal/game/session"
 	"github.com/gravestench/dark-magic/internal/game/simulation"
+	gameworld "github.com/gravestench/dark-magic/internal/game/world"
 	playeradapter "github.com/gravestench/dark-magic/internal/mod/d2legacy/adapter/player"
+	modruntime "github.com/gravestench/dark-magic/internal/runtime/lua"
 )
 
 // TestGroundItemResidencyRestoresAcrossInactiveRoom verifies inactive-room
@@ -58,6 +60,27 @@ func TestGroundItemResidencyRestoresAcrossInactiveRoom(t *testing.T) {
 	item := groundItemEntity(t, engine, "ground-potion")
 	assertResidentRoom(t, dynamicStore(t, engine, "d2legacy.world.room_resident"), item, 2, "a")
 	assertGroundItemWorldState(t, engine, item, "world", true)
+	checkpointView, err := session.CanonicalCheckpoint()
+	if err != nil {
+		t.Fatal(err)
+	}
+	public, err := playeradapter.ProjectWorldView("alice", checkpointView)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var view playeradapter.WorldView
+	if err := json.Unmarshal(public, &view); err != nil {
+		t.Fatal(err)
+	}
+	var visible bool
+	for _, entity := range view.Entities {
+		if entity.ID == "item:alice:ground-potion" {
+			visible = entity.Kind == "item" && entity.WorldDC6 == "data/global/items/flphp1.dc6" && entity.WorldAnimated
+		}
+	}
+	if !visible {
+		t.Fatalf("ground-item art absent from public view: %+v", view.Entities)
+	}
 
 	submitMoveCommand(t, session, engine.Tick()+1, "alice", 1, 1)
 
@@ -114,10 +137,10 @@ func TestGroundItemResidencyRestoresAcrossInactiveRoom(t *testing.T) {
 	returnTick := checkpoint.Tick + 1
 	submitMoveCommand(t, session, returnTick, "alice", 3, -1)
 	submitMoveCommand(t, restoredSession, returnTick, "alice", 1, -1)
-	stepSession(t, session, 55)
-	stepSession(t, restoredSession, 55)
+	stepSession(t, session, 75)
+	stepSession(t, restoredSession, 75)
 
-	stopTick = returnTick + 55
+	stopTick = returnTick + 75
 	submitMoveCommand(t, session, stopTick, "alice", 4, 0)
 	submitMoveCommand(t, restoredSession, stopTick, "alice", 2, 0)
 	stepSession(t, session, 2)
@@ -125,6 +148,9 @@ func TestGroundItemResidencyRestoresAcrossInactiveRoom(t *testing.T) {
 	assertResidentActivation(t, engine, item, true, false)
 	assertResidentActivation(t, restoredEngine, item, true, false)
 	assertEqualLatestChecksums(t, session, restoredSession, "reactivated ground item")
+	if x := playerPositionX(t, engine, "alice"); x > 4.5 {
+		t.Fatalf("player has not approached ground item: x=%g", x)
+	}
 
 	moveItem(t, session, engine.Tick()+1, 5, "held", 0, 0)
 	moveItem(t, restoredSession, restoredEngine.Tick()+1, 3, "held", 0, 0)
@@ -193,6 +219,14 @@ func startGroundItemFixture(
 		_ = session.Close()
 		_ = engine.Close()
 
+		t.Fatal(err)
+	}
+	geometry, err := gameworld.NewOpenMap(30, 10)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := modruntime.SetWorldMapForLevel(t.Context(), authority.Runtime,
+		"d2legacy.gameplay.systems.init", "set_collision", 2, geometry); err != nil {
 		t.Fatal(err)
 	}
 

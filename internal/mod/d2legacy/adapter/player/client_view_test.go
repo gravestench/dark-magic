@@ -19,6 +19,12 @@ func TestValidateClientViewRejectsUnboundedOrInvalidNetworkState(t *testing.T) {
 	}
 
 	tests := map[string]func(*ClientView){
+		"previous client version": func(view *ClientView) { view.Version = 13 },
+		"previous world version":  func(view *ClientView) { view.World.Version = 6 },
+		"oversized ground art path": func(view *ClientView) {
+			view.World.Entities[0].Kind = "item"
+			view.World.Entities[0].WorldDC6 = strings.Repeat("x", maxWorldAssetBytes+1)
+		},
 		"wrong nested tick": func(view *ClientView) { view.Private.Tick++ },
 		"non-finite owner":  func(view *ClientView) { view.HUD.Position.X = math.NaN() },
 		"excess entities": func(view *ClientView) {

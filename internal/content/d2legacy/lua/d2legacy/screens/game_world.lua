@@ -134,6 +134,7 @@ local function install_current_world(self)
     destroy_missiles(self)
     destroy_state_overlays(self)
     destroy_warps(self)
+    if self.ground_items then self.ground_items:destroy(); self.ground_items = nil end
     -- Selection and held-input state names coordinates/entities in the old
     -- world. It must not survive into the destination presentation.
     self.pending_interaction = nil
@@ -156,6 +157,7 @@ local function install_current_world(self)
         canvas_width = self.world_canvas_width,
         canvas_height = self.world_canvas_height,
     })
+    self.ground_items = require("d2legacy.gameplay.ground_items").new(self.map.root, next_world, level_id, manifest.palettes.units)
     self.hero = render.create("world", self.map.root)
     self.hero:set_visible(false)
     -- The previous render handle belonged to the destroyed map root. Force the
@@ -876,6 +878,7 @@ return {
             update_players(self, elapsed)
             update_missiles(self)
             update_warps(self)
+            if self.ground_items then self.ground_items:update() end
             observe_semantic_cues(self)
             update_state_overlays(self, elapsed)
         end
@@ -1179,7 +1182,7 @@ return {
                         self.held_hostile = { id = selected.id }
                         request_left_skill(self, selected.x, selected.y, selected.id)
                     end
-                elseif selected.kind == "static-object" or selected.kind == "dynamic-object" then
+                elseif selected.kind == "item" or selected.kind == "static-object" or selected.kind == "dynamic-object" then
                     self.pending_interaction = selected
                     self.player.request_move(selected.x, selected.y, 3.5)
                 else
@@ -1214,7 +1217,8 @@ return {
                 -- unlike the locally predicted hero position above. Name the
                 -- selected entity so point overlap cannot actuate a different
                 -- object on the command's eventual apply tick.
-                self.interaction.open(selected.id)
+                if selected.kind == "item" then self.items.pickup(selected.id)
+                else self.interaction.open(selected.id) end
             end
             if finished then
                 -- Completion or route rejection consumes this click. A stale
@@ -1245,6 +1249,7 @@ return {
         destroy_missiles(self)
         destroy_state_overlays(self)
         destroy_warps(self)
+        if self.ground_items then self.ground_items:destroy(); self.ground_items = nil end
         chunked_map.destroy(self.map)
     end,
 }

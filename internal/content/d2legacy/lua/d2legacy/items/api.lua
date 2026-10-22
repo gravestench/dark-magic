@@ -21,6 +21,10 @@ function M.move(item_id, destination, place_held)
     })
 end
 
+function M.pickup(target_id)
+    intents.submit("item.pickup", { target_id = target_id })
+end
+
 function M.select_weapon_set(set)
     intents.submit("item.weapon_set", { set = set })
 end

@@ -305,6 +305,10 @@ func installWorldMirror(
 		return installPlayerMirror(world, entity, value, location, snap)
 	}
 
+	if value.Kind == "item" {
+		return installGroundItemMirror(world, entity, value, location, snap)
+	}
+
 	values := remoteMonsterComponents(value, location)
 	if value.Kind == "corpse" {
 		// Corpses remain selectable for skills but lose living collision.
@@ -320,6 +324,34 @@ func installWorldMirror(
 	}
 
 	return setRemoteComponents(world, entity, values)
+}
+
+func installGroundItemMirror(world *akara.World,
+	entity akara.Entity,
+	value playeradapter.WorldEntity,
+	location playeradapter.HUDLocation,
+	snap bool) error {
+	if err := moveMirrorToward(world, entity, value.Position, correctionAlpha(snap)); err != nil {
+		return err
+	}
+
+	return setRemoteComponents(world, entity, map[string]map[string]any{
+		"d2legacy.world.location": {"act": worldLocation(value.Act,
+			location.Act),
+			"level_id": worldLocation(value.LevelID,
+				location.LevelID)},
+		"d2legacy.world.selectable": {"id": value.ID,
+			"kind":     value.Kind,
+			"label":    value.Label,
+			"owner":    value.Owner,
+			"radius":   value.Radius,
+			"priority": value.Priority},
+		"d2legacy.item.presentation": {"inventory_dc6": "",
+			"world_dc6":      value.WorldDC6,
+			"world_animated": value.WorldAnimated,
+			"composite":      "",
+			"weapon_class":   ""},
+	})
 }
 
 // remoteMonsterComponents fills schema-required gameplay fields with neutral values while mapping
