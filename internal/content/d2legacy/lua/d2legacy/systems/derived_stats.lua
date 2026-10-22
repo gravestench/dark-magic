@@ -57,6 +57,7 @@ function M.register()
                         )
                     end
                     if defense then
+                        local summon_resist = defense:get("summon_resist_bonus")
                         -- Only players take the session's resistance penalty;
                         -- monsters and summons author resistances per difficulty.
                         local penalty = 0
@@ -78,7 +79,9 @@ function M.register()
                                 entities,
                                 target,
                                 "fire_resist",
-                                defense:get("base_fire_resist") + penalty
+                                defense:get("base_fire_resist")
+                                    + penalty
+                                    + (defense:get("fire_absorb_percent") > 0 and 0 or summon_resist)
                             )
                         )
                         defense:set(
@@ -87,7 +90,7 @@ function M.register()
                                 entities,
                                 target,
                                 "cold_resist",
-                                defense:get("base_cold_resist") + penalty
+                                defense:get("base_cold_resist") + penalty + summon_resist
                             )
                         )
                         defense:set(
@@ -96,7 +99,7 @@ function M.register()
                                 entities,
                                 target,
                                 "lightning_resist",
-                                defense:get("base_lightning_resist") + penalty
+                                defense:get("base_lightning_resist") + penalty + summon_resist
                             )
                         )
                         defense:set(
@@ -105,7 +108,7 @@ function M.register()
                                 entities,
                                 target,
                                 "poison_resist",
-                                defense:get("base_poison_resist") + penalty
+                                defense:get("base_poison_resist") + penalty + summon_resist
                             )
                         )
                         defense:set("max_fire_resist", stat_sources.resolve(entities, target, "max_fire_resist", 75))
