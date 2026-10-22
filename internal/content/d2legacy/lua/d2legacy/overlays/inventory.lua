@@ -57,6 +57,7 @@ end
 
 local function dc6_at(root, sheet, palette, frame, x, y)
     local node = render.create("modal", root)
+    node:set_z(-1)
     local width, height = node:set_dc6(sheet, palette, 0, frame)
     -- x/y describe top-left placement; retained node uses image center.
     node:set_position(x + width / 2, y + height / 2)
@@ -118,6 +119,7 @@ local function refresh_items(self)
             -- Lazily create each item's presentation node once. Stable item ID is
             -- the cache key; movement later reuses the same node.
             local node = render.create("modal", self.root)
+            node:set_z(2)
             local width, height = node:set_dc6(item.inventory_dc6, manifest.palettes.units, 0, 0)
             drawing = { node = node, width = width, height = height }
             self.item_nodes[item.id] = drawing
@@ -304,6 +306,7 @@ return {
 
         button.create(self.root, self.controls, "close", close_placement, assert(locale.text(close.label)), {
             layer = "modal",
+            z = 1,
             show_label = false,
             sound = manifest.sounds.button,
             tooltip = assert(locale.text(close.label)),
