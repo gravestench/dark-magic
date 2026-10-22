@@ -2,12 +2,110 @@ package clientapp
 
 import (
 	"fmt"
+	"reflect"
 	"testing"
 
 	"github.com/gravestench/akara"
+	"github.com/gravestench/dark-magic/internal/content"
 	gameecs "github.com/gravestench/dark-magic/internal/game/ecs"
 	playeradapter "github.com/gravestench/dark-magic/internal/mod/d2legacy/adapter/player"
+	modruntime "github.com/gravestench/dark-magic/internal/runtime/lua"
+	lua "github.com/yuin/gopher-lua"
 )
+
+// newRemotePresentationTestEngine copies real skill/action registrations through the production
+// replica boundary. Unrelated identity schemas remain focused test fixtures.
+func newRemotePresentationTestEngine(t *testing.T) *gameecs.Engine {
+	t.Helper()
+
+	source := gameecs.New()
+
+	t.Cleanup(func() { _ = source.Close() })
+
+	if err := registerProductionSkillActionSchemas(t, source); err != nil {
+		t.Fatal(err)
+	}
+
+	for _, schema := range remoteViewTestSchemas() {
+		if _, found := akara.GetDynamicStore(source.World(), schema.Name); found {
+			continue
+		}
+
+		if _, err := akara.RegisterSchema(source.World(), schema); err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	app := &application{entitySimulation: source}
+
+	replica, err := app.newConnectedReplica()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	t.Cleanup(func() { _ = replica.Close() })
+
+	return replica
+}
+
+func registerProductionSkillActionSchemas(t *testing.T, engine *gameecs.Engine) error {
+	t.Helper()
+
+	runtime := modruntime.New()
+	if err := runtime.RegisterInstaller(modruntime.ContentRequire(content.D2Legacy(), "lua")); err != nil {
+		return err
+	}
+
+	if err := runtime.RegisterModule(modruntime.NewECSCapability(runtime, engine).Module()); err != nil {
+		return err
+	}
+
+	if err := runtime.Start(t.Context()); err != nil {
+		return err
+	}
+	defer func() { _ = runtime.Stop(t.Context()) }()
+
+	return runtime.Run(t.Context(), func(state *lua.LState) error {
+		if err := state.CallByParam(lua.P{Fn: state.GetGlobal("require"), NRet: 1, Protect: true},
+			lua.LString("d2legacy.components.skill_actions")); err != nil {
+			return err
+		}
+
+		module := state.Get(-1)
+		state.Pop(1)
+
+		return state.CallByParam(lua.P{Fn: state.GetField(module, "register"), Protect: true})
+	})
+}
+
+func assertRemotePresentationCheckpoint(t *testing.T, engine *gameecs.Engine) {
+	t.Helper()
+
+	snapshot, err := engine.Snapshot()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	restored, err := gameecs.RestoreSnapshot(snapshot)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	t.Cleanup(func() { _ = restored.Close() })
+
+	if err := registerProductionSkillActionSchemas(t, restored); err != nil {
+		t.Fatalf("register restored production schemas: %v", err)
+	}
+
+	roundtrip, err := restored.Snapshot()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if !reflect.DeepEqual(snapshot, roundtrip) {
+		t.Fatal("presentation checkpoint changed schemas or mirrored values")
+	}
+}
 
 // registerRemoteViewSchemas installs the same allowlisted component shapes needed by connected
 // projection while omitting unrelated production systems.
@@ -92,12 +190,14 @@ func remotePlayerAndPresentationTestSchemas() []akara.Schema {
 			remoteTestFields(akara.FieldFloat64, "seconds")),
 		remoteTestSchema("d2legacy.presentation.overlay_anchor",
 			remoteTestFields(akara.FieldInt64, "height")),
+		remoteTestSchema("d2legacy.presentation.missile_sound_owner", remoteTestFields(akara.FieldString, "projectile_id")),
 		remoteTestSchema("d2legacy.presentation.missile", remoteMissileTestFields()),
-		remoteTestSchema("d2legacy.presentation.state",
-			remoteTestFields(akara.FieldEntity, "target"),
-			remoteTestFields(akara.FieldString, "state_id"),
-			remoteTestFields(akara.FieldInt64, "period_ticks"),
-			remoteTestFields(akara.FieldBool, "aura")),
+		{Name: "d2legacy.presentation.state", Version: 2, Fields: []akara.Field{
+			{Name: "target", Kind: akara.FieldEntity},
+			{Name: "state_id", Kind: akara.FieldString},
+			{Name: "period_ticks", Kind: akara.FieldInt64},
+			{Name: "aura", Kind: akara.FieldBool},
+		}},
 		remoteTestSchema("d2legacy.presentation.effect_cue",
 			remoteTestFields(akara.FieldString, "kind", "overlay_id", "sound"),
 			remoteTestFields(akara.FieldInt64, "tick"),

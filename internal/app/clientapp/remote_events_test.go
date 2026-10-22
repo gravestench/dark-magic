@@ -1,6 +1,7 @@
 package clientapp
 
 import (
+	"strings"
 	"testing"
 
 	"github.com/gravestench/akara"
@@ -11,8 +12,7 @@ import (
 // TestConnectedPersistentStatesBindToMirrorsWithoutGameplayFacts proves aura presentation binds to
 // retained targets while effect magnitude and other authority-only state remain absent.
 func TestConnectedPersistentStatesBindToMirrorsWithoutGameplayFacts(t *testing.T) {
-	engine := gameecs.New()
-	registerRemoteViewSchemas(t, engine)
+	engine := newRemotePresentationTestEngine(t)
 	app := &application{clientSimulation: engine}
 	location := playeradapter.HUDLocation{Act: 1, LevelID: 2}
 
@@ -64,6 +64,8 @@ func TestConnectedPersistentStatesBindToMirrorsWithoutGameplayFacts(t *testing.T
 		t.Fatal("persistent state period did not update in place")
 	}
 
+	assertRemotePresentationCheckpoint(t, engine)
+
 	if err := client.reconcilePersistentStates(app, nil); err != nil {
 		t.Fatal(err)
 	}
@@ -74,8 +76,7 @@ func TestConnectedPersistentStatesBindToMirrorsWithoutGameplayFacts(t *testing.T
 }
 
 func TestConnectedPoisonStateRemovesExpiredMirrorWithoutPrivateFacts(t *testing.T) {
-	engine := gameecs.New()
-	registerRemoteViewSchemas(t, engine)
+	engine := newRemotePresentationTestEngine(t)
 	app := &application{clientSimulation: engine}
 	peer := playeradapter.WorldEntity{ID: "player:peer", Kind: "player", Label: "Peer", Owner: "peer"}
 	location := playeradapter.HUDLocation{Act: 1, LevelID: 2}
@@ -107,6 +108,8 @@ func TestConnectedPoisonStateRemovesExpiredMirrorWithoutPrivateFacts(t *testing.
 		}
 	}
 
+	assertRemotePresentationCheckpoint(t, engine)
+
 	if err := client.reconcilePersistentStates(app, nil); err != nil {
 		t.Fatal(err)
 	}
@@ -119,8 +122,7 @@ func TestConnectedPoisonStateRemovesExpiredMirrorWithoutPrivateFacts(t *testing.
 // TestConnectedMissilesUsePresentationOnlyECSLifecycle requires complete reliable views to create,
 // update, and retire projectile mirrors without installing damage or collision authority.
 func TestConnectedMissilesUsePresentationOnlyECSLifecycle(t *testing.T) {
-	engine := gameecs.New()
-	registerRemoteViewSchemas(t, engine)
+	engine := newRemotePresentationTestEngine(t)
 	app := &application{clientSimulation: engine}
 	client := newClientWorld()
 
@@ -153,13 +155,21 @@ func TestConnectedMissilesUsePresentationOnlyECSLifecycle(t *testing.T) {
 		t.Fatalf("connected fireball dcc=%v blend=%v position=%+v", dcc, blend, currentPosition(engine.World(), entity))
 	}
 
-	if _, authorityPresent := akara.GetDynamicStore(engine.World(), "d2legacy.missile.projectile"); authorityPresent {
-		t.Fatal("test schema unexpectedly gives connected presentation projectile authority")
+	authority, found := akara.GetDynamicStore(engine.World(), "d2legacy.missile.projectile")
+	if !found || authority.Len() != 0 {
+		t.Fatal("connected presentation populated authoritative projectiles")
+	}
+
+	owners, _ := akara.GetDynamicStore(engine.World(), "d2legacy.presentation.missile_sound_owner")
+	if owners.Len() != 0 {
+		t.Fatal("legacy missile acquired a sound owner")
 	}
 
 	updated := fireball
 
 	updated.Position = playeradapter.HUDPosition{X: 11, Y: 20}
+	updated.SoundOwnerID = "projectile:42"
+
 	if err := client.reconcileMissiles(app, []playeradapter.WorldMissile{updated}); err != nil {
 		t.Fatal(err)
 	}
@@ -168,12 +178,60 @@ func TestConnectedMissilesUsePresentationOnlyECSLifecycle(t *testing.T) {
 		t.Fatalf("missile identity/position was not updated in place")
 	}
 
+	owner, found := owners.Get(entity)
+	if !found {
+		t.Fatal("missile sound owner missing")
+	}
+
+	id, _ := owner.Get("projectile_id")
+	if id != updated.SoundOwnerID {
+		t.Fatalf("missile sound owner = %v", id)
+	}
+
+	assertRemotePresentationCheckpoint(t, engine)
+
+	updated.SoundOwnerID = ""
+	if err := client.reconcileMissiles(app, []playeradapter.WorldMissile{updated}); err != nil {
+		t.Fatal(err)
+	}
+
+	if owners.Len() != 0 {
+		t.Fatal("legacy correction retained a sound owner")
+	}
+
 	if err := client.reconcileMissiles(app, nil); err != nil {
 		t.Fatal(err)
 	}
 
 	if len(client.missileEntities) != 0 || engine.World().EntityExists(entity) {
 		t.Fatal("retired connected missile remains in the disposable ECS")
+	}
+}
+
+func TestConnectedPresentationStateRefusesObsoleteSchema(t *testing.T) {
+	engine := gameecs.New()
+
+	t.Cleanup(func() { _ = engine.Close() })
+
+	_, err := akara.RegisterSchema(engine.World(), akara.Schema{
+		Name: "d2legacy.presentation.state", Version: 1, Fields: []akara.Field{
+			{Name: "target", Kind: akara.FieldEntity},
+			{Name: "state_id", Kind: akara.FieldString},
+			{Name: "period_ticks", Kind: akara.FieldInt64},
+		},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	err = registerProductionSkillActionSchemas(t, engine)
+	if err == nil || !strings.Contains(err.Error(), `"d2legacy.presentation.state" version 2 requires migrate`) {
+		t.Fatalf("obsolete state schema was not refused explicitly: %v", err)
+	}
+
+	states, _ := akara.GetDynamicStore(engine.World(), "d2legacy.presentation.state")
+	if states.Schema().Version != 1 || len(states.Schema().Fields) != 3 {
+		t.Fatal("refused registration mutated the obsolete state schema")
 	}
 }
 
@@ -484,6 +542,11 @@ func TestConnectedSemanticEffectPreservesRecordOverlayAndSoundOnly(t *testing.T)
 		t.Fatalf("connected effect cues = %d, want 1", store.Len())
 	}
 
+	owners, _ := akara.GetDynamicStore(engine.World(), "d2legacy.presentation.missile_sound_owner")
+	if owners.Len() != 0 {
+		t.Fatal("unowned impact acquired a sound owner")
+	}
+
 	entity := store.Entities()[0]
 	instance, _ := store.Get(entity)
 	overlay, _ := instance.Get("overlay_id")
@@ -499,6 +562,28 @@ func TestConnectedSemanticEffectPreservesRecordOverlayAndSoundOnly(t *testing.T)
 			target,
 			currentPosition(engine.World(), entity),
 		)
+	}
+
+	effect.ID, effect.Tick = 51, 12
+
+	effect.Effect = &playeradapter.SemanticEffectCue{
+		Kind: "missile_spawn", Sound: "fireball", SoundOwnerID: "projectile:42",
+	}
+	if err := client.reconcileSemanticEvents(app, playeradapter.EventView{
+		Version: playeradapter.EventViewVersion, Tick: 12, FromTick: 0, Events: []playeradapter.SemanticEvent{effect},
+	}, 1); err != nil {
+		t.Fatal(err)
+	}
+
+	if owners.Len() != 1 {
+		t.Fatalf("spawn sound owners = %d", owners.Len())
+	}
+
+	owner, _ := owners.Get(store.Entities()[0])
+
+	id, _ := owner.Get("projectile_id")
+	if id != effect.Effect.SoundOwnerID {
+		t.Fatalf("effect sound owner = %v", id)
 	}
 }
 

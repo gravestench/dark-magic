@@ -27,6 +27,7 @@ local game_hud = require("d2legacy.ui.game_hud")
 local player_composite = require("d2legacy.gameplay.player_composite")
 local monster_composite = require("d2legacy.gameplay.monster_composite")
 local missile_presentation = require("d2legacy.gameplay.missile_presentation")
+local missile_audio = require("d2legacy.gameplay.missile_audio")
 local cast_presentation = require("d2legacy.gameplay.cast_presentation")
 local held_skill_input = require("d2legacy.gameplay.held_skill_input")
 local state_overlay_presentation = require("d2legacy.gameplay.state_overlay_presentation")
@@ -73,6 +74,7 @@ local function destroy_players(self)
 end
 
 local function destroy_missiles(self)
+    missile_audio.close(self.missile_sounds)
     for _, missile in pairs(self.missiles or {}) do
         if missile.node and missile.node:exists() then
             missile.node:destroy()
@@ -668,6 +670,7 @@ local function update_state_overlays(self, elapsed)
 end
 
 local function observe_semantic_cues(self)
+    self.missile_sounds = self.missile_sounds or {}
     self.observed_cues = self.observed_cues or {}
     self.semantic_cues = {}
     for _, cue in ipairs(self.gameplay_world.semantic_cues(self.observed_cues)) do
@@ -698,7 +701,11 @@ local function observe_semantic_cues(self)
             end
             if cue.cue_type == "effect" then
                 if cue.sound and cue.sound ~= "" then
-                    pcall(legacy_audio.play_record, cue.sound, cue.tick or 0)
+                    if cue.kind == "missile_spawn" then
+                        pcall(missile_audio.play, self.missile_sounds, cue)
+                    else
+                        pcall(legacy_audio.play_record, cue.sound, cue.tick or 0)
+                    end
                 end
                 if cue.overlay_id and cue.overlay_id ~= "" then
                     queue_record_overlay_effect(self, cue)
@@ -721,13 +728,13 @@ local function observe_semantic_cues(self)
     end
 end
 
-local function update_missiles(self)
+local function update_missiles(self, snapshots)
     if not self.map or not self.world then
         return
     end
     self.missiles = self.missiles or {}
     local seen = {}
-    for _, snapshot in ipairs(self.gameplay_world.missile_snapshots()) do
+    for _, snapshot in ipairs(snapshots) do
         if snapshot.level_id == self.world_level_id then
             local key = tostring(snapshot.entity_id)
             seen[key] = true
@@ -874,9 +881,11 @@ return {
         if render.assets_available() then
             update_monsters(self, elapsed)
             update_players(self, elapsed)
-            update_missiles(self)
+            local missiles = self.gameplay_world.missile_snapshots()
+            update_missiles(self, missiles)
             update_warps(self)
             observe_semantic_cues(self)
+            missile_audio.reconcile(self.missile_sounds, missiles, self.world_level_id)
             update_state_overlays(self, elapsed)
         end
         -- Scene system separates UPDATE from INPUT OWNERSHIP. A transparent panel

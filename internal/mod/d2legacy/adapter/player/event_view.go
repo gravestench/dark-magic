@@ -12,7 +12,7 @@ import (
 )
 
 const (
-	EventViewVersion      uint32 = 4
+	EventViewVersion      uint32 = 5
 	EventViewHistoryTicks        = 64
 	MaxEventViewEvents           = 256
 	maxEventKindBytes            = 32
@@ -69,9 +69,10 @@ type SemanticStateCue struct {
 }
 
 type SemanticEffectCue struct {
-	Kind      string `json:"kind"`
-	OverlayID string `json:"overlay_id,omitempty"`
-	Sound     string `json:"sound,omitempty"`
+	SoundOwnerID string `json:"sound_owner_id,omitempty"`
+	Kind         string `json:"kind"`
+	OverlayID    string `json:"overlay_id,omitempty"`
+	Sound        string `json:"sound,omitempty"`
 }
 
 // SemanticMonsterDeathCue is the presentation-safe subset of the durable
@@ -127,6 +128,11 @@ func ProjectEventView(playerID string, checkpoint simulation.Checkpoint) (EventV
 	}
 
 	monsterAppearanceByEntity, ok := indexEventComponent(monsterAppearances)
+	if !ok {
+		return EventView{}, ErrEventView
+	}
+
+	ownerByEntity, ok := projectMissileSoundOwners(snapshot)
 	if !ok {
 		return EventView{}, ErrEventView
 	}
@@ -240,9 +246,10 @@ func ProjectEventView(playerID string, checkpoint simulation.Checkpoint) (EventV
 				}
 			case "effect":
 				event.Effect = &SemanticEffectCue{
-					Kind:      stringField(fields, "kind"),
-					OverlayID: stringField(fields, "overlay_id"),
-					Sound:     stringField(fields, "sound"),
+					SoundOwnerID: ownerByEntity[instance.Entity],
+					Kind:         stringField(fields, "kind"),
+					OverlayID:    stringField(fields, "overlay_id"),
+					Sound:        stringField(fields, "sound"),
 				}
 			}
 
@@ -521,7 +528,8 @@ func validStateCue(cue SemanticStateCue) bool {
 // validEffectCue requires at least one visual or audio asset, avoiding empty
 // effect events that consume bounded history without presenting anything.
 func validEffectCue(cue SemanticEffectCue) bool {
-	return boundedRequired(cue.Kind, maxEventKindBytes) && bounded(cue.OverlayID, maxEventSourceBytes) &&
+	return bounded(cue.SoundOwnerID, maxMissileSoundOwnerBytes) && boundedRequired(cue.Kind, maxEventKindBytes) &&
+		bounded(cue.OverlayID, maxEventSourceBytes) &&
 		bounded(cue.Sound, maxEventSourceBytes) && (cue.OverlayID != "" || cue.Sound != "")
 }
 

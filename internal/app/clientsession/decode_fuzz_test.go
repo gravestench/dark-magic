@@ -37,6 +37,87 @@ func TestDecodeViewRejectsUnknownFieldsAndOversizedCollections(t *testing.T) {
 	}
 }
 
+// TestDecodeViewVersionsMissileSoundOwners preserves optional ownership within the current schema.
+func TestDecodeViewVersionsMissileSoundOwners(t *testing.T) {
+	view := validNetworkView(9)
+	view.HUD.Resistances = &playeradapter.HUDResistances{PoisonResist: 35, MaxPoisonResist: 80}
+	view.World.States = []playeradapter.WorldState{{TargetID: "player:player", StateID: "poison"}}
+	view.World.Missiles = []playeradapter.WorldMissile{{
+		ID: "missile:1", Kind: "projectile", MissileID: "fireball", SoundOwnerID: "projectile:1",
+		Act: 1, LevelID: 1, DCC: "fireball.dcc", LogicalDirection: -1, Directions: 16, FramesPerSecond: 16,
+	}}
+
+	view.Events.Events = []playeradapter.SemanticEvent{{
+		ID: 2, Type: "effect", Tick: 9, Act: 1, LevelID: 1,
+		Effect: &playeradapter.SemanticEffectCue{Kind: "missile_spawn", Sound: "fireball", SoundOwnerID: "projectile:1"},
+	}}
+
+	for _, owner := range []string{"projectile:1", ""} {
+		view.World.Missiles[0].SoundOwnerID = owner
+		view.Events.Events[0].Effect.SoundOwnerID = owner
+
+		payload, err := json.Marshal(view)
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		decoded, err := decodeView(gameserver.Snapshot{Tick: 9, Payload: payload})
+		if err != nil {
+			t.Fatalf("current schema with owner %q: %v", owner, err)
+		}
+
+		if decoded.World.Missiles[0].SoundOwnerID != owner || decoded.Events.Events[0].Effect.SoundOwnerID != owner {
+			t.Fatal("sound ownership changed during decoding")
+		}
+
+		if decoded.HUD.Resistances == nil || *decoded.HUD.Resistances != *view.HUD.Resistances ||
+			len(decoded.World.States) != 1 || decoded.World.States[0] != view.World.States[0] {
+			t.Fatal("poison presentation changed alongside missile sound ownership")
+		}
+	}
+
+	for name, mutate := range map[string]func(*playeradapter.ClientView){
+		"previous envelope": func(v *playeradapter.ClientView) { v.Version-- },
+		"previous world":    func(v *playeradapter.ClientView) { v.World.Version-- },
+		"previous events":   func(v *playeradapter.ClientView) { v.Events.Version-- },
+	} {
+		t.Run(name, func(t *testing.T) {
+			candidate := view
+			mutate(&candidate)
+
+			payload, err := json.Marshal(candidate)
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			if _, err := decodeView(gameserver.Snapshot{Tick: 9, Payload: payload}); err == nil {
+				t.Fatal("obsolete projection version accepted")
+			}
+		})
+	}
+}
+
+func TestDecodeViewRejectsCollidingMissileAudioAndPoisonVersions(t *testing.T) {
+	for name, mutate := range map[string]func(*playeradapter.ClientView){
+		"published and upstream envelope 13": func(v *playeradapter.ClientView) { v.Version = 13 },
+		"published and upstream world 6":     func(v *playeradapter.ClientView) { v.World.Version = 6 },
+	} {
+		t.Run(name, func(t *testing.T) {
+			view := validNetworkView(9)
+			mutate(&view)
+
+			payload, err := json.Marshal(view)
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			if _, err := decodeView(gameserver.Snapshot{Tick: 9, Payload: payload}); err == nil {
+				t.Fatal("a version shared by incompatible pre-merge schemas was accepted")
+			}
+		})
+	}
+}
+
 // FuzzDecodeClientView requires arbitrary payloads to fail safely or produce a validated bounded view.
 func FuzzDecodeClientView(f *testing.F) {
 	valid, _ := json.Marshal(validNetworkView(3))

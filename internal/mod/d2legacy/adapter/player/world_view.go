@@ -12,7 +12,7 @@ import (
 	"github.com/gravestench/dark-magic/internal/game/simulation"
 )
 
-const WorldViewVersion uint32 = 6
+const WorldViewVersion uint32 = 7
 
 const (
 	WorldViewRadius         = 80.0
@@ -60,6 +60,7 @@ type worldStateKey struct {
 // locks, and lifetime policy: a connected client can render these values but
 // cannot reconstruct or advance gameplay from them.
 type WorldMissile struct {
+	SoundOwnerID     string      `json:"sound_owner_id,omitempty"`
 	ID               string      `json:"id"`
 	Kind             string      `json:"kind"`
 	MissileID        string      `json:"missile_id"`

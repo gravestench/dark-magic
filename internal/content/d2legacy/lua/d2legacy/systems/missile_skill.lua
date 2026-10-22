@@ -25,6 +25,7 @@ local function projectile_components(caster, cast, definition, velocity_x, veloc
     return projectile_spawn.components(caster, definition, {
         cast_id = shared_cast_id,
         projectile_id = projectile_id,
+        sound_owner_id = projectile_id,
         velocity_x = velocity_x,
         velocity_y = velocity_y,
         target_x = target_x,
@@ -51,7 +52,7 @@ local function spawn_straight(context, caster, cast, definition, structural)
             cast:get("target_y")
         )
     )
-    local sound = projectile_spawn.sound_cue(caster, context.tick, "missile_spawn", definition.travel_sound)
+    local sound = projectile_spawn.sound_cue(caster, context.tick, "missile_spawn", definition.travel_sound, cast_id(caster, cast))
     if sound then
         structural:create(sound)
     end
@@ -72,7 +73,8 @@ local function spawn_radial(context, caster, cast, definition, structural)
                 instance
             )
         )
-        local sound = projectile_spawn.sound_cue(caster, context.tick, "missile_spawn", definition.travel_sound)
+        local sound = projectile_spawn.sound_cue(caster, context.tick, "missile_spawn", definition.travel_sound,
+            cast_id(caster, cast) .. ":instance:" .. instance)
         if sound then
             structural:create(sound)
         end
@@ -102,6 +104,7 @@ function M.register(definitions)
             "d2legacy.world.location",
             "d2legacy.world.room_resident",
             "d2legacy.presentation.effect_cue",
+            "d2legacy.presentation.missile_sound_owner",
         },
         update = function(context, casters, structural)
             for _, caster in ipairs(casters) do

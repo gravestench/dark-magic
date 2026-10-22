@@ -469,6 +469,8 @@ function M.semantic_cues(observed)
             end
         end
         if values then
+            local sound_owner = optional_component(entity, "d2legacy.presentation.missile_sound_owner")
+            if sound_owner then values.sound_owner_id = sound_owner:get("projectile_id") end
             -- Dynamic entity fields are checked ECS handles. Collapse the
             -- missile reference to a number before this table crosses into
             -- presentation, just like the event entity itself below.
@@ -509,6 +511,8 @@ function M.missile_snapshots()
                 local position = ecs.get(entity, "d2legacy.world.position")
                 local location = ecs.get(entity, "d2legacy.world.location")
                 snapshot.entity_id = entity:id()
+                local sound_owner = optional_component(entity, "d2legacy.presentation.missile_sound_owner")
+                if sound_owner then snapshot.sound_owner_id = sound_owner:get("projectile_id") end
                 snapshot.owner_entity = nil
                 if snapshot.logical_direction and snapshot.logical_direction < 0 then
                     snapshot.logical_direction = nil

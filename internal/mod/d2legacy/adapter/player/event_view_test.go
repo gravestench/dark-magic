@@ -2,6 +2,7 @@ package player
 
 import (
 	"math"
+	"strings"
 	"testing"
 
 	"github.com/gravestench/akara"
@@ -12,7 +13,15 @@ import (
 // TestProjectEventViewReturnsBoundedNearbySemanticTail verifies spatial and
 // historical filtering without exposing authority-only event details.
 func TestProjectEventViewReturnsBoundedNearbySemanticTail(t *testing.T) {
-	view, err := ProjectEventView("alice", semanticCheckpoint())
+	checkpoint := semanticCheckpoint()
+	owner := strings.Repeat("p", maxMissileSoundOwnerBytes)
+	checkpoint.Snapshot.Components = append(checkpoint.Snapshot.Components, gameecs.ComponentSnapshot{
+		Name: "d2legacy.presentation.missile_sound_owner", Version: 1,
+		Fields:    []gameecs.FieldSnapshot{{Name: "projectile_id", Kind: akara.FieldString}},
+		Instances: []gameecs.InstanceSnapshot{{Entity: 24, Values: []gameecs.ValueSnapshot{{String: &owner}}}},
+	})
+
+	view, err := ProjectEventView("alice", checkpoint)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -42,7 +51,7 @@ func TestProjectEventViewReturnsBoundedNearbySemanticTail(t *testing.T) {
 
 	effect := view.Events[3]
 	if effect.ID != 24 || effect.Type != "effect" || effect.Effect == nil || effect.Effect.Kind != "state_reaction" ||
-		effect.Effect.OverlayID != "frozenarmor_hit" {
+		effect.Effect.OverlayID != "frozenarmor_hit" || effect.Effect.SoundOwnerID != owner {
 		t.Fatalf("presentation effect event = %+v", effect)
 	}
 }
@@ -65,6 +74,12 @@ func TestValidateEventViewRejectsUntrustedUnionAndOrdering(t *testing.T) {
 	}
 
 	for name, mutate := range map[string]func(*EventView){
+		"oversized sound owner": func(view *EventView) {
+			view.Events[1].Type, view.Events[1].State = "effect", nil
+			view.Events[1].Effect = &SemanticEffectCue{
+				Kind: "missile_spawn", Sound: "fireball", SoundOwnerID: strings.Repeat("a", maxMissileSoundOwnerBytes+1),
+			}
+		},
 		"duplicate id": func(view *EventView) { view.Events[1].ID = 1 },
 		"wrong union": func(view *EventView) {
 			view.Events[0].State = &SemanticStateCue{Kind: "applied", StateID: "armor"}
