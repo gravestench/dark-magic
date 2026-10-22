@@ -17,6 +17,11 @@ import (
 // TestOwnedVendorContentsDrawAbovePanelAfterSceneTeardown executes the shipped
 // overlay, text and button helpers through real decoding and retained rendering.
 func TestOwnedVendorContentsDrawAbovePanelAfterSceneTeardown(t *testing.T) {
+	testOwnedOverlayAfterSceneTeardown(t, "vendor", 1, 12)
+}
+
+func testOwnedOverlayAfterSceneTeardown(t *testing.T, overlay string, panels, minimumDrawables int) {
+	t.Helper()
 	directory := os.Getenv("DARK_MAGIC_TEST_MPQ_DIRECTORY")
 	if directory == "" {
 		t.Skip("set DARK_MAGIC_TEST_MPQ_DIRECTORY to the owned expansion MPQ directory")
@@ -66,7 +71,7 @@ func TestOwnedVendorContentsDrawAbovePanelAfterSceneTeardown(t *testing.T) {
 			t.Cleanup(func() { _ = runtime.Stop(context.Background()) })
 
 			definition, err := modruntime.LoadDefinition(
-				t.Context(), runtime, source, "lua/d2legacy/tests/support/vendor_render.lua",
+				t.Context(), runtime, source, "lua/d2legacy/tests/support/"+overlay+"_render.lua",
 			)
 			if err != nil {
 				t.Fatal(err)
@@ -83,7 +88,7 @@ func TestOwnedVendorContentsDrawAbovePanelAfterSceneTeardown(t *testing.T) {
 
 			t.Cleanup(func() { _ = component.Stop(context.Background()) })
 
-			background, drawable, largest := -1, 0, 0
+			backgrounds, drawable := 0, 0
 			frame := image.NewRGBA(image.Rect(0, 0, 800, 600))
 
 			for _, node := range composer.Snapshot() {
@@ -98,7 +103,7 @@ func TestOwnedVendorContentsDrawAbovePanelAfterSceneTeardown(t *testing.T) {
 
 				pixels, ok := resource.Payload.(image.Image)
 				if !ok {
-					t.Fatal("vendor drawable is not a decoded image")
+					t.Fatal("overlay drawable is not a decoded image")
 				}
 
 				bounds := pixels.Bounds()
@@ -106,8 +111,12 @@ func TestOwnedVendorContentsDrawAbovePanelAfterSceneTeardown(t *testing.T) {
 				t.Logf("draw%d slot%d generation%d Z%d size%v position%g,%g",
 					drawable, node.ID.Slot, node.ID.Generation, node.Z, bounds.Size(), node.X, node.Y)
 
-				if area > largest {
-					largest, background = area, drawable
+				if area > 100*100 {
+					if drawable != backgrounds {
+						t.Fatalf("%s panel %d paints after foreground at draw %d", overlay, backgrounds, drawable)
+					}
+
+					backgrounds++
 				}
 				// These overlay nodes share an untransformed root. Composite
 				// their real decoded pixels in the backend's layer/Z/slot order.
@@ -118,9 +127,8 @@ func TestOwnedVendorContentsDrawAbovePanelAfterSceneTeardown(t *testing.T) {
 				drawable++
 			}
 
-			if background != 0 || drawable < 12 || largest < 300*300 {
-				t.Fatalf("panel must precede all content: background=%d drawable=%d panel area=%d",
-					background, drawable, largest)
+			if backgrounds != panels || drawable < minimumDrawables {
+				t.Fatalf("panels must precede all content: backgrounds=%d drawable=%d", backgrounds, drawable)
 			}
 
 			frames[reused] = frame
@@ -128,6 +136,6 @@ func TestOwnedVendorContentsDrawAbovePanelAfterSceneTeardown(t *testing.T) {
 	}
 
 	if frames[false] != nil && frames[true] != nil && !bytes.Equal(frames[false].Pix, frames[true].Pix) {
-		t.Fatal("recycled retained slots changed visible vendor pixels")
+		t.Fatal("recycled retained slots changed visible overlay pixels")
 	}
 }
