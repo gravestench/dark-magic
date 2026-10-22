@@ -391,3 +391,26 @@ Go strings. Generic runtime tests under `internal/runtime/lua`
 deliberately boot synthetic mods instead. The checked coverage ledger at
 `docs/architecture/d2legacy-test-coverage.tsv` records both Lua policy evidence
 and the Go integration evidence that must remain at the host boundary.
+
+### Owned Town Portal scrolls
+
+Inventory secondary-click submits an exact item identity. Authority supports
+owned inventory `tsc` use in Blood Moor, validates both positions before consuming
+the scroll, and uses the shared warp/transition path. Portal ownership, return
+side and expiry are ECS state. Expired inactive endpoints remain registered room
+residents until activation clears their references, then collision-phase cleanup
+retires them. In-session checkpoint continuation is supported, not save/rejoin.
+Public endpoint IDs use canonical item entity identity rather than concatenating
+owner/item labels, keeping maximum-length valid labels within projection bounds.
+
+The supported `tsc` binding is qualified by owned 1.14d Misc `type=scro`,
+`useable=1`, `pSpell=2` and Books `ScrollSpellCode=tsc`, `pSpell=2` in
+`internal/mod/d2legacy/item_use_real_test.go`. Handler 2 is the recovered portal
+dispatch, not a claim that all usable-item spells are implemented.
+
+Placement uses a bounded nearby collision search with seam avoidance, not native
+placement/arrival rules. Refused recasts preserve the previous pair, unlike the
+remove-before-create order recovered in D2MOO 1.10f
+[`SKILLITEM_pSpell02_CastPortal`](https://github.com/ThePhrozenKeep/D2MOO/blob/1fe7444dc2cfb6bf1c2934b8901e5699a4c36913/source/D2Game/src/SKILLS/SkillItem.cpp#L84-L136).
+Neither that failed-recast ordering nor boundary-adjacent geometry is claimed as
+1.14d parity. Party permissions, tomes and other levels remain unsupported.

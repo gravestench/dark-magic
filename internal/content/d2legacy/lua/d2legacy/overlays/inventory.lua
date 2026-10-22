@@ -109,7 +109,9 @@ local function refresh_items(self)
     -- should hide while held item art acts as the pointer.
     self.__darkmagic_item_held = held_item(snapshot) ~= nil
 
+    local present = {}
     for _, item in ipairs(snapshot.items) do
+        present[item.id] = true
         local drawing = self.item_nodes[item.id]
 
         if drawing == nil and item.inventory_dc6 ~= "" then
@@ -155,6 +157,9 @@ local function refresh_items(self)
                 )
             end
         end
+    end
+    for id, drawing in pairs(self.item_nodes) do
+        if not present[id] then drawing.node:set_visible(false) end
     end
 end
 
@@ -315,6 +320,13 @@ return {
         -- every render handle owned by its scope. Refresh items BEFORE controls;
         -- do not touch item nodes after control dispatch if close may have run.
         if self.items ~= nil then refresh_items(self) end
+        if self.items and input.pressed("pointer_secondary") then
+            local x, y = input.cursor()
+            local column = math.floor((x - self.grid_left) / self.cell_width)
+            local row = math.floor((y - self.grid_top) / self.cell_height)
+            local item = item_at(self.item_snapshot, column, row)
+            if item and item.code == "tsc" and held_item(self.item_snapshot) == nil then self.items.use(item.id) end
+        end
         self.controls:update()
 
         if self.items ~= nil and input.pressed("swap_weapons") then

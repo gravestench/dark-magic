@@ -32,6 +32,7 @@ func (app *application) sessionInitialData() map[string]any {
 		"d2legacy.interactions":       app.interactionBootstrapData(),
 		"d2legacy.world_transitions":  app.transitionBootstrapData(),
 		"d2legacy.world_warps":        app.warpBootstrapData(),
+		"d2legacy.world_spawns":       app.worldSpawnBootstrapData(),
 	}
 }
 

@@ -58,6 +58,11 @@ local function matching_seam(seams, level, x, y)
     return nil
 end
 
+-- Placement consumers avoid destinations that would immediately cross a seam.
+function M.at_trigger(level, x, y)
+    return matching_seam(configured_seams(), level, x, y) ~= nil
+end
+
 function M.register()
     local seams = configured_seams()
     ecs.system({

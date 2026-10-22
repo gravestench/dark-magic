@@ -13,6 +13,10 @@ function M.snapshot()
     return snapshots.local_player()
 end
 
+function M.use(item_id)
+    intents.submit("item.use", { item_id = item_id })
+end
+
 function M.move(item_id, destination, place_held)
     intents.submit("item.move", {
         item_id = item_id,
