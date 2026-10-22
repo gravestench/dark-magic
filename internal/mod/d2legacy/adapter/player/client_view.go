@@ -6,7 +6,7 @@ import (
 	"strings"
 )
 
-const ClientViewVersion uint32 = 12
+const ClientViewVersion uint32 = 13
 
 const (
 	MaxHUDLearnedSkills  = 256

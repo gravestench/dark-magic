@@ -26,7 +26,7 @@ func TestConnectedPersistentStatesBindToMirrorsWithoutGameplayFacts(t *testing.T
 
 	client := newClientWorld()
 
-	projected := []playeradapter.WorldState{{TargetID: peer.ID, StateID: "might", PeriodTicks: 50}}
+	projected := []playeradapter.WorldState{{TargetID: peer.ID, StateID: "might", Aura: true, PeriodTicks: 50}}
 	if err := client.reconcilePersistentStates(app, projected); err != nil {
 		t.Fatal(err)
 	}
@@ -46,7 +46,8 @@ func TestConnectedPersistentStatesBindToMirrorsWithoutGameplayFacts(t *testing.T
 	stateID, _ := state.Get("state_id")
 
 	period, _ := state.Get("period_ticks")
-	if target != app.remoteMirrors[peer.ID] || stateID != "might" || period != int64(50) {
+	aura, _ := state.Get("aura")
+	if target != app.remoteMirrors[peer.ID] || stateID != "might" || period != int64(50) || aura != true {
 		t.Fatalf("persistent state target=%v state=%v period=%v", target, stateID, period)
 	}
 
@@ -68,6 +69,39 @@ func TestConnectedPersistentStatesBindToMirrorsWithoutGameplayFacts(t *testing.T
 
 	if states.Len() != 0 || engine.World().EntityExists(entity) {
 		t.Fatal("removed persistent state retained a disposable client entity")
+	}
+}
+
+func TestConnectedPoisonStateRemovesExpiredMirrorWithoutPrivateFacts(t *testing.T) {
+	engine := gameecs.New()
+	registerRemoteViewSchemas(t, engine)
+	app := &application{clientSimulation: engine}
+	peer := playeradapter.WorldEntity{ID: "player:peer", Kind: "player", Label: "Peer", Owner: "peer"}
+	if err := app.syncRemoteMirrors([]playeradapter.WorldEntity{peer}, playeradapter.HUDLocation{Act: 1, LevelID: 2}); err != nil {
+		t.Fatal(err)
+	}
+	client := newClientWorld()
+	poison := []playeradapter.WorldState{{TargetID: peer.ID, StateID: "poison"}}
+	if err := client.reconcilePersistentStates(app, poison); err != nil {
+		t.Fatal(err)
+	}
+	states, _ := akara.GetDynamicStore(engine.World(), "d2legacy.presentation.state")
+	if states.Len() != 1 {
+		t.Fatalf("poison mirrors = %d", states.Len())
+	}
+	for _, entity := range states.Entities() {
+		state, _ := states.Get(entity)
+		aura, _ := state.Get("aura")
+		period, _ := state.Get("period_ticks")
+		if aura != false || period != int64(0) {
+			t.Fatalf("poison mirror aura=%v period=%v", aura, period)
+		}
+	}
+	if err := client.reconcilePersistentStates(app, nil); err != nil {
+		t.Fatal(err)
+	}
+	if states.Len() != 0 {
+		t.Fatal("expired poison mirror remains")
 	}
 }
 
