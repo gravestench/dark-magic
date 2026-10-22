@@ -99,11 +99,24 @@ function M.register()
                                 defense:get("base_lightning_resist") + penalty
                             )
                         )
+                        defense:set(
+                            "poison_resist",
+                            stat_sources.resolve(
+                                entities,
+                                target,
+                                "poison_resist",
+                                defense:get("base_poison_resist") + penalty
+                            )
+                        )
                         defense:set("max_fire_resist", stat_sources.resolve(entities, target, "max_fire_resist", 75))
                         defense:set("max_cold_resist", stat_sources.resolve(entities, target, "max_cold_resist", 75))
                         defense:set(
                             "max_lightning_resist",
                             stat_sources.resolve(entities, target, "max_lightning_resist", 75)
+                        )
+                        defense:set(
+                            "max_poison_resist",
+                            stat_sources.resolve(entities, target, "max_poison_resist", 75)
                         )
                         defense:set(
                             "physical_reduction_raw",

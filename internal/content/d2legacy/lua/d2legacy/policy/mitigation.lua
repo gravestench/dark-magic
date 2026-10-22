@@ -5,6 +5,7 @@ local elemental_resistance = {
     fire = { resistance = "fire_resist", maximum = "max_fire_resist" },
     cold = { resistance = "cold_resist", maximum = "max_cold_resist" },
     lightning = { resistance = "lightning_resist", maximum = "max_lightning_resist" },
+    poison = { resistance = "poison_resist", maximum = "max_poison_resist" },
 }
 
 local function percent(value, resistance)

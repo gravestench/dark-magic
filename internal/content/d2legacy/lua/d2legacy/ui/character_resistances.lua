@@ -7,8 +7,8 @@
 
 local M = {}
 
--- Elements in panel order. Poison is not modeled yet, so it has no value.
-M.elements = { "fire", "cold", "lightning" }
+-- Elements in panel order.
+M.elements = { "fire", "cold", "lightning", "poison" }
 
 -- The panel shows the effective resistance limited to its maximum. The limit is
 -- inferred from the original game's behavior, not from recovered client code.
@@ -17,6 +17,9 @@ function M.displayed(defense)
     for _, element in ipairs(M.elements) do
         local value = defense[element .. "_resist"]
         local maximum = defense["max_" .. element .. "_resist"]
+        if element == "poison" then
+            maximum = math.min(maximum, 95)
+        end
         values[element] = math.min(value, maximum)
     end
     return values
@@ -33,7 +36,9 @@ function M.for_player(player_id)
             return M.displayed(ecs.get(entity, "d2legacy.combat.defense"):snapshot())
         end
     end
-    for _, entity in ipairs(ecs.query({ all = { "d2legacy.player.identity", "d2legacy.presentation.character_resistances" } })) do
+    for _, entity in
+        ipairs(ecs.query({ all = { "d2legacy.player.identity", "d2legacy.presentation.character_resistances" } }))
+    do
         if ecs.get(entity, "d2legacy.player.identity"):get("player") == player_id then
             return M.displayed(ecs.get(entity, "d2legacy.presentation.character_resistances"):snapshot())
         end

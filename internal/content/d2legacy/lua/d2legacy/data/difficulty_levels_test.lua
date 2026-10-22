@@ -6,6 +6,7 @@ local enter = fixtures.player_entry({
     fire_resistance = 20,
     cold_resistance = 10,
     lightning_resistance = 0,
+    poison_resistance = 30,
 })
 
 return test.suite({
@@ -72,6 +73,9 @@ return test.suite({
                 test.expect(defense:get("fire_resist")):equals(-80)
                 test.expect(defense:get("cold_resist")):equals(-90)
                 test.expect(defense:get("lightning_resist")):equals(-100)
+                test.expect(defense:get("base_poison_resist")):equals(30)
+                test.expect(defense:get("poison_resist")):equals(-70)
+                test.expect(defense:get("max_poison_resist")):equals(75)
                 test.expect(defense:get("physical_resist")):equals(0)
                 ecs.create({
                     ["d2legacy.stat.source"] = {
@@ -79,6 +83,22 @@ return test.suite({
                         source_id = "shield:fire",
                         stat = "fire_resist",
                         value = 170,
+                    },
+                })
+                ecs.create({
+                    ["d2legacy.stat.source"] = {
+                        target = player,
+                        source_id = "charm:poison",
+                        stat = "poison_resist",
+                        value = 180,
+                    },
+                })
+                ecs.create({
+                    ["d2legacy.stat.source"] = {
+                        target = player,
+                        source_id = "charm:max-poison",
+                        stat = "max_poison_resist",
+                        value = 25,
                     },
                 })
                 ecs.create({
@@ -99,6 +119,7 @@ return test.suite({
             test.step(1),
             test.run(function()
                 local ecs = require("engine.ecs/v1")
+                local damage = require("d2legacy.policy.damage")
                 local mitigation = require("d2legacy.policy.mitigation")
                 local player = ecs.query({ all = { "d2legacy.player.identity" } })[1]
                 local defense = ecs.get(player, "d2legacy.combat.defense")
@@ -106,6 +127,15 @@ return test.suite({
                 test.expect(defense:get("fire_resist")):equals(90)
                 test.expect(mitigation.apply(1000, "fire", defense)):equals(250)
                 test.expect(mitigation.apply(1000, "cold", defense)):equals(1900)
+                test.expect(defense:get("poison_resist")):equals(110)
+                test.expect(defense:get("max_poison_resist")):equals(100)
+                test.expect(mitigation.apply(1000, "poison", defense)):equals(50)
+                local vitals = ecs.get(player, "d2legacy.player.vitals")
+                local health = vitals:get("health")
+                local poison = damage.resolve(player, { poison = 1000 }, ecs)
+                test.expect(poison.mitigated.poison):equals(50)
+                test.expect(poison.damage_raw):equals(0)
+                test.expect(vitals:get("health")):equals(health)
                 local monster = ecs.query({ all = { "d2legacy.monster.stats" } })[1]
                 test.expect(ecs.get(monster, "d2legacy.combat.defense"):get("fire_resist")):equals(20)
             end),

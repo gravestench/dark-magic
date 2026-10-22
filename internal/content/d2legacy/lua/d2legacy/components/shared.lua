@@ -385,24 +385,29 @@ function M.register()
         { name = "base_fire_resist", type = "i64" },
         { name = "base_cold_resist", type = "i64" },
         { name = "base_lightning_resist", type = "i64" },
+        { name = "base_poison_resist", type = "i64" },
         { name = "physical_resist", type = "i64" },
         { name = "fire_resist", type = "i64" },
         { name = "cold_resist", type = "i64" },
         { name = "lightning_resist", type = "i64" },
+        { name = "poison_resist", type = "i64" },
         { name = "max_fire_resist", type = "i64" },
         { name = "max_cold_resist", type = "i64" },
         { name = "max_lightning_resist", type = "i64" },
+        { name = "max_poison_resist", type = "i64" },
         { name = "physical_reduction_raw", type = "i64" },
         { name = "fire_absorb_percent", type = "i64", default = 0 },
     })
-    -- Connected clients mirror only the six values drawn by the character panel.
+    -- Connected clients mirror only the values drawn by the character panel.
     component("d2legacy.presentation.character_resistances", {
         { name = "fire_resist", type = "i64" },
         { name = "cold_resist", type = "i64" },
         { name = "lightning_resist", type = "i64" },
+        { name = "poison_resist", type = "i64" },
         { name = "max_fire_resist", type = "i64" },
         { name = "max_cold_resist", type = "i64" },
         { name = "max_lightning_resist", type = "i64" },
+        { name = "max_poison_resist", type = "i64" },
     })
     component("d2legacy.stat.source", {
         { name = "target", type = "entity" },

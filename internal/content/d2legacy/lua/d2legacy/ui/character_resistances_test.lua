@@ -43,11 +43,13 @@ return test.suite({
                     max_cold_resist = 75,
                     lightning_resist = 80,
                     max_lightning_resist = 85,
+                    poison_resist = 120,
+                    max_poison_resist = 100,
                 })
                 test.expect(shown.fire):equals(75)
                 test.expect(shown.cold):equals(-100)
                 test.expect(shown.lightning):equals(80)
-                test.expect(shown.poison):equals(nil)
+                test.expect(shown.poison):equals(95)
             end)
         end),
         test.case("connected_mirror_displays_current_owner_values", function(t)
@@ -60,9 +62,11 @@ return test.suite({
                         fire_resist = 90,
                         cold_resist = -100,
                         lightning_resist = 31,
+                        poison_resist = 105,
                         max_fire_resist = 75,
                         max_cold_resist = 80,
                         max_lightning_resist = 85,
+                        max_poison_resist = 100,
                     },
                 })
                 ecs.create({
@@ -71,18 +75,21 @@ return test.suite({
                         fire_resist = 999,
                         cold_resist = 999,
                         lightning_resist = 999,
+                        poison_resist = 999,
                         max_fire_resist = 999,
                         max_cold_resist = 999,
                         max_lightning_resist = 999,
+                        max_poison_resist = 999,
                     },
                 })
                 test.expect(resistances.for_player("connected-owner"))
-                    :deep_equals({ fire = 75, cold = -100, lightning = 31 })
+                    :deep_equals({ fire = 75, cold = -100, lightning = 31, poison = 95 })
                 local projected = ecs.get(owner, "d2legacy.presentation.character_resistances")
                 projected:set("fire_resist", -40)
                 projected:set("max_fire_resist", 95)
+                projected:set("poison_resist", -100)
                 test.expect(resistances.for_player("connected-owner"))
-                    :deep_equals({ fire = -40, cold = -100, lightning = 31 })
+                    :deep_equals({ fire = -40, cold = -100, lightning = 31, poison = -100 })
             end)
         end),
         test.case("hell_penalty_reaches_the_panel_for_the_admitted_player", {
@@ -93,7 +100,8 @@ return test.suite({
             test.step(1),
             test.run(function()
                 local resistances = require("d2legacy.ui.character_resistances")
-                test.expect(resistances.for_player("alice")):deep_equals({ fire = -100, cold = -100, lightning = -100 })
+                test.expect(resistances.for_player("alice"))
+                    :deep_equals({ fire = -100, cold = -100, lightning = -100, poison = -100 })
                 test.expect(resistances.for_player("bob")):equals(nil)
             end),
         }),

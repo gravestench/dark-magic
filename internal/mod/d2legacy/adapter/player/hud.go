@@ -12,7 +12,7 @@ import (
 	"github.com/gravestench/dark-magic/internal/game/simulation"
 )
 
-const HUDVersion uint32 = 7
+const HUDVersion uint32 = 8
 
 var ErrHUDPlayer = errors.New("player HUD: authenticated player is absent")
 
@@ -69,9 +69,11 @@ type HUDResistances struct {
 	FireResist         int64 `json:"fire_resist"`
 	ColdResist         int64 `json:"cold_resist"`
 	LightningResist    int64 `json:"lightning_resist"`
+	PoisonResist       int64 `json:"poison_resist"`
 	MaxFireResist      int64 `json:"max_fire_resist"`
 	MaxColdResist      int64 `json:"max_cold_resist"`
 	MaxLightningResist int64 `json:"max_lightning_resist"`
+	MaxPoisonResist    int64 `json:"max_poison_resist"`
 }
 
 type HUDPosition struct {
@@ -266,9 +268,11 @@ func fillOptionalHUD(reader hudComponentReader, view *HUD) {
 			FireResist:         intField(fields, "fire_resist"),
 			ColdResist:         intField(fields, "cold_resist"),
 			LightningResist:    intField(fields, "lightning_resist"),
+			PoisonResist:       intField(fields, "poison_resist"),
 			MaxFireResist:      intField(fields, "max_fire_resist"),
 			MaxColdResist:      intField(fields, "max_cold_resist"),
 			MaxLightningResist: intField(fields, "max_lightning_resist"),
+			MaxPoisonResist:    intField(fields, "max_poison_resist"),
 		}
 	}
 

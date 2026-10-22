@@ -16,13 +16,13 @@ import (
 // owner selection and the explicit HUD allowlist share one checkpoint.
 func TestProjectHUDSelectsAuthenticatedPlayerAndAllowlistedFields(t *testing.T) {
 	resistanceFields := []string{
-		"fire_resist", "cold_resist", "lightning_resist",
-		"max_fire_resist", "max_cold_resist", "max_lightning_resist",
+		"fire_resist", "cold_resist", "lightning_resist", "poison_resist",
+		"max_fire_resist", "max_cold_resist", "max_lightning_resist", "max_poison_resist",
 	}
-	defenses := intsComponent("d2legacy.combat.defense", resistanceFields, 1, 90, -100, 31, 75, 80, 85)
+	defenses := intsComponent("d2legacy.combat.defense", resistanceFields, 1, 90, -100, 31, 105, 75, 80, 85, 95)
 	defenses.Instances = append(
 		defenses.Instances,
-		intsComponent("d2legacy.combat.defense", resistanceFields, 2, 999, 999, 999, 999, 999, 999).Instances[0],
+		intsComponent("d2legacy.combat.defense", resistanceFields, 2, 999, 999, 999, 999, 999, 999, 999, 999).Instances[0],
 	)
 	snapshot := gameecs.Snapshot{
 		Version: gameecs.SnapshotVersion,
@@ -84,8 +84,8 @@ func TestProjectHUDSelectsAuthenticatedPlayerAndAllowlistedFields(t *testing.T) 
 		t.Fatal(err)
 	}
 	wantResistances := map[string]int64{
-		"fire_resist": 90, "cold_resist": -100, "lightning_resist": 31,
-		"max_fire_resist": 75, "max_cold_resist": 80, "max_lightning_resist": 85,
+		"fire_resist": 90, "cold_resist": -100, "lightning_resist": 31, "poison_resist": 105,
+		"max_fire_resist": 75, "max_cold_resist": 80, "max_lightning_resist": 85, "max_poison_resist": 95,
 	}
 	if len(wire.Resistances) != len(wantResistances) {
 		t.Fatalf("HUD resistance schema = %v, want %v", wire.Resistances, wantResistances)
