@@ -9,6 +9,7 @@
 local ecs = require("engine.ecs/v1")
 local attribution = require("d2legacy.owned_units.attribution")
 local player_motion = require("d2legacy.gameplay.player_motion")
+local forced_motion = require("d2legacy.gameplay.systems.forced_motion")
 local game_rules = require("d2legacy.policy.game_rules")
 local difficulty_levels = require("d2legacy.data.difficulty_levels")
 local M = {}
@@ -59,6 +60,7 @@ local function stop_actions(player, context, structural)
         animation:set("start_tick", context.tick)
     end
 
+    forced_motion.interrupt(context, player, structural)
     for _, component in ipairs({
         "d2legacy.skill.cast_request",
         "d2legacy.skill.cast",
@@ -67,7 +69,6 @@ local function stop_actions(player, context, structural)
         "d2legacy.combat.attack_animation",
         "d2legacy.combat.basic_attack_request",
         "d2legacy.world.forced_motion_request",
-        "d2legacy.world.forced_motion",
     }) do
         structural:remove(player, component)
     end
@@ -179,6 +180,8 @@ function M.register(experience_thresholds)
             "d2legacy.player.movement_mode",
             "d2legacy.player.animation",
             "d2legacy.player.progress",
+            "d2legacy.world.position",
+            "d2legacy.world.forced_motion",
         },
         write = {
             "d2legacy.combat.player_death_observed",
@@ -197,6 +200,7 @@ function M.register(experience_thresholds)
             "d2legacy.combat.basic_attack_request",
             "d2legacy.world.forced_motion_request",
             "d2legacy.world.forced_motion",
+            "d2legacy.world.forced_motion_event",
         },
         update = update,
     })
