@@ -15,9 +15,14 @@ local function buy(tick, sequence, code, player)
     )
 end
 
-local function setup(name, steps)
+local function setup(name, steps, level)
     local actions = {
-        test.submit_system({ tick = 1, sequence = 1, kind = "system.player.enter", payload = fixtures.player_entry() }),
+        test.submit_system({
+            tick = 1,
+            sequence = 1,
+            kind = "system.player.enter",
+            payload = fixtures.player_entry({ level = level or 1 }),
+        }),
         test.step(1),
         submit(2, 1, "interaction.open", { target = "npc:akara" }),
         test.step(1),
@@ -134,7 +139,7 @@ return test.suite({
                 test.expect(require("d2legacy.interactions.context").for_owner("alice"):get("dialogue_page")):equals("")
             end),
         }),
-        setup("permanent_purchases_have_distinct_identity_fit_and_checkpoint_continuation", {
+        setup("higher_level_purchases_keep_distinct_items_and_restore_supply", {
             buy(4, 3, "tsc"),
             buy(4, 4, "tsc"),
             test.step(1),
@@ -144,11 +149,15 @@ return test.suite({
                 local ecs = require("engine.ecs/v1")
                 local a = find.item(layout, "akara-purchase:tsc:1")
                 local b = find.item(layout, "akara-purchase:tsc:2")
+                local player = ecs.query({ all = { "d2legacy.player.progress" } })[1]
+                test.expect(ecs.get(player, "d2legacy.player.progress"):get("level")):equals(25)
                 test.expect(a ~= nil and b ~= nil):is_true()
                 test.expect(ecs.get(a, "d2legacy.item.placement"):get("x")):equals(0)
                 test.expect(ecs.get(b, "d2legacy.item.placement"):get("x")):equals(1)
                 local snapshot = require("d2legacy.items.snapshot").for_owner("alice")
                 test.expect(snapshot.items[2].buy_price):equals(100)
+                local context = require("d2legacy.interactions.context").for_owner("alice")
+                test.expect(context:get("trade_available")):is_true()
             end),
             test.expect_checkpoint_parity(1),
             test.restore_checkpoint(),
@@ -170,7 +179,7 @@ return test.suite({
             test.run(function()
                 state(670, 4)
             end),
-        }),
+        }, 25),
         setup("full_inventory_refusal_keeps_offer_and_wallet_and_can_close", {
             buy(4, 3, "tsc"),
             test.step(1),
@@ -239,7 +248,7 @@ return test.suite({
                 state(870, 2)
             end),
         }),
-        setup("level_change_refuses_the_narrow_offer", {
+        setup("level_change_keeps_permanent_offers_available", {
             test.run(function()
                 local ecs = require("engine.ecs/v1")
                 ecs.get(ecs.query({ all = { "d2legacy.player.progress" } })[1], "d2legacy.player.progress")
@@ -247,8 +256,10 @@ return test.suite({
             end),
             buy(4, 3, "tsc"),
             test.step(1),
+            buy(5, 4, "hp1"),
+            test.step(1),
             test.run(function()
-                state(1000, 0)
+                state(870, 2)
             end),
         }),
         setup("wrong_vendor_and_missing_offer_refuse_without_losing_session", {

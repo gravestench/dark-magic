@@ -59,5 +59,5 @@ func TestOwnedAkaraConsumablePurchases(t *testing.T) {
 		config.records[path] = values
 	}
 
-	runLuaCase(t, source, path, "permanent_purchases_have_distinct_identity_fit_and_checkpoint_continuation", config)
+	runLuaCase(t, source, path, "higher_level_purchases_keep_distinct_items_and_restore_supply", config)
 }

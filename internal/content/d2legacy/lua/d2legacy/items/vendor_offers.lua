@@ -1,6 +1,6 @@
 -- Permanent offers belong to each admitted owner's item graph. A purchase copies
 -- the representative, preserving supply and checkpointed purchase identities.
--- Only fresh level-one, living, undiscounted Normal-town purchases are admitted.
+-- Only living, undiscounted Normal-town purchases are admitted.
 local ecs = require("engine.ecs/v1")
 local find = require("d2legacy.items.find")
 local contexts = require("d2legacy.interactions.context")
@@ -23,7 +23,6 @@ function M.supported(owner)
             return location
                 and location:get("act") == 1
                 and location:get("level_id") == 1
-                and ecs.get(entity, "d2legacy.player.progress"):get("level") == 1
                 and ecs.get(entity, "d2legacy.player.vitals"):get("health") > 0
                 and not ecs.get(entity, "d2legacy.player.death")
                 and not (quest and (quest:get("completed") or quest:get("rewarded")))
