@@ -210,7 +210,10 @@ local function hand_case(name, flags, hand, expected_ar)
             sequence = 4,
             player = "alice",
             kind = "item.move",
-            payload = { item_id = offhand.id, destination = { container = "equipment", slot = "larm", weapon_set = 0 } },
+            payload = {
+                item_id = offhand.id,
+                destination = { container = "equipment", slot = "larm", weapon_set = 0 },
+            },
         }),
         test.step(2),
         test.run(function()

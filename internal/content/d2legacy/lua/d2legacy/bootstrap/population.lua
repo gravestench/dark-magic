@@ -464,6 +464,7 @@ function M.register()
             "d2legacy.monster.revivable",
             "d2legacy.world.room_resident",
             "d2legacy.monster.stats",
+            "d2legacy.monster.type_flags",
             "d2legacy.combat.defense",
             "d2legacy.combat.melee_profile",
             "d2legacy.monster.appearance",
