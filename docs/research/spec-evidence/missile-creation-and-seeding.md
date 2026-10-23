@@ -181,3 +181,27 @@ Every applicable blocking finding was resolved; this completed independent docum
 ## Restructure (2026-10-15)
 
 The combined missile creation contract was split at the point where the creator has numbered the missile, following the approved review recommendation for oversized specs. The spec was not consumed by any plan, code or test, so both resulting specs were renumbered cleanly in execution order. This contract (renamed from the combined file) keeps validation, start/room/aim, speed, the distance refusal, allocation/act, seeding, identity/mode, the client-notification boundary and the request's draw accounting: 13 rule ids, 4 questions, 9 executable vectors and 3 observations. Metadata, the creation event, placement and registry insertion, range/lifetime/activation, missing path, path setup, destroy condition, moving speed/planner, last-collision source, acceleration, point-distance lifetime, base list, callback, damage requests, attribution, pierce, stat requests and the monster-mod event moved to [missile-initialization-and-registry](missile-initialization-and-registry.md) with its own companion and gap file. The combined adjacent-room/path question was split: adjacent-room collection production stays here (MCI-Q01); path, collision-room and update integration moved (MIR-Q02). The observation question was split into MCI-Q04 and MIR-Q09. The seeding vector MCI-V07 keeps its MIR-R01a metadata assertions; the speed/maximum vector moved to MIR-V08 because its discriminating assertions are maximum speed and acceleration. No rule behavior, label, value or vector result changed. Function, layout, assessment, correction, named-cell, observation and review records above were divided by owning rule with their dates retained. A fresh blind-implementer pass of the split contracts has not been run.
+
+## Publication review — 2026-10-23
+
+A fresh independent blind reader assessed the complete behavioral boundary in both split
+MCI and MIR specs and read both gap files in full. The reader sampled companion identity,
+source-boundary, correction, restructure and review-history sections, then independently
+recomputed representative speed and aim/distance cases in MCI-V04 and related MIR range,
+lifetime and pierce-seed cases. No in-scope rule/vector mismatch or guessed result was found.
+The 2026-10-15 restructure note above accurately described review status at that date;
+this current review is the fresh pass over the split contracts required by issue #499.
+It is not an all-case arithmetic replay or a gameplay observation.
+
+An independent evidence reader reviewed the six public split documents, source-manifest
+identities, dated 2026-10-12/15 evidence, named-cell/profile limits, question and vector
+IDs, and local links. A separate architecture reader checked issue #499 and README routes,
+MCI's validation/aim/speed/allocation/seed/identity boundary, MIR's later same-request
+stages, and the delegated movement, parameter and contact contracts. All three approved
+bounded 1.13c documentation publication. Issue #499's body was updated to name the six
+current split files in place of the retired combined filenames.
+
+MCI-Q01–Q04 and sibling MIR-Q01–Q09 remain open at their stated boundaries. No behavioral rule, vector output, evidence label or gate changed.
+This review adds no original-image investigation, protected game-data capture,
+implementation comparison, gameplay test or 1.14d confirmation. Both contracts remain
+draft.
