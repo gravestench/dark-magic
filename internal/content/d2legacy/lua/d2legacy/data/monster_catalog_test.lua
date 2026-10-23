@@ -65,17 +65,50 @@ for level = 1, 5 do
 end
 local npc = stats("npc", "0")
 npc.npc = "1"
+local ordinary = stats("ordinary", "1")
+ordinary.demon = "1"
+ordinary.hUndead = "1"
+local pet = stats("pet", "0")
+pet.lUndead = "1"
+local neutral = stats("neutral", "1")
 
 return test.suite({
     name = "monster catalog indexing",
     profile = "module",
     tier = "fast",
     records = {
-        ["data/global/excel/monstats.txt"] = { stats("ordinary", "1"), stats("pet", "0"), npc },
+        ["data/global/excel/monstats.txt"] = { ordinary, pet, neutral, npc },
         ["data/global/excel/monstats2.txt"] = { graphics },
         ["data/global/excel/monlvl.txt"] = levels,
     },
     cases = {
+        test.case("authored_type_flags_survive_population_summon_and_revive_definitions", function(t)
+            t:run(function()
+                test.mock_module("d2legacy.policy.game_rules", {
+                    difficulty = function()
+                        return 0
+                    end,
+                }, { "difficulty" })
+                test.unload_module("d2legacy.data.monster")
+                local monster = require("d2legacy.data.monster")
+                local loaded = monster.load("ordinary")
+                test.expect(loaded.demon):equals(true)
+                test.expect(loaded.low_undead):equals(false)
+                test.expect(loaded.high_undead):equals(true)
+                local summoned = monster.summon("pet", 2)
+                test.expect(summoned.demon):equals(false)
+                test.expect(summoned.low_undead):equals(true)
+                test.expect(summoned.high_undead):equals(false)
+                local revived = monster.revive("ordinary", 2)
+                test.expect(revived.demon):equals(true)
+                test.expect(revived.low_undead):equals(false)
+                test.expect(revived.high_undead):equals(true)
+                local missing = monster.load("neutral")
+                test.expect(missing.demon):equals(false)
+                test.expect(missing.low_undead):equals(false)
+                test.expect(missing.high_undead):equals(false)
+            end)
+        end),
         test.case("selected_columns_preserve_full_consumer_results", function(t)
             t:run(function()
                 local records = require("engine.records/v1")

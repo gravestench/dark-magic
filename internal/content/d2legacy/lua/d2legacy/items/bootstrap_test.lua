@@ -162,12 +162,54 @@ return test.suite({
                 test.expect(#require("d2legacy.gameplay.world").npc_snapshots()):equals(2)
             end),
         }),
+        test.case("one_session_world_source_survives_bootstrap_and_checkpoint", {
+            test.run(function()
+                local ecs = require("engine.ecs/v1")
+                local source = ecs.query({ all = { "d2legacy.items.world_source" } })
+                test.expect(#source):equals(1)
+                local layout = ecs.get(source[1], "d2legacy.items.layout")
+                test.expect(layout:get("owner")):equals("")
+                for _, field in ipairs({
+                    "inventory_width",
+                    "inventory_height",
+                    "stash_width",
+                    "stash_height",
+                    "cube_width",
+                    "cube_height",
+                    "belt_capacity",
+                    "vendor_width",
+                    "vendor_height",
+                    "carried_gold",
+                    "stashed_gold",
+                }) do
+                    test.expect(layout:get(field)):equals(0)
+                end
+                local id = source[1]:id()
+                require("d2legacy.items.bootstrap").load()
+                require("d2legacy.items.bootstrap").load()
+                source = ecs.query({ all = { "d2legacy.items.world_source" } })
+                test.expect(#source):equals(1)
+                test.expect(source[1]:id()):equals(id)
+                for _, entity in ipairs(ecs.query({ all = { "d2legacy.interaction.context" } })) do
+                    test.assert(
+                        ecs.get(entity, "d2legacy.interaction.context"):get("owner") ~= "",
+                        "world source gained a player interaction"
+                    )
+                end
+            end),
+            test.step(1),
+            test.expect_checkpoint_parity(1),
+            test.restore_checkpoint(),
+            test.run(function()
+                test.expect(#require("engine.ecs/v1").query({ all = { "d2legacy.items.world_source" } })):equals(1)
+            end),
+        }),
         test.case("materializes_initial_items_into_lua_owned_ecs", {
             test.run(function()
                 local ecs = require("engine.ecs/v1")
                 test.assert(
-                    #ecs.query({ all = { "d2legacy.items.layout" } }) == 1,
-                    [=[#ecs.query({ all = { "d2legacy.items.layout" } }) == 1]=]
+                    #ecs.query({ all = { "d2legacy.items.layout" }, none = { "d2legacy.items.world_source" } }) == 1,
+                    "one player layout remains separate from the neutral source"
                 )
                 test.assert(
                     #ecs.query({ all = { "d2legacy.item.identity" } }) == 1,

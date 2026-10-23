@@ -196,7 +196,9 @@ Defaults for each independent case: supplied objects/storage exist, valid skill 
   - (f) Inputs: to-hit miss, NextHit 0. Outputs: hitbymissile requested, no allocation/event/attach/state-on; state 86 off, lists/events empty.
   - (g) Inputs: initial state 86 on, NextHit 0, to-hit miss. Outputs: to-hit request made, hitbymissile requested, no allocation/event/attach/state-on; state 86 remains on.
   - (h) Inputs: to-hit miss, NextDelay 200, allocation succeeds. Outputs: list expiry 300, state 86 on, event 12 due 300; same ordered calls as(a).
-  - Discriminates: miss-only-no-arm fails(a); arm-every-contact fails(b, c); scheduling on failed allocation fails(d); clamping the list as well as the event fails(e); rejecting on state 86 regardless of NextHit fails(g); arming before the to-hit request fails(a)'s order; reading NextDelay as a signed byte (expiry 44) fails(h).
+  - (i) Inputs: initial state 86 on, NextHit 2. Outputs: no to-hit request, list, event, item-event or membership change; state 86 remains on.
+  - (j) Inputs: independent initial state 86 off, NextHit 2, to-hit miss, allocation succeeds. Outputs: list expiry 125, state 86 on, event 12 due 125 (no callback, auxiliaries 0); same ordered calls as(a).
+  - Discriminates: miss-only-no-arm fails(a); arm-every-contact fails(b, c); scheduling on failed allocation fails(d); clamping the list as well as the event fails(e); rejecting on state 86 regardless of NextHit fails(g); arming before the to-hit request fails(a)'s order; reading NextDelay as a signed byte (expiry 44) fails(h); treating NextHit as exactly 1 instead of nonzero fails(i, j).
   - runtime_observed: no
 
 - **BSF-V03** Fury gate, failed creation and partial failure (R02/R06a; boundary: supplied-input stage)
@@ -215,7 +217,8 @@ Defaults for each independent case: supplied objects/storage exist, valid skill 
   - (i) Inputs: frame 100, timer 99, supplied selected missile 0, state 12 false. Outputs: marker false, return 1, timer 105, one creation request identical to(a) except missile 0; no missile, no refresh.
   - (j) Inputs: frame 100, timer -1, state 12 false. Outputs: marker false, return 1, timer 105, one creation request as in(a); no missile, no refresh. Trace: signed -1<100 opens the gate.
   - (k) Inputs: frame 100, timer 99, supplied selected missile -1, state 12 true. Outputs: return 0, timer 99, marker true, no progression request, no target/creation/refresh request.
-  - Discriminates: evaluating progression before resolving the selected missile fails(k); wrong or reordered selection/progression arguments fail(a)'s logged requests; rejecting selected missile 0 (testing >0 instead of >=0) fails(i); an unsigned timer comparison (0xFFFFFFFF>=100 blocks) fails(j); <= gate fails(c); conditioning timer/return on creator success fails(a); skipping refresh on blocked casts fails(b); rolling back marker fails(f); refreshing on an early return fails(e, f, g, k); testing duration==0 instead of <=0 fails(g); refreshing only on the blocked branch fails(h).
+  - (l) Inputs: frame 2147483647, timer 2147483646, P=6 (duration 5), state 12 false; supplied creator returns absent and draws nothing. Outputs: marker false, return 1, one creation request as in(a), timer -2147483644, no missile/refresh. Trace: signed 2147483646<2147483647 opens the gate; low32(2147483647+5)=-2147483644.
+  - Discriminates: evaluating progression before resolving the selected missile fails(k); wrong or reordered selection/progression arguments fail(a)'s logged requests; rejecting selected missile 0 (testing >0 instead of >=0) fails(i); an unsigned timer comparison (0xFFFFFFFF>=100 blocks) fails(j); <= gate fails(c); conditioning timer/return on creator success fails(a); skipping refresh on blocked casts fails(b); rolling back marker fails(f); refreshing on an early return fails(e, f, g, k); testing duration==0 instead of <=0 fails(g); refreshing only on the blocked branch fails(h); unbounded timer addition fails(l).
   - runtime_observed: no
 
 - **BSF-V04** Existing ranges and an external equipment change (R08/R12a/R12c; boundary: supplied-input stage)
@@ -344,7 +347,8 @@ Partial acceptance is V01..V11's verified local decisions, exact requests, reach
 
 ## 10. Related specs
 
-- [skill-assassin-sentry-firing-and-range](skill-assassin-sentry-firing-and-range.md): shared summon, target, speed and creation context; its labels do not verify Blade AI.
+- [skill-assassin-sentry-firing-and-range](skill-assassin-sentry-firing-and-range.md): sentry think, budget and target context; its labels do not verify Blade AI.
+- [skill-assassin-sentry-missile-launch](skill-assassin-sentry-missile-launch.md): action-17 burst and shared missile-creation speed consumer; it does not establish Blade missile creation.
 - [skill-assassin-death-sentry-corpse-damage](skill-assassin-death-sentry-corpse-damage.md): sibling trap skill.
 - [combat-damage-pipeline-order](combat-damage-pipeline-order.md), [combat-damage-mitigation](combat-damage-mitigation.md): downstream application and mitigation.
 - [combat-shield-block-and-avoidance](combat-shield-block-and-avoidance.md): hit and avoidance operations.

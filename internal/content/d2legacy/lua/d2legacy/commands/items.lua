@@ -3,6 +3,7 @@
 -- Keeping this tiny makes the full policy inventory visible without mixing
 -- unrelated transactions into one large file.
 
+local pickup = require("d2legacy.commands.item_pickup")
 local movement = require("d2legacy.commands.item_movement")
 local vendor = require("d2legacy.commands.item_vendor")
 local services = require("d2legacy.commands.item_services")
@@ -11,6 +12,7 @@ local M = {}
 
 function M.register()
     movement.register()
+    pickup.register()
     vendor.register()
     services.register()
     use.register()

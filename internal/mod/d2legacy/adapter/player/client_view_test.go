@@ -19,10 +19,17 @@ func TestValidateClientViewRejectsUnboundedOrInvalidNetworkState(t *testing.T) {
 	}
 
 	tests := map[string]func(*ClientView){
-		"pre-commerce private schema": func(view *ClientView) { view.Private.Version = 1 },
-		"pre-commerce client schema":  func(view *ClientView) { view.Version = 14 },
-		"wrong nested tick":           func(view *ClientView) { view.Private.Tick++ },
-		"non-finite owner":            func(view *ClientView) { view.HUD.Position.X = math.NaN() },
+		"pre-commerce private schema":     func(view *ClientView) { view.Private.Version = 1 },
+		"pre-commerce client schema":      func(view *ClientView) { view.Version = 14 },
+		"previous combined client schema": func(view *ClientView) { view.Version = 15 },
+		"previous client version":         func(view *ClientView) { view.Version = 13 },
+		"previous world version":          func(view *ClientView) { view.World.Version = 6 },
+		"oversized ground art path": func(view *ClientView) {
+			view.World.Entities[0].Kind = "item"
+			view.World.Entities[0].WorldDC6 = strings.Repeat("x", maxWorldAssetBytes+1)
+		},
+		"wrong nested tick": func(view *ClientView) { view.Private.Tick++ },
+		"non-finite owner":  func(view *ClientView) { view.HUD.Position.X = math.NaN() },
 		"excess entities": func(view *ClientView) {
 			view.World.Entities = make([]WorldEntity, MaxWorldViewEntities+1)
 		},

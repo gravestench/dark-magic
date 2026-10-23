@@ -20,3 +20,12 @@ Spec: [Timed State Lifecycle](../../specs/state-timed-state-lifecycle.md)
 | Malformed event and object failure boundary | behavior | STL-Q10, STL-R01, STL-R03 | Negative type/wrapped-negative slots and object type 12 failure; ordinary timed type 12 scheduling/player-monster-item routing remains available | Complete guard/indexing and pointer-check import consumer | 2026-10-14: scheduler signed upper bound/no lower-bound guard inspected; original object null slot record reused; imported check not resolved | Read/check malformed domain and object dispatcher import/failure path |
 | Auxiliary consumer | behavior | STL-Q07, STL-R17 | Complete auxiliary removal/update effects; separate state-free lifetime bounded only | Imported auxiliary getters/remover and update outputs | 2026-10-14: read D2Game+0x6E470; unsigned future comparison and type 6 reschedule confirmed, callees not fully read | Read auxiliary owner or cite separate accepted consumer contract |
 | Gameplay confirmation | observation | STL-Q08, STL-O01, STL-O02, STL-O03, STL-O04 | Runtime confirmation only; independently verified supplied-input assertions remain available | Valid matching original 1.13c observations | 2026-10-14: reviewed historical records (none); migration excludes a gameplay campaign; tool-neutral procedures retained in companion | Authorized observations with actual inputs, record counts, identity and matched assertions |
+| Monster death without loaded data | outside-boundary | STL-R13a, STL-V19 | none for supplied loaded monsters or explicit non-monster faults; no outcome asserted for a type-1 unit missing loaded monster data | Reachability and behavior of a malformed monster without its loaded definition | 2026-10-23: fresh blind review identified the absent-input boundary; no new original-code read or runtime observation | Establish whether such a unit can reach death cleanup and trace its definition read and failure handling |
+
+## Issue #481 publication assessment (2026-10-23)
+
+The existing behavioral, integration and observation gaps above remain open. The final row
+records a malformed monster-data input boundary identified during the fresh blind review.
+The accepted supplied-input vectors and 1.13c static labels are unchanged by those gaps;
+no 1.14d behavior or gameplay observation was added. The companion records the dated
+review disposition for the revised vectors.

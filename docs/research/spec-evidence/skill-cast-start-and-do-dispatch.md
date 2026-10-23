@@ -91,7 +91,7 @@ The behavioral contract uses logical fields; these original layouts only permit 
 | Active-state/missile selectors | States +0x36; Missiles +0x3C/+0x4C | SCD-R14 |
 | Stored target point and selected unit | Path +0x10/+0x12 are the point-setter's low-16-bit coordinate writes; Path +0x58 is selected unit, with target kind/id cached at +0x5C/+0x60 when non-null | SCD-R01; valid setter branches only, unrelated preparation effects remain SCD-Q10 |
 
-Skill/missile/state descriptor roots are D2Common 0x61EC0/0x7C8D0/0x5F6E0, read on 2026-10-12. Names are consumed through GDF's current schema contract; detailed schema ownership remains there. No archive row/column is reproduced here.
+Skill/missile/state descriptor roots are D2Common 0x61EC0/0x7C8D0/0x5F6E0, read on 2026-10-12. GDF owns the consumed names and identities; GDA owns the table-column schema, including the open SCD-Q13 columns. No archive row/column is reproduced here.
 
 ## Gap assessment and correction rationale (2026-10-15)
 
@@ -786,3 +786,13 @@ Added cases and section 3 statements require another full run.
 | HARDEST: V12/R06; V14/R09a–b; V13/R07 | No change |
 
 Lint after recording: 0 errors.
+
+## Publication review — 2026-10-23
+
+The current three-file 1.13c dispatch handoff received independent blind-implementer, evidence/provenance and issue-boundary reviews. This review supersedes reader 14's incomplete publication verdict above; the historical reader counts and their 2026-10-15 dates remain records of the versions those readers saw. No original binary or owned game image was newly read for this publication review.
+
+The initial independent reader and reader 14 both identified the unsupported assertion that every in-range skill identity has a record. R02/R06 now state their actual range-only local checks and require a present Skills record for their supplied in-range cases. An absent in-range record has no invented safe return and remains SCD-Q05. The reader-14 latch discriminator is now V13's resolver-time observation: the supplied target-coordinate resolver sees latch=true before returning, in addition to the creator's observation. A separate review found V05(d)'s omitted frame/ownership level requests; V05 now logs both, distinguishes `Skills.delay` from `perdelay`, and treats its populated zero-return callback and nonperiodic case separately. These changes do not revise the already documented period, coordinate, resource or seed arithmetic.
+
+A fresh blind implementer read the complete then-current SCD contract and relevant sections of its cited public numeric, game-data, layout, expression and missile-seeding dependencies without the companion, gap record, diff, private source, original binaries or runtime; after the full pass, it reviewed the corrective precondition and wording edits as deltas. It recomputed SCD-V01–V18, including due frames 106/105/97 and 105/1/-2147483639/101, wrapped V13 displacement/destination and the NRF seed step. It found no local arithmetic or rule/output mismatch and no concrete failed discriminator. Its one input-boundary finding, the absent in-range Skills record, was resolved by the explicit present-record precondition and SCD-Q05 gate; a delta read found no new contradiction. Additional absent-object and out-of-range-record fixtures, plus asm-only caller fixtures, were advisory because the listed local return recipes or integration gates already state their boundaries; the absent in-range record remains SCD-Q05. This is approval of the declared supplied-input stage, not of complete gameplay dispatch.
+
+The evidence review checked that citations match the manifest-pinned 1.13c D2Game/D2Common identities and dated source reads, together with the unauthenticated effective-Skills-text limitation, local links and open questions; it did not rehash binaries. The boundary review checked #486 against the spec index and dependency ownership. Both approved their corrected deltas. GDF owns identities/names; GDA owns table-column schemas. Historical triage entries above that assigned SCD-Q13's missing loader schema to `core-game-data-fields` are superseded by the current spec and gap record assigning it to `core-game-data-table-records`. SCD-Q01–Q07, Q09–Q13 and observations O01/O02 retain their stated status and limits. No gameplay test, original-game capture, or 1.14d parity claim follows from this review. The old `check_spec.py` result above is historical; that helper is absent from the current checkout and was not rerun for this publication.

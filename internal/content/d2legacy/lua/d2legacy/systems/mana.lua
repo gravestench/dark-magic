@@ -8,12 +8,28 @@
 local ecs = require("engine.ecs/v1")
 local M = {}
 
-local function integer_percentage(value, percentage)
-    local product = value * percentage
-    if product >= 0 then
-        return math.floor(product / 100)
+local function signed32(value)
+    local wrapped = value % 4294967296
+    if wrapped >= 2147483648 then
+        return wrapped - 4294967296
     end
-    return math.ceil(product / 100)
+    return wrapped
+end
+
+local function trunc(value)
+    return math.modf(value)
+end
+
+-- PMR calls NRF-R05 with the percentage factor first and divisor 100.
+-- For signed-32 raw maximum mana, the wide-product branches cannot be reached.
+local function mul_div_100(factor, base)
+    if base > 0x100000 then
+        return signed32(trunc(base / 100) * factor)
+    end
+    if factor > 0x10000 then
+        return signed32(trunc(factor / 100) * base)
+    end
+    return trunc(signed32(factor * base) / 100)
 end
 
 local function suppressed_targets(entities)
@@ -32,16 +48,24 @@ local function update(entity, suppressed)
     local stats = ecs.get(entity, "d2legacy.player.resource_stats")
     local current = vitals:get("mana_raw")
     local maximum = vitals:get("max_mana_raw")
-    local recovery = stats:get("manarecovery")
+    local recovery = signed32(stats:get("manarecovery"))
     local frames = stats:get("mana_regen_frames")
     if not suppressed and frames > 0 then
         local base = math.floor(maximum / (25 * frames))
         if base < 1 then
             base = 1
         end
-        recovery = recovery + integer_percentage(base, stats:get("manarecoverybonus") + 100)
+        recovery = signed32(recovery + mul_div_100(signed32(100 + stats:get("manarecoverybonus")), base))
     end
-    current = math.max(0, math.min(maximum, current + recovery))
+    local room = signed32(maximum - current)
+    if recovery > room then
+        recovery = room
+    end
+    local lower = signed32(-current)
+    if recovery < lower then
+        recovery = lower
+    end
+    current = current + recovery
     vitals:set("mana_raw", current)
     vitals:set("mana", math.floor(current / 256))
     vitals:set("max_mana", math.floor(maximum / 256))

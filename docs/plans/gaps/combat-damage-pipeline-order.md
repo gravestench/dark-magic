@@ -49,3 +49,10 @@ Old spec status: "Values in those files are implemented assumptions unless secti
 | 8 | Process | Issue #383 update (ready = stage order, R17 lethal rule, crit exclusivity, mitigation arithmetic; uncertain = scale `P` values, poison double role, Crushing Blow, Open Wounds, 1.14d); parent #348 | Tracker items, removed from spec | n/a | n/a |
 
 Dark Magic files compared (old provenance): `policy/damage.lua`, `policy/mitigation.lua`, `docs/research/COMBAT_DAMAGE_AND_DEATH.md`.
+
+## Publication review (2026-10-23, issue #483)
+
+The fresh full blind-implementer pass resolved the prior review's vector ambiguity and
+coverage findings within the supplied-input contract (DPO-V01 through DPO-V31; final
+MISMATCH/GUESS/GAP/DISCRIM counts all zero). The questions above remain open as labeled.
+No gameplay observation or 1.14d parity claim follows from the reader review.

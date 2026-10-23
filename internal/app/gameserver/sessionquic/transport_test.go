@@ -67,6 +67,7 @@ type quicProtocolFixture struct {
 	identity simulation.RuntimeIdentity
 	session  *gamesession.Session
 	client   *Client
+	server   *Server
 }
 
 // newQUICProtocolFixture starts the real endpoint and QUIC stack so tests do not substitute transport behavior.
@@ -127,7 +128,7 @@ func newQUICProtocolFixture(t *testing.T) quicProtocolFixture {
 
 	t.Cleanup(func() { _ = client.Close() })
 
-	return quicProtocolFixture{ctx: ctx, identity: identity, session: session, client: client}
+	return quicProtocolFixture{ctx: ctx, identity: identity, session: session, client: client, server: server}
 }
 
 // registerMoveCommand gives the transport one valid deterministic command without adding gameplay concerns.

@@ -30,10 +30,12 @@ mode update. It also defines the player-count term of the monster damage setup a
 treasure drop, the eligible-player count, the NoDrop weight conversion and the pick draw.
 Out of scope, with their owners: the kill experience award and party share
 ([player-party-experience-sharing](player-party-experience-sharing.md));
-seed stepping, draw forms, `mulDiv`, the 8.8 format, stat reads and writes and state tests
-([core-numeric-and-rng-foundations](core-numeric-and-rng-foundations.md)); the `unitGate`
+seed stepping, draw forms, `mulDiv` and the 8.8 format
+([core-numeric-and-rng-foundations](core-numeric-and-rng-foundations.md)); stat reads, writes
+and state tests ([core-record-layouts-and-ids](core-record-layouts-and-ids.md)); the `unitGate`
 status helper ([combat-status-application](combat-status-application.md), CSA-R02);
-column and id names ([core-game-data-fields](core-game-data-fields.md)); skill grants, property
+table fields ([core-game-data-table-records](core-game-data-table-records.md)) and stat, state, mode
+and class identities ([core-game-data-fields](core-game-data-fields.md)); skill grants, property
 application, item generation, the monster resistance and life-regeneration stats written in the
 same creation step, the base monster damage values, treasure item selection and the gold drop.
 Player units take another creation path and are outside this boundary.
@@ -50,8 +52,9 @@ Player units take another creation path and are outside this boundary.
   mode update (MSD-R19). This runs once per created monster, inside the creating server frame.
 - Damage term: the monster damage setup reached on mode changes, including the post-creation
   mode update, evaluates MSD-R20.
-- Drop trigger: the treasure-class drop routine runs MSD-R21 to MSD-R23 once per pick of the
-  dropping unit's treasure class; the killer is supplied by the caller.
+- Drop trigger: with a nonzero prepared treasure total `T`, the treasure-class drop routine
+  runs MSD-R21 to MSD-R23 once per pick; the killer is supplied by the caller. A zero total
+  exits this treasure-class level before those stages.
 - These stages request local stat writes and send no direct client message. Stored-write
   integration remains RLI-Q03; update bookkeeping remains RLI-Q02. Client delivery is outside
   this verified boundary; message contracts belong to `net-` specs.
@@ -330,8 +333,10 @@ request writes of stat 21 = minDamage, 22 = maxDamage, 19 = toHit       // alway
 base values, `damageTermSkip` and the classic-game difficulty adjustment are outside this rule
 (MSD-Q05).
 
-**MSD-R21** **NoDrop eligible count** [verified in 1.13c code (static)]. Evaluated once per pick,
-only when `N != 0` and `Picks >= 0`, with `E` and the party read again for each pick. No draw.
+**MSD-R21** **NoDrop eligible count** [verified in 1.13c code (static)]. The
+treasure-class level exits before the pick loop when its prepared total `T` is 0. Otherwise
+this count is evaluated once per pick, only when `N != 0` and `Picks >= 0`, with `E` and the
+party read again for each pick. No draw.
 
 ```
 k = killer
@@ -383,8 +388,9 @@ else:
     else: select item by (roll - N')
 ```
 
-Evaluated once per pick: one draw per non-negative pick on the dropping unit's own seed; there
-is no separate treasure seed. Item selection is outside this boundary.
+Evaluated once per pick when the prepared total `T` is nonzero: one draw per non-negative pick
+on the dropping unit's own seed; there is no separate treasure seed. Item selection is outside
+this boundary.
 
 ### Id map
 
@@ -434,7 +440,7 @@ is no separate treasure seed. Item selection is outside this boundary.
 | Game-seed steps of created equipment items | MSD-R17 |
 | Monster-seed draws of the post-creation mode update | MSD-R19 |
 | Stat 21 `mindamage`, 22 `maxdamage`, 19 `tohit` write requests | MSD-R20 |
-| NoDrop outcome or item-selection roll; one `dropper.seed` draw per non-negative pick; pick consumed on NoDrop | MSD-R23 |
+| NoDrop outcome or item-selection roll; one `dropper.seed` draw per non-negative pick when `T != 0`; pick consumed on NoDrop | MSD-R23 |
 
 No direct message is sent by these rules. Their stat-write requests do not establish stored
 effects (RLI-Q03), update bookkeeping (RLI-Q02) or client delivery.
@@ -469,7 +475,10 @@ numeric-return assertion.
   `eligible` can fall below the party size (party 5, `E` 3 gives 4).
 - Killer: a non-player killer is replaced by its owner; a missing or non-player owner gives
   `elig = 1`. Party members on another level, without a room, or not alive are not counted.
-- `N = 0`: no conversion and no eligibility computation; the draw is `Rand(T)` and never NoDrop.
+- `T = 0`: the treasure-class level exits before the NoDrop count or a pick draw, including
+  when `noDropBypass` is set.
+- `N = 0` with `T != 0`: no conversion and no eligibility computation; the draw is `Rand(T)`
+  and never NoDrop.
 - `Picks < 0`: no NoDrop and no draw for that pick.
 - Preset sharing: only the first monster of its class on a level pays the build draws; later
   ones make one appearance draw from the stored entry.
@@ -745,7 +754,8 @@ Outputs may assert named intermediate results. Each vector has `runtime_observed
   - (c) `N' = 33`, `noDropBypass`. Draws: `Rand(100)` → 97. Outputs: item selected by roll 97; no NoDrop test
   - (d) `Picks = -2`. Draws: none. Outputs: no NoDrop; seed stays `M`
   - (e) `T = 110`, supplied `N' = 23`. Draws: `Rand(133)` → 23. Trace: `23 < 23` false. Outputs: item selected by roll 0
-  - Discriminates: (a) rejects a separate treasure seed and `roll >= N'`; (c) rejects including `N'` in the bypass range; (e) rejects `roll <= N'`; the unchanged killer and game seeds reject drawing on another seed
+  - (f) `T = 0`, `N = 100`, `Picks = 1`, first without and then with `noDropBypass`. Draws: none. Trace: the treasure-class level exits before eligibility or pick selection. Outputs: no NoDrop outcome or item-selection roll; `dropper.seed` stays `M` in both cases
+  - Discriminates: (a) rejects a separate treasure seed and `roll >= N'`; (c) rejects including `N'` in the bypass range; (e) rejects `roll <= N'`; (f) rejects drawing when `T = 0`, even under bypass; the unchanged killer and game seeds reject drawing on another seed
   - runtime_observed: no
 
 - **MSD-V21** Creation order across rules (MSD-R02, MSD-R03, MSD-R04, MSD-R06, MSD-R09, MSD-R11 to MSD-R16; boundary: supplied-input stage)
@@ -763,7 +773,18 @@ All are pending gameplay observations ([procedures](../research/spec-evidence/mo
 
 - **MSD-O01** Life of one fixed monster type in one area at counts 1, 2 and 8 in each difficulty; expect MSD-R10 to MSD-R12 values from the supplied bounds and `lifePct` 0, 50, 350.
 - **MSD-O02** Experience value of that monster at counts 1 and 8; expect +350% at 8.
-- **MSD-O03** NoDrop rate of a fixed treasure class at counts 1, 2 and 8 with party members near, far on the same level, on another level and dead; expect no distance effect and MSD-V19's weights.
+- **MSD-O03** NoDrop rate of a fixed treasure class at counts 1, 2 and 8 with party
+  members near, far on the same level, on another level and dead; expect no distance effect
+  and MSD-V19's weights. For a discriminating dead-player case, use a real fixed treasure
+  class with `N > 0` and `T > 0`, override 0, a monster whose stat 100 is at least 3, and
+  three connected players: killer A, living unpartied B and C who dies but remains in the
+  game. Repeat enough kills and picks to compare the NoDrop rates before and after C dies.
+  The 1.13c static path predicts `E = 2`, `elig = 1`, `eligible = 1` after death; counting all
+  connected slots would give `E = 3`, `eligible = 2`. Compute both rates from that class's
+  actual `N` and `T`. As a supplied arithmetic illustration only, `N = T = 100` gives
+  NoDrop weights 100 (50% per pick) and 33 (about 24.8%) respectively. A killer plus one
+  dead player cannot distinguish these counts because signed halving leaves `eligible = 1`
+  either way.
 - **MSD-O04** A kill by a summoned minion: expect the owner's party to set `elig`.
 - **MSD-O05** Stat 100, life and experience of a monster created before a player joins or leaves; record whether they change. MSD-Q03 leaves the result open.
 - **MSD-O06** Party larger than `E`, if reachable; expect the MSD-R21 negative term.
@@ -782,14 +803,16 @@ slot with variant count 0 is eligible; its actual initialized variant count requ
 A complete replay of a monster's creation draws needs MSD-Q04 resolved. Full
 reproduction also needs the observations of MSD-Q07.
 
-**Depends on:** [core-numeric-and-rng-foundations](core-numeric-and-rng-foundations.md): Owners of the cited GDA, RLI, GPS ids: [core-game-data-table-records](core-game-data-table-records.md) (GDA); [core-record-layouts-and-ids](core-record-layouts-and-ids.md) (RLI); [player-party-gold-sharing](player-party-gold-sharing.md) (GPS).
-NRF-R01/NRF-R02 step and draw forms, NRF-R03a and NRF-R12a/NRF-R12b creation seeding, NRF-R04b
-mode-slot draws, NRF-R05 `mulDiv`, NRF-R06a `/128`, NRF-R08a 8.8 life format,
-RLI-R03 `HasState`, RLI-R02a stat reads; [combat-status-application](combat-status-application.md):
+**Depends on:** [core-numeric-and-rng-foundations](core-numeric-and-rng-foundations.md):
+NRF-R01/NRF-R02 step and draw forms, NRF-R03a and NRF-R12a/NRF-R12b creation seeding,
+NRF-R04b mode-slot draws, NRF-R05 `mulDiv`, NRF-R06a `/128`, NRF-R08a 8.8 life format;
+[core-record-layouts-and-ids](core-record-layouts-and-ids.md): RLI-R03 `HasState`,
+RLI-R02a stat reads; [combat-status-application](combat-status-application.md):
 CSA-R02 `unitGate`;
-[core-game-data-fields](core-game-data-fields.md): GDA-R05 DifficultyLevels, GDA-R08a MonStats,
-GDA-R15a/GDA-R15b treasure fields, GDF-R02 stats, GDF-R03 states, GDF-R05a and GDF-R06a modes,
-GDF-R08 class identities;
+[core-game-data-table-records](core-game-data-table-records.md): GDA-R05 DifficultyLevels,
+GDA-R08a MonStats, GDA-R15a/GDA-R15b treasure fields;
+[core-game-data-fields](core-game-data-fields.md): GDF-R02 stats, GDF-R03 states,
+GDF-R05a and GDF-R06a modes, GDF-R08 class identities;
 [player-party-experience-sharing](player-party-experience-sharing.md): PXL-R04a
 enumeration of the killer's party members with matching room level id. Both contracts state
 that a missing party record yields no callback (companion).
@@ -804,9 +827,11 @@ bonus). A reverse consumer is not a delivery prerequisite.
 - [combat-crushing-blow](combat-crushing-blow.md): reads stat 100 written by MSD-R09.
 - [combat-hit-recovery](combat-hit-recovery.md): monster mode-change draws in the damage setup (MSD-R19).
 - [combat-damage-pipeline-order](combat-damage-pipeline-order.md): where monster damage values are consumed.
-- [core-numeric-and-rng-foundations](core-numeric-and-rng-foundations.md): shared arithmetic, seeds, the life format and state primitives.
+- [core-numeric-and-rng-foundations](core-numeric-and-rng-foundations.md): shared arithmetic, seeds and the life format.
+- [core-record-layouts-and-ids](core-record-layouts-and-ids.md): stat reads and writes and state tests.
 - [combat-status-application](combat-status-application.md): the `unitGate` helper under CSA-R02.
-- [core-game-data-fields](core-game-data-fields.md): column, stat, state and mode names.
+- [core-game-data-table-records](core-game-data-table-records.md): prepared table fields and lookups.
+- [core-game-data-fields](core-game-data-fields.md): stat, state, mode and class identities.
 
 ## Appendix A. Provenance
 

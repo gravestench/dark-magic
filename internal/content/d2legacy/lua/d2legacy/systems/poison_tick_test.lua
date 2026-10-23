@@ -86,6 +86,8 @@ return test.suite({
         test.case("town_and_inactive_or_dead_targets_do_not_lose_life", {
             test.run(function()
                 poison(actor("player:town", true, 2, 1), 128, 2)
+                poison(actor("player:act2town", true, 2, 40), 128, 2)
+                poison(actor("player:outside", true, 2, 45), 128, 2)
                 local inactive = actor("monster:inactive", false, 512)
                 require("engine.ecs/v1").set(inactive, "d2legacy.world.inactive", {})
                 poison(inactive, 128, 2)
@@ -96,6 +98,10 @@ return test.suite({
                 local ecs = require("engine.ecs/v1")
                 test.expect(vitals("player:town"):get("health")):equals(2)
                 test.expect(vitals("player:town"):get("poison_remainder_raw")):equals(0)
+                test.expect(vitals("player:act2town"):get("health")):equals(2)
+                test.expect(vitals("player:act2town"):get("poison_remainder_raw")):equals(0)
+                test.expect(vitals("player:outside"):get("health")):equals(1)
+                test.expect(vitals("player:outside"):get("poison_remainder_raw")):equals(0)
                 for _, monster in ipairs(ecs.query({ all = { "d2legacy.monster.stats" } })) do
                     local health = ecs.get(monster, "d2legacy.monster.stats"):get("health")
                     test.assert(health == 0 or health == 512, "inactive or dead monster lost health")

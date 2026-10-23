@@ -455,3 +455,23 @@ corrected discrimination statement and the finding resolutions above; its result
 After three full passes, a fresh reader checked exactly the two added cases V02(g) and V09(h), plus the V01 discrimination-wording correction, under the delta-review rule. Counts for changed material only: MISMATCH 0, GUESS 0, GAP 0, DISCRIM 0. All three previous findings are resolved. The reader independently obtained 3584 versus the incorrect after-shift result 3619, the successful linked-skill-2 request/value sequence for stored -1/count 3, and the modular left-shift equivalence proof. No producer or stored-effect claim was inferred.
 
 Rules, ownership and gates were unchanged after full pass 3. This clean applicable delta completes independent documentation review; no further behavior, input, vector, output, acceptance or boundary edit is made in this record. The full-pass counts retain their own case-count conventions rather than being added together. All original twelve parent families, seven legacy executable families, seven historical question outcomes and the observation procedure are preserved. Status remains draft, gameplay observations and exact integration gates remain pending, and maintainer approval has not been inferred. Mechanical lint, committed scope, technical-token and preservation checks are repeated for publication.
+
+## Publication review — 2026-10-23
+
+A fresh independent blind reader reviewed the complete MDP contract, all eighteen vector
+families, and the current companion and gap record. It found no arithmetic mismatch,
+contradictory branch or missing in-scope behavior blocking the 1.13c documentation handoff.
+In particular, MDP-R07a/R09/R11a and MDP-V16 distinguish physical source selection from
+post-halving parent elemental selection; MDP-R12a/MDP-V15 record both stat-315 replacing
+requests without asserting the final stored value. The earlier 2026-10-15 reviews and their
+case-count conventions remain historical records, not new gameplay observations.
+
+An independent evidence reader checked the source-manifest identities, recorded
+module-relative RVA labels, dates and limits of the 2026-10-12 reused evidence and
+2026-10-15 original-image reading records, and synthetic-vector labels. A separate architecture reader checked the MCI/MIR creation boundary, this
+creation-time parameter contract, MHD contact-time consumption, and the README route to
+issues #502, #387 and #442. All three approved publication within issue #502's
+1.13c documentation boundary. MDP-Q02/Q04/Q06/Q07 still gate actual expression and
+equipment results, preparation effects, stat propagation and gameplay confirmation.
+This review adds no original-game reading, runtime capture, implementation comparison,
+gameplay test or 1.14d confirmation; the contract remains draft.

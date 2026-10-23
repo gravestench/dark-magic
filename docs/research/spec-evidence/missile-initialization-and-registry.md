@@ -202,3 +202,25 @@ HARDEST, all no change: MIR-V13/MIR-R15a specifies local seed ownership, every d
 ## Restructure (2026-10-15)
 
 This contract was created by splitting the combined missile creation contract at the point where the creator has numbered the missile, following the approved review recommendation for oversized specs. The combined spec was not consumed by any plan, code or test, so this contract was numbered cleanly in execution order: 24 rule ids, 9 questions, 13 executable vectors and 2 observations. It received metadata and the creation event, placement and registry insertion, range/lifetime/activation, missing path, path setup, destroy condition, moving speed/planner, last-collision source, acceleration/maximum speed, point-distance lifetime, base list, callback/skill/level, damage requests, owner attribution, pierce, stat requests/return and the monster-mod event. Validation, aim, speed, allocation, seeding, identity, the client-notification boundary and draw accounting remain in [missile-creation-and-seeding](missile-creation-and-seeding.md). The combined path/room question was split (path, collision-room and update integration here as MIR-Q02; adjacent-room production stays MCI-Q01), and the observation question was split (MIR-Q09 here). The speed/maximum vector came here as MIR-V08 because its discriminating assertions are maximum speed and acceleration; its speed values remain MCI-R05/R07 assertions. The neutral-condition question stayed with the sibling as MCI-Q02 and is cited by MIR-R01a/R06. No rule behavior, label, value or vector result changed. Function, layout, assessment, correction, named-cell, observation and review records were divided by owning rule with their dates retained; the migration and self-review records stay in the sibling companion. A fresh blind-implementer pass of the split contracts has not been run.
+
+## Publication review — 2026-10-23
+
+The fresh independent reader of the split MCI/MIR contracts read both complete specs and
+gap files, sampled their companion identity/correction/restructure/review records, and
+assessed the full behavioral boundary. Representative MIR-V04 range/activation,
+MIR-V05 independent clamps, MIR-V09 distance/lifetime and MIR-V13 pierce-seed cases were
+recomputed without a mismatch or an invented integration result. The dated 2026-10-15
+restructure statement above remains historical; this 2026-10-23 review supplies the
+post-split blind pass for issue #499. It does not claim an all-case replay or gameplay.
+
+An independent evidence reader checked the six split public documents, manifest identities,
+dated records, names/limits, links and defined IDs. A separate architecture reader checked
+MIR's metadata/event/registry/range/path/damage-request/owner/pierce/stat/return ownership
+against MCI, movement, damage-parameter and contact specs. Both approved the handoff along
+with the blind reader. The issue body now names the six current files.
+
+MIR-Q01–Q09 and sibling MCI-Q01–Q04 retain their exact open evidence boundaries, including
+event, path, stat and damage integration plus original-game observation. No behavioral rule,
+vector output, evidence label or gate changed. No new original-image investigation,
+protected game-data capture, implementation comparison, gameplay test or 1.14d
+confirmation was added. Both contracts remain draft.

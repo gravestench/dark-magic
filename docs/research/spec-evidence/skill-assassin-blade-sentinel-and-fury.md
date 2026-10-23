@@ -578,7 +578,7 @@ Run type: full (R02 argument wording changed). It recomputed 53 cases. Counts: M
 
 ### Independent reader FULL8 (2026-10-15)
 
-Run type: full (R01 order wording and vectors changed). This was the fourth and last run allowed in this task. It recomputed 53 cases. Counts: MISMATCH 0, GUESS 11, GAP 9, DISCRIM 11, GATED grouped, COVERAGE 20, HARDEST 3. Reader coverage limit: it opened only parts of NRF, GDF, SCD, MMC, STL and SCX and did not open MCI, MDP, MSD, HRC, MHD or the companion; it states that no vector needed them. No spec edit was made after this run, so the contract it read is the current one.
+Run type: full (R01 order wording and vectors changed). This was the fourth and last run allowed in this task. It recomputed 53 cases. Counts: MISMATCH 0, GUESS 11, GAP 9, DISCRIM 11, GATED grouped, COVERAGE 20, HARDEST 3. Reader coverage limit: it opened only parts of NRF, GDF, SCD, MMC, STL and SCX and did not open MCI, MDP, MSD, HRC, MHD or the companion; it states that no vector needed them. No spec edit had been made after this run when this outcome was recorded; the contract it read was then current.
 
 | Finding | Disposition |
 |---|---|
@@ -616,3 +616,31 @@ Run type: full (R01 order wording and vectors changed). This was the fourth and 
 | HARDEST V01/V02, V05, V10(d, e) | No change: order and owners stated |
 
 **Outcome.** Four reader runs (FULL5..FULL8) were made in this task, and every run returned MISMATCH 0. The blind-implementer pass is **not complete**: FULL8 leaves two DISCRIM entries open (NextHit values other than 0 or 1; the R02 timer wrap). Both need a vector edit and one further full reader run. Every other FULL8 entry is resolved or gated above. The document remains draft.
+
+## Publication review — 2026-10-23
+
+The FULL8 outcome above was incomplete on 2026-10-15. BSF-V02(i,j) now give independent
+NextHit=2 cases for active-state rejection and miss-branch arming; BSF-V03(l) gives the
+signed frame-maximum release and low32 timer wrap. These cases close the two recorded
+DISCRIM omissions as coverage of the existing BSF-R04/BSF-R02 contract. The NextHit
+nonzero rule retains the 2026-10-15 original-instruction review recorded under FULL3
+above and MMC-R11; the timer rule retains the recorded plain add at D2Game 0x95560.
+The original bytes were not reread for this publication, so the new examples add no
+fresh original-image verification.
+
+A fresh independent blind reader reviewed the revised full spec and its two companion
+files, recomputed the new cases plus representative seeding, percentage and seven-slot
+base-roll results, and found no blocking mismatch or unmarked producer assumption at
+the stated supplied-input boundary. An independent evidence reader checked artifact
+identities, dated reuse, table-cell limits, public links and open gates. A separate
+architecture reader checked the BSF ownership/dependency handoffs and #419 gameplay
+boundary. All three approved bounded 1.13c publication. The earlier FULL8 open entries
+remain a dated record; this section gives their current disposition without changing
+any unresolved integration or observation gate. The historical implementation table's
+G4 note that numeric NextDelay was unread predates the current TD-BLADE-MISSILES named
+text value 25; compiled missile binding remains BSF-Q04.
+
+BSF-Q01–Q10 and BSF-O01–O03 remain open at their stated limits. No source status was
+promoted by the new vectors; no new original-image investigation, protected game-data
+capture, gameplay test, implementation comparison or 1.14d confirmation was added.
+The spec remains draft.

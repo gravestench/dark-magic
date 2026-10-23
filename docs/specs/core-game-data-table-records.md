@@ -69,7 +69,7 @@ Decoder/compiler/writer integration is GDA-R02; supplied-result control flow rem
 
 **GDA-R02. Full preparation integration** [unresolved]. Full resource decoding, name/code linking, locale-sensitive header matching, writer success/failure, expression/callback conversion, and arbitrary compiled correspondence need complete producer contracts. GDA-Q01/GDA-Q03/GDA-Q02/GDA-Q04 gate those subsets, not supplied-result control flow.
 
-**GDA-R03a. Column schema** [verified in 1.13c code (static)]. A table's schema identifies named columns and conversion kinds. A descriptor with conversion kind Stop ends the schema, regardless of its displayed name. A descriptor named end with another conversion kind does not terminate it. Initialization publishes prepared records; it publishes their count only when requested. A schema proves field identity, not gameplay meaning.
+**GDA-R03a. Column schema** [verified in 1.13c code (static)]. A table's schema identifies named columns and conversion kinds. Unique, present text headers bind to descriptors by name regardless of column order; missing and duplicate headers remain GDA-Q02. A descriptor with conversion kind Stop ends the schema, regardless of its displayed name. A descriptor named end with another conversion kind does not terminate it. Initialization publishes prepared records; it publishes their count only when requested. A schema proves field identity, not gameplay meaning.
 
 **GDA-R03b. Direct text-cell conversions** [verified in 1.13c code (static)]. At an already selected schema-field/cell boundary:
 - Text characters and string/code limits here mean original 8-bit bytes, not Unicode code points. Numeric fixtures use ASCII decimal bytes; string/code copying retains the supplied byte order.
@@ -84,7 +84,7 @@ These conversions do not establish header selection, name lookup, callback execu
 
 **GDA-R03d. Other text conversions** [unresolved]. Name/code links, expressions, callback fields, descriptor-specific callback outputs, and missing schema columns must match the original compiler. GDA-Q01 / GDA-Q02 gate their complete contracts; GDA-R03b supplied-cell conversions remain available.
 
-**GDA-R04a. Prepared table ownership** [verified in 1.13c code (static)]. Initialization publishes named MonStats/MonStats2/Skills/SkillDesc/CharStats/ItemStatCost/Missiles/States/ItemTypes collections and counts. Difficulty/Experience are separate; Experience has no separately published count. Game/unit/path/stat-list/AI/damage records are built by code rather than loaded from these tables. Their shared semantic fields are described in the foundations sections 3.2/3.3; each consuming gameplay contract owns its required fields and operations. RLI-R01a/RLI-R01b consumes this dictionary’s table-field and identity correspondence.
+**GDA-R04a. Prepared table ownership** [verified in 1.13c code (static)]. Initialization publishes named MonStats/MonStats2/Skills/SkillDesc/CharStats/ItemStatCost/Missiles/States collections and counts. ItemTypes publication is the separately labeled GDA-R14 assertion. Difficulty/Experience are separate; Experience has no separately published count. Game/unit/path/stat-list/AI/damage records are built by code rather than loaded from these tables. Their shared semantic fields are described in the foundations sections 3.2/3.3; each consuming gameplay contract owns its required fields and operations. RLI-R01a/RLI-R01b consumes this dictionary’s table-field and identity correspondence.
 
 **GDA-R04b. PetType count** [verified in 1.13c code (static)]. The count used by the party experience pet gate belongs to PetType. Its loader rejects count >= 256. Count <= 0 publishes 0; otherwise it publishes the positive count. Why a consumer compares it to 7 belongs to that consumer. Original PetType has 20 text rows; matching PlrMode's count does not change ownership.
 
@@ -153,7 +153,7 @@ Difficulty selects base/(N)/(H) in domain 0..2. Drain is read as u8 by leech.
 
 **GDA-R13. State-definition fields** [verified in 1.13c code (static)]. State fields: state/`overlay1`..4/castoverlay/removerlay/pgsvoverlay/stat/onsound/offsound/skill/missile (16-bit linked ids); setfunc/remfunc/group/gfxclass/cltevent/clteventfunc/cltactivefunc/srvactivefunc (16-bit); colorpri/colorshift/light-r/light-g/light-b/gfxtype (u8); itemtype (linked 16-bit); itemtrans (linked 8-bit); and boolean nosend/aura/hide/transform/pgsv/active/remhit/damblue/damred/attblue/attred/curse/curable/plrstaydeath/monstaydeath/bossstaydeath/disguise/restrict/blue/armblue/rfblue/rcblue/rlblue/rpblue/stambarblue/armred/rfred/rcred/rlred/rpred/exp/shatter/life/udead/green/nooverlays/noclear/bossinv/meleeonly/notondead. Definition fields are separate from unit state membership.
 
-**GDA-R14. Item-type fields** [verified in 1.13c code (static)]. Code is a four-byte code also participating in link-building. Equiv1/Equiv2/Shoots/Quiver are linked 16-bit item types; BodyLoc1/BodyLoc2/StaffMods/Class/StorePage linked 8-bit identities; Repair/Body/Throwable/Reload/ReEquip/AutoStack/Magic/Rare/Normal/Charm/Gem/Beltable/MaxSock1/MaxSock25/MaxSock40/TreasureClass/Rarity/CostFormula/VarInvGfx u8; InvGfx1..6 strings with limit 31. Arbitrary custom link-building remains gated by GDA-Q01.
+**GDA-R14. Item-type fields and publication** [asm-only]. The identified ItemTypes loader writes its prepared collection and count; its dispatch-root caller has not been established. Code is a four-byte code also participating in link-building. Equiv1/Equiv2/Shoots/Quiver are linked 16-bit item types; BodyLoc1/BodyLoc2/StaffMods/Class/StorePage linked 8-bit identities; Repair/Body/Throwable/Reload/ReEquip/AutoStack/Magic/Rare/Normal/Charm/Gem/Beltable/MaxSock1/MaxSock25/MaxSock40/TreasureClass/Rarity/CostFormula/VarInvGfx u8; InvGfx1..6 strings with limit 31. Arbitrary custom link-building remains gated by GDA-Q01.
 
 **GDA-R15a. Treasure source fields** [verified in 1.13c code (static)]. TreasureClassEx has Treasure Class (string, limit 32); group/level/Unique/Set/Rare/Magic (16-bit words); Picks/NoDrop (i32); Item1..10 (strings, limit 64); Prob1..10 (i32). Two reserved words have no descriptor column.
 
@@ -191,7 +191,7 @@ Probability entry construction/sums are outside this supplied-field conversion.
 | GDA-R11b | Parameter calculation | verified in 1.13c code (static) | none | GDA-V14 |
 | GDA-R12 | Stat-definition fields | verified in 1.13c code (static) | none | GDF-V02 |
 | GDA-R13 | State-definition fields | verified in 1.13c code (static) | none | GDA-V16 |
-| GDA-R14 | Item-type fields | verified in 1.13c code (static) | GDA-Q01: custom linked values; field identities remain available | GDF-V04 |
+| GDA-R14 | Item-type fields and publication | asm-only | GDA-Q01: custom linked values; root path untraced; field identities remain available | GDF-V04 |
 | GDA-R15a | Treasure source fields | verified in 1.13c code (static) | none | GDA-V17 |
 | GDA-R15b | Selected treasure conversion | verified in 1.13c code (static) | none | GDA-V17 |
 | GDA-R16 | Named flag-test results | verified in 1.13c code (static) | none | GDA-V11, GDA-V13, GDA-V15 |
@@ -203,7 +203,7 @@ Probability entry construction/sums are outside this supplied-field conversion.
 | requested load form / generation / initialization abort | GDA-R01 |
 | named fields and direct normalized cells | GDA-R03a, GDA-R03b and field rules |
 | header equality | GDA-R03c |
-| published logical collections / requested counts | GDA-R04a, GDA-R01 |
+| published logical collections / requested counts | GDA-R04a, GDA-R01; ItemTypes only at GDA-R14 asm-only boundary |
 | PetType count / initialization abort | GDA-R04b |
 | Difficulty initialization abort when prepared count is not 3 | GDA-R05 |
 | published supplied Experience records, without a separately stored count | GDA-R07 |
@@ -310,7 +310,7 @@ GDA-R12 (stat-definition fields) is exercised by GDF-V02, and GDA-R14 (item-type
 
 ## 9. Acceptance and dependencies
 
-Accept verified supplied-record/schema/cell/control-flow assertions demonstrated by GDA-V01..GDA-V17 separately from gated producer integration. No assertion requires the original memory layout.
+Accept verified supplied-record/schema/cell/control-flow assertions demonstrated by GDA-V01..GDA-V17 separately from gated producer integration. GDA-R14 item-type fields and publication retain their asm-only label pending the untraced dispatch root; GDF-V04 supports only the selected identities it asserts. No assertion requires the original memory layout.
 
 Full reproduction also requires all in-scope gates resolved and attributable observations of verified behavioral rules where possible. Table reading does not satisfy gameplay observation. This draft does not imply user approval.
 

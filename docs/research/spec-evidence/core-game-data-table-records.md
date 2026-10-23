@@ -165,7 +165,7 @@ Direct kinds established here are 1 bounded byte string, 2 i32, 3 low16, 4/6 low
 | +0x3A | `MissA1` | 0x14 | none; bounds the descriptor gap at derived words +0x36/+0x38 |
 | +0x4C | `Align` | 4 | monster-scaling-by-players-and-difficulty (byte "noScaling") |
 | +0x4F / +0x50 / +0x51 | `aidel` / `aidel(N)` / `aidel(H)` | 4 | state-movement-modifiers-and-freeze |
-| +0x56 + 6k + 2d | `aip(k+1)` for difficulty d = 0/1/2 (`aip1` +0x56, `aip2` +0x5C, `aip3` +0x62, `aip4` +0x68, `aip5` +0x6E, `aip6` +0x74, `aip7` +0x7A, `aip8` +0x80; the `(N)`/`(H)` columns follow each at +2/+4) | 3 | skill-assassin-sentry-firing-and-range, skill-assassin-death-sentry-corpse-damage |
+| +0x56 + 6k + 2d | `aip(k+1)` for difficulty d = 0/1/2 (`aip1` +0x56, `aip2` +0x5C, `aip3` +0x62, `aip4` +0x68, `aip5` +0x6E, `aip6` +0x74, `aip7` +0x7A, `aip8` +0x80; the `(N)`/`(H)` columns follow each at +2/+4) | 3 | skill-assassin-sentry-firing-and-range, skill-assassin-death-sentry-corpse-selection |
 | +0xA0 / +0xA1 / +0xA2 | `Drain` / `Drain(N)` / `Drain(H)` | 4 | combat-leech-and-drain (drain effectiveness, read **unsigned**: `movzx ecx, byte ptr [edx + ecx + 0xA0]` with `ecx` = `Game +0x6D`, D2Game RVA 0xDBA40; earlier text said signed, corrected; now LSE-R02) |
 | +0xA3 / +0xA4 / +0xA5 | `ToBlock` / `ToBlock(N)` / `ToBlock(H)` | 4 | none |
 | +0xA6 | `Crit` | 4 | NRF-R04a (monster damage-doubling roll, D2Game rva 0x770E0) |
@@ -175,7 +175,7 @@ Direct kinds established here are 1 bounded byte string, 2 i32, 3 low16, 4/6 low
 | +0xBC / +0xBE / +0xC0 | `AC` / `(N)` / `(H)` | 3 | monster-scaling |
 | +0xD4 / +0xD6 / +0xD8 | `Exp` / `(N)` / `(H)` | 3 | monster-scaling |
 | +0x168 / +0x169 / +0x16A | `ColdEffect` / `(N)` / `(H)` | 4 | state-movement-modifiers-and-freeze (read signed) |
-| +0x170 / +0x172 ... +0x17E | `Skill1` / `Skill2` ... `Skill8` (16-bit skill index) | 0x14 | skill-assassin-sentry-firing-and-range (`nSkill[0]` = `Skill1`), skill-assassin-death-sentry-corpse-damage (`nSkill[1]` = `Skill2`) |
+| +0x170 / +0x172 ... +0x17E | `Skill1` / `Skill2` ... `Skill8` (16-bit skill index) | 0x14 | skill-assassin-sentry-firing-and-range (`nSkill[0]` = `Skill1`), skill-assassin-death-sentry-corpse-selection (`nSkill[1]` = `Skill2`) |
 | +0x198..+0x19F | `Sk1lvl`..`Sk8lvl` | 4 | none |
 
 ### Extended monster fields
@@ -206,11 +206,11 @@ Direct kinds established here are 1 bounded byte string, 2 i32, 3 low16, 4/6 low
 |--------|--------|------|----------|
 | +0x04 | flag dword; bit 31 = **`interrupt`** (byte +0x07 bit 7: D2Game RVA 0x77FA0 `mov al, byte ptr [eax + 7]; test byte ptr [ecx + 0x1C], al` with `ecx` = `gdwBitMasks`, `mask[7]` = 0x80) | 0x1A | combat-hit-recovery (skill record byte +7 bit 7) |
 | +0x2C | `srvstfunc` | 3 | skill-assassin-blade-sentinel-and-fury (start function index) |
-| +0x2E | `srvdofunc` | 3 | skill-assassin-blade-sentinel-and-fury, skill-assassin-sentry-firing-and-range (do-function index); GDF-R08 |
+| +0x2E | `srvdofunc` | 3 | skill-assassin-blade-sentinel-and-fury, skill-assassin-sentry-missile-launch (do-function index); GDF-R08 |
 | +0x50 | `aurafilter` | 2 | skill-assassin-death-sentry-corpse-damage |
 | +0x64 | `aurarangecalc` | 0x19 | skill-assassin-death-sentry-corpse-damage |
-| +0x138 / +0x13C / +0x140 / +0x144 | `calc1` / `calc2` / `calc3` / `calc4` | 0x19 | skill-assassin-sentry-firing-and-range, skill-assassin-death-sentry-corpse-damage |
-| +0x148..+0x164 (step 4) | `Param1`..`Param8` | 2 | skill-assassin-death-sentry-corpse-damage (`Param3` +0x150, `Param4` +0x154; see note) |
+| +0x138 / +0x13C / +0x140 / +0x144 | `calc1` / `calc2` / `calc3` / `calc4` | 0x19 | skill-assassin-sentry-firing-and-range, skill-assassin-sentry-missile-launch, skill-assassin-death-sentry-corpse-damage |
+| +0x148..+0x164 (step 4) | `Param1`..`Param8` | 2 | skill-assassin-death-sentry-corpse-selection (`Param3` +0x150, `Param4` +0x154; see note) |
 | +0x16A | `ItemEffect` | 3 | skill-assassin-blade-sentinel-and-fury (item-effect override) |
 | +0x198 / +0x19C | `ToHit` / `LevToHit` | 2 | skill-leveled-damage-tohit-and-elements |
 | +0x1A0 | `ToHitCalc` | 0x19 | skill-leveled-damage-tohit-and-elements |
@@ -557,3 +557,11 @@ order (the spec is not consumed by a plan). Function, data-location and named-ce
 filtered by the rules they support; rows supporting both specs appear in both companions. Dated
 records were kept with ids updated to the current numbering. The gap file was split to match.
 No new reading, table read, fixture execution or gameplay action was performed.
+
+## Split-contract publication review (2026-10-23)
+
+Issue [#568](https://github.com/gravestench/dark-magic/issues/568) owns publication of the current 25-rule, 17-vector table-record contract after the 2026-10-15 split. A fresh blind reader examined this split spec and its named dependency contracts without the companion or original assets, recomputed GDA-V01..GDA-V17 (including width/wrap, mode masks 32 and 8, and treasure group wrap 4), and found no arithmetic, mask, getter, or flag-result contradiction. The reader requested one clarity change: GDA-R03a now states that unique present headers bind by name independent of column order, as GDA-V06 and GDA-V08 require. Missing and duplicate-header behavior remains GDA-Q02. This review did not execute the original game or corroborate original archive cells, compiled records, or 1.14d behavior.
+
+A separate publication review compared the split spec, source records, gap file, index and README status rules. It found that ItemTypes loader `0x72510` has identified descriptors, stride, output stores and selected data identities, but this companion has never established a dispatch-root caller. The README requires that root for the `verified in 1.13c code (static)` label. The blind reader independently confirmed the mismatch from the recorded evidence. GDA-R04a now excludes ItemTypes from its static-verified publication list; GDA-R14 separately labels the ItemTypes field/publication assertions `asm-only`. The named fields and GDF-V04 selected identities remain available at their stated evidence boundaries. The untraced root is recorded in the [gap file](../../plans/gaps/core-game-data-table-records.md); it was not resolved by this review.
+
+The [source manifest](../source-manifest.md#game-data-identity-and-limits) now links this companion alongside the other narrow game-data reads. The index already points this split contract to #568. The six GDA-Q questions, original-profile limits and draft status remain. This publication review adds no new reverse engineering, table read, runtime observation, or implementation result.

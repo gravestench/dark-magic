@@ -36,15 +36,15 @@ embedded bytes were corroborated against the original image as described below.
 | LOD113C-D2GAME | `0x38FB0` | Contact type gate | MMC-R11 | Listing plus complete 64-byte original image/jump-table check 2026-10-15 |
 | LOD113C-D2GAME | `0x38F40`, `0x6F660` | Pierce use/creation | MMC-R12 | Full listings 2026-10-15; current owner stats, own-base input, local seed and layer-0 request; source creation call MIR-R15a |
 | LOD113C-D2GAME | `0x3E590`, `0x38E60` | Cooldown caller/expiry callback identity | MMC-R16 | Full 224-byte caller listing 2026-10-15; callback body/attachment integration not established |
-| LOD113C-D2GAME | `0x8E9A0`, `0x8E680`, `0x6F8A0` | Callback-free walker/creation event | MMC-Q03 | Walker directed read 2026-10-15 plus MIR-R01b; registration association does not establish recurring order |
-| LOD113C-D2GAME | `0xE20A0` | Removal request target | MMC-R01/MMC-Q04 | Direct caller target retained from 2026-10-12; complete destruction bookkeeping unread |
+| LOD113C-D2GAME | `0x8E9A0`, `0x8E680`, `0x6F8A0` | Callback-free walker/creation event | MMC-Q02 | Walker directed read 2026-10-15 plus MIR-R01b; registration association does not establish recurring order |
+| LOD113C-D2GAME | `0xE20A0` | Removal request target | MMC-R01/MMC-Q03 | Direct caller target retained from 2026-10-12; complete destruction bookkeeping unread |
 | LOD113C-D2COMMON | `0xCEB0` | Velocity ramp/step arithmetic | MMC-R04a | Compatible current NRF-R11a contract; 2026-10-12 read and later NRF evidence retain their dates |
-| LOD113C-D2COMMON | `0xE230` / 10342; `0xD8E0` | Shared path step/advance | MMC-R05a/MMC-Q04 | Directed full listings 2026-10-15 expose reset/update/position/room callees; complete integrated path output not established |
+| LOD113C-D2COMMON | `0xE230` / 10342; `0xD8E0` | Shared path step/advance | MMC-R05a/MMC-Q03 | Directed full listings 2026-10-15 expose reset/update/position/room callees; complete integrated path output not established |
 | LOD113C-D2COMMON | `0xD580`, `0x3E110`, `0xD420` | Bounded tracer,increment normalization,move test | MMC-R05b | Full listings; original image 416/128-byte byte-run checks 2026-10-15; supplied collision-result consumer only |
-| LOD113C-D2COMMON | `0x4D760`, `0x4D6E0`, `0x4CE00` / 10573 | Relocation/query callers | MMC-Q04 | Available byte-checked reconstruction first for `0x4D760`; other listings; `0x4CE00` full 144-byte image/table check. Nested shapes/room map not completed |
+| LOD113C-D2COMMON | `0x4D760`, `0x4D6E0`, `0x4CE00` / 10573 | Relocation/query callers | MMC-Q03 | Available byte-checked reconstruction first for `0x4D760`; other listings; `0x4CE00` full 144-byte image/table check. Nested shapes/room map not completed |
 | LOD113C-D2COMMON | `0x7F6A0` / 10389; `0x7F490` | Candidate search/room predicate | MMC-R09b | Full listings plus original 624/112-byte images and jump tables 2026-10-15; supplied rooms/sizes/positions and filter callback |
 | LOD113C-D2COMMON | `0x3BA20` / 10383; `0x3BA60` | Stored room collection/bounds copy | MMC-R09b | Byte-checked reconstructions read 2026-10-15; stored array/count and bounds, no sort/discovery inferred |
-| LOD113C-D2COMMON | `0x30F80` / 10589 | Unit size selection | MMC-R09b/MMC-Q04 | Byte-checked reconstruction read 2026-10-15; player/monster/missile cases, underlying class-record production retains gate |
+| LOD113C-D2COMMON | `0x30F80` / 10589 | Unit size selection | MMC-R09b/MMC-Q03 | Byte-checked reconstruction read 2026-10-15; player/monster/missile cases, underlying class-record production retains gate |
 | LOD113C-D2COMMON | `0x347C0` / 10214 | Recorded-cell accessor | MMC-R05c/MMC-R09a | Byte-checked reconstruction 2026-10-15; recording-condition assertion then stored list/count |
 | LOD113C-D2COMMON | `0x36030` / 11003; `0x34F80` | Fresh type-3 allocation/path selector writes | MMC-R05c | Directed allocation listing and full 192-byte selector original-image check 2026-10-15; entry 4 (table base RVA `0x94180`, entry at `0x94190`) is `0x60000`,setting both conditions; later planner effects remain gated |
 | LOD113C-D2COMMON | `0x6A270` / 10737; `0x6A6D0` / 10970; `0x6A030` / 10130 | Remaining read/clamped write/activation read | MMC-R06/MMC-R07 | Remaining byte-checked reconstruction and setter listing 2026-10-15; activation compatible 2026-10-12 record |
@@ -286,3 +286,30 @@ own-base seed sequence 66,18,35,30 with full seed pairs and the equal-chance sto
 kept as case MMC-V09(d), which cites MIR-R15a. No rule behavior, label, value or vector result
 changed. Review records above predate this restructure and keep their original ids; the phase-A
 id map relates them to current ids. Lint after the change is recorded in the restructure report.
+
+## Publication review — 2026-10-23
+
+A fresh independent blind reader reviewed the complete movement, collision, contact-result
+and removal contract, its eleven vector families, and the current companion and gap record.
+It independently recomputed velocity ramp, blocked trace endpoint and ten-cell cap,
+candidate geometry/order, pierce countdown, callback-result replacement and cooldown
+expiry fixtures. It found no blocking mismatch within the documented supplied-input
+boundary. This review is separate from the historical 2026-10-15 FULL1/FULL2 passes;
+no gameplay observation was added.
+
+An independent evidence reader checked the public 1.13c source-manifest identity, recorded
+RVA and ordinal labels, dated reuse and original-image reading records, named-cell limits,
+and cross-document links. It did not inspect private binaries. A separate architecture
+reader checked issue #500 against MCI/MIR creation, MMC movement and contact selection, MHD
+hit/damage interiors, and #387 gameplay ownership. It found five live source-anchor table
+gate IDs left at their pre-restructure numbers. The table now cites MMC-Q02 for recurring
+queue order and MMC-Q03 for removal, path, query and size integration; the 2026-10-15
+historical review narrative retains its dated numbering. The contact hand-off wording now
+makes MHD-R12's absent-creator early return explicit. All three readers approved the
+bounded publication and its corrected delta.
+
+MMC-Q01–Q08 remain open at their stated integration, outside-boundary and observation
+limits. No rule arithmetic, vector output, evidence label or gate was promoted. This
+publication adds no original-image investigation, protected game-data capture,
+implementation comparison, gameplay test or 1.14d confirmation. The contract remains
+draft.

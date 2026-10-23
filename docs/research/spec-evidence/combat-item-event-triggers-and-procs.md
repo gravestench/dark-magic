@@ -193,7 +193,9 @@ owner-relationship production and the spawn callback remain outside the registra
 finds or creates/attaches a flag-0x80 list, marks the base list, stores stat 178 and requests
 update. Calls target 0x37F40, 0x38100, 0x3A7D0, 0x3A280 and 0x665C0. Compatible Crushing Blow
 records also leave these helpers open. Repeating the outer helper adds an exact remaining
-callee boundary, not a verified stored overlay effect. IEP-R19 becomes unresolved with IEP-Q09.
+callee boundary, not a verified stored overlay effect. At this 2026-10-14 review stage,
+IEP-R19 became unresolved with IEP-Q09; the 2026-10-15 restructure below removed R19
+and assigned the shared overlay operation to LSE-R13.
 
 **Resource/classification integration.** New export resolution and reads locate maximum
 mana/life at Common 0x390A0/0x390F0 (stat 9/7) through 0x38A80. Demon classifier 0x1A610
@@ -407,3 +409,22 @@ effects (STL-R06b/STL-R06c/RLI-Q02, as LSE-Q01); the original overlay-count iden
 LSE-Q03. The old rule had no vector; IEP-V06/IEP-V07 keep their `overlay<id>` request
 assertions and LSE-V11 discriminates the consumed operation. No other rule, label, value or
 vector result changed, and no other id was renumbered.
+
+### Publication review (2026-10-23, issue #482)
+
+Three independent read-only reviews checked the supplied-input vectors, original-image
+evidence boundaries and publication references. Blind implementation review found that
+IEP-V11(b)/(c) did not supply DPO-R13a's record flag 32 and that IEP-R08's generic
+stat-read sentence contradicted IEP-R18's Rest in Peace no-read behavior. The spec now
+supplies the hit, scale-request and record-flag gates in those missile cases and limits
+the stat reread to IEP-R14 through IEP-R17. Evidence review confirmed the 1.13c
+static-only, supplied-outcome and original-profile catalog boundaries. Publication review
+found a broken NRF-R08a dependency sentence, a misattributed HIT-R02g owner link, and a
+stale coverage index row; these references were corrected. The earlier IEP-R19 statement
+is now explicitly dated to its pre-restructure review stage.
+
+The reviews do not establish automatic registration or notification order (IEP-Q01/Q03),
+complete level-root eligibility (IEP-Q05), the original-profile item/event binding catalog
+(IEP-Q08), stored overlay/replacing-write effects (IEP-Q09/Q10), matching gameplay
+observations (IEP-Q11), or 1.14d parity. The existing blind-reader record and 2026-10-15
+static spot-check remain the evidence for the unchanged rules and vectors.

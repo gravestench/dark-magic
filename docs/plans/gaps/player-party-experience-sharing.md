@@ -47,3 +47,7 @@ Old tracker/process content also removed (not gaps): "Issue(s): none assigned (c
 ## Restructure (2026-10-15)
 
 Gold-pickup sharing moved to [party gold sharing](../../specs/player-party-gold-sharing.md). This file was renamed with its spec. The gold parts of the neutral-flag, drop-policy, award-integration and gameplay-confirmation rows moved to the [gold gap file](player-party-gold-sharing.md) as rows for GPS-Q01, GPS-Q03, GPS-Q02 and GPS-O01; the rows here keep their experience parts with the original attempt dates. Ids use the renumbered experience contract.
+
+## Publication review - 2026-10-23
+
+Fresh blind and evidence reviews approved the separated 1.13c supplied-input experience contract and corrected its coverage locator. No question or observation gap above was closed. The NoDrop comparison remains dependency-owned and does not establish a drop outcome, dead-player runtime behavior or 1.14d parity.

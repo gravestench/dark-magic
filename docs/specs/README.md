@@ -15,7 +15,7 @@ specs to the project's tracker and are the only place issue numbers appear.
 | [core-numeric-and-rng-foundations](core-numeric-and-rng-foundations.md) | #469; shared by all specs | #442 |
 | [core-record-layouts-and-ids](core-record-layouts-and-ids.md) | #469; shared by all specs | #442 |
 | [core-game-data-fields](core-game-data-fields.md) | #470; shared by all specs | #442 |
-| [core-game-data-table-records](core-game-data-table-records.md) | #470; shared by all specs | #442 |
+| [core-game-data-table-records](core-game-data-table-records.md) | #568; shared by all specs | #442 |
 
 ### Combat (`combat-`)
 
@@ -28,11 +28,11 @@ specs to the project's tracker and are the only place issue numbers appear.
 | [combat-leech-and-drain](combat-leech-and-drain.md) | #473 (spec); #383 (gameplay) | #348 |
 | [combat-status-application](combat-status-application.md) | #472 (spec); #383 (gameplay) | #348 |
 | [combat-crushing-blow](combat-crushing-blow.md) | #491 (spec); #383 (gameplay) | #348 |
-| [combat-open-wounds](combat-open-wounds.md) | #492 (spec); #383 (gameplay) | #348 |
+| [combat-open-wounds](combat-open-wounds.md) | #492 (spec); #383/#384 (gameplay) | #348 |
 | [combat-knockback](combat-knockback.md) | #489 (spec); #378, #379 (gameplay) | #345 |
 | [combat-hit-recovery](combat-hit-recovery.md) | #490 (spec); #383, #378, #375 (gameplay) | #348 |
 | [combat-pvp-damage-and-kill-credit](combat-pvp-damage-and-kill-credit.md) | #493 (spec); #383, #420 (gameplay) | #348 |
-| [player-hostility-declaration](player-hostility-declaration.md) | #493 (spec); #383, #420 (gameplay) | #348 |
+| [player-hostility-declaration](player-hostility-declaration.md) | #493 (spec); #383 (gameplay) | #348 |
 | [combat-item-event-triggers-and-procs](combat-item-event-triggers-and-procs.md) | #482 (spec); #383 (gameplay) | #348 |
 
 ### States (`state-`)
@@ -122,7 +122,7 @@ reviews new boundaries before drafting. Original 1.13c evidence does not settle 
 | #401 | Focus Fire Golem death/replacement explosion separately from the broad summon-family candidate | Both triggers, target selection, radius, damage and ordering |
 | #377 | Running stamina drain does not establish spending Vitality or rescaling current stamina | Attribute-spend handler and ordered current/maximum stamina writes |
 | #376 | Path collision candidates need route-versus-step category coverage | Player, hireling, summon, townsfolk and corpse conditions at both consumers |
-| #374 | Party XP has an existing spec; kill/owned-unit/quest credit and gold require their own boundary assessment | Each consumer's eligibility/distance rules; do not infer universal sharing from XP alone |
+| #374 | Party XP and gold pickup have separate specs; kill/owned-unit/quest credit and broader loot ownership still need their own boundary assessment | Each consumer's eligibility/distance rules; do not infer universal sharing from XP or gold pickup alone |
 | #466 | Inventory monster skill bindings, then review the existing nine proposed behavior families | Include shared player skills used by monsters, AI selection/handoff, server/client handlers, missiles/summons and difficulty |
 | #467 | Playback, positional sound, ambience and music selection/transition candidates | D2Client selection roots, D2Sound execution, effective table bindings and exact transition/loop/fade behavior |
 | #468 | Light-map/radius, ambient lighting, palette/fade candidates and the existing world-clock consumer | Original rendering consumers and how world/quest state reaches them |

@@ -243,7 +243,7 @@ in between. It stays in CSA-Q02. The subject mapping below retains the source-to
   reused for CSA-R02 to CSA-R09. NRF's cold-callback reconstruction reading is reused for CSA-R13 and
   was reread on 2026-10-14.
 - Divisor values used by vectors reuse the
-  [DifficultyLevels named cell records](core-game-data-fields.md#named-cell-records) (`TD-DIFFICULTY`:
+  [DifficultyLevels named cell records](core-game-data-table-records.md#named-cell-records) (`TD-DIFFICULTY`:
   MonsterColdDivisor 1/2/4 and MonsterFreezeDivisor 1/2/4 for Normal/Nightmare/Hell, compiled words
   agree) and NRF's [difficulty cells](core-numeric-and-rng-foundations.md#difficulty-divisors-and-identities).
   Their identity limits are stated in those records. Per-class `ColdEffect`, `Velocity`, `boss` and
@@ -660,7 +660,7 @@ expected value was introduced. The lifecycle's unresolved removal/propagation is
 from CSA-R13's supplied callback entry, and state-update integration is named without gating the
 verified supplied requests. These are dependency-boundary clarifications, not label promotions.
 
-The named DifficultyLevels cells reuse the 2026-10-14 GDF record: effective virtual text file
+The named DifficultyLevels cells reuse the 2026-10-14 GDA record: effective virtual text file
 `data/global/excel/difficultylevels.txt`, whole-file coverage 0+586/586 bytes, columns selected by
 decoded header and rows Normal/Nightmare/Hell at zero-based data indices 0/1/2; cold and freeze
 divisors are respectively 1/1, 2/2 and 4/4. Its compiled record is 0+268/268 bytes with named words
@@ -854,3 +854,11 @@ Run D4 (delta, CSA-V09 (p)/(q)/(r)): MISMATCH 0, GUESS 0, GAP 0, DISCRIM 1; both
 Outcome: final run D4 has MISMATCH 0 and no unresolved GUESS, GAP or DISCRIM. Four reader runs were
 made in this task (the cap). Lint: 0 errors, 0 warnings.
 
+
+## Issue #472 publication review (2026-10-23)
+
+Issue [#472](https://github.com/gravestench/dark-magic/issues/472) owns the current 1.13c status-application documentation handoff. A fresh blind reader used only the main contract and its named dependency specs to check CSA-R01..R13 and CSA-V01..V15 at their supplied-input boundaries. Seed steps, duration arithmetic, refresh branches, timer-chain requests, poison comparison and callback cases were recomputed without a material contradiction or missing input. This review is separate from the dated FULL2 and D1–D4 records above. It did not use this companion, original assets or implementation code, and it does not establish gameplay observation.
+
+A separate publication reviewer checked the spec, this public companion, the six-row gap file, source manifest, index and current dependency gates. The one material finding was a stale link from the DifficultyLevels divisor record to Game Data Fields after the GDF/GDA split. The link in [Reused evidence and table records](#reused-evidence-and-table-records) now points to the [Game Data Table Records named cells](core-game-data-table-records.md#named-cell-records), which carry the six Normal/Nightmare/Hell divisor values; the later paragraph names that GDA record. The spec's own section 3 table link already pointed there. The README and coverage index already discover this contract. The six CSA-Q gaps, static-only rule labels, draft status and no-runtime-observation markers remain.
+
+The spec acceptance text now states explicitly that accepting this supplied-input 1.13c contract would not establish 1.14d parity or Dark Magic implementation. This publication audit performed no new original-image or game-data read, executable fixture run, capture, or gameplay test.

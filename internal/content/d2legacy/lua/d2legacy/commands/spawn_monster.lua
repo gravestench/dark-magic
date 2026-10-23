@@ -79,6 +79,11 @@ function M.components(command, game_player_count)
             experience = experience,
             drain_percent = definition.drain_percent or 0,
         },
+        ["d2legacy.monster.type_flags"] = {
+            demon = definition.demon == true,
+            low_undead = definition.low_undead == true,
+            high_undead = definition.high_undead == true,
+        },
         ["d2legacy.combat.defense"] = {
             base_physical_resist = definition.physical_resist or 0,
             base_magic_resist = definition.magic_resist or 0,

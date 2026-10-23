@@ -506,9 +506,14 @@ Defaults for every vector unless its Inputs state otherwise:
   - (f) Inputs: FILETIME 116444736000000000, tick count 0, counter 0; a non-null child unit seeded with no parent
     (NRF-R03a). Outputs: `child.initialLo` 1372387049; `child.seed = {1372387049, 666}`; counter 1; the child
     seed is not stepped.
+  - (g) Inputs: counter 7; supplied FILETIME and tick-count providers log the counter on entry, return
+    116444736000000000 and 0 respectively, and have no other effect. Outputs: `arg` 14; counter 8 before
+    either sample; both providers record counter 8; seconds 0; initial `x` 14; rounds 1037207573,
+    2355444336, 1741392655; return 1741392655. No gameplay LCG seed changes.
   - Discriminates: (a) and (b) reject one scramble round and a plain (undoubled) counter; (c) rejects signed
     time subtraction, a rounded quotient and doubling the incremented counter; (d) rejects omitting the tick
-    count and (e) a widened (unwrapped) sum; (f) rejects leaving `initialLo` unwritten on the no-parent path.
+    count and (e) a widened (unwrapped) sum; (f) rejects leaving `initialLo` unwritten on the no-parent path;
+    (g) rejects sampling either clock value before writing the incremented counter.
   - runtime_observed: no
 
 - **NRF-V06** Game seed hand-off (NRF-R03d; boundary: supplied-input stage)

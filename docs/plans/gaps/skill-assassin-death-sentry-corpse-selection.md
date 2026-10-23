@@ -23,5 +23,5 @@ Repo side: family decoder `trap.assassin-family` and lifecycle hardening (PR #40
 |---|---|---|---|---|
 | DST-R03a/DST-R04/DSC-R09a | Corpse selection | Corpse usable, in range (`Param3/Param4` radius, halved), nearest first, tie by id | Radius-10 search centered on nearest hostile target, first match, last-corpse id excluded, `maxDist/2` gate | verified |
 | DST-R04 | Corpse path gating | Corpse costs one shot; gated like other shots | No chance roll, no `aip3/aip4` check on corpse branch | verified |
-| DST-R04/DST-R06a | Consumption timing | Corpse consumed before damage resolved; no corpse falls back to projectile | Consumed by state 0x68 when explosion runs; selection not atomic | verified / race unresolved |
+| DST-R04/DST-R06a/DST-R06b | Consumption timing | Corpse consumed before damage resolved; no corpse falls back to projectile | State 104 is requested when the explosion runs; whether eligibility consumes that state and the competing-claim outcome remain unresolved | state request verified / outcome unresolved |
 | tests | Tests do not pin corpse selection or rounding; fixtures bypass real decoder values | n/a | n/a | n/a |

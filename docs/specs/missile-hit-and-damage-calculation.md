@@ -35,13 +35,13 @@ Integer additions, subtractions, products and shifts wrap at 32 bits unless an o
 | elemental pairs | 48/49 firemindam/firemaxdam, 52/53 magicmindam/magicmaxdam, 50/51 lightmindam/lightmaxdam, 54/55 coldmindam/coldmaxdam, 57/58 poisonmindam/poisonmaxdam, 316/317 burningmin/burningmax | i32 raw | Six fill pairs, in this order |
 | masteries | 329 passive_fire_mastery, 357 passive_mag_mastery, 330 passive_ltng_mastery, 331 passive_cold_mastery, 332 passive_pois_mastery | i32 percent | Burn reuses fire mastery |
 | lengths and drains | 56 coldlength, 59 poisonlength, 315 firelength, 66 stunlength; 60 lifedrainmindam, 62 manadrainmindam, 64 stamdrainmindam; 326 poison_count | i32 | Direct copies; poison-length divisor |
-| physical target terms | 121 item_demondamage_percent, 122 item_undeaddamage_percent, 180 damage_vs_montype | i32; up to 128 ordered (u16 layer,i32 value) entries; missile list usesResolvedStats and resolvedStats under NRF section 3.8 | Add conditional bonuses to physical percent |
+| physical target terms | 121 item_demondamage_percent, 122 item_undeaddamage_percent, 180 damage_vs_montype | i32; up to 128 ordered (u16 layer,i32 value) entries; missile list usesResolvedStats and resolvedStats under [RLI section 3.7](core-record-layouts-and-ids.md#37-stat-reader-inputs-rli-r02a-rli-r02b) | Add conditional bonuses to physical percent |
 | target definition | MonStats.demon, lUndead, hUndead; signed monster-type index; supplied type-count and relation matrix | Booleans, i16 index, i32 count, bits | Demon/undead predicates and type bonus matching |
 | critical/bypass | 141 item_deadlystrike; 103 skill_bypass_undead, 104 skill_bypass_demons, 106 skill_bypass_beasts | i32 nonzero tests | Deterministic double and record flags |
 | pierce | Owner 166 skill_pierce / 156 item_pierce; missile 328 pierce_idx | i32 | Nonzero owner eligibility and remaining contact counter |
 | armor / apply | Missile 120 item_damagetargetac, 327 damage_framerate; target 31 armorclass; missile's two source flags | i32; booleans | Armor request, reductionScale and applied flags |
 | target state / clock | 54 uninterruptable, 86 justhit; missile-associated game's frame | Booleans, i32 frame | Contact exclusion and reaction/cooldown gates |
-| record | NRF section 3.2 DamageRecord semantic fields | i32, u32 flags, u16 resultFlags, u8 reservedCondition | Shared mutable record |
+| record | [RLI section 3.1](core-record-layouts-and-ids.md#31-damage-record) DamageRecord semantic fields | i32, u32 flags, u16 resultFlags, u8 reservedCondition | Shared mutable record |
 | callbacks/dependencies | Hit, damage, event 0, hit-roll, block/avoidance, double, combat process/results, stat-write, cooldown allocation/attachment, footprint-clear, removal | Supplied operations and results | Log arguments/order; any declared mutations persist for following operations |
 | seeds / footprint | Missile seed; owner/target seeds for dependency-owned draws; supplied room,x,y,size | Pairs of u32; i32 coordinates, u8 size | Local fill and missile knockback versus separate dependency budgets |
 

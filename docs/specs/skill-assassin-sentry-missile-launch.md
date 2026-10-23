@@ -136,7 +136,7 @@ All records are synthetic supplied inputs, not archive rows. Each independent ca
   - runtime_observed: no
 
 - **STT-V04** Shared speed supplied arithmetic (STT-R03 consuming MCI-R05/MCI-R06/MCI-R07; boundary: supplied-input stage)
-  - Inputs: independent cases below, with section defaults.
+  - Inputs: independent cases below, with section defaults. Any stated stat 161/layer-0 value is the supplied final list-read result after any applicable stat-reader adjustment; whether that adjustment applies to a real state-87 list remains STT-Q03.
   - Seeds: no draw.
   - Draws: none.
   - Trace: (a)30*256*75/100=5760; (b)10*256*75/100=1920; (c)missing list skips 50%; (d)2560*50/100=1280 then 75%=960.

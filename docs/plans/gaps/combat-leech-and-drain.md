@@ -15,13 +15,16 @@ Evidence: [companion records](../../research/spec-evidence/combat-leech-and-drai
 
 ## Implementation gaps
 
-Comparison of the original 1.13c behavior with the Dark Magic implementation, as previously
-recorded. Findings are unchanged; rule and vector references use the spec's current ids.
+Historical comparison of original 1.13c behavior with Dark Magic, preserved through the
+2026-10-15 restructure. The earlier code snapshot was not recorded; these rows are not a current
+implementation audit. Rule and vector references use the spec's current ids. The original-evidence
+status in row 3 is the earlier assessment; the current LSE-R14 label and integration gate are in
+the spec and the open evidence gaps above.
 
-Repo file named in the comparison: `policy/leech.lua` (and its test). Its header cites 1.10f D2MOO as
+Repo file named in the earlier comparison: `policy/leech.lua` (and its test). Its header cites 1.10f D2MOO as
 its source. All values there are implemented assumptions unless noted.
 
-| # | Spec rule | Repo file/function | Current repo behavior | Original behavior | Original status |
+| # | Spec rule | Repo file/function at earlier comparison | Repo behavior recorded earlier | Original behavior | Original status when compared |
 |---|-----------|--------------------|-----------------------|-------------------|-----------------|
 | 1 | LSE-R01 to LSE-R08 player-path leech (base, drain P, x64 scale, difficulty divisors, mulDiv, >>6) | `policy/leech.lua` | Agrees with the player/percent path: base, drain, x64, difficulty divisors for players only, and the defender mana quirk | Same arithmetic as LSE-R01 to LSE-R08 | verified in 1.13c (static) |
 | 2 | LSE-R12 overlay draw | `policy/leech.lua` | Extra `GetRandomModulo(2)` draw only when both leech types fire, matching the Lua pick | One extra modulo-2 draw only when mana leech occurred and life leech non-zero | verified in 1.13c (static) |
