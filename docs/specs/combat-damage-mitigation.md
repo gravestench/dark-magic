@@ -495,7 +495,7 @@ values for the isolated numeric checks. IDs and names map through section 3's bi
   penalty; `cap = 0 + 75 = 75 < 95`, `r = 75`; `v = mulDiv(25, 2560, 100) = 640`. (b)
   `Stat(39) = 95`, `Stat(40) = 20`: `cap = 95` (sum 95 is `>= 95`), `r = 95`, `v = mulDiv(5, 2560, 100) = 128`.
   (c) `physical = 5120`, `Stat(36) = 90`, `Stat(34) = 0`: `cap = 50`, `r = 50`,
-  `v = mulDiv(50, 5120, 100) = 2560`. Outputs: `fire = 640` / `128`; `physical = 2560`; heal 0.
+  `v = mulDiv(50, 5120, 100) = 2560`. Outputs: `fire = 640` / `128` in (a)/(b); in (c), `physical = 2560` and the shared `fire = 2560`; heal 0.
   (d) Fresh common setup, player defender; `fire=2560`, `Stat(39)=120`, `Stat(40)=40`:
   `75+40=115` is capped to 95; `r=95`, so `fire=mulDiv(5,2560,100)=128`, heal 0.
   Omitting the 95 ceiling would give `r=115`, then DMI-R06's 100 clamp and fire 0.
@@ -561,8 +561,8 @@ values for the isolated numeric checks. IDs and names map through section 3's bi
   `cap = 75`, `r = 10`; `v = mulDiv(90, 2560, 100) = 2304`. (b) `game.difficulty = 2`:
   `r = 30 - 50 = -20`; step 4 returns -20; `v = mulDiv(120, 2560, 100) = 3072`. (c)
   `game.difficulty = 2`, `physical = 5120`, `Stat(36) = 30`: stat 36, no penalty; `cap = 50`,
-  `r = 30`; `v = mulDiv(70, 5120, 100) = 3584`. Outputs: `fire = 2304` / `3072`;
-  `physical = 3584`. `runtime_observed: no`.
+  `r = 30`; `v = mulDiv(70, 5120, 100) = 3584`. Outputs: `fire = 2304` in (a);
+  `fire = 3072` in (b) and (c); `physical = 3584` in (c). `runtime_observed: no`.
 - **DMI-V10** (DMI-R07 steps 2 and 3, expansion) penalty and non-monster pierce. (a)
   `game.expansion = 1`, `game.difficulty = 2`, `DifficultyLevels.ResistPenalty` (Hell, row 2)
   = -100 (section 3.1); player defender `Stat(39) = 30`; `fire = 2560`: `r = 30 + (-100) = -70`;
@@ -618,8 +618,8 @@ values for the isolated numeric checks. IDs and names map through section 3's bi
   `record.total = 1400`; classic (`game.expansion = 0`) Hell: `lifeDrain = mulDiv(150, 1000,
   100) = 1500`, `record.total = 1500`; Normal: `lifeDrain = 1000`, `record.total = 1000`. Same
   record with a **player** attacker (`context.regularAttacker = 0`), mitigation boundary only
-  (preamble): the loop ends at entry 9, `lifeDrain = 1000` untouched and not in the total,
-  `record.total = 0`. The supplied
+  (preamble): the loop ends at entry 9, leaving `lifeDrain = 1000` untouched.
+  `record.total` is not asserted at this boundary. The supplied
   `ResistPenalty` value is added as given. `runtime_observed: no`.
 - **DMI-V16** (DMI-R07 steps 1, 3, 5) poison length under the penalty. Player defender;
   `poisonLength = 500`; attacker `Stat(336) = 0`. (a) `game.expansion = 1`, `game.difficulty = 2`,
