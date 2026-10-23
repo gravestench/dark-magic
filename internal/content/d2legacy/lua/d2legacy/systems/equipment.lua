@@ -354,6 +354,7 @@ function M.register()
                             for _, stat in ipairs({
                                 "velocitypercent",
                                 "item_fastermovevelocity",
+                                "item_ignoretargetac",
                                 "staminarecoverybonus",
                                 "item_staminadrainpct",
                                 "vitality",
@@ -403,6 +404,7 @@ function M.register()
                             for _, stat in ipairs({
                                 "velocitypercent",
                                 "item_fastermovevelocity",
+                                "item_ignoretargetac",
                                 "staminarecoverybonus",
                                 "item_staminadrainpct",
                                 "vitality",

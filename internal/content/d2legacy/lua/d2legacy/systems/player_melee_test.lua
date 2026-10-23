@@ -192,6 +192,38 @@ return test.suite({
         },
     },
     cases = {
+        test.case("admits_ignore_target_defense_passive_source", {
+            test.submit_system({
+                tick = 1,
+                sequence = 1,
+                kind = "system.player.enter",
+                payload = fixtures.player_entry({
+                    passive_stat_sources = {
+                        { id = "ignore-defense", stat = "item_ignoretargetac", operation = "add", value = 1 },
+                    },
+                }),
+            }),
+            test.step(1),
+            test.run(function()
+                local sources = require("d2legacy.gameplay.stat_sources")
+                local player = test.entities_with("d2legacy.player.identity")[1]
+                test.expect(
+                    sources.resolve(test.entities_with("d2legacy.stat.source"), player, "item_ignoretargetac", 0)
+                )
+                    :equals(1)
+            end),
+        }),
+        test.case("rejects_percent_ignore_target_defense_passive_source", {
+            test.run(function()
+                local entry = fixtures.player_entry({
+                    passive_stat_sources = {
+                        { id = "ignore-defense", stat = "item_ignoretargetac", operation = "percent", value = 1 },
+                    },
+                })
+                local ok = pcall(require("d2legacy.commands.enter_player").apply, { tick = 1, payload = entry })
+                test.assert(not ok, "percent Ignore Target's Defense source was admitted")
+            end),
+        }),
         -- Using the basic left-skill attack should emit a full animation lifecycle.
         -- This proves the player melee system admits the attack, schedules impact,
         -- and completes the animation without extra player input.

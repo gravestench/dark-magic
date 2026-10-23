@@ -5,6 +5,20 @@ return test.suite({
     tier = "fast",
     covers = { "internal/game/stats" },
     cases = {
+        test.case("ignore_target_defense_only_zeroes_eligible_monster_defense", {
+            test.run(function()
+                local melee = require("d2legacy.policy.melee")
+                test.expect(melee.effective_defense(500, 0, true, true, false, false)):equals(500)
+                test.expect(melee.effective_defense(500, 1, true, true, false, false)):equals(0)
+                test.expect(melee.effective_defense(500, -1, true, true, false, false)):equals(0)
+                test.expect(melee.effective_defense(500, 1, true, true, true, false)):equals(500)
+                test.expect(melee.effective_defense(500, 1, true, true, false, true)):equals(500)
+                test.expect(melee.effective_defense(500, 1, true, false, false, false)):equals(500)
+                test.expect(melee.effective_defense(500, 1, false, true, false, false)):equals(500)
+                test.expect(melee.hit_chance(20, 20, 300, 0)):equals(95)
+                test.expect(melee.hit_chance(20, 20, 300, 500)):equals(37)
+            end),
+        }),
         test.case("hit_chance_preserves_recovered_integer_order", {
             test.run(function()
                 local melee = require("d2legacy.policy.melee")

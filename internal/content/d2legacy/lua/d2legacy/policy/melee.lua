@@ -15,6 +15,13 @@ function M.reach(attack_range, attacker_radius, target_radius)
     return attack_range + attacker_radius + target_radius
 end
 
+function M.effective_defense(defense, ignore_target_ac, attacker_is_player, defender_is_monster, boss, hireling)
+    if attacker_is_player and defender_is_monster and ignore_target_ac ~= 0 and not boss and not hireling then
+        return 0
+    end
+    return defense
+end
+
 function M.hit_chance(attacker_level, defender_level, attack_rating, defense)
     assert(attacker_level > 0 and defender_level > 0, "unit levels must be positive")
     if defense < 0 then attack_rating, defense = attack_rating-defense, 0 end
