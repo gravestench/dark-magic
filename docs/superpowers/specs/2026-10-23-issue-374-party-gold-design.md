@@ -1,0 +1,32 @@
+# Issue #374: party gold pickup and sharing
+
+## Intent and boundary
+
+Advance the gold-sharing part of [#374](https://github.com/gravestench/dark-magic/issues/374) with an authoritative, replayable pickup of a trusted world gold pile. A player who interacts with that pile receives gold through the existing carried-gold layout. Current party membership at the pickup tick determines the split. This is a bounded production slice: it works for authored or trusted imported piles; generating retail gold drops from treasure classes, ownership and timers, and exact original excess-pile recreation remain separate work under #374 or the item/loot issues. #374 remains open.
+
+The behavioral source is [GPS-R01/R02](../../specs/player-party-gold-sharing.md), statically verified from Expansion 1.13c at the supplied-input stage. The project's 1.14d behavior remains an inference. The [evidence companion](../../research/spec-evidence/player-party-gold-sharing.md) and [gap record](../../plans/gaps/player-party-gold-sharing.md) retain the original-game limits. Community reconstruction of older D2Game code is a lead, not an authority for either target patch.
+
+## Approaches considered
+
+1. **Gold split helper only.** Small, but no existing ground-gold pickup calls it; it would have no product effect.
+2. **Treat gold as an ordinary movable item.** This would put a currency amount into owner-bound inventory placement and let `item.move` bypass a dedicated pickup transaction. It also makes another player's ground pile difficult to address safely.
+3. **New gold pickup command and entity.** Viable, but duplicates the existing interaction command's targeting, range admission, and component dispatch.
+4. **Chosen: world interaction target with a gold-pile fact.** Reuse `interaction.open`, `interactions.operations`, world selectables, current party authority, and `d2legacy.items.layout.carried_gold`. Two independent delegated reviews favored this smallest complete route after the user delegated review decisions. The gold fact and balances live in authoritative ECS and therefore participate in checkpoints.
+
+## Behavior
+
+Trusted `d2legacy.interactions.targets` input may provide a positive integer `gold_amount` for a selectable target with an act, level, position, and configured interaction radius. Bootstrap creates a `d2legacy.gold.pile` component on that shared world entity. It validates the amount and required spatial facts before creation. The target is visible through the existing world selectable projection. The configured radius is a Dark Magic interaction choice; the original gold pickup radius is unresolved.
+
+The gold operation runs only after `interaction.open` selects the entity. It independently requires an admitted, living player matching the command owner; a player progress record and carried-gold layout; an active positive pile; and matching act/level and in-range coordinates. The extra checks matter because generic interaction admission permits some administrator/bootstrap calls before player admission. A stale, duplicate, remote, or otherwise invalid pickup is a no-op and cannot credit gold. The handler snapshots all recipients and computes all changes before mutating any balance.
+
+For an ordinary positive pile, count the living members of the picker's current party on the picker's level without a distance limit. A missing party, failed party record, or count of at most one uses the picker-only path. For a count greater than one, compute `trunc(amount / count)` and visit the current party record in stable order. Each nonpicker on the same map level with a present player, room-equivalent location, progress, and layout can receive that share up to its `effective level * 10,000` carried-gold cap. The recipient pass does **not** recheck liveness: a dead same-level member may receive a share even though dead members did not increase the divisor. The picker receives the remainder and shares other recipients could not carry, up to the picker's cap. A nonpicker's distance from the pile never affects the gold split. Gold amounts and additions use the signed 32-bit arithmetic defined by GPS-R01/R02 in isolated policy tests; trusted physical piles admit only positive amounts in the ordinary game domain.
+
+The operation writes the computed balances to the existing layouts in stable party order, then updates the pile. If all gold was accepted, the pile becomes inactive rather than being destroyed. This prevents a later player admission from reimporting an authored pile with the same target ID. If excess remains, its amount stays on the same active pile for a later pickup. That conservation behavior is a provisional Dark Magic integration choice: GPS-R04 verifies only a request to recreate positive excess near the picker, not the resulting item, placement, or persistence. Tests assert conservation and disclose this deviation; they do not claim original recreation parity.
+
+## Tests and limits
+
+- Policy vectors: three-way 1000 gives 333/333/334; two-way 1001 with recipient 100 below cap gives 100/901; picker 50 below cap leaves 851 excess; dead-recipient and negative/overflow supplied-input branches distinguish counting, iteration, and signed arithmetic.
+- Production session: interact with a trusted selectable pile and assert stored balances and pile state for solo, far same-level party, other level, death, leave/rejoin, near-cap/excess, duplicate pickup, and restore before/after pickup. Assert a forged remote or unadmitted pickup cannot grant gold. Confirm world selectable state and the existing item snapshot show the stored result.
+- No change to party XP, NoDrop, ordinary item movement, vendor transactions, or unrelated loot generation.
+
+Open parity work: original 1.13c and 1.14d runtime observations; owner-exception producer; exact player-room condition and death-mode interactions; real stat-write propagation; excess-pile creation and identity; pickup radius, ownership, visibility, and timers; monster/treasure gold pile generation and final presentation art. Do not close #374 with this PR.
