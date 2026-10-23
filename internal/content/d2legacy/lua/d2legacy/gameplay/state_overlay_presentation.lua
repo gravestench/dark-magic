@@ -89,6 +89,7 @@ function M.from_rows(states, overlay_rows, state_id)
     end
     return {
         state_id = state_id,
+        green = integer(state, "green", 0) ~= 0,
         active = active,
         applied = recipe(overlays, state.castoverlay, "front", false),
         removed = recipe(overlays, state.removerlay, "front", false),

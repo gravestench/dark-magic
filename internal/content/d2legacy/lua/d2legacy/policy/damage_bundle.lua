@@ -52,8 +52,8 @@ function M.label(values)
     return label
 end
 
-function M.stage_component(rolled, mitigated)
-    local component = {}
+function M.stage_component(rolled, mitigated, poison_length_frames)
+    local component = { poison_length_frames = poison_length_frames or 0 }
     for _, channel in ipairs(M.channels) do
         component[channel .. "_rolled_raw"] = rolled[channel]
         component[channel .. "_mitigated_raw"] = mitigated[channel]

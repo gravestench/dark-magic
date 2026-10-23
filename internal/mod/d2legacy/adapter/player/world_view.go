@@ -12,7 +12,7 @@ import (
 	"github.com/gravestench/dark-magic/internal/game/simulation"
 )
 
-const WorldViewVersion uint32 = 5
+const WorldViewVersion uint32 = 7
 
 const (
 	WorldViewRadius         = 80.0
@@ -45,6 +45,7 @@ type WorldView struct {
 type WorldState struct {
 	TargetID    string `json:"target_id"`
 	StateID     string `json:"state_id"`
+	Aura        bool   `json:"aura"`
 	PeriodTicks int64  `json:"period_ticks"`
 	distance2   float64
 }
@@ -59,6 +60,7 @@ type worldStateKey struct {
 // locks, and lifetime policy: a connected client can render these values but
 // cannot reconstruct or advance gameplay from them.
 type WorldMissile struct {
+	SoundOwnerID     string      `json:"sound_owner_id,omitempty"`
 	ID               string      `json:"id"`
 	Kind             string      `json:"kind"`
 	MissileID        string      `json:"missile_id"`
@@ -533,7 +535,7 @@ func (projection *worldProjection) visibleTargets() map[uint64]string {
 	return targets
 }
 
-// projectWorldStates joins persistent aura relationships to visible public IDs.
+// projectWorldStates joins persistent aura and poison relationships to visible public IDs.
 // Returning false rejects malformed or duplicate state instead of hiding drift.
 func projectWorldStates(
 	snapshot gameecs.Snapshot,
@@ -541,8 +543,9 @@ func projectWorldStates(
 	origin HUDPosition,
 	originAct, originLevel int64,
 ) ([]WorldState, bool) {
-	effects, exists := findComponent(snapshot, "d2legacy.skill.aura_effect")
-	if !exists {
+	effects, hasAuras := findComponent(snapshot, "d2legacy.skill.aura_effect")
+	timed, hasTimed := findComponent(snapshot, "d2legacy.state.instance")
+	if !hasAuras && !hasTimed {
 		return []WorldState{}, true
 	}
 
@@ -554,9 +557,9 @@ func projectWorldStates(
 		return nil, false
 	}
 
-	result := make([]WorldState, 0, len(effects.Instances))
+	result := make([]WorldState, 0, len(effects.Instances)+len(timed.Instances))
 
-	seen := make(map[worldStateKey]struct{}, len(effects.Instances))
+	seen := make(map[worldStateKey]struct{}, len(effects.Instances)+len(timed.Instances))
 	for _, instance := range effects.Instances {
 		fields, found := findInstance(effects, instance.Entity)
 		if !found {
@@ -583,7 +586,7 @@ func projectWorldStates(
 		dx, dy := floatField(position, "x")-origin.X, floatField(position, "y")-origin.Y
 
 		state := WorldState{
-			TargetID: targetID, StateID: stringField(fields, "state_id"),
+			TargetID: targetID, StateID: stringField(fields, "state_id"), Aura: true,
 			PeriodTicks: intField(fields, "refresh_delay"), distance2: dx*dx + dy*dy,
 		}
 		if state.distance2 > WorldViewRadius*WorldViewRadius {
@@ -601,6 +604,47 @@ func projectWorldStates(
 
 		seen[key] = struct{}{}
 
+		result = append(result, state)
+	}
+
+	for _, instance := range timed.Instances {
+		fields, found := findInstance(timed, instance.Entity)
+		if !found {
+			return nil, false
+		}
+		if stringField(fields, "state_id") != "poison" {
+			continue
+		}
+		applied, expires := intField(fields, "applied_tick"), intField(fields, "expires_tick")
+		if applied < 0 || expires <= applied || intField(fields, "stat_value") >= 0 {
+			return nil, false
+		}
+		if uint64(applied) > snapshot.Tick || uint64(expires) <= snapshot.Tick {
+			continue
+		}
+		target := entityField(fields, "target")
+		targetID, public := publicIDs[target]
+		position, hasPosition := findInstance(positions, target)
+		location, hasLocation := findInstance(locations, target)
+		if !public || !hasPosition || !hasLocation {
+			continue
+		}
+		if _, dormant := findInstance(inactive, target); dormant {
+			continue
+		}
+		if intField(location, "act") != originAct || intField(location, "level_id") != originLevel {
+			continue
+		}
+		dx, dy := floatField(position, "x")-origin.X, floatField(position, "y")-origin.Y
+		state := WorldState{TargetID: targetID, StateID: "poison", distance2: dx*dx + dy*dy}
+		if state.distance2 > WorldViewRadius*WorldViewRadius {
+			continue
+		}
+		key := worldStateKey{targetID: targetID, stateID: "poison"}
+		if _, duplicate := seen[key]; duplicate {
+			return nil, false
+		}
+		seen[key] = struct{}{}
 		result = append(result, state)
 	}
 
@@ -624,7 +668,8 @@ func projectWorldStates(
 func validateWorldState(state WorldState) error {
 	if !boundedRequired(state.TargetID, maxWorldIDBytes) ||
 		!boundedRequired(state.StateID, maxWorldStateBytes) ||
-		state.PeriodTicks < 1 || state.PeriodTicks > math.MaxInt32 {
+		(state.Aura && (state.PeriodTicks < 1 || state.PeriodTicks > math.MaxInt32)) ||
+		(!state.Aura && (state.StateID != "poison" || state.PeriodTicks != 0)) {
 		return ErrWorldView
 	}
 

@@ -88,6 +88,7 @@ return test.suite({
                         { name = "target", type = "entity" },
                         { name = "state_id", type = "string" },
                         { name = "period_ticks", type = "i64" },
+                        { name = "aura", type = "bool" },
                     },
                 })
                 local world = require("d2legacy.gameplay.world")
@@ -123,6 +124,15 @@ return test.suite({
                         target = target,
                         state_id = "prayer",
                         period_ticks = 50,
+                        aura = true,
+                    },
+                })
+                local projected_poison = ecs.create({
+                    ["d2legacy.presentation.state"] = {
+                        target = target,
+                        state_id = "poison",
+                        period_ticks = 0,
+                        aura = false,
                     },
                 })
                 ecs.create({
@@ -137,7 +147,7 @@ return test.suite({
                     },
                 })
                 local snapshots = world.state_snapshots()
-                test.assert(#snapshots == 3, [=[#snapshots == 3]=])
+                test.assert(#snapshots == 4, [=[#snapshots == 4]=])
                 local by_state = {}
                 for _, snapshot in ipairs(snapshots) do
                     by_state[snapshot.state_id] = snapshot
@@ -170,6 +180,14 @@ return test.suite({
                         and projected_snapshot.aura
                         and projected_snapshot.aura_period_ticks == 50,
                     [=[connected semantic state uses the aura presentation contract]=]
+                )
+                local poison_snapshot = by_state.poison
+                test.assert(
+                    poison_snapshot.entity_id == projected_poison:id()
+                        and poison_snapshot.target_entity_id == target:id()
+                        and not poison_snapshot.aura
+                        and poison_snapshot.aura_period_ticks == 0,
+                    [=[connected poison remains outside aura rotation]=]
                 )
                 local cues = world.semantic_cues()
                 local cue = cues[#cues]

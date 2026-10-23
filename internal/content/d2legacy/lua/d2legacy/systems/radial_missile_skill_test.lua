@@ -107,6 +107,29 @@ local monster = fixtures.monster_spawn({
     },
 })
 
+local function expect_sound_owners()
+    local ecs = require("engine.ecs/v1")
+    local world = require("d2legacy.gameplay.world")
+    local owners = {}
+    for _, entity in ipairs(ecs.query({ all = { "d2legacy.missile.projectile" } })) do
+        local owner = ecs.get(entity, "d2legacy.presentation.missile_sound_owner"):get("projectile_id")
+        test.assert(not owners[owner], "each radial ray owns a distinct travel sound")
+        owners[owner] = true
+    end
+    local count = 0
+    for _, cue in ipairs(world.semantic_cues()) do
+        if cue.kind == "missile_spawn" then
+            test.assert(owners[cue.sound_owner_id], "travel cue names a living radial ray")
+            owners[cue.sound_owner_id] = false
+            count = count + 1
+        end
+    end
+    test.expect(count):equals(12)
+    for _, snapshot in ipairs(world.missile_snapshots()) do
+        test.assert(owners[snapshot.sound_owner_id] == false, "snapshot preserves the cue's owner")
+    end
+end
+
 return test.suite({
     profile = "authority",
     tier = "integration",
@@ -174,7 +197,9 @@ return test.suite({
                     [=[Nova spends its level-one authored mana cost exactly once]=]
                 )
             end),
+            test.run(expect_sound_owners),
             test.expect_checkpoint_parity(1),
+            test.run(expect_sound_owners),
             test.step(3),
             test.run(function()
                 local ecs = require("engine.ecs/v1")

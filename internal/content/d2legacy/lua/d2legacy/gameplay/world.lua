@@ -328,7 +328,6 @@ function M.state_snapshots()
         local aura = optional_component(entity, "d2legacy.skill.aura_effect")
         local projected = optional_component(entity, "d2legacy.presentation.state")
         local relationship = assert(instance or aura or projected, "state snapshot entity has no state relationship")
-        local aura_relationship = aura or projected
         local target = relationship:get("target")
         if target and target:exists() and not optional_component(target, "d2legacy.world.inactive") then
             local position = optional_component(target, "d2legacy.world.position")
@@ -339,7 +338,7 @@ function M.state_snapshots()
                     entity_id = entity:id(),
                     target_entity_id = target:id(),
                     state_id = relationship:get("state_id"),
-                    aura = aura_relationship ~= nil,
+                    aura = aura ~= nil or projected ~= nil and projected:get("aura"),
                     aura_period_ticks = aura and aura:get("refresh_delay") or projected and projected:get(
                         "period_ticks"
                     ) or 0,
@@ -470,6 +469,8 @@ function M.semantic_cues(observed)
             end
         end
         if values then
+            local sound_owner = optional_component(entity, "d2legacy.presentation.missile_sound_owner")
+            if sound_owner then values.sound_owner_id = sound_owner:get("projectile_id") end
             -- Dynamic entity fields are checked ECS handles. Collapse the
             -- missile reference to a number before this table crosses into
             -- presentation, just like the event entity itself below.
@@ -510,6 +511,8 @@ function M.missile_snapshots()
                 local position = ecs.get(entity, "d2legacy.world.position")
                 local location = ecs.get(entity, "d2legacy.world.location")
                 snapshot.entity_id = entity:id()
+                local sound_owner = optional_component(entity, "d2legacy.presentation.missile_sound_owner")
+                if sound_owner then snapshot.sound_owner_id = sound_owner:get("projectile_id") end
                 snapshot.owner_entity = nil
                 if snapshot.logical_direction and snapshot.logical_direction < 0 then
                     snapshot.logical_direction = nil

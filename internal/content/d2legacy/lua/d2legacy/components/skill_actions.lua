@@ -100,6 +100,7 @@ function M.register()
             { name = "source_id", type = "string" },
             { name = "mana_cost_raw", type = "i64" },
             { name = "period_ticks", type = "i64" },
+            { name = "aura", type = "bool" },
             { name = "next_tick", type = "i64" },
             -- Target enumeration is durable schedule policy. Party-member and
             -- world-corpse pulses share timing without pretending they share
@@ -290,11 +291,12 @@ function M.register()
     -- aura stats, radius, party/filter policy, or source arbitration.
     ecs.component({
         name = "d2legacy.presentation.state",
-        version = 1,
+        version = 2,
         fields = {
             { name = "target", type = "entity" },
             { name = "state_id", type = "string" },
             { name = "period_ticks", type = "i64" },
+            { name = "aura", type = "bool" },
         },
     })
 
@@ -311,6 +313,13 @@ function M.register()
             { name = "overlay_id", type = "string" },
             { name = "sound", type = "string" },
         },
+    })
+
+    -- The same stable identity joins a travel cue to its live projectile without changing either schema.
+    ecs.component({
+        name = "d2legacy.presentation.missile_sound_owner",
+        version = 1,
+        fields = { { name = "projectile_id", type = "string" } },
     })
 
     -- NextHit missiles share one checkpointed suppression window per target.
@@ -373,6 +382,7 @@ function M.register()
             { name = "magic_mitigated_raw", type = "i64" },
             { name = "poison_rolled_raw", type = "i64" },
             { name = "poison_mitigated_raw", type = "i64" },
+            { name = "poison_length_frames", type = "i64" },
         },
     })
 
@@ -381,6 +391,12 @@ function M.register()
     -- markers without centralizing all proc policy in one event dispatcher.
     ecs.component({
         name = "d2legacy.combat.death_observed",
+        version = 1,
+        fields = {},
+    })
+
+    ecs.component({
+        name = "d2legacy.combat.poison_observed",
         version = 1,
         fields = {},
     })
