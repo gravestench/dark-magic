@@ -235,3 +235,27 @@ Outcome: MISMATCH 0; no unresolved GUESS or DISCRIM; the one GAP has a recorded 
 ## Restructure (2026-10-15)
 
 The approved review split the combined Death Sentry spec at its two independent triggers: the AI think and the Skills action-55 explosion. This spec keeps the explosion: guards and corpse-valid producer, initial and monster life, endpoints, roll, level scale, percent, hand-off, split and units, geometry and traversal, scaling, copies and events, mitigation, duration/router and draw counts, with ten executable vectors and three observation recipes. The think and corpse-selection rules, their four vectors, the AI-entry and competing-claim questions and the two-sentry observation recipe moved to [Death Sentry corpse selection](../../specs/skill-assassin-death-sentry-corpse-selection.md) (DST). The former combined local-producer question was divided into DSC-Q04 (explosion producers) and DST-Q03 (think producers). The state-order vector stays here because it asserts DSC-R01a's request order; it also cites DST-R06a. No rule behavior, label, value or vector result changed; ids were renumbered under the unconsumed-spec policy. Records above were partitioned by owning rule; their dates and counts are unchanged.
+
+## Publication review — 2026-10-23
+
+A fresh independent blind reader reviewed the complete post-split DSC and DST
+three-file contracts. For DSC, the reader recomputed representative corpse-seed rolls,
+level scaling, independent split, wrapped blast geometry, PvP/mitigation order,
+monster life and elemental routing across DSC-V01–V10. It confirmed that DSC-R01a
+requests state 104 after the selection/mode request, while actual scheduler and corpse
+eligibility producers remain gated. No blocking rule/vector mismatch was found within
+the 1.13c static/supplied-input boundary. DSC-V01–V10 and DSC-Q01–Q05 are the current
+IDs; the 2026-10-15 combined-contract review counts above remain dated history.
+
+An independent evidence reader checked both complete three-file sets and the source
+manifest for artifact identity, dated reuse, named text-cell limits, public links and
+unresolved producers. A separate architecture reader checked DST/DSC ownership and
+dependencies. All three approved bounded publication after split-stale SFR and GDA
+consumer references were corrected. The historical DST gap comparison was narrowed to
+the state request that the current rules support. Issue #498 now names both three-file
+handoffs; #420 remains the gameplay owner.
+
+DSC-Q01–Q05, DSC-O01–O03 and the sibling DST gates remain open. No spec behavioral rule or vector output changed. The historical comparison status
+wording was narrowed; original-source evidence labels were not changed, and the
+implementation comparison was not renewed. No new original-image investigation, protected game-data capture,
+gameplay test or 1.14d confirmation was added. Both specs remain draft.
