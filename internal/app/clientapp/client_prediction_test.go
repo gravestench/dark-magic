@@ -89,3 +89,38 @@ func TestPredictionTownStaminaUsesRecoveredLevels(t *testing.T) {
 		}
 	}
 }
+
+func TestPredictionStaminaUsesSigned32Drain(t *testing.T) {
+	catalog, err := movement.LoadCatalog(predictionMovementRecords{})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	payload, err := json.Marshal(movement.MovePayload{Running: true, Target: &movement.MoveTarget{X: 11, Y: 20}})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	hud := playeradapter.HUD{
+		Tick:     10,
+		Position: playeradapter.HUDPosition{X: 10, Y: 20},
+		Player:   playeradapter.HUDIdentity{Class: "Amazon"},
+		Vitals:   playeradapter.HUDVitals{StaminaRaw: 2560, MaxStaminaRaw: 84 * 256},
+		Location: playeradapter.HUDLocation{LevelID: 2},
+		Movement: playeradapter.HUDMovement{
+			Bounds:              playeradapter.HUDPosition{X: 100, Y: 100},
+			Radius:              1,
+			RunDrain:            20,
+			StaminaDrainPercent: 107374183,
+		},
+	}
+
+	prediction := newPositionPrediction(hud, []gameserver.CommandIntent{
+		{TargetTick: 11, Sequence: 1, Kind: movement.MoveCommand, Payload: payload},
+	}, nil, 40*time.Millisecond, catalog)
+	prediction.advanceTick(11)
+
+	if prediction.staminaRaw != 2520 {
+		t.Fatalf("predicted stamina raw = %d, want 2520", prediction.staminaRaw)
+	}
+}
