@@ -10,7 +10,7 @@ function M.supports(npc)
     return conversations[string.lower(npc or "")] ~= nil
 end
 
-function M.choices(npc, page)
+function M.choices(npc, page, trade)
     if not M.supports(npc) then return {} end
     if page == "topics" then
         return {
@@ -20,10 +20,12 @@ function M.choices(npc, page)
     elseif page == "text" then
         return { { id = "back", label = "cancel" } }
     end
-    return {
+    local choices = {
         { id = "talk", label = "d2legacy.npc.talk" },
         { id = "cancel", label = "cancel" },
     }
+    if trade then table.insert(choices, 2, { id = "trade", label = "d2legacy.npc.trade" }) end
+    return choices
 end
 
 function M.select(npc, page, choice)

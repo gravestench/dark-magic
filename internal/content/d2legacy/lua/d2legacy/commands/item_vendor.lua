@@ -11,6 +11,7 @@ local owner = require("d2legacy.items.command_owner")
 local find = require("d2legacy.items.find")
 local placement = require("d2legacy.items.placement")
 local arrangement = require("d2legacy.items.vendor_arrangement")
+local offers = require("d2legacy.items.vendor_offers")
 local M = {}
 
 local PRICE_SCALE = 1024
@@ -50,7 +51,10 @@ local function validate(command, buying)
             "category cannot contain a slash")
     end
     owner.resolve(command)
-    terms(payload.vendor)
+    if not buying then terms(payload.vendor) end
+    if buying then
+        assert(payload.to_inventory == nil or type(payload.to_inventory) == "boolean", "inventory purchase choice must be boolean")
+    end
 end
 
 local function held_item(layout_entity, item_id, entities)
@@ -92,34 +96,65 @@ function M.apply_sell(command)
     layout:set("carried_gold", layout:get("carried_gold") + price)
 end
 
+local function buy_offer(command, layout_entity, layout, entity, item, offer, entities)
+    local payload = command.payload
+    if not payload.to_inventory or not offers.trading(owner.resolve(command), string.lower(payload.vendor))
+        or offer:get("vendor") ~= string.lower(payload.vendor) then return end
+    local placed = ecs.get(entity, "d2legacy.item.placement")
+    if not placed or placed:get("container") ~= "vendor" or placed:get("slot") ~= "misc"
+        or ecs.get(entity, "d2legacy.world.inactive") then return end
+    if layout:get("carried_gold") < offer:get("price") then return end
+    if placement.slot_occupant(entity, item, { container = "held", slot = "" }, entities) then return end
+    for y = 0, layout:get("inventory_height") - item:get("height") do
+        for x = 0, layout:get("inventory_width") - item:get("width") do
+            local destination = { container = "inventory", x = x, y = y }
+            if #placement.overlaps(entity, item, destination, entities) == 0 then
+                placement.validate(layout, entity, item, destination, entities)
+                offers.purchase(layout_entity, entity, item, destination)
+                layout:set("carried_gold", layout:get("carried_gold") - offer:get("price"))
+                return
+            end
+        end
+    end
+end
+
 function M.apply_buy(command)
     local payload = command.payload
     local entities = all_items()
-    local layout_entity, layout = assert(find.layout(
+    local layout_entity, layout = find.layout(
         owner.resolve(command),
         entities
-    ))
-    local entity, item = assert(find.item(
+    )
+    if not layout_entity then return end
+    local entity, item = find.item(
         layout_entity,
         payload.item_id,
         entities
-    ))
+    )
+    if not entity then return end
+    local offer = ecs.get(entity, "d2legacy.vendor.offer")
+    if offer then
+        buy_offer(command, layout_entity, layout, entity, item, offer, entities)
+        return
+    end
+    -- Inventory purchases are restricted to the supported permanent offers.
+    if payload.to_inventory then return end
     local placed = assert(ecs.get(entity, "d2legacy.item.placement"))
-    assert(placed:get("container") == "vendor", "item is not vendor stock")
+    if placed:get("container") ~= "vendor" then return end
 
     -- A purchased item first enters the durable held location. The player can
     -- then place it in inventory, belt, stash, cube, or equipment normally.
-    local held_destination = { container = "held" }
+    local held_destination = { container = "held", slot = "" }
     local occupied = placement.slot_occupant(
         entity,
         item,
         held_destination,
         entities
     )
-    assert(not occupied, "held item already exists")
+    if occupied then return end
 
     local price = scaled_price(item, terms(payload.vendor):get("sell_multiplier"))
-    assert(layout:get("carried_gold") >= price, "insufficient carried gold")
+    if layout:get("carried_gold") < price then return end
 
     arrangement.apply(
         layout,

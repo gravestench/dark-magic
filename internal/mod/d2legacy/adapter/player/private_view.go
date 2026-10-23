@@ -7,7 +7,7 @@ import (
 	"github.com/gravestench/dark-magic/internal/game/simulation"
 )
 
-const PrivateViewVersion uint32 = 1
+const PrivateViewVersion uint32 = 2
 
 // PrivateView is owner-only state needed by connected presentation. It is an
 // explicit allowlist rather than a serialized ECS snapshot, so another
@@ -40,6 +40,8 @@ type ItemLayoutView struct {
 }
 
 type ItemEntityView struct {
+	Vendor          string `json:"vendor,omitempty"`
+	BuyPrice        int64  `json:"buy_price,omitempty"`
 	ID              string `json:"id"`
 	Code            string `json:"code"`
 	BodySlots       string `json:"body_slots"`
@@ -63,6 +65,7 @@ type ItemEntityView struct {
 }
 
 type InteractionView struct {
+	TradeAvailable   bool                   `json:"trade_available,omitempty"`
 	Active           bool                   `json:"active"`
 	Target           *InteractionTargetView `json:"target,omitempty"`
 	DialoguePage     string                 `json:"dialogue_page,omitempty"`
@@ -140,6 +143,7 @@ func projectInteraction(snapshot gameecs.Snapshot, playerID string) InteractionV
 		DialoguePage:     stringField(fields, "dialogue_page"),
 		DialogueLine:     stringField(fields, "dialogue_line"),
 		DialogueRevision: intField(fields, "dialogue_revision"),
+		TradeAvailable:   boolField(fields, "trade_available"),
 		Target: &InteractionTargetView{
 			ID:         stringField(target, "id"),
 			NPC:        stringField(target, "npc"),
@@ -189,6 +193,7 @@ func projectItems(snapshot gameecs.Snapshot, layoutEntity uint64) []ItemEntityVi
 	}
 
 	placements, _ := findComponent(snapshot, "d2legacy.item.placement")
+	offers, _ := findComponent(snapshot, "d2legacy.vendor.offer")
 	presentations, _ := findComponent(snapshot, "d2legacy.item.presentation")
 	inactive, _ := findComponent(snapshot, "d2legacy.world.inactive")
 	items := []ItemEntityView{}
@@ -205,7 +210,11 @@ func projectItems(snapshot gameecs.Snapshot, layoutEntity uint64) []ItemEntityVi
 
 		placement, _ := findInstance(placements, instance.Entity)
 		presentation, _ := findInstance(presentations, instance.Entity)
-		items = append(items, projectItem(identity, placement, presentation))
+		item := projectItem(identity, placement, presentation)
+		offer, _ := findInstance(offers, instance.Entity)
+		item.Vendor = stringField(offer, "vendor")
+		item.BuyPrice = intField(offer, "price")
+		items = append(items, item)
 	}
 
 	sort.Slice(items, func(i, j int) bool { return items[i].ID < items[j].ID })

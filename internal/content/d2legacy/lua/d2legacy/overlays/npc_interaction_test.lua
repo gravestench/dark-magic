@@ -29,6 +29,9 @@ local function fixture(speech_failure)
         pop = function()
             calls.pops = calls.pops + 1
         end,
+        toggle_overlay = function(name, slot)
+            calls.overlay, calls.slot = name, slot
+        end,
     })
     test.mock_module("engine.locale/v1", {
         text = function(value)
@@ -98,6 +101,16 @@ return test.suite({
     profile = "module",
     tier = "fast",
     cases = {
+        test.case("accepted_trade_switches_from_conversation_to_vendor", {
+            test.run(function()
+                local overlay, instance, state, calls = fixture()
+                state.page, state.revision = "trade", 2
+                overlay.update(instance)
+                test.expect(calls.pops):equals(1)
+                test.expect(calls.overlay):equals("vendor")
+                test.expect(calls.slot):equals("left")
+            end),
+        }),
         test.case("unknown_connected_speech_displays_unavailable_text_and_keeps_back_control", function(t)
             t:run(function()
                 local overlay, instance, state, calls = fixture("missing")

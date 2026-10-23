@@ -14,7 +14,14 @@ import (
 // identity, admitted dialogue commands, localization and the connected mirror.
 func TestOwnedAkaraDialogueProjectsSelectedLocalizedSpeech(t *testing.T) {
 	fixture := newRealD2LegacyFixture(t, realD2LegacyFixtureConfig{})
-	createSelectedAcceptanceCharacter(t, fixture)
+	character := createSelectedAcceptanceCharacter(t, fixture)
+	// Trade requires a living character. Set the immutable selected profile
+	// before admission rather than repairing gameplay vitals after entry.
+	character.Stats.Health, character.Stats.MaxHealth = 50, 50
+	if err := fixture.app.saves.UpdateSelected(character); err != nil {
+		t.Fatal(err)
+	}
+
 	fixture.advanceOffline(t, 10)
 	targets := requireRealStore(t, fixture, "d2legacy.interaction.target", "interaction targets missing")
 	positions := requireRealStore(t, fixture, "d2legacy.world.position", "positions missing")
@@ -145,5 +152,62 @@ func TestOwnedAkaraDialogueProjectsSelectedLocalizedSpeech(t *testing.T) {
 	location, _ := locations.Get(locations.Entities()[0])
 	if level, _ := location.Get("level_id"); level != int64(1) {
 		t.Fatalf("mirrored target level = %v", level)
+	}
+
+	submit("interaction.choose", map[string]any{"target": "act1-akara", "choice": "back", "revision": 3})
+	submit("interaction.choose", map[string]any{"target": "act1-akara", "choice": "trade", "revision": 4})
+	submit("item.vendor_buy", map[string]any{"vendor": "akara", "item_id": "akara-offer:tsc", "to_inventory": true})
+
+	checkpoint, err = fixture.app.offlineSession.CanonicalCheckpoint()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	view, err = playeradapter.ProjectPrivateView("local-player", checkpoint)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if !view.Interaction.TradeAvailable || view.Interaction.DialoguePage != "trade" ||
+		view.Items.Layout.CarriedGold != 0 || len(view.Items.Items) != 2 {
+		t.Fatalf("fresh character Trade/refusal = %#v", view)
+	}
+
+	for _, offer := range view.Items.Items {
+		want := int64(30)
+		if offer.Code == "tsc" {
+			want = 100
+		}
+
+		if offer.Vendor != "akara" || offer.BuyPrice != want || offer.Container != "vendor" {
+			t.Fatalf("offer = %#v", offer)
+		}
+	}
+
+	peer, err = playeradapter.ProjectPrivateView("unrelated-player", checkpoint)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if len(peer.Items.Items) != 0 || peer.Interaction.TradeAvailable {
+		t.Fatal("offers leaked to another owner")
+	}
+
+	if err := installPrivateProjection(engine.World(), hero, "local-player", nil, view); err != nil {
+		t.Fatal(err)
+	}
+
+	offers, _ := akara.GetDynamicStore(engine.World(), "d2legacy.vendor.offer")
+	if len(offers.Entities()) != 2 {
+		t.Fatal("connected offer facts missing")
+	}
+
+	for _, entity := range offers.Entities() {
+		row, _ := offers.Get(entity)
+
+		price, _ := row.Get("price")
+		if price != int64(30) && price != int64(100) {
+			t.Fatalf("mirrored quote = %v", price)
+		}
 	}
 }

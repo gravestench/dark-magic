@@ -61,7 +61,7 @@ function M.dialogue()
         page = page,
         revision = context:get("dialogue_revision"),
         line = context:get("dialogue_line"),
-        choices = dialogue.choices(target:get("npc"), page),
+        choices = dialogue.choices(target:get("npc"), page, context:get("trade_available")),
     }
     return result
 end

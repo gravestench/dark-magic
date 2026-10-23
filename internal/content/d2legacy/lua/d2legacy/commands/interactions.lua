@@ -121,6 +121,8 @@ function M.open(command)
     context:set("dialogue_page", "menu")
     context:set("dialogue_line", "")
     context:set("dialogue_revision", context:get("dialogue_revision") + 1)
+    context:set("trade_available", string.lower(target:get("vendor")) == "akara"
+        and require("d2legacy.items.vendor_offers").supported(owner))
 end
 
 function M.close(command)
@@ -128,6 +130,7 @@ function M.close(command)
     destroy_null_target(context)
     context:set("target", ecs.create({ ["d2legacy.interaction.null_target"] = {} }))
     context:set("dialogue_page", "")
+    context:set("trade_available", false)
     context:set("dialogue_line", "")
     context:set("dialogue_revision", context:get("dialogue_revision") + 1)
 end
@@ -146,6 +149,17 @@ function M.choose(command)
     local context, target = contexts.active(owner)
     local payload = command.payload
     if not context or target:get("id") ~= payload.target or context:get("dialogue_revision") ~= payload.revision then
+        return
+    end
+    if payload.choice == "trade" and context:get("dialogue_page") == "menu"
+        and string.lower(target:get("vendor")) == "akara"
+        and string.lower(target:get("npc")) == "akara" then
+        local offers = require("d2legacy.items.vendor_offers")
+        if not offers.supported(owner) then return end
+        offers.ensure(owner)
+        context:set("dialogue_page", "trade")
+        context:set("dialogue_line", "")
+        context:set("dialogue_revision", context:get("dialogue_revision") + 1)
         return
     end
     local page, line = dialogue.select(target:get("npc"), context:get("dialogue_page"), payload.choice)

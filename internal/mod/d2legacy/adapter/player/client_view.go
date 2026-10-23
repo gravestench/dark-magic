@@ -6,7 +6,7 @@ import (
 	"strings"
 )
 
-const ClientViewVersion uint32 = 14
+const ClientViewVersion uint32 = 15
 
 const (
 	MaxHUDLearnedSkills  = 256
@@ -232,7 +232,8 @@ func validatePrivateView(private PrivateView) error {
 			!bounded(item.InventoryDC6, maxViewTokenBytes) || !bounded(item.WorldDC6, maxViewTokenBytes) ||
 			!bounded(item.Composite, maxViewTokenBytes) || !bounded(item.WeaponClass, maxWorldKindBytes) ||
 			item.Width < 0 || item.Width > maxItemDimension ||
-			item.Height < 0 || item.Height > maxItemDimension || item.BaseCost < 0 {
+			item.Height < 0 || item.Height > maxItemDimension || item.BaseCost < 0 ||
+			!bounded(item.Vendor, maxWorldKindBytes) || item.BuyPrice < 0 {
 			return ErrClientView
 		}
 
