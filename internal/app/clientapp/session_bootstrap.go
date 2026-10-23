@@ -16,6 +16,7 @@ import (
 func (app *application) sessionInitialData() map[string]any {
 	return map[string]any{
 		"engine.game_data_generation_id": app.gameDataGenerationID(),
+		"d2legacy.entry_world_checksum":  app.entryWorldChecksum,
 		"d2legacy.game_rules": map[string]any{
 			"target":          "lod-1.14d",
 			"expansion":       true,
@@ -69,10 +70,11 @@ func (app *application) interactionBootstrapData() map[string]any {
 // bootstrap helpers, avoiding a second generation or divergent spawn calculation.
 func (app *application) preparedEntryWorld() *entryworld.Prepared {
 	return &entryworld.Prepared{
-		Worlds: app.gameWorlds,
-		Zones:  app.gameWorldZones,
-		Spawns: app.gameWorldSpawns,
-		Seams:  app.transitionSeams,
+		Worlds:   app.gameWorlds,
+		Zones:    app.gameWorldZones,
+		Spawns:   app.gameWorldSpawns,
+		Seams:    app.transitionSeams,
+		Topology: app.entryWorldTopology,
 	}
 }
 

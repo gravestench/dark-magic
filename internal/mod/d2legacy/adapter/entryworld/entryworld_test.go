@@ -142,7 +142,10 @@ func TestInitialDataUsesSharedInteractionAndTransitionContracts(t *testing.T) {
 		Second: gametransition.SeamEndpoint{LevelID: 2, X: 6, Y: 7, Width: 40, Height: 50},
 	}
 	seam.TriggerRadius = 2
-	prepared := &Prepared{Worlds: map[int]*gameworld.Map{}, Difficulty: 2, Seams: []gametransition.Seam{seam}}
+	prepared := &Prepared{
+		Worlds: map[int]*gameworld.Map{}, Difficulty: 2, Seams: []gametransition.Seam{seam},
+		TopologyChecksum: "saved-entry-world",
+	}
 	initial := prepared.InitialData("realm-authority", false)
 
 	interactions := initial["d2legacy.interactions"].(map[string]any)
@@ -163,6 +166,9 @@ func TestInitialDataUsesSharedInteractionAndTransitionContracts(t *testing.T) {
 	rules := initial["d2legacy.game_rules"].(map[string]any)
 	if rules["difficulty"] != 2 {
 		t.Fatalf("game rules = %#v", rules)
+	}
+	if got := initial["d2legacy.entry_world_checksum"]; got != prepared.TopologyChecksum {
+		t.Fatalf("entry world checksum = %v, want %q", got, prepared.TopologyChecksum)
 	}
 }
 

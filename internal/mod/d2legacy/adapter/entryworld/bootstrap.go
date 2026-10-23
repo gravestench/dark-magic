@@ -14,6 +14,7 @@ import (
 // transitions from this Prepared value keeps initial Lua state aligned with the maps admitted by the authority.
 func (world *Prepared) InitialData(owner string, developmentItems bool) map[string]any {
 	return map[string]any{
+		"d2legacy.entry_world_checksum": world.TopologyChecksum,
 		"d2legacy.game_rules": map[string]any{
 			"target":          "lod-1.14d",
 			"expansion":       true,

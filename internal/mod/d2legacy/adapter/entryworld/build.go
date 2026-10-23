@@ -71,6 +71,10 @@ func prepareTopology(
 	resolver gameworld.ObjectResolver,
 	generated d2mapgen.EntryWorld,
 ) (*Prepared, error) {
+	checksum, err := generated.Checksum()
+	if err != nil {
+		return nil, fmt.Errorf("d2legacy entry world: checksum topology: %w", err)
+	}
 	worlds := make(map[int]*gameworld.Map, len(generated.Zones))
 	for level := 1; level <= len(generated.Zones); level++ {
 		zone := generated.Zones[level]
@@ -104,7 +108,7 @@ func prepareTopology(
 	}
 	return &Prepared{
 		Worlds: worlds, Zones: generated.Zones, Spawns: spawns,
-		Seams: seams, Topology: generated,
+		Seams: seams, Topology: generated, TopologyChecksum: checksum,
 		Difficulty: int(generated.Zones[1].Request().Difficulty),
 	}, nil
 }

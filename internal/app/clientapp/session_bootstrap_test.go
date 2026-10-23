@@ -47,3 +47,11 @@ func TestSessionInitialDataPublishesGeneratedSpawnGeometry(t *testing.T) {
 		t.Fatalf("spawn geometry = %#v, want %#v", got, want)
 	}
 }
+
+// Topology identity must enter the same initial-data digest used by offline authority and connected peers.
+func TestSessionInitialDataIncludesEntryWorldChecksum(t *testing.T) {
+	app := &application{entryWorldChecksum: "three-zone-topology"}
+	if got := app.sessionInitialData()["d2legacy.entry_world_checksum"]; got != "three-zone-topology" {
+		t.Fatalf("entry-world checksum = %v", got)
+	}
+}

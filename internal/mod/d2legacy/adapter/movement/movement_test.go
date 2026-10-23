@@ -128,6 +128,31 @@ func (fixture movementFixture) addPosition(x, y float64) {
 	}
 }
 
+// addLocation lets movement command tests verify the world observed by the presentation source.
+func (fixture movementFixture) addLocation(level int64) {
+	fixture.t.Helper()
+	locations, err := akara.RegisterSchema(fixture.engine.World(), akara.Schema{
+		Name:   "d2legacy.world.location",
+		Fields: []akara.Field{{Name: "level_id", Kind: akara.FieldInt64}},
+	})
+	if err != nil {
+		fixture.t.Fatal(err)
+	}
+	if _, err := locations.Set(fixture.entity, map[string]any{"level_id": level}); err != nil {
+		fixture.t.Fatal(err)
+	}
+}
+
+// TestMovementSourceStampsObservedLevel keeps delayed connected samples tied to the world where they originated.
+func TestMovementSourceStampsObservedLevel(t *testing.T) {
+	fixture := newMovementFixture(t)
+	fixture.addLocation(2)
+	source := fixture.source(nil)
+	if payload := commandPayload(t, source, 1); payload.SourceLevel != 2 {
+		t.Fatalf("movement source level = %d, want 2", payload.SourceLevel)
+	}
+}
+
 // source constructs the production command source with the fixture's stable player and focus identifiers.
 func (fixture movementFixture) source(controller *MovementController) *MovementSource {
 	fixture.t.Helper()

@@ -21,6 +21,7 @@ import (
 	"github.com/gravestench/dark-magic/internal/inputstate"
 	loadcore "github.com/gravestench/dark-magic/internal/loading"
 	"github.com/gravestench/dark-magic/internal/localization"
+	d2mapgen "github.com/gravestench/dark-magic/internal/mod/d2legacy/adapter/mapgen"
 	d2movement "github.com/gravestench/dark-magic/internal/mod/d2legacy/adapter/movement"
 	d2save "github.com/gravestench/dark-magic/internal/mod/d2legacy/adapter/save"
 	gametransition "github.com/gravestench/dark-magic/internal/mod/d2legacy/adapter/transition"
@@ -144,6 +145,10 @@ type application struct {
 	movementCatalog      d2movement.Catalog
 	transitionSeam       gametransition.Seam
 	transitionSeams      []gametransition.Seam
+	entryWorldTopology   d2mapgen.EntryWorld
+	entryWorldChecksum   string
+	entryWorldSnapshot   []byte
+	pendingEntryRecovery *entryWorldRecovery
 	commandIntents       *gamesession.IntentController
 	commandIntentSource  *gamesession.IntentSource
 	commandSource        func(uint64) []simulation.Command
