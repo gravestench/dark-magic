@@ -140,8 +140,9 @@ draws nothing and shares the same mutable record across calls and with its calle
 guards own eligibility of absent other/record inputs. New head entries do not restart the walk.
 
 **IEP-R08 Generic callback inputs** [verified in 1.13c code (static)]. The generic callbacks
-specified here read the current owner stat at the entry's stat identity using RLI-R02a/RLI-R02b.
-Their failed guards return zero without direct draw or effect. IEP-R14 through IEP-R18 define
+in IEP-R14 through IEP-R17 read the current owner stat at the entry's stat identity
+using RLI-R02a/RLI-R02b; IEP-R18 does not reread the proc stat. Their failed guards
+return zero without direct draw or effect. IEP-R14 through IEP-R18 define
 the exact guards; unread callbacks receive no inferred guard/draw contract.
 Effective maximum mana selects stat 9 and maximum life selects stat 7 from the owner's
 existing stat collection through RLI-R02a/RLI-R02b. An absent owner/list or a definition count
@@ -471,8 +472,8 @@ Fixture callbacks log all seven inputs and return the stated result.
   - Trace: build, mitigation, apply pair, death pair, completion pair.
   - Outputs: `(event,owner,other)` log `(3,D,A),(11,D,A),(5,A,D),(1,D,A),(10,D,A),(9,A,D),(7,A,D),(3,D,A)`; no 4/8; completion uses copied record, earlier stages shared record.
   - (a) Inputs: supplied apply only, suppression set, death reported. Outputs: no apply item/kill dispatches.
-  - (b) Inputs: reached missile contact by missile M on D, then mitigation and nonlethal missile apply from A to D; both suppression conditions clear. Outputs: `(0,D,M),(11,D,A),(6,A,D),(2,D,A)`; contact has absent record, later calls share the damage record; no death pair.
-  - (c) Inputs: supplied nonlethal missile apply only, item-event suppression clear but missile-attacker-event suppression set. Outputs: exactly `(2,D,A)` with the supplied record; no event 6.
+  - (b) Inputs: reached missile contact by missile M on D, then mitigation and nonlethal missile apply from A to D. The apply gates pass with scale request true, hit result set, result event-suppression bit 32 clear, record flags 32 set and flags 128 clear. Outputs: `(0,D,M),(11,D,A),(6,A,D),(2,D,A)`; contact has absent record, later calls share the damage record; no death pair.
+  - (c) Inputs: supplied nonlethal missile apply only. The apply gates pass with scale request true, hit result set, result event-suppression bit 32 clear, record flags 32 and 128 set; flag 128 suppresses the missile-attacker event. Outputs: exactly `(2,D,A)` with the supplied record; no event 6.
   - (d) Inputs: reached regeneration death for D with killer A. Outputs: `(10,D,A),(9,A,D)`, both with absent record.
   - (e) Inputs: reached regeneration death for D with absent killer. Outputs: exactly `(10,D,absent)` with absent record.
   - (f) Inputs: reached monster M transition to mode 12 dead. Outputs: exactly `(13,M,absent)` with absent record, after the mode transition.
@@ -544,15 +545,17 @@ IEP-Q05 level roots, IEP-Q08 data bindings, IEP-Q09/IEP-Q10 resource/overlay int
 relied-on reaction/state effects. IEP-Q11 limits runtime-confirmation claims only. Outside
 effect families are not prerequisites to reproducing the supplied-callback dispatcher.
 
-**Depends on:** NRF-R01/NRF-R02 seed/draw; NRF-R05 percentage arithmetic; NRF-R08a resource Owners of the cited HIT, GDA, RLI ids: [combat-hit-roll](combat-hit-roll.md) (HIT); [core-game-data-table-records](core-game-data-table-records.md) (GDA); [core-record-layouts-and-ids](core-record-layouts-and-ids.md) (RLI).
+**Depends on:** NRF-R01/NRF-R02 seed/draw; NRF-R05 percentage arithmetic; NRF-R08a resource
 units; RLI-R03 state routing; RLI-R02a/RLI-R02b existing stat reads; GDA-R12 definition fields
-and GDF-R03 state names. [Damage pipeline](combat-damage-pipeline-order.md),
+and GDF-R03 state names. Owners of the cited HIT, GDA and RLI ids:
+[combat-hit-roll](combat-hit-roll.md) (HIT);
+[core-game-data-table-records](core-game-data-table-records.md) (GDA);
+[core-record-layouts-and-ids](core-record-layouts-and-ids.md) (RLI). [Damage pipeline](combat-damage-pipeline-order.md),
 DPO-R08c/DPO-R09/DPO-R13 through DPO-R19/DPO-R23/DPO-R29, owns stages, damage writes and
 downstream draw order. [Mitigation](combat-damage-mitigation.md) owns retaliation reduction
 and resistance. [Open Wounds](combat-open-wounds.md), OWD-R10, owns regeneration-death context.
 Replacing-write effects retain RLI-Q03; update bookkeeping retains RLI-Q02.
-[Shield block and avoidance](combat-shield-block-and-avoidance.md), HIT-R02g, supplies the
-demon predicate for selector 18.
+[Hit roll](combat-hit-roll.md), HIT-R02g, supplies the demon predicate for selector 18.
 [Leech and drain](combat-leech-and-drain.md), LSE-R13, owns the overlay
 operation; its stored effects retain IEP-Q09 and its count identity LSE-Q03.
 
