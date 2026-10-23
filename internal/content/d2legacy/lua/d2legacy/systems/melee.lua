@@ -130,6 +130,7 @@ function M.register()
             "d2legacy.world.collider",
             "d2legacy.combat.melee_profile",
             "d2legacy.monster.stats",
+            "d2legacy.monster.boss",
             "d2legacy.player.vitals",
             "d2legacy.player.identity",
             "d2legacy.owned_unit",
@@ -177,6 +178,19 @@ function M.register()
                         local attacker_level, attack_rating = combat_values(attacker, entities)
                         local defender_level, _, defense = combat_values(target, entities)
                         attack_rating = hand_attack_rating(profile, attack_rating, request:get("hand"))
+                        local player_attacker = ecs.get(attacker, "d2legacy.player.identity") ~= nil
+                        local ignore_target_ac = player_attacker
+                                and stat_sources.resolve(entities, attacker, "item_ignoretargetac", 0)
+                            or 0
+                        local owned = ecs.get(target, "d2legacy.owned_unit")
+                        defense = policy.effective_defense(
+                            defense,
+                            ignore_target_ac,
+                            player_attacker,
+                            ecs.get(target, "d2legacy.monster.stats") ~= nil,
+                            ecs.get(target, "d2legacy.monster.boss") ~= nil,
+                            owned and owned:get("active") and owned:get("category") == "hireable"
+                        )
                         base.attack_rating = attack_rating
                         base.defense = defense
                         base.hit_chance = policy.hit_chance(attacker_level, defender_level, attack_rating, defense)

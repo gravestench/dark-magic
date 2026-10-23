@@ -242,6 +242,49 @@ local function ignore_target_defense_stat()
     )
 end
 
+local function spawn_melee_target()
+    require("engine.ecs/v1").create({
+        ["d2legacy.monster.stats"] = {
+            level = 1,
+            health = 100000,
+            max_health = 100000,
+            defense = 500,
+            attack_rating = 0,
+            physical_min = 0,
+            physical_max = 0,
+            experience = 0,
+        },
+        ["d2legacy.world.position"] = { x = 12, y = 12 },
+        ["d2legacy.world.location"] = { act = 1, level_id = 1 },
+        ["d2legacy.world.collider"] = { radius = 1 },
+        ["d2legacy.world.selectable"] = {
+            id = "monster:modifier-target",
+            kind = "hostile",
+            label = "Target",
+            owner = "",
+            radius = 1,
+            priority = 1,
+        },
+    })
+end
+
+local function request_melee(tick)
+    local ecs = require("engine.ecs/v1")
+    ecs.set(test.only_entity_with("d2legacy.player.identity"), "d2legacy.combat.basic_attack_request", {
+        target_id = "monster:modifier-target",
+        request_tick = tick,
+        hand = "rarm",
+    })
+end
+
+local function expect_latest_melee_defense(count, defense)
+    local ecs = require("engine.ecs/v1")
+    local events = test.entities_with("d2legacy.combat.melee_event")
+    test.expect(#events):equals(count)
+    local result = ecs.get(events[#events], "d2legacy.combat.attack_result")
+    test.expect(result:get("defense")):equals(defense)
+end
+
 -- Assert that a source is present with an exact value,
 -- or assert that it has been removed when expected is nil.
 local function expect_source(sources, source_id, expected)
@@ -349,6 +392,66 @@ return test.suite({
         ["d2legacy.items"] = initial_items(),
     },
     cases = {
+        test.case("melee_uses_current_ignore_target_defense_after_weapon_changes", {
+            test.submit_system({
+                tick = 1,
+                sequence = 1,
+                kind = "system.player.enter",
+                payload = fixtures.player_entry(),
+            }),
+            test.step(1),
+            test.submit(move_item(2, 1, "weapon", { container = "held" })),
+            test.step(1),
+            test.submit(move_item(3, 2, "weapon", { container = "equipment", slot = "rarm", weapon_set = 0 })),
+            test.step(2),
+            test.run(function()
+                spawn_melee_target()
+                request_melee(5)
+            end),
+            test.step(1),
+            test.run(function()
+                expect_latest_melee_defense(1, 0)
+            end),
+            test.submit({
+                tick = 6,
+                sequence = 3,
+                player = "alice",
+                kind = "item.weapon_set",
+                payload = { set = 1 },
+            }),
+            test.step(2),
+            test.run(function()
+                request_melee(8)
+            end),
+            test.step(1),
+            test.run(function()
+                expect_latest_melee_defense(2, 500)
+            end),
+            test.submit({
+                tick = 9,
+                sequence = 4,
+                player = "alice",
+                kind = "item.weapon_set",
+                payload = { set = 0 },
+            }),
+            test.step(2),
+            test.run(function()
+                request_melee(11)
+            end),
+            test.step(1),
+            test.run(function()
+                expect_latest_melee_defense(3, 0)
+            end),
+            test.submit(move_item(12, 5, "weapon", { container = "inventory", x = 2, y = 0 })),
+            test.step(2),
+            test.run(function()
+                request_melee(14)
+            end),
+            test.step(1),
+            test.run(function()
+                expect_latest_melee_defense(4, 500)
+            end),
+        }),
         test.case("ignore_target_defense_modifier_follows_active_equipment", {
             test.submit_system({
                 tick = 1,
