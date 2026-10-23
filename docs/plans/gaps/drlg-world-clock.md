@@ -31,3 +31,7 @@ Restructure (2026-10-15): the dated table was divided by subject when the combin
 | G5 | 3.1/3.4 eclipse flag setter | `eclipse` flag read by clock | Nothing in the repo ever sets it true | Start sets rate index 1 (rate 4), cycle 0, ticks 0, period 3, flag 1 | verified |
 | G6 | 3.4 start effect | Dark Magic eclipse should set rate to 4 and reset cycle/ticks, not just flip the flag | Flipping flag only (if it were set) | Start jumps to fixed state | verified |
 | G9 | Consumers 3.10 | `systems/maximum_stamina.lua` (time-based maximum stamina); `components/shared.lua` | Stamina reads the clock | Other consumers not found in the bounded original-code search | gated |
+
+## Publication review - 2026-10-23
+
+Fresh blind and evidence reviews approved the separated 1.13c supplied-input world-clock contract after correcting WCK-V14's source-103 presentation snapshots to 16 ticks. No evidence gap above was closed. Presentation, client cadence and eligibility, integrated message delivery, runtime observations and 1.14d parity remain unverified.

@@ -555,3 +555,9 @@ On 2026-10-15 a fresh full reader recomputed every case on the revision with the
 
 Four reader runs were made within this task (FULL9-FULL12, all full). Every run returned MISMATCH 0. FULL12's edits added vector cases and assertions and clarified TSW-R02b and TSW-R04c. Under the "When to stop" rule a further fresh run (FULL13) is required, and the task cap prevents it here. One FULL12 GAP is still open: the unspecified return values of the join, animation, event and direct-retry stages. Review completion is not claimed.
 
+
+## Publication review - 2026-10-23
+
+A fresh independent blind reader checked the separated WCK-R01–R09 contract and every WCK-V01–V16 family within the stated 1.13c static, supplied-input boundary. It identified one WCK-V14 wording mismatch: source 103 maps to act argument 3, and the normal core advance from the supplied default Act I clock is 1+15=16 ticks at both presentation requests. WCK-V14 now states 16 consistently with its output array and source-103/108 exception. The reader rechecked the corrected vector and reported MISMATCH 0, GUESS 0, GAP 0 and DISCRIM 0 on the applicable contract. This fresh review supersedes the historical FULL12 incomplete-review status without rewriting its dated record.
+
+An independent evidence review checked the identified original artifacts, dated source limits and local links. WCK-Q01–WCK-Q05, WCK-O01 and their gap records remain open. Neither the corrected supplied-input arithmetic nor document review establishes rendering, client cadence, runtime delivery or 1.14d parity. No new source artifact, game capture, gameplay test or implementation comparison was added.

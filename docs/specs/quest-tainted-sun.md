@@ -157,7 +157,7 @@ Supplied operation effects, including actual drops, iteration results and amulet
 | fatal assertion path for invalid sender recipients or a missing game quest structure | TSW-R01g, TSW-R02b, TSW-R02c, TSW-R04a |
 | quest-seed writes, schedule parameter, gold-pile count | TSW-R01g, TSW-R02b, TSW-R02c, TSW-R07b |
 
-The quest stages make no environment save write; wider persistence remains gated (TSW-R06). Message payloads belong to the rules; this table names effects only.
+The quest stages make no environment save write; wider persistence remains gated (TSW-R06). No return value is specified for join selection, the animation and event slices, or direct retry; their callers and any use of those results remain TSW-Q06. Message payloads belong to the rules; this table names effects only.
 
 ## 6. Branches and edge cases
 
