@@ -275,6 +275,24 @@ func TestMovementSourceKeepsAcceptedRouteWhenReplacementIsBlocked(t *testing.T) 
 	if retained == nil || retained.X != 20 || retained.Y != 11 {
 		t.Fatalf("controller retained target = %#v, want original target", retained)
 	}
+	controller.ClearMoveTarget()
+	if stopped := commandPayload(t, source, 3); stopped.Target != nil || source.path != nil {
+		t.Fatalf("superseded route resumed: payload=%#v path=%v", stopped, source.path)
+	}
+	if err := controller.SetMoveTarget(20, 11); err != nil {
+		t.Fatal(err)
+	}
+	if next := commandPayload(t, source, 4); next.Target == nil {
+		t.Fatalf("new ground route did not start: %#v", next)
+	}
+	fixture.publishInput("game_world", false, map[string]inputstate.ActionState{"right": {Down: true}})
+	if keyboard := commandPayload(t, source, 5); keyboard.Target != nil || keyboard.X != 1 || controller.HasMoveTarget() {
+		t.Fatalf("keyboard movement did not replace the ground route: %#v", keyboard)
+	}
+	fixture.publishInput("game_world", false, nil)
+	if idle := commandPayload(t, source, 6); idle.Target != nil || idle.X != 0 {
+		t.Fatalf("released keyboard input resumed the ground route: %#v", idle)
+	}
 }
 
 // TestMovementSourceDoesNotReplanHeldPointerInsideCollisionCell protects camera-follow pointer stability.

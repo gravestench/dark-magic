@@ -47,7 +47,12 @@ func TestD2LegacyBuildsSkillCommandsThroughGenericIntentMailbox(t *testing.T) {
 	}
 
 	commands := source.Commands(9)
-	if len(commands) != 2 || commands[0].Kind != "player.assign_skills" || commands[1].Kind != "player.use_skill" {
+	if len(commands) != 5 || commands[0].Kind != "player.assign_skills" {
 		t.Fatalf("d2legacy skill requests = %#v", commands)
+	}
+	for _, command := range commands[1:] {
+		if command.Kind != "player.use_skill" {
+			t.Fatalf("d2legacy skill request = %#v", command)
+		}
 	}
 }

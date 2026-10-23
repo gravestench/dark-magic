@@ -82,7 +82,7 @@ func TestVersionedCapabilityConformance(t *testing.T) {
 		"engine.settings/v1":       {"get", "save", "set", "status"},
 		"engine.video/v1":          {"available", "play"},
 		"engine.locale/v1":         {"text"},
-		"engine.player/v1":         {"request_move", "request_running"},
+		"engine.player/v1":         {"cancel_move", "request_move", "request_running"},
 		"engine.command_intent/v1": {"submit"},
 		"engine.simulation/v1": {
 			"move_hero",
