@@ -16,7 +16,7 @@ The current `internal/content/d2legacy/lua/d2legacy/systems/stamina.lua` invokes
 2. Move the authoritative formula into Lua and retain a Go prediction mirror. This would duplicate the rule and create a new drift risk without a shared parity contract. It also changes ownership beyond the arithmetic bug.
 3. Move all stamina and prediction policy into a shared Lua runtime. This best satisfies the general policy ownership rule but requires a larger client prediction integration and performance review, beyond issue #598.
 
-`docs/ARCHITECTURE.md` and `docs/GAMEPLAY_OWNERSHIP.md` assign Diablo formulas to Lua and Go adapters to thin translation. The current movement implementation is a transitional tension with that rule, while `docs/research/MOVEMENT_COLLISION_AND_PATHFINDING.md` explicitly documents the shared pure stamina rule. This design keeps the existing seam for one scoped parity fix and leaves an ownership migration to the broader movement work in #346. It adds no new Go policy surface.
+`docs/ARCHITECTURE.md` and `docs/GAMEPLAY_OWNERSHIP.md` assign Diablo formulas to Lua and Go adapters to thin translation. The current movement implementation is a transitional tension with that rule, while `docs/research/MOVEMENT_COLLISION_AND_PATHFINDING.md` explicitly documents the shared pure stamina rule. This design keeps the existing seam for one scoped parity fix. Any ownership migration needs a separately scoped follow-up; #346 tracks broader movement and stamina parity but does not currently require that migration. This fix adds no new Go policy surface.
 
 ## Arithmetic
 
@@ -34,7 +34,7 @@ For the supplied valid inputs, compute in this order:
 - Direct shared-rule tests use `CurrentRaw=MaximumRaw=23552`, running/moving outside town: SDR-V07(c) `RunDrain=20`, speed 0, `p=107374183` yields drain 40, `CurrentRaw=23512`, `ForceWalk=false`; SDR-V10(d) synthetic speed `1000000000`, `p=0` wraps the weight product negative and floors to drain 1, `CurrentRaw=23551`, `ForceWalk=false`.
 - Regression direct vectors: `p=33` yields 23525, `p=-33` yields 23499, speed 10 yields 23472, speed -9 yields 23512, `p=100` and `RunDrain=0` each yield 23551. These check truncation, torso multiplier, and one-unit floor.
 - An authoritative Lua player-entry/tick test admits a passive source `item_staminadrainpct=107374183`, then resets `stamina_raw` to 2560 after the entry tick and advances one running movement tick outside town. It observes the resolved percentage and `stamina_raw=2520`; the current rule produces 2559.
-- A connected prediction HUD with the same current/maximum, `RunDrain=20`, percentage, running velocity, and outside-town level advances one tick and observes `staminaRaw=2520` through the existing prediction path.
+- A connected prediction HUD with `CurrentRaw=2560`, `MaximumRaw>=2560`, `RunDrain=20`, `p=107374183`, running velocity, and outside-town level advances one tick and observes `staminaRaw=2520` through the existing prediction path.
 - Existing movement, stamina, prediction, architecture, and formatting checks pass. The PR reports exact commands on its submitted commit and whether local real-asset and race suites ran.
 
 ## Risks and limits
