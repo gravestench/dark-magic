@@ -686,6 +686,7 @@ function M.register(definitions)
             "d2legacy.monster.appearance",
             "d2legacy.monster.ai",
             "d2legacy.monster.granted_skill",
+            "d2legacy.combat.defense",
             "d2legacy.combat.melee_profile",
             "d2legacy.combat.knockback_target",
             "d2legacy.owned_unit",
