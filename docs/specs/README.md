@@ -122,7 +122,7 @@ reviews new boundaries before drafting. Original 1.13c evidence does not settle 
 | #401 | Focus Fire Golem death/replacement explosion separately from the broad summon-family candidate | Both triggers, target selection, radius, damage and ordering |
 | #377 | Running stamina drain does not establish spending Vitality or rescaling current stamina | Attribute-spend handler and ordered current/maximum stamina writes |
 | #376 | Path collision candidates need route-versus-step category coverage | Player, hireling, summon, townsfolk and corpse conditions at both consumers |
-| #374 | Party XP has an existing spec; kill/owned-unit/quest credit and gold require their own boundary assessment | Each consumer's eligibility/distance rules; do not infer universal sharing from XP alone |
+| #374 | Party XP and gold pickup have separate specs; kill/owned-unit/quest credit and broader loot ownership still need their own boundary assessment | Each consumer's eligibility/distance rules; do not infer universal sharing from XP or gold pickup alone |
 | #466 | Inventory monster skill bindings, then review the existing nine proposed behavior families | Include shared player skills used by monsters, AI selection/handoff, server/client handlers, missiles/summons and difficulty |
 | #467 | Playback, positional sound, ambience and music selection/transition candidates | D2Client selection roots, D2Sound execution, effective table bindings and exact transition/loop/fade behavior |
 | #468 | Light-map/radius, ambient lighting, palette/fade candidates and the existing world-clock consumer | Original rendering consumers and how world/quest state reaches them |
