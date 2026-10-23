@@ -89,7 +89,7 @@ These are the original investigation records and dates, preserved without renewi
 ### Original function references
 
 
-The table identifies original module-relative functions, resolved import ordinals, supported rules and the scope of each dated reading. Reconstruction-assisted readings mean the reconstructed instructions were checked against the original machine code; no private source distribution is required.
+The table identifies original module-relative functions, resolved import ordinals, supported rules and the scope of each dated reading. Its historical R32a/R32b labels were later consolidated into current DPO-R32; the labels here preserve the 2026-10-13 reading record. Reconstruction-assisted readings mean the reconstructed instructions were checked against the original machine code; no private source distribution is required.
 
 | Artifact | Function RVA | Export ordinal | Analyst description | Rules | Method / boundary |
 |---|---|---|---|---|---|
@@ -259,7 +259,7 @@ Migration self-review keeps every original rule/vector id and all original vecto
 
 ### Final self-review checks (2026-10-14)
 
-The current contract has 29 executable vectors. DPO-V01..V28 retain their original numeric traces/expected values with semantic fixture roles. DPO-V29 adds a draw-free queued-miss case with exact reaction/event/removal log; this gives the verified reaction-placement rule a direct executable assertion beyond V20's build trace. The final reader must recompute this new case as well as the retained cases.
+At this review stage, the contract had 29 executable vectors. DPO-V01..V28 retain their original numeric traces/expected values with semantic fixture roles. DPO-V29 adds a draw-free queued-miss case with exact reaction/event/removal log; this gives the verified reaction-placement rule a direct executable assertion beyond V20's build trace. The final reader must recompute this new case as well as the retained cases.
 
 Baseline `check_spec.py combat-damage-pipeline-order`:367 errors, 51 warnings. After semantic cleanup:0 local errors and 0 warnings; two stale sibling references to the removed resolved-question entry remained for shared reconciliation. No executable implementation tests or gameplay observations ran. Original-image instruction checks are source verification, not gameplay confirmation. The current contract still requires a fresh full blind-implementer pass before review completion.
 
@@ -841,3 +841,26 @@ Source checks made while triaging (original D2Game 1.13c disassembly, read-only,
 Remaining to finish the blind-implementer pass: apply the open proposed outcomes above (behavioral ones verified against the original instructions first), then a fresh full reader run, repeating until MISMATCH 0 and every GUESS, GAP and DISCRIM is resolved or gated. Review completion is not claimed.
 
 `check_spec.py combat-damage-pipeline-order`: 0 errors, 0 warnings. No gameplay observation ran.
+
+### Fresh full blind-implementer pass and publication review (2026-10-23, issue #483)
+
+The open proposals in pass 12 above were applied to the supplied-input contract. Inputs now
+identify post-shift physical endpoints and the gated producer, class and apply-gate conditions,
+resource-write call logs, and the defender's state tests. New discriminating cases cover the
+player-only Run pre-set, type-specific dead modes, negative mana remainder and poison override,
+large-value ratio arithmetic, ratio-zero normalization outside the physical stage, hireling
+monster doubling, durability qualification/threshold/order, event-11 record mutation,
+nonzero event-6 callback return, and the no-crit and regular-monster/hireling outputs. The
+historical pass-12 table remains above as a dated record of findings, not current open work.
+
+An independent read-only blind implementer recomputed DPO-V01 through DPO-V31 from the
+revised rules and their named dependency contracts. Final counts within each vector's
+supplied-input/stage boundary: MISMATCH 0, GUESS 0, GAP 0, DISCRIM 0. The reviewer checked
+seed steps, `mulDiv` branch order, wrapping and ratio normalization, weighted durability
+selection, conversion, dispatch and durability order, and total/prediction arithmetic. A
+second independent review checked the static 1.13c evidence labels and found no new
+promotion of asm-only or unresolved claims; a publication audit checked links, IDs,
+manifest references and index ownership. These reviews establish a complete applicable
+reader pass for the stated partial contract. They do not close the listed DPO-Q
+behavior/integration/observation entries, prove their producer paths, or provide a
+matching gameplay observation. No 1.14d parity is asserted.
