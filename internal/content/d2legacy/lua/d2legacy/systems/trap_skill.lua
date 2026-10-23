@@ -682,6 +682,7 @@ function M.register(definitions)
             "engine.world.velocity_mover",
             "d2legacy.monster.identity",
             "d2legacy.monster.stats",
+            "d2legacy.monster.type_flags",
             "d2legacy.monster.appearance",
             "d2legacy.monster.ai",
             "d2legacy.monster.granted_skill",

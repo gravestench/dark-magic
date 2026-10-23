@@ -187,6 +187,7 @@ function M.register(definitions)
             "d2legacy.skill.summon_event",
             "d2legacy.monster.identity",
             "d2legacy.monster.stats",
+            "d2legacy.monster.type_flags",
             "d2legacy.combat.melee_profile",
             "d2legacy.combat.knockback_target",
             "d2legacy.monster.appearance",
