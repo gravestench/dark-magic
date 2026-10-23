@@ -111,6 +111,23 @@ local function hand_attack_rating(profile, total, hand)
     return total
 end
 
+local function player_attack_rating(attacker, target, entities)
+    local stats = assert(ecs.get(attacker, "d2legacy.player.combat_stats"))
+    local base = stat_sources.resolve(entities, attacker, "attack_rating", stats:get("base_attack_rating"))
+    local flags = ecs.get(target, "d2legacy.monster.type_flags")
+    local adjusted = policy.target_type_attack_rating(
+        base,
+        stat_sources.resolve(entities, attacker, "item_demon_tohit", 0),
+        stat_sources.resolve(entities, attacker, "item_undead_tohit", 0),
+        true,
+        ecs.get(target, "d2legacy.monster.stats") ~= nil,
+        flags and flags:get("demon") or false,
+        flags and flags:get("low_undead") or false,
+        flags and flags:get("high_undead") or false
+    )
+    return stat_sources.resolve(entities, attacker, "item_tohit_percent", adjusted)
+end
+
 function M.register()
     ecs.system({
         id = "d2legacy.combat.basic_melee",
@@ -130,6 +147,7 @@ function M.register()
             "d2legacy.world.collider",
             "d2legacy.combat.melee_profile",
             "d2legacy.monster.stats",
+            "d2legacy.monster.type_flags",
             "d2legacy.monster.boss",
             "d2legacy.player.vitals",
             "d2legacy.player.identity",
@@ -177,8 +195,11 @@ function M.register()
                     if target then
                         local attacker_level, attack_rating = combat_values(attacker, entities)
                         local defender_level, _, defense = combat_values(target, entities)
-                        attack_rating = hand_attack_rating(profile, attack_rating, request:get("hand"))
                         local player_attacker = ecs.get(attacker, "d2legacy.player.identity") ~= nil
+                        if player_attacker then
+                            attack_rating = player_attack_rating(attacker, target, entities)
+                        end
+                        attack_rating = hand_attack_rating(profile, attack_rating, request:get("hand"))
                         local ignore_target_ac = player_attacker
                                 and stat_sources.resolve(entities, attacker, "item_ignoretargetac", 0)
                             or 0
