@@ -245,3 +245,9 @@ Also: the Depends-on line now links RLI, GDA and MIR ids to their owning specs a
 - HARDEST (V07c wrap, V05 tracking guard, V08 traversal): no change, because each is already stated and has a discriminating vector (FULL3 triage).
 
 Final applicable run: MISMATCH 0, with no unresolved GUESS, GAP or DISCRIM. Lint: 0 errors, 0 warnings.
+
+### Focused publication review of the current contract, 2026-10-23
+
+A fresh blind implementer read the current SDR contract and its cited dependency specs without this companion or historical review results. The reader independently recomputed SDR-V01–SDR-V12's numeric outputs, conditional duration and local draw/order claims and found no arithmetic, RNG or ordering contradiction. In particular, V07(c)'s `107374183*40` retains low32 value 24; at supplied 25 fps and no other writer, 23552 raw stamina with drain 40 reaches 32 after 588 invocations and depletes on 589. It identified a fixture ambiguity in V05(b)/(c) and missing discrimination for R06's wrapped weight product. The writer clarified those two supplied getter results as overrides and added synthetic V10(d). A separate blind delta review recomputed V10(d)'s multiplier 100000001, wrapped signed product -294967256 and post-floor drain 1, then approved the fixture wording and rule attribution without a blocker.
+
+An independent publication reviewer checked the three-file handoff, all cited dependency IDs, provenance labels and Q01–Q07 boundaries, and approved the qualified static/supplied-input publication. That review found 25 relative links resolving at the time of review; committed-byte checks are reported in the PR. The earlier 2026-10-15 full/delta passes remain dated evidence, not a claim of new source reading. No new original-game observation, binary reading, actual storage/cadence integration, gameplay implementation or 1.14d equivalence was established. Draft status remains appropriate.
