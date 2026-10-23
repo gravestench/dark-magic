@@ -552,3 +552,9 @@ On 2026-10-15 a fresh full reader recomputed every case on the revision with the
 
 Four reader runs were made within this task (FULL9-FULL12, all full). Every run returned MISMATCH 0. FULL12's edits added vector cases and assertions and clarified TSW-R02b and TSW-R04c. Under the "When to stop" rule a further fresh run (FULL13) is required, and the task cap prevents it here. One FULL12 GAP is still open: the unspecified return values of the join, animation, event and direct-retry stages. Review completion is not claimed.
 
+
+## Publication review - 2026-10-23
+
+A fresh independent blind reader checked the separated TSW-R01–R07 contract and every TSW-V01–V10 family and subcase, including the ordered quest/altar/message requests, join and timer states, and quest-seed arithmetic. It reported MISMATCH 0, GUESS 0, GAP 0 and DISCRIM 0 within the stated 1.13c static, supplied-input stage boundary. The reader rechecked the section-5 clarification: this contract specifies no return value for join selection, animation and event slices or direct retry; caller use remains TSW-Q06. This resolves the historical FULL12 review ambiguity as an explicit boundary, without asserting a newly read original return value. The historical FULL12 status remains dated evidence, superseded by this fresh applicable review.
+
+An independent evidence review checked the identified original artifacts, dated source limits and local links. TSW-Q01–TSW-Q07, TSW-O01–TSW-O03 and their gap records remain open as stated. No new source artifact, game capture, gameplay test, implementation comparison or 1.14d confirmation was added.
