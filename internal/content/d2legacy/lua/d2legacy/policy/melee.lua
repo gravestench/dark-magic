@@ -4,6 +4,20 @@
 
 local random = require("engine.authority_random/v1")
 local M = {}
+local U32 = 4294967296
+local I32_SIGN = 2147483648
+
+local function signed32(value)
+    local wrapped = value % U32
+    if wrapped >= I32_SIGN then
+        return wrapped - U32
+    end
+    return wrapped
+end
+
+local function truncate(value)
+    return value < 0 and math.ceil(value) or math.floor(value)
+end
 
 -- Melee range is clearance between the physical footprints of two actors, not
 -- center-to-center distance. Selectable radii describe pointer affordances and
@@ -20,6 +34,23 @@ function M.effective_defense(defense, ignore_target_ac, attacker_is_player, defe
         return 0
     end
     return defense
+end
+
+function M.fractional_defense(defense, value, half)
+    if value <= 0 then
+        return defense
+    end
+    if half then
+        value = truncate(value / 2)
+    end
+    local percent = math.min(value, 100)
+    local cut
+    if defense > 1048576 then
+        cut = signed32(truncate(defense / 100) * percent)
+    else
+        cut = truncate(signed32(defense * percent) / 100)
+    end
+    return signed32(defense - cut)
 end
 
 function M.hit_chance(attacker_level, defender_level, attack_rating, defense)

@@ -192,6 +192,43 @@ return test.suite({
         },
     },
     cases = {
+        test.case("admits_fractional_target_defense_passive_source", {
+            test.submit_system({
+                tick = 1,
+                sequence = 1,
+                kind = "system.player.enter",
+                payload = fixtures.player_entry({
+                    passive_stat_sources = {
+                        { id = "fractional-defense", stat = "item_fractionaltargetac", operation = "add", value = 50 },
+                    },
+                }),
+            }),
+            test.step(1),
+            test.run(function()
+                local sources = require("d2legacy.gameplay.stat_sources")
+                local player = test.only_entity_with("d2legacy.player.identity")
+                test.expect(
+                    sources.resolve(test.entities_with("d2legacy.stat.source"), player, "item_fractionaltargetac", 0)
+                )
+                    :equals(50)
+            end),
+        }),
+        test.case("rejects_percent_fractional_target_defense_passive_source", {
+            test.run(function()
+                local entry = fixtures.player_entry({
+                    passive_stat_sources = {
+                        {
+                            id = "fractional-defense",
+                            stat = "item_fractionaltargetac",
+                            operation = "percent",
+                            value = 50,
+                        },
+                    },
+                })
+                local ok = pcall(require("d2legacy.commands.enter_player").apply, { tick = 1, payload = entry })
+                test.assert(not ok, "percent Fractional Target Defense source was admitted")
+            end),
+        }),
         test.case("admits_ignore_target_defense_passive_source", {
             test.submit_system({
                 tick = 1,

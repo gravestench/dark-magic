@@ -251,6 +251,7 @@ local function create_passive_sources(player, sources)
                 or source.stat == "attackrate"
                 or source.stat == "item_fasterattackrate"
                 or source.stat == "item_ignoretargetac"
+                or source.stat == "item_fractionaltargetac"
                 or source.stat == "velocitypercent"
                 or source.stat == "item_fastermovevelocity"
                 or source.stat == "staminarecoverybonus"
@@ -271,6 +272,9 @@ local function create_passive_sources(player, sources)
         )
         if source.stat == "item_ignoretargetac" then
             assert(source.operation == nil or source.operation == "add", "Ignore Target's Defense must be additive")
+        end
+        if source.stat == "item_fractionaltargetac" then
+            assert(source.operation == nil or source.operation == "add", "Fractional Target Defense must be additive")
         end
         if
             source.stat == "vitality"

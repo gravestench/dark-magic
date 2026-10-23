@@ -182,14 +182,24 @@ function M.register()
                         local ignore_target_ac = player_attacker
                                 and stat_sources.resolve(entities, attacker, "item_ignoretargetac", 0)
                             or 0
+                        local fractional_target_ac = player_attacker
+                                and stat_sources.resolve(entities, attacker, "item_fractionaltargetac", 0)
+                            or 0
                         local owned = ecs.get(target, "d2legacy.owned_unit")
+                        local boss = ecs.get(target, "d2legacy.monster.boss") ~= nil
+                        local hireling = owned and owned:get("active") and owned:get("category") == "hireable"
                         defense = policy.effective_defense(
                             defense,
                             ignore_target_ac,
                             player_attacker,
                             ecs.get(target, "d2legacy.monster.stats") ~= nil,
-                            ecs.get(target, "d2legacy.monster.boss") ~= nil,
-                            owned and owned:get("active") and owned:get("category") == "hireable"
+                            boss,
+                            hireling
+                        )
+                        defense = policy.fractional_defense(
+                            defense,
+                            fractional_target_ac,
+                            ecs.get(target, "d2legacy.player.identity") ~= nil or boss or hireling
                         )
                         base.attack_rating = attack_rating
                         base.defense = defense
