@@ -319,7 +319,12 @@ return test.suite({
             test.step(1),
             use(2, 1),
             test.step(1),
-            test.submit_system({ tick = 3, sequence = 2, kind = "system.player.leave", payload = { player = "alice" } }),
+            test.submit_system({
+                tick = 3,
+                sequence = 2,
+                kind = "system.player.leave",
+                payload = { player = "alice" },
+            }),
             test.step(1),
             test.restore_checkpoint(),
             test.step(1),

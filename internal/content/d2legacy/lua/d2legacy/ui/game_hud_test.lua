@@ -31,7 +31,9 @@ return test.suite({
                     end,
                 }
                 local snapshot = {
-                    items = { { id = "belt-hp1", code = "hp1", container = "belt", belt_slot = 0, inventory_dc6 = "" } },
+                    items = {
+                        { id = "belt-hp1", code = "hp1", container = "belt", belt_slot = 0, inventory_dc6 = "" },
+                    },
                 }
                 local used
                 local hud = {
