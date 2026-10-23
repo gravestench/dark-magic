@@ -1,14 +1,16 @@
 -- Commit Diablo monster death exactly once when health reaches zero.
 --
 -- The corpse entity remains because later skills and interactions may consume
--- it. AI, collision, and selection are removed. Experience goes to a player
--- killer, and deterministic loot facts are copied into durable death state.
+-- it. AI, collision, and selection are removed. Experience goes to the
+-- credited player or eligible party members, and deterministic loot facts
+-- are copied into durable death state.
 
 local ecs = require("engine.ecs/v1")
 local loot = require("d2legacy.loot.generate")
 local attribution = require("d2legacy.owned_units.attribution")
 local player_count = require("d2legacy.policy.player_count")
 local party = require("d2legacy.policy.party")
+local party_experience = require("d2legacy.policy.party_experience")
 local experience_gain = require("d2legacy.policy.experience_gain")
 local progression = require("d2legacy.data.progression")
 local stat_sources = require("d2legacy.gameplay.stat_sources")
@@ -50,11 +52,10 @@ end
 
 -- Credit resolves through ownership, so a minion's kill is computed at its
 -- owner's level. Returns the experience actually added.
-local function credit_experience(entities, killer_id, stats)
-    local killer = selectable_by_id(entities, killer_id)
-    local progress = killer and ecs.get(killer, "d2legacy.player.progress")
-    local identity = killer and ecs.get(killer, "d2legacy.player.identity")
-    if not progress or not identity or stats:get("experience") <= 0 then
+local function award_experience(entities, player, stats, raw_experience)
+    local progress = ecs.get(player, "d2legacy.player.progress")
+    local identity = ecs.get(player, "d2legacy.player.identity")
+    if not progress or not identity then
         return 0
     end
     local class = identity:get("class")
@@ -63,13 +64,36 @@ local function credit_experience(entities, killer_id, stats)
         class,
         progress:get("level"),
         stats:get("level"),
-        stats:get("experience"),
-        stat_sources.resolve(entities, killer, "item_addexperience", 0)
+        raw_experience,
+        stat_sources.resolve(entities, player, "item_addexperience", 0)
     )
     local before = progress:get("experience")
     local after = experience_gain.capped_total(experience_rules, thresholds, class, before, gained)
     progress:set("experience", after)
     return after - before
+end
+
+local function credit_experience(entities, killer_id, stats, monster)
+    local killer = selectable_by_id(entities, killer_id)
+    local progress = killer and ecs.get(killer, "d2legacy.player.progress")
+    local identity = killer and ecs.get(killer, "d2legacy.player.identity")
+    if not progress or not identity or stats:get("experience") <= 0 then
+        return 0
+    end
+    local shares = party_experience.shares(
+        entities,
+        killer,
+        ecs.get(monster, "d2legacy.world.position"),
+        stats:get("experience")
+    )
+    if not shares then
+        return award_experience(entities, killer, stats, stats:get("experience"))
+    end
+    local awarded = 0
+    for _, share in ipairs(shares) do
+        awarded = awarded + award_experience(entities, share.entity, stats, share.raw)
+    end
+    return awarded
 end
 
 local function no_drop_context(entities, credited_id, monster_player_count)
@@ -179,7 +203,7 @@ local function commit_death(context, entities, structural, monster, killers)
     local ownership = attribution.resolve(entities, killer)
     local credited = ownership.ultimate_owner_id
     local experience = stats:get("experience")
-    credit_experience(entities, credited, stats)
+    credit_experience(entities, credited, stats, monster)
 
     local drops, counts = roll_loot(entities, identity, stats, credited)
     local values = death_values(context, monster, identity, killer, credited, experience, drops, counts)
@@ -226,6 +250,7 @@ function M.register(experience_thresholds)
             "d2legacy.player.vitals",
             "d2legacy.player.death",
             "d2legacy.world.location",
+            "d2legacy.world.position",
             "d2legacy.owned_unit",
             "d2legacy.player.progress",
             "d2legacy.monster.appearance",
