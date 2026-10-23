@@ -157,6 +157,36 @@ return test.suite({
                 test.expect(gold("charlie")):equals(500)
             end),
         }),
+        test.case("two_dead_recipients_cannot_create_gold", {
+            enter("alice", 1),
+            enter("bob", 2),
+            enter("charlie", 3),
+            enter("donna", 4),
+            test.step(1),
+            party_command(2, "alice", 1, "party.invite", { target = "bob" }),
+            party_command(2, "alice", 2, "party.invite", { target = "charlie" }),
+            party_command(2, "alice", 3, "party.invite", { target = "donna" }),
+            test.step(1),
+            party_command(3, "bob", 1, "party.accept", { inviter = "alice" }),
+            party_command(3, "charlie", 1, "party.accept", { inviter = "alice" }),
+            party_command(3, "donna", 1, "party.accept", { inviter = "alice" }),
+            test.step(1),
+            test.run(function()
+                local ecs = require("engine.ecs/v1")
+                ecs.get(player_entity("charlie"), "d2legacy.player.vitals"):set("health", 0)
+                ecs.get(player_entity("donna"), "d2legacy.player.vitals"):set("health", 0)
+            end),
+            open(4, "alice", 4),
+            test.step(1),
+            test.run(function()
+                local _, amount = pile()
+                test.expect(gold("alice")):equals(0)
+                test.expect(gold("bob")):equals(500)
+                test.expect(gold("charlie")):equals(500)
+                test.expect(gold("donna")):equals(0)
+                test.expect(amount:get("amount")):equals(0)
+            end),
+        }),
         test.case("other_level_member_does_not_split_gold", {
             enter("alice", 1),
             enter("bob", 2),

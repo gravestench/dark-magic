@@ -73,10 +73,17 @@ function M.allocate(amount, picker_id, members, safe_production)
         local share = truncate(amount / count)
         for _, member in ipairs(members) do
             if member.id ~= picker_id and member.can_receive then
-                local request = capacity(member.gold, share, member.level, safe_production)
+                -- The original recipient pass can outnumber the living divisor.
+                -- A physical production pile cannot pay more than it contains.
+                local requested = safe_production and math.min(share, math.max(0, remaining)) or share
+                local request = capacity(member.gold, requested, member.level, safe_production)
                 request.id = member.id
                 requests[#requests + 1] = request
-                remaining = signed32(remaining - request.accepted)
+                if safe_production then
+                    remaining = remaining - request.accepted
+                else
+                    remaining = signed32(remaining - request.accepted)
+                end
             end
         end
     end

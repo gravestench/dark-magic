@@ -72,6 +72,22 @@ return test.suite({
                 test.expect(result.excess):equals(0)
             end),
         }),
+        test.case("production_never_distributes_more_than_the_physical_pile", {
+            test.run(function()
+                local result = allocate(1000, {
+                    member("picker", 0, 10, true, true),
+                    member("living", 0, 10, true, true),
+                    member("dead-one", 0, 10, false, true),
+                    member("dead-two", 0, 10, false, true),
+                }, true)
+                test.expect(result.count):equals(2)
+                request_is(result.requests[1], "living", 500, "add", 500)
+                request_is(result.requests[2], "dead-one", 500, "add", 500)
+                request_is(result.requests[3], "dead-two", 0, "add", 0)
+                request_is(result.requests[4], "picker", 0, "add", 0)
+                test.expect(result.excess):equals(0)
+            end),
+        }),
         test.case("signed_negative_split_truncates_toward_zero", {
             test.run(function()
                 local result = allocate(-1000, {
@@ -94,10 +110,10 @@ return test.suite({
                 test.expect(result.excess):equals(0)
             end),
         }),
-        test.case("supplied_effective_level_controls_the_cap", {
+        test.case("supplied_level_controls_cap_arithmetic", {
             test.run(function()
-                -- The supplied effective level is 10; an owned level of 20
-                -- is deliberately irrelevant to this policy input.
+                -- The original getter reads effective stat 12. This pure
+                -- policy test verifies only the supplied level's cap math.
                 local result = allocate(1000, {
                     member("picker", 99900, 10, true, true),
                 }, false)
