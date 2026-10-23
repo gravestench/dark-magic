@@ -16,3 +16,7 @@ The 2026-10-15 [assessment](../../research/spec-evidence/core-game-data-fields.m
 No implementation comparison was requested in this migration.
 
 Restructure (2026-10-15): the combined gap file was split with the spec ([record](../../research/spec-evidence/core-game-data-fields.md#restructure-2026-10-15)). The first two rows track this contract's share of gaps owned by [Game Data Table Records](../../specs/core-game-data-table-records.md) questions GDA-Q02 and GDA-Q03, with their dated attempts copied unchanged; the observation row is this contract's own GDF-Q01. Ids were updated to the current numbering.
+
+## Publication review (2026-10-23)
+
+A fresh blind review of the split GDF dictionary found no new behavioral or identity gap. GDF-V03's all-zero monster direction inputs are explicitly synthetic; GDA-Q02 still owns actual absent-column defaults, GDA-Q03 owns global compiled MonStats correspondence, and GDF-Q01 owns pending execution observations. The sibling table-records publication has its own [issue #568](https://github.com/gravestench/dark-magic/issues/568). No 1.14d comparison was performed.
