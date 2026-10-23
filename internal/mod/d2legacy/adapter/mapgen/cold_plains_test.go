@@ -14,6 +14,8 @@ const (
 	presetsPath = "data/global/excel/LvlPrest.txt"
 )
 
+// coldPlainsRecords supplies a complete, small fixture so each malformed-row
+// case can change one admission rule without depending on owned game data.
 func coldPlainsRecords() entryRecords {
 	return entryRecords{
 		levelsPath: {{
@@ -34,6 +36,8 @@ func coldPlainsRecords() entryRecords {
 	}
 }
 
+// coldPlainsRuntime closes with a live context because test cleanup runs after
+// the test context is canceled.
 func coldPlainsRuntime(t *testing.T, records entryRecords) *Runtime {
 	t.Helper()
 	runtime, err := NewRuntime(t.Context(), content.D2Legacy(), records)
@@ -48,7 +52,9 @@ func coldPlainsRuntime(t *testing.T, records entryRecords) *Runtime {
 	return runtime
 }
 
-func TestColdPlainsProducesDeterministicConnectedZone(t *testing.T) {
+// TestColdPlainsProducesConnectedZone checks every mode and approach direction
+// because the entry route must remain traversable after either choice changes.
+func TestColdPlainsProducesConnectedZone(t *testing.T) {
 	runtime := coldPlainsRuntime(t, coldPlainsRecords())
 	for _, mode := range []struct {
 		difficulty int
@@ -57,7 +63,9 @@ func TestColdPlainsProducesDeterministicConnectedZone(t *testing.T) {
 		for _, facing := range []struct {
 			source, entry string
 		}{{"north", "south"}, {"east", "west"}, {"south", "north"}, {"west", "east"}} {
-			zone, err := runtime.Generate(t.Context(), "cold_plains", float64(3), float64(42), facing.source, float64(mode.difficulty))
+			zone, err := runtime.Generate(
+				t.Context(), "cold_plains", float64(3), float64(42), facing.source, float64(mode.difficulty),
+			)
 			if err != nil {
 				t.Fatalf("difficulty=%d source=%s: %v", mode.difficulty, facing.source, err)
 			}
@@ -70,7 +78,8 @@ func TestColdPlainsProducesDeterministicConnectedZone(t *testing.T) {
 			}
 			wantRooms := mode.size / 8 * (mode.size / 8)
 			if len(zone.Rooms()) != wantRooms || len(zone.Stamps()) != wantRooms {
-				t.Fatalf("difficulty=%d rooms/stamps=%d/%d, want %d", mode.difficulty, len(zone.Rooms()), len(zone.Stamps()), wantRooms)
+				t.Fatalf("difficulty=%d rooms/stamps=%d/%d, want %d",
+					mode.difficulty, len(zone.Rooms()), len(zone.Stamps()), wantRooms)
 			}
 			if !coldPlainsRoomsConnected(zone) {
 				t.Fatalf("difficulty=%d source=%s: room graph disconnected", mode.difficulty, facing.source)
@@ -87,11 +96,17 @@ func TestColdPlainsProducesDeterministicConnectedZone(t *testing.T) {
 				t.Fatalf("difficulty=%d source=%s: warp=%#v is off edge", mode.difficulty, facing.source, warp)
 			}
 			if !coldPlainsPathConnects(zone.Paths(), warp.X, warp.Y, mode.size/2, mode.size/2) {
-				t.Fatalf("difficulty=%d source=%s: semantic path does not connect entry to center", mode.difficulty, facing.source)
+				t.Fatalf("difficulty=%d source=%s: semantic path does not connect entry to center",
+					mode.difficulty, facing.source)
 			}
 		}
 	}
+}
 
+// TestColdPlainsChecksumSurvivesRestore keeps canonical replay separate from
+// geometry checks, including a direction change that must alter the identity.
+func TestColdPlainsChecksumSurvivesRestore(t *testing.T) {
+	runtime := coldPlainsRuntime(t, coldPlainsRecords())
 	first, err := runtime.Generate(t.Context(), "cold_plains", float64(3), float64(42), "east", float64(0))
 	if err != nil {
 		t.Fatal(err)
@@ -130,6 +145,8 @@ func TestColdPlainsProducesDeterministicConnectedZone(t *testing.T) {
 	}
 }
 
+// TestColdPlainsRejectsInvalidInputsAndRecords requires every source field to
+// be valid before admission, even when the selected seed would not use it.
 func TestColdPlainsRejectsInvalidInputsAndRecords(t *testing.T) {
 	cases := []struct {
 		name      string
@@ -140,19 +157,46 @@ func TestColdPlainsRejectsInvalidInputsAndRecords(t *testing.T) {
 		{name: "wrong level", level: 4, direction: "east"},
 		{name: "empty direction", level: 3, direction: ""},
 		{name: "diagonal direction", level: 3, direction: "northeast"},
-		{name: "wrong act", level: 3, direction: "east", mutate: func(rows entryRecords) { rows[levelsPath][0]["Act"] = "1" }},
-		{name: "wrong drlg type", level: 3, direction: "east", mutate: func(rows entryRecords) { rows[levelsPath][0]["DrlgType"] = "2" }},
-		{name: "wrong level type", level: 3, direction: "east", mutate: func(rows entryRecords) { rows[levelsPath][0]["LevelType"] = "3" }},
-		{name: "misaligned size", level: 3, direction: "east", mutate: func(rows entryRecords) { rows[levelsPath][0]["SizeX"] = "81" }},
-		{name: "missing normal size", level: 3, direction: "east", mutate: func(rows entryRecords) { rows[levelsPath][0]["SizeX"] = "" }},
-		{name: "missing type row", level: 3, direction: "east", mutate: func(rows entryRecords) { rows[typesPath] = rows[typesPath][:2] }},
-		{name: "missing preset", level: 3, direction: "east", mutate: func(rows entryRecords) { rows[presetsPath] = rows[presetsPath][:1] }},
-		{name: "wrong preset level", level: 3, direction: "east", mutate: func(rows entryRecords) { rows[presetsPath][0]["LevelId"] = "3" }},
-		{name: "nonoutdoor preset", level: 3, direction: "east", mutate: func(rows entryRecords) { rows[presetsPath][0]["Outdoors"] = "0" }},
-		{name: "wrong preset width", level: 3, direction: "east", mutate: func(rows entryRecords) { rows[presetsPath][0]["SizeX"] = "16" }},
-		{name: "wrong preset height", level: 3, direction: "east", mutate: func(rows entryRecords) { rows[presetsPath][0]["SizeY"] = "16" }},
-		{name: "missing ds1 reference", level: 3, direction: "east", mutate: func(rows entryRecords) { rows[presetsPath][0]["File1"] = "" }},
-		{name: "missing dt1 reference", level: 3, direction: "east", mutate: func(rows entryRecords) { rows[typesPath][2]["File 1"] = "" }},
+		{name: "wrong act", level: 3, direction: "east",
+			mutate: func(rows entryRecords) { rows[levelsPath][0]["Act"] = "1" }},
+		{name: "wrong drlg type", level: 3, direction: "east",
+			mutate: func(rows entryRecords) { rows[levelsPath][0]["DrlgType"] = "2" }},
+		{name: "wrong level type", level: 3, direction: "east",
+			mutate: func(rows entryRecords) { rows[levelsPath][0]["LevelType"] = "3" }},
+		{name: "misaligned size", level: 3, direction: "east",
+			mutate: func(rows entryRecords) { rows[levelsPath][0]["SizeX"] = "81" }},
+		{name: "missing normal size", level: 3, direction: "east",
+			mutate: func(rows entryRecords) { rows[levelsPath][0]["SizeX"] = "" }},
+		{name: "missing type row", level: 3, direction: "east",
+			mutate: func(rows entryRecords) { rows[typesPath] = rows[typesPath][:2] }},
+		{name: "missing preset", level: 3, direction: "east",
+			mutate: func(rows entryRecords) { rows[presetsPath] = rows[presetsPath][:1] }},
+		{name: "wrong preset level", level: 3, direction: "east",
+			mutate: func(rows entryRecords) { rows[presetsPath][0]["LevelId"] = "3" }},
+		{name: "nonoutdoor preset", level: 3, direction: "east",
+			mutate: func(rows entryRecords) { rows[presetsPath][0]["Outdoors"] = "0" }},
+		{name: "wrong preset width", level: 3, direction: "east",
+			mutate: func(rows entryRecords) { rows[presetsPath][0]["SizeX"] = "16" }},
+		{name: "wrong preset height", level: 3, direction: "east",
+			mutate: func(rows entryRecords) { rows[presetsPath][0]["SizeY"] = "16" }},
+		{name: "missing ds1 reference", level: 3, direction: "east",
+			mutate: func(rows entryRecords) { rows[presetsPath][0]["File1"] = "" }},
+		{name: "missing dt1 reference", level: 3, direction: "east",
+			mutate: func(rows entryRecords) { rows[typesPath][2]["File 1"] = "" }},
+		{name: "missing declared ds1 variant", level: 3, direction: "east",
+			mutate: func(rows entryRecords) {
+				rows[presetsPath][0]["Files"] = "2"
+				rows[presetsPath][0]["File2"] = ""
+			}},
+		{name: "missing selected dt1 tile", level: 3, direction: "east",
+			mutate: func(rows entryRecords) {
+				rows[presetsPath][0]["Dt1Mask"] = "3"
+				rows[typesPath][2]["File 2"] = ""
+			}},
+		{name: "directory ds1 reference", level: 3, direction: "east",
+			mutate: func(rows entryRecords) {
+				rows[presetsPath][0]["File1"] = "/"
+			}},
 	}
 	for _, test := range cases {
 		t.Run(test.name, func(t *testing.T) {
@@ -161,13 +205,16 @@ func TestColdPlainsRejectsInvalidInputsAndRecords(t *testing.T) {
 				test.mutate(rows)
 			}
 			runtime := coldPlainsRuntime(t, rows)
-			if _, err := runtime.Generate(t.Context(), "cold_plains", float64(test.level), float64(42), test.direction, float64(0)); err == nil {
+			if _, err := runtime.Generate(
+				t.Context(), "cold_plains", float64(test.level), float64(42), test.direction, float64(0),
+			); err == nil {
 				t.Fatal("expected malformed Cold Plains request or records to be rejected")
 			}
 		})
 	}
 }
 
+// coldPlainsWarpOnEdge checks the facing edge rather than any boundary cell.
 func coldPlainsWarpOnEdge(warp worldgen.Warp, size int) bool {
 	switch warp.Direction {
 	case "north":
@@ -183,6 +230,7 @@ func coldPlainsWarpOnEdge(warp worldgen.Warp, size int) bool {
 	}
 }
 
+// coldPlainsRoomsConnected checks that the admitted room links reach every room.
 func coldPlainsRoomsConnected(zone *worldgen.Zone) bool {
 	rooms := zone.Rooms()
 	if len(rooms) == 0 {
@@ -208,6 +256,7 @@ func coldPlainsRoomsConnected(zone *worldgen.Zone) bool {
 	return len(seen) == len(rooms)
 }
 
+// coldPlainsPathConnects checks semantic route continuity before materialization.
 func coldPlainsPathConnects(paths []worldgen.PathTile, startX, startY, endX, endY int) bool {
 	points := map[[2]int]bool{}
 	for _, point := range paths {

@@ -13,6 +13,7 @@ local CELL = 8
 local opposite = {north = "south", east = "west", south = "north", west = "east"}
 local fill_definitions = {29, 30}
 
+-- Keep each difficulty's dimensions aligned to the fixed-size DS1 fill grid.
 local function selected_size(level, difficulty)
     local suffix = ({[0] = "", [1] = "(N)", [2] = "(H)"})[difficulty]
     assert(suffix, "d2legacy mapgen: Cold Plains difficulty must be 0, 1, or 2")
@@ -23,6 +24,46 @@ local function selected_size(level, difficulty)
     return width, height
 end
 
+-- Check the original table field before normalization can turn an empty or
+-- directory-only value into an apparently usable tile-root path.
+local function valid_asset_reference(value, extension)
+    if type(value) ~= "string" then return false end
+    local normalized = value:match("^%s*(.-)%s*$"):gsub("\\", "/")
+    if normalized == "" or normalized:sub(1, 1) == "/" or normalized:find("//", 1, true)
+        or not normalized:lower():match("%." .. extension .. "$") then return false end
+    for segment in normalized:gmatch("[^/]+") do
+        if segment == "." or segment == ".." then return false end
+    end
+    return true
+end
+
+-- The shared asset helpers omit blank slots, so verify every declared DS1
+-- variant and every mask-selected DT1 before building an admissible recipe.
+local function validate_fill_references(row, level_type)
+    local declared = data.integer(row.Files, 0)
+    assert(declared >= 1 and declared <= 6,
+        "d2legacy mapgen: Cold Plains stone-fill preset has invalid DS1 variant count")
+    for index = 1, declared do
+        assert(valid_asset_reference(row["File" .. index], "ds1"),
+            "d2legacy mapgen: Cold Plains stone-fill preset has invalid DS1 reference")
+    end
+
+    local mask = data.integer(row.Dt1Mask, 0)
+    assert(mask > 0 and mask < 2 ^ 32,
+        "d2legacy mapgen: Cold Plains stone-fill preset has invalid DT1 mask")
+    for index = 1, 32 do
+        local bit = 2 ^ (index - 1)
+        if math.floor(mask / bit) % 2 == 1 then
+            local reference = level_type["File " .. index] or level_type["File" .. index]
+            assert(valid_asset_reference(reference, "dt1"),
+                "d2legacy mapgen: Cold Plains stone-fill preset has invalid DT1 reference")
+        end
+    end
+    return mask
+end
+
+-- Generic stone-fill candidates must be complete before a seed can choose
+-- one of them; otherwise malformed assets could be hidden by that draw.
 local function fill_candidates(level_type)
     local candidates = {}
     for _, definition in ipairs(fill_definitions) do
@@ -31,8 +72,9 @@ local function fill_candidates(level_type)
         assert(data.integer(row.LevelId, -1) == 0 and data.integer(row.Outdoors, -1) == 1
             and data.integer(row.SizeX, 0) == CELL and data.integer(row.SizeY, 0) == CELL,
             "d2legacy mapgen: Cold Plains stone-fill preset is not a generic 8x8 outdoor piece")
+        local mask = validate_fill_references(row, level_type)
         local variants = assets.preset_files(row)
-        local tile_paths = assets.masked_tiles(level_type, data.integer(row.Dt1Mask, 0))
+        local tile_paths = assets.masked_tiles(level_type, mask)
         assert(#variants > 0 and #tile_paths > 0,
             "d2legacy mapgen: Cold Plains stone-fill preset lacks DS1 or DT1 references")
         candidates[#candidates + 1] = {row = row, variants = variants, tile_paths = tile_paths}
@@ -40,6 +82,7 @@ local function fill_candidates(level_type)
     return candidates
 end
 
+-- The incoming Blood Moor exit determines the facing edge of this zone.
 local function entry_warp(width, height, direction)
     local x, y = math.floor(width / 2), math.floor(height / 2)
     if direction == "north" then y = 0
@@ -50,6 +93,7 @@ local function entry_warp(width, height, direction)
         x = x, y = y, destination_level = 2}
 end
 
+-- A semantic route reserves a connected corridor through provisional fill.
 local function route_to_interior(entry, width, height)
     local path, x, y = {}, entry.x, entry.y
     local goal_x, goal_y = math.floor(width / 2), math.floor(height / 2)
@@ -64,6 +108,8 @@ local function route_to_interior(entry, width, height)
     return dirt_path.apply(path)
 end
 
+-- Admit the complete deterministic recipe only after all source rows and
+-- candidate assets have been checked, independent of this seed's fill draws.
 function M.generate(level_id, seed, source_direction, difficulty)
     level_id, seed = math.floor(assert(tonumber(level_id))), math.floor(assert(tonumber(seed)))
     difficulty = math.floor(tonumber(difficulty) or 0)
