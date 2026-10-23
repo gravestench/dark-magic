@@ -2,6 +2,7 @@ package player
 
 import (
 	"sort"
+	"strings"
 
 	gameecs "github.com/gravestench/dark-magic/internal/game/ecs"
 	"github.com/gravestench/dark-magic/internal/game/simulation"
@@ -95,7 +96,7 @@ func ProjectPrivateView(playerID string, checkpoint simulation.Checkpoint) (Priv
 		Tick:    checkpoint.Tick,
 		Items:   ItemView{Items: []ItemEntityView{}},
 	}
-	if checkpoint.Snapshot == nil {
+	if strings.TrimSpace(playerID) == "" || checkpoint.Snapshot == nil {
 		return view, ErrHUDPlayer
 	}
 

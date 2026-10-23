@@ -342,10 +342,22 @@ Current executable boundary: an imported, player-layout-owned `world` item can
 now carry authoritative act/level/subtile state, resolve generated-room
 residency after the plan arrives, deactivate/checkpoint/reactivate on the same
 ECS entity, and remove/reacquire spatial components through pickup/re-drop
-placement transitions. This is mechanism evidence only. The death/loot result
-still does not materialize a public item instance, search a legal drop point,
-apply allocation/reservation, validate pickup range/path, or enforce the target
-1.14d ground lifetime described below.
+placement transitions. Admitted pickup now validates a living active actor,
+same act/level, 3.5-subtile reach, clear line, an empty cursor, destination-local
+identity and backpack fit before transferring the exact entity. Full durable IDs
+remain distinct from bounded public targets, including after late replay and
+checkpoint restoration. Public ground facts contain presentation, not private
+item authority. Optional generation/origin facts are retained without activating
+rolled effects; a neutral session layout remains independent of player departure.
+
+This is authoritative/replicated mechanism evidence, not ordinary pointer or
+natural combat proof. Monster death still records rolls without materializing
+public items. Legal drop-point search, allocation/reservation and the target
+1.14d ground lifetime described below remain outside this boundary. The recovered
+1.10f [pickup path](https://github.com/ThePhrozenKeep/D2MOO/blob/1fe7444dc2cfb6bf1c2934b8901e5699a4c36913/source/D2Game/src/ITEMS/ItemMode.cpp#L1108-L1278)
+transfers an existing ground item and refuses failed placement. Dark Magic's
+radius and backpack-only destination do not establish native distance or automatic
+belt/equipment/stack behavior.
 
 Needed transaction:
 

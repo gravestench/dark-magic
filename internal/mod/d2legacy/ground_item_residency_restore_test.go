@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"reflect"
+	"strings"
 	"testing"
 
 	"github.com/gravestench/akara"
@@ -11,14 +12,17 @@ import (
 	gameecs "github.com/gravestench/dark-magic/internal/game/ecs"
 	gamesession "github.com/gravestench/dark-magic/internal/game/session"
 	"github.com/gravestench/dark-magic/internal/game/simulation"
+	gameworld "github.com/gravestench/dark-magic/internal/game/world"
 	playeradapter "github.com/gravestench/dark-magic/internal/mod/d2legacy/adapter/player"
+	modruntime "github.com/gravestench/dark-magic/internal/runtime/lua"
+	lua "github.com/yuin/gopher-lua"
 )
 
 // TestGroundItemResidencyRestoresAcrossInactiveRoom verifies inactive-room
 // serialization preserves item ownership, placement, and checksum parity.
 func TestGroundItemResidencyRestoresAcrossInactiveRoom(t *testing.T) {
 	ctx := context.Background()
-	authority, engine, session := startGroundItemFixture(t, nil)
+	authority, engine, session := startGroundItemFixture(t, nil, "ground-potion", "world")
 	t.Cleanup(func() {
 		_ = authority.Stop(ctx)
 		_ = session.Close()
@@ -56,8 +60,30 @@ func TestGroundItemResidencyRestoresAcrossInactiveRoom(t *testing.T) {
 	}
 
 	item := groundItemEntity(t, engine, "ground-potion")
+	groundTarget := componentSnapshot(t, engine, item, "d2legacy.world.selectable")["id"].(string)
 	assertResidentRoom(t, dynamicStore(t, engine, "d2legacy.world.room_resident"), item, 2, "a")
 	assertGroundItemWorldState(t, engine, item, "world", true)
+	checkpointView, err := session.CanonicalCheckpoint()
+	if err != nil {
+		t.Fatal(err)
+	}
+	public, err := playeradapter.ProjectWorldView("alice", checkpointView)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var view playeradapter.WorldView
+	if err := json.Unmarshal(public, &view); err != nil {
+		t.Fatal(err)
+	}
+	var visible bool
+	for _, entity := range view.Entities {
+		if entity.ID == groundTarget {
+			visible = entity.Kind == "item" && entity.WorldDC6 == "data/global/items/flphp1.dc6" && entity.WorldAnimated
+		}
+	}
+	if !visible {
+		t.Fatalf("ground-item art absent from public view: %+v", view.Entities)
+	}
 
 	submitMoveCommand(t, session, engine.Tick()+1, "alice", 1, 1)
 
@@ -79,15 +105,15 @@ func TestGroundItemResidencyRestoresAcrossInactiveRoom(t *testing.T) {
 	}
 
 	assertResidentActivation(t, engine, item, false, false)
-	assertInactiveRoom(t, authority, "a", "item:alice:ground-potion")
+	assertInactiveRoom(t, authority, "a", groundTarget)
 	inactive := groundItemResidencySnapshot(t, engine, item)
 
-	replay, err := session.Replay()
+	recovery, err := session.RecoveryCheckpoint()
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	checkpoint := replay.Checkpoints[len(replay.Checkpoints)-1]
+	checkpoint := recovery.State
 
 	private, err := playeradapter.ProjectPrivateView("alice", checkpoint)
 	if err != nil {
@@ -98,7 +124,10 @@ func TestGroundItemResidencyRestoresAcrossInactiveRoom(t *testing.T) {
 		t.Fatalf("inactive ground item leaked into private presentation: %#v", private.Items.Items)
 	}
 
-	restored, restoredEngine, restoredSession := startGroundItemFixture(t, &checkpoint)
+	restored, restoredEngine, restoredSession := startGroundItemFixture(t, &checkpoint, "ground-potion", "world")
+	if err := restoredSession.RestoreRecoveryCheckpoint(recovery); err != nil {
+		t.Fatal(err)
+	}
 	t.Cleanup(func() {
 		_ = restored.Stop(ctx)
 		_ = restoredSession.Close()
@@ -109,25 +138,30 @@ func TestGroundItemResidencyRestoresAcrossInactiveRoom(t *testing.T) {
 		t.Fatalf("restored inactive ground item = %#v, want %#v", got, inactive)
 	}
 
-	assertInactiveRoom(t, restored, "a", "item:alice:ground-potion")
+	assertInactiveRoom(t, restored, "a", groundTarget)
 
 	returnTick := checkpoint.Tick + 1
 	submitMoveCommand(t, session, returnTick, "alice", 3, -1)
-	submitMoveCommand(t, restoredSession, returnTick, "alice", 1, -1)
-	stepSession(t, session, 55)
-	stepSession(t, restoredSession, 55)
+	submitGroundContinuation(t, restoredSession, returnTick, 3, "player.move", map[string]any{"x": -1, "y": 0, "running": false})
+	stepSession(t, session, 75)
+	stepSession(t, restoredSession, 75)
 
-	stopTick = returnTick + 55
+	stopTick = returnTick + 75
 	submitMoveCommand(t, session, stopTick, "alice", 4, 0)
-	submitMoveCommand(t, restoredSession, stopTick, "alice", 2, 0)
+	submitGroundContinuation(t, restoredSession, stopTick, 4, "player.move", map[string]any{"x": 0, "y": 0, "running": false})
 	stepSession(t, session, 2)
 	stepSession(t, restoredSession, 2)
 	assertResidentActivation(t, engine, item, true, false)
 	assertResidentActivation(t, restoredEngine, item, true, false)
 	assertEqualLatestChecksums(t, session, restoredSession, "reactivated ground item")
+	if x := playerPositionX(t, engine, "alice"); x > 4.5 {
+		t.Fatalf("player has not approached ground item: x=%g", x)
+	}
 
 	moveItem(t, session, engine.Tick()+1, 5, "held", 0, 0)
-	moveItem(t, restoredSession, restoredEngine.Tick()+1, 3, "held", 0, 0)
+	submitGroundContinuation(t, restoredSession, restoredEngine.Tick()+1, 5, "item.move", map[string]any{
+		"item_id": "ground-potion", "destination": map[string]any{"container": "held", "x": 0, "y": 0},
+	})
 	stepSession(t, session, 1)
 	stepSession(t, restoredSession, 1)
 	assertGroundItemWorldState(t, engine, item, "held", false)
@@ -135,7 +169,9 @@ func TestGroundItemResidencyRestoresAcrossInactiveRoom(t *testing.T) {
 	assertEqualLatestChecksums(t, session, restoredSession, "picked-up ground item")
 
 	moveItem(t, session, engine.Tick()+1, 6, "world", 2, 1)
-	moveItem(t, restoredSession, restoredEngine.Tick()+1, 4, "world", 2, 1)
+	submitGroundContinuation(t, restoredSession, restoredEngine.Tick()+1, 6, "item.move", map[string]any{
+		"item_id": "ground-potion", "destination": map[string]any{"container": "world", "x": 2, "y": 1},
+	})
 	stepSession(t, session, 1)
 	stepSession(t, restoredSession, 1)
 	assertGroundItemWorldState(t, engine, item, "world", true)
@@ -145,11 +181,197 @@ func TestGroundItemResidencyRestoresAcrossInactiveRoom(t *testing.T) {
 	assertEqualLatestChecksums(t, session, restoredSession, "redropped ground item")
 }
 
+func TestGroundItemMaximumIdentityDropPickupAndRestore(t *testing.T) {
+	id := strings.Repeat("i", 128)
+	authority, engine, session := startGroundItemFixture(t, nil, id, "inventory")
+	t.Cleanup(func() { _ = authority.Stop(t.Context()); _ = session.Close(); _ = engine.Close() })
+	admitGroundItemPlayer(t, session, "alice", 1, 1)
+	checkedGroundItemView(t, session, "alice")
+	submitPartyCommand(t, session, engine.Tick()+1, "alice", 1, "item.move", map[string]any{
+		"item_id": id, "destination": map[string]any{"container": "world", "x": 1, "y": 1},
+	})
+	stepSession(t, session, 1)
+	item := groundItemEntity(t, engine, id)
+	selector := componentSnapshot(t, engine, item, "d2legacy.world.selectable")["id"].(string)
+	if len(selector) > 128 {
+		t.Fatalf("maximum durable ID created %d-byte selector", len(selector))
+	}
+	checkedGroundItemView(t, session, "alice")
+	callGroundIdentityFixture(t, authority, "assert_selected", selector)
+	recovery, err := session.RecoveryCheckpoint()
+	if err != nil {
+		t.Fatal(err)
+	}
+	checkpoint := recovery.State
+	restored, restoredEngine, restoredSession := startGroundItemFixture(t, &checkpoint, id, "inventory")
+	if err := restoredSession.RestoreRecoveryCheckpoint(recovery); err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { _ = restored.Stop(t.Context()); _ = restoredSession.Close(); _ = restoredEngine.Close() })
+	for _, timeline := range []struct {
+		engine  *gameecs.Engine
+		session *gamesession.Session
+	}{{engine, session}, {restoredEngine, restoredSession}} {
+		sequence := uint64(1)
+		if got := componentSnapshot(t, timeline.engine, item, "d2legacy.world.selectable")["id"]; got != selector {
+			t.Fatalf("restored selector = %v, want %s", got, selector)
+		}
+		submitGroundContinuation(t, timeline.session, timeline.engine.Tick()+1, sequence+1, "item.pickup", map[string]any{"target_id": selector})
+		stepSession(t, timeline.session, 1)
+		view := checkedGroundItemView(t, timeline.session, "alice")
+		if len(view.Private.Items.Items) != 1 || view.Private.Items.Items[0].ID != id {
+			t.Fatal("pickup shortened or lost the durable item identity")
+		}
+		submitGroundContinuation(t, timeline.session, timeline.engine.Tick()+1, sequence+2, "item.move", map[string]any{
+			"item_id": id, "destination": map[string]any{"container": "world", "x": 1, "y": 1},
+		})
+		stepSession(t, timeline.session, 1)
+		next := componentSnapshot(t, timeline.engine, item, "d2legacy.world.selectable")["id"].(string)
+		if next == selector || len(next) > 128 {
+			t.Fatal("redrop reused the retired selector or exceeded the public bound")
+		}
+		before := groundItemResidencySnapshot(t, timeline.engine, item)
+		submitGroundContinuation(t, timeline.session, timeline.engine.Tick()+1, sequence+3, "item.pickup", map[string]any{"target_id": selector})
+		stepSession(t, timeline.session, 1)
+		if !reflect.DeepEqual(before, groundItemResidencySnapshot(t, timeline.engine, item)) {
+			t.Fatal("stale selector picked up a later ground incarnation")
+		}
+		submitGroundContinuation(t, timeline.session, timeline.engine.Tick()+1, sequence+4, "item.pickup", map[string]any{"target_id": next})
+		stepSession(t, timeline.session, 1)
+		checkedGroundItemView(t, timeline.session, "alice")
+		if componentSnapshot(t, timeline.engine, item, "d2legacy.item.placement")["container"] != "inventory" {
+			t.Fatal("fresh redrop selector did not collect the exact item")
+		}
+	}
+	assertEqualLatestChecksums(t, session, restoredSession, "maximum ID pickup and redrop")
+}
+
+func TestGroundItemPickupPreservesOwnerLocalIdentities(t *testing.T) {
+	for _, existingID := range []string{"sword", "other"} {
+		t.Run(existingID, func(t *testing.T) {
+			authority, engine, session := startGroundItemFixture(t, nil, "sword", "world")
+			t.Cleanup(func() { _ = authority.Stop(t.Context()); _ = session.Close(); _ = engine.Close() })
+			admitGroundItemPlayer(t, session, "alice", 1, 1)
+			admitGroundItemPlayer(t, session, "bob", 2, 4)
+			callGroundIdentityFixture(t, authority, "create_destination_item", existingID)
+			checkedGroundItemView(t, session, "alice")
+			checkedGroundItemView(t, session, "bob")
+			item := groundItemEntity(t, engine, "sword")
+			var unrelated akara.Entity
+			for _, entity := range dynamicStore(t, engine, "d2legacy.item.identity").Entities() {
+				if entity != item {
+					unrelated = entity
+				}
+			}
+			if unrelated == 0 {
+				t.Fatal("destination fixture item is missing")
+			}
+			unrelatedBefore := groundItemResidencySnapshot(t, engine, unrelated)
+			before := groundItemResidencySnapshot(t, engine, item)
+			selector := before["d2legacy.world.selectable"]["id"].(string)
+			submitPartyCommand(t, session, engine.Tick()+1, "bob", 1, "item.pickup", map[string]any{"target_id": selector})
+			stepSession(t, session, 1)
+			view := checkedGroundItemView(t, session, "bob")
+			after := groundItemResidencySnapshot(t, engine, item)
+			if existingID == "sword" {
+				if !reflect.DeepEqual(before, after) || len(view.Private.Items.Items) != 1 {
+					t.Fatal("destination ID collision changed the ground item or duplicated an owner-local ID")
+				}
+			} else if len(view.Private.Items.Items) != 2 || after["d2legacy.item.placement"]["container"] != "inventory" {
+				t.Fatal("distinct owner-local identity did not transfer")
+			}
+			if !reflect.DeepEqual(before["d2legacy.item.generation"], after["d2legacy.item.generation"]) {
+				t.Fatal("pickup changed rolled generation facts")
+			}
+			submitPartyCommand(t, session, engine.Tick()+1, "bob", 2, "item.pickup", map[string]any{"target_id": selector})
+			stepSession(t, session, 1)
+			checkedGroundItemView(t, session, "bob")
+			if !reflect.DeepEqual(after, groundItemResidencySnapshot(t, engine, item)) {
+				t.Fatal("repeated pickup changed item identity or generation")
+			}
+			if !reflect.DeepEqual(unrelatedBefore, groundItemResidencySnapshot(t, engine, unrelated)) {
+				t.Fatal("pickup mutated the unrelated destination item")
+			}
+			if existingID == "other" {
+				submitPartyCommand(t, session, engine.Tick()+1, "bob", 3, "item.move", map[string]any{
+					"item_id": "sword", "destination": map[string]any{"container": "world", "x": 4, "y": 1},
+				})
+				stepSession(t, session, 1)
+				redropped := groundItemResidencySnapshot(t, engine, item)
+				fresh := redropped["d2legacy.world.selectable"]["id"].(string)
+				if fresh == selector {
+					t.Fatal("ownership transfer and redrop reused the old target")
+				}
+				submitPartyCommand(t, session, engine.Tick()+1, "alice", 1, "item.pickup", map[string]any{"target_id": selector})
+				stepSession(t, session, 1)
+				if !reflect.DeepEqual(redropped, groundItemResidencySnapshot(t, engine, item)) {
+					t.Fatal("retired source-owner target collected the transferred redrop")
+				}
+				submitPartyCommand(t, session, engine.Tick()+1, "bob", 4, "item.pickup", map[string]any{"target_id": fresh})
+				stepSession(t, session, 1)
+				checkedGroundItemView(t, session, "bob")
+				if componentSnapshot(t, engine, item, "d2legacy.item.placement")["container"] != "inventory" {
+					t.Fatal("current owner could not pick up the transferred redrop")
+				}
+			}
+		})
+	}
+}
+
+func callGroundIdentityFixture(t *testing.T, authority *Authority, action, value string) {
+	t.Helper()
+	if err := authority.Runtime.Run(t.Context(), func(state *lua.LState) error {
+		if err := state.CallByParam(lua.P{Fn: state.GetGlobal("require"), NRet: 1, Protect: true},
+			lua.LString("d2legacy.tests.integration.item_identity")); err != nil {
+			return err
+		}
+		module := state.Get(-1)
+		state.Pop(1)
+		return state.CallByParam(lua.P{Fn: state.GetField(module, action), Protect: true}, lua.LString(value))
+	}); err != nil {
+		t.Fatal(err)
+	}
+}
+
+func admitGroundItemPlayer(t *testing.T, session *gamesession.Session, owner string, sequence uint64, x float64) {
+	t.Helper()
+	checkpoint, err := session.CanonicalCheckpoint()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := session.Submit(simulation.Command{Tick: checkpoint.Tick + 1, Player: "system", Authority: simulation.AuthoritySystem,
+		Sequence: sequence, Kind: "system.player.enter", Payload: generatedPlayerPayload(t, owner, owner, x, 1)}); err != nil {
+		t.Fatal(err)
+	}
+	stepSession(t, session, 1)
+}
+
+func checkedGroundItemView(t *testing.T, session *gamesession.Session, owner string) playeradapter.ClientView {
+	t.Helper()
+	checkpoint, err := session.CanonicalCheckpoint()
+	if err != nil {
+		t.Fatal(err)
+	}
+	raw, err := playeradapter.ProjectClientView(owner, checkpoint)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var view playeradapter.ClientView
+	if err := json.Unmarshal(raw, &view); err != nil {
+		t.Fatal(err)
+	}
+	if err := playeradapter.ValidateClientView(view, checkpoint.Tick); err != nil {
+		t.Fatal(err)
+	}
+	return view
+}
+
 // startGroundItemFixture boots either a fresh or restored authority with the
 // same seed, making checkpoint state the only difference between both runs.
 func startGroundItemFixture(
 	t *testing.T,
 	checkpoint *simulation.Checkpoint,
+	itemID, container string,
 ) (*Authority, *gameecs.Engine, *gamesession.Session) {
 	t.Helper()
 
@@ -181,9 +403,10 @@ func startGroundItemFixture(
 		"stash_width": 6, "stash_height": 8, "cube_width": 3, "cube_height": 4,
 		"belt_capacity": 4, "vendor_width": 10, "vendor_height": 10,
 		"items": []any{map[string]any{
-			"id": "ground-potion", "code": "hp1", "width": 1, "height": 1,
-			"container": "world", "x": 1, "y": 1, "act": 1, "level_id": 2,
+			"id": itemID, "code": "hp1", "width": 1, "height": 1,
+			"container": container, "x": 1, "y": 1, "act": 1, "level_id": 2,
 			"world_dc6": "data/global/items/flphp1.dc6", "world_animated": true,
+			"generation": map[string]any{"quality": "normal", "level": 1, "facts": "fixture-generation"},
 		}},
 	}}
 
@@ -193,6 +416,14 @@ func startGroundItemFixture(
 		_ = session.Close()
 		_ = engine.Close()
 
+		t.Fatal(err)
+	}
+	geometry, err := gameworld.NewOpenMap(30, 10)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := modruntime.SetWorldMapForLevel(t.Context(), authority.Runtime,
+		"d2legacy.gameplay.systems.init", "set_collision", 2, geometry); err != nil {
 		t.Fatal(err)
 	}
 
@@ -233,12 +464,17 @@ func groundItemResidencySnapshot(
 		"d2legacy.item.identity",
 		"d2legacy.item.placement",
 		"d2legacy.item.presentation",
+		"d2legacy.item.generation",
+		"d2legacy.item.origin",
+		"d2legacy.world.selectable",
 		"d2legacy.world.position",
 		"d2legacy.world.location",
 		"d2legacy.world.room_resident",
 		"d2legacy.world.inactive",
 	} {
-		result[name] = componentSnapshot(t, engine, item, name)
+		if _, present := dynamicStore(t, engine, name).Get(item); present {
+			result[name] = componentSnapshot(t, engine, item, name)
+		}
 	}
 
 	return result
