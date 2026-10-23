@@ -213,17 +213,32 @@ return test.suite({
                 test.expect(sources.resolve(entities, player, "item_undead_tohit", 0)):equals(40)
             end),
         }),
-        test.case("rejects_percent_target_type_attack_rating_passive_sources", {
+        test.case("rejects_percent_demon_attack_rating_passive_source", {
             test.run(function()
-                for _, stat in ipairs({ "item_demon_tohit", "item_undead_tohit" }) do
-                    local entry = fixtures.player_entry({
-                        passive_stat_sources = {
-                            { id = "wrong-operation", stat = stat, operation = "percent", value = 50 },
-                        },
-                    })
-                    local ok = pcall(require("d2legacy.commands.enter_player").apply, { tick = 1, payload = entry })
-                    test.assert(not ok, "percent target-type attack rating source was admitted: " .. stat)
-                end
+                local entry = fixtures.player_entry({
+                    passive_stat_sources = {
+                        { id = "wrong-operation", stat = "item_demon_tohit", operation = "percent", value = 50 },
+                    },
+                })
+                local ok, reason = pcall(require("d2legacy.commands.enter_player").apply, { tick = 1, payload = entry })
+                test.assert(
+                    not ok and tostring(reason):find("Target type attack rating must be additive", 1, true),
+                    "percent demon attack rating must fail the additive guard"
+                )
+            end),
+        }),
+        test.case("rejects_percent_undead_attack_rating_passive_source", {
+            test.run(function()
+                local entry = fixtures.player_entry({
+                    passive_stat_sources = {
+                        { id = "wrong-operation", stat = "item_undead_tohit", operation = "percent", value = 50 },
+                    },
+                })
+                local ok, reason = pcall(require("d2legacy.commands.enter_player").apply, { tick = 1, payload = entry })
+                test.assert(
+                    not ok and tostring(reason):find("Target type attack rating must be additive", 1, true),
+                    "percent undead attack rating must fail the additive guard"
+                )
             end),
         }),
         test.case("admits_fractional_target_defense_passive_source", {

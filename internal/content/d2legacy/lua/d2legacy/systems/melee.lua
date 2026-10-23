@@ -196,10 +196,6 @@ function M.register()
                         local attacker_level, attack_rating = combat_values(attacker, entities)
                         local defender_level, _, defense = combat_values(target, entities)
                         local player_attacker = ecs.get(attacker, "d2legacy.player.identity") ~= nil
-                        if player_attacker then
-                            attack_rating = player_attack_rating(attacker, target, entities)
-                        end
-                        attack_rating = hand_attack_rating(profile, attack_rating, request:get("hand"))
                         local ignore_target_ac = player_attacker
                                 and stat_sources.resolve(entities, attacker, "item_ignoretargetac", 0)
                             or 0
@@ -222,6 +218,10 @@ function M.register()
                             fractional_target_ac,
                             ecs.get(target, "d2legacy.player.identity") ~= nil or boss or hireling
                         )
+                        if player_attacker then
+                            attack_rating = player_attack_rating(attacker, target, entities)
+                        end
+                        attack_rating = hand_attack_rating(profile, attack_rating, request:get("hand"))
                         base.attack_rating = attack_rating
                         base.defense = defense
                         base.hit_chance = policy.hit_chance(attacker_level, defender_level, attack_rating, defense)
