@@ -14,8 +14,8 @@ import (
 // changing normal character admission while preserving generated wilderness arrival.
 func TestEntryWorldSpawnsKeepGameplayAndSeamCaptureDistinct(t *testing.T) {
 	seam := gametransition.Seam{
-		Town:       gametransition.SeamEndpoint{ArrivalX: 11, ArrivalY: 12},
-		Wilderness: gametransition.SeamEndpoint{ArrivalX: 21, ArrivalY: 22},
+		First:  gametransition.SeamEndpoint{ArrivalX: 11, ArrivalY: 12},
+		Second: gametransition.SeamEndpoint{ArrivalX: 21, ArrivalY: 22},
 	}
 
 	entry, err := entryWorldSpawns("entry", seam, 1, 2)

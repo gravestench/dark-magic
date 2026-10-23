@@ -69,14 +69,24 @@ func (app *application) prepareEntryWorld() (*entryworld.Prepared, error) {
 func (app *application) resolveEntryWorldSpawns(
 	prepared *entryworld.Prepared,
 ) (map[int][2]float64, error) {
-	townSpawn := prepared.Spawns[prepared.Seam.Town.LevelID]
+	townSeam := prepared.Seams[0]
+	townSpawn := prepared.Spawns[townSeam.First.LevelID]
 
-	return entryWorldSpawns(
+	spawns, err := entryWorldSpawns(
 		app.options.FixtureWorldSpawn,
-		prepared.Seam,
+		townSeam,
 		townSpawn[0],
 		townSpawn[1],
 	)
+	if err != nil {
+		return nil, err
+	}
+	for level, spawn := range prepared.Spawns {
+		if _, exists := spawns[level]; !exists {
+			spawns[level] = spawn
+		}
+	}
+	return spawns, nil
 }
 
 // fixtureActiveLevel confines direct world selection to development fixtures and defaults ordinary
@@ -117,7 +127,8 @@ func (app *application) publishEntryWorld(
 	pointerAcceptance *pointerMovementAcceptance,
 ) {
 	app.worldMu.Lock()
-	app.transitionSeam = prepared.Seam
+	app.transitionSeam = prepared.Seams[0]
+	app.transitionSeams = append([]gametransition.Seam(nil), prepared.Seams...)
 	app.gameWorldZones = prepared.Zones
 	app.gameWorlds = prepared.Worlds
 	app.gameWorldSpawns = spawns
@@ -138,12 +149,12 @@ func entryWorldSpawns(
 	case "", "entry":
 		return map[int][2]float64{
 			1: {townX, townY},
-			2: {seam.Wilderness.ArrivalX, seam.Wilderness.ArrivalY},
+			2: {seam.Second.ArrivalX, seam.Second.ArrivalY},
 		}, nil
 	case "seam":
 		return map[int][2]float64{
-			1: {seam.Town.ArrivalX, seam.Town.ArrivalY},
-			2: {seam.Wilderness.ArrivalX, seam.Wilderness.ArrivalY},
+			1: {seam.First.ArrivalX, seam.First.ArrivalY},
+			2: {seam.Second.ArrivalX, seam.Second.ArrivalY},
 		}, nil
 	default:
 		return nil, fmt.Errorf("development fixture world spawn %q is unavailable", fixtureSpawn)

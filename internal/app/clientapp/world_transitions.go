@@ -6,6 +6,7 @@ import (
 	"github.com/gravestench/akara"
 	gameworld "github.com/gravestench/dark-magic/internal/game/world"
 	entryworld "github.com/gravestench/dark-magic/internal/mod/d2legacy/adapter/entryworld"
+	gametransition "github.com/gravestench/dark-magic/internal/mod/d2legacy/adapter/transition"
 )
 
 // syncActiveWorldFromPlayer observes the controlled player's committed location and updates map
@@ -79,10 +80,10 @@ func controlledPlayerLevel(world *akara.World, playerID string) (int, bool) {
 // reinterpret coordinates, preserving the generator as the single geometry authority.
 func (app *application) transitionBootstrapData() map[string]any {
 	app.worldMu.RLock()
-	seam := app.transitionSeam
+	seams := append([]gametransition.Seam(nil), app.transitionSeams...)
 	app.worldMu.RUnlock()
 
-	return entryworld.TransitionData(seam)
+	return entryworld.TransitionData(seams)
 }
 
 // warpBootstrapData creates paired portals solely for the named acceptance scene. Production scenes
@@ -92,8 +93,8 @@ func (app *application) warpBootstrapData() map[string]any {
 		return emptyWarpBootstrap()
 	}
 
-	townLevel := app.transitionSeam.Town.LevelID
-	wildernessLevel := app.transitionSeam.Wilderness.LevelID
+	townLevel := app.transitionSeam.First.LevelID
+	wildernessLevel := app.transitionSeam.Second.LevelID
 	town := app.gameWorlds[townLevel]
 
 	wilderness := app.gameWorlds[wildernessLevel]

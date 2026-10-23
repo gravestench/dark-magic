@@ -72,7 +72,7 @@ func (app *application) preparedEntryWorld() *entryworld.Prepared {
 		Worlds: app.gameWorlds,
 		Zones:  app.gameWorldZones,
 		Spawns: app.gameWorldSpawns,
-		Seam:   app.transitionSeam,
+		Seams:  app.transitionSeams,
 	}
 }
 

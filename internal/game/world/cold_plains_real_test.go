@@ -20,7 +20,7 @@ func TestGeneratedColdPlainsMaterializesAConnectedEntry(t *testing.T) {
 		t.Fatal(err)
 	}
 	var sourceDirection string
-	for _, warp := range entryWorld.Wilderness.Warps() {
+	for _, warp := range entryWorld.Zones[2].Warps() {
 		if warp.Role != "next-level-exit" || warp.DestinationLevel != 3 {
 			continue
 		}

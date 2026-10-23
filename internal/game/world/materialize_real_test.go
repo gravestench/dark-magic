@@ -79,7 +79,7 @@ func TestGeneratedBloodMoorMaterializesFromTownExit(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	town, moor := entryWorld.Town, entryWorld.Wilderness
+	town, moor := entryWorld.Zones[1], entryWorld.Zones[2]
 
 	worldMap := materializeRealZone(t, source, moor)
 
@@ -131,12 +131,12 @@ func TestGeneratedBloodMoorMaterializesFromTownExit(t *testing.T) {
 
 	townMap := materializeRealZone(t, source, town)
 
-	seam, err := gametransition.ResolveSeam(entryWorld.Seam, townMap, worldMap)
+	seam, err := gametransition.ResolveSeam(entryWorld.Seams[0], townMap, worldMap)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	if seam.Town.LevelID != 1 || seam.Wilderness.LevelID != 2 {
+	if seam.First.LevelID != 1 || seam.Second.LevelID != 2 {
 		t.Fatalf("production seam = %#v", seam)
 	}
 }

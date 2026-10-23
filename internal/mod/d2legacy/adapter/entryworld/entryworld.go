@@ -9,6 +9,7 @@ import (
 
 	gameworld "github.com/gravestench/dark-magic/internal/game/world"
 	"github.com/gravestench/dark-magic/internal/game/worldgen"
+	d2mapgen "github.com/gravestench/dark-magic/internal/mod/d2legacy/adapter/mapgen"
 	playeradapter "github.com/gravestench/dark-magic/internal/mod/d2legacy/adapter/player"
 	gametransition "github.com/gravestench/dark-magic/internal/mod/d2legacy/adapter/transition"
 )
@@ -27,7 +28,8 @@ type Prepared struct {
 	Worlds     map[int]*gameworld.Map
 	Zones      map[int]*worldgen.Zone
 	Spawns     map[int][2]float64
-	Seam       gametransition.Seam
+	Seams      []gametransition.Seam
+	Topology   d2mapgen.EntryWorld
 	Difficulty int
 }
 

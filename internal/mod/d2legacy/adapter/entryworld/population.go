@@ -16,7 +16,7 @@ func (world *Prepared) PopulationData(nearby int) map[string]any {
 	}
 
 	request := zone.Request()
-	player := world.Spawns[world.Seam.Wilderness.LevelID]
+	player := world.Spawns[world.Seams[0].Second.LevelID]
 	populated := populatedStamps(zone)
 
 	rooms := make([]any, 0, len(zone.Rooms()))
@@ -44,7 +44,7 @@ func (world *Prepared) wilderness() (*worldgen.Zone, *gameworld.Map, bool) {
 		return nil, nil, false
 	}
 
-	levelID := world.Seam.Wilderness.LevelID
+	levelID := world.Seams[0].Second.LevelID
 	zone := world.Zones[levelID]
 	gameMap := world.Worlds[levelID]
 

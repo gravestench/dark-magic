@@ -143,6 +143,7 @@ type application struct {
 	movementSource       *d2movement.MovementSource
 	movementCatalog      d2movement.Catalog
 	transitionSeam       gametransition.Seam
+	transitionSeams      []gametransition.Seam
 	commandIntents       *gamesession.IntentController
 	commandIntentSource  *gamesession.IntentSource
 	commandSource        func(uint64) []simulation.Command
