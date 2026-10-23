@@ -240,7 +240,7 @@ leads.
 | ai-hireling | `Ai\AiGeneral` | Hireling | `0x1DD40` (aux `0x16060`) | candidate | |
 | ai-necromancer-and-druid-summons | `Ai\AiThink4`, `AiGeneral` | aip* | `0x1E900`, `0xAC8E0`, `0xAB360` | candidate | |
 | ai-shadow-warrior-and-master | `Ai\AiThink4` | aip* | `0xAC410`, `0xAB580`, `0xA6B70`, `0xA5350` | candidate | |
-| (sentry and death sentry AI) | `Ai\AiThink4` | none | `0xA7DC0`, `0xA7C20` | written | In [skill-assassin-sentry-firing-and-range](skill-assassin-sentry-firing-and-range.md), [skill-assassin-sentry-missile-launch](skill-assassin-sentry-missile-launch.md) and [skill-assassin-death-sentry-corpse-selection](skill-assassin-death-sentry-corpse-selection.md). |
+| (sentry and death sentry AI) | `Ai\AiThink4` | none | `0xA7DC0`, `0xA7C20` | written | In [skill-assassin-sentry-firing-and-range](skill-assassin-sentry-firing-and-range.md) and [skill-assassin-death-sentry-corpse-selection](skill-assassin-death-sentry-corpse-selection.md). |
 
 ## game
 

@@ -347,7 +347,8 @@ Partial acceptance is V01..V11's verified local decisions, exact requests, reach
 
 ## 10. Related specs
 
-- [skill-assassin-sentry-firing-and-range](skill-assassin-sentry-firing-and-range.md): shared summon, target, speed and creation context; its labels do not verify Blade AI.
+- [skill-assassin-sentry-firing-and-range](skill-assassin-sentry-firing-and-range.md): sentry think, budget and target context; its labels do not verify Blade AI.
+- [skill-assassin-sentry-missile-launch](skill-assassin-sentry-missile-launch.md): action-17 burst and shared missile-creation speed consumer; it does not establish Blade missile creation.
 - [skill-assassin-death-sentry-corpse-damage](skill-assassin-death-sentry-corpse-damage.md): sibling trap skill.
 - [combat-damage-pipeline-order](combat-damage-pipeline-order.md), [combat-damage-mitigation](combat-damage-mitigation.md): downstream application and mitigation.
 - [combat-shield-block-and-avoidance](combat-shield-block-and-avoidance.md): hit and avoidance operations.

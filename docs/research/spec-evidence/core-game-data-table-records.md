@@ -206,10 +206,10 @@ Direct kinds established here are 1 bounded byte string, 2 i32, 3 low16, 4/6 low
 |--------|--------|------|----------|
 | +0x04 | flag dword; bit 31 = **`interrupt`** (byte +0x07 bit 7: D2Game RVA 0x77FA0 `mov al, byte ptr [eax + 7]; test byte ptr [ecx + 0x1C], al` with `ecx` = `gdwBitMasks`, `mask[7]` = 0x80) | 0x1A | combat-hit-recovery (skill record byte +7 bit 7) |
 | +0x2C | `srvstfunc` | 3 | skill-assassin-blade-sentinel-and-fury (start function index) |
-| +0x2E | `srvdofunc` | 3 | skill-assassin-blade-sentinel-and-fury, skill-assassin-sentry-firing-and-range (do-function index); GDF-R08 |
+| +0x2E | `srvdofunc` | 3 | skill-assassin-blade-sentinel-and-fury, skill-assassin-sentry-missile-launch (do-function index); GDF-R08 |
 | +0x50 | `aurafilter` | 2 | skill-assassin-death-sentry-corpse-damage |
 | +0x64 | `aurarangecalc` | 0x19 | skill-assassin-death-sentry-corpse-damage |
-| +0x138 / +0x13C / +0x140 / +0x144 | `calc1` / `calc2` / `calc3` / `calc4` | 0x19 | skill-assassin-sentry-firing-and-range, skill-assassin-death-sentry-corpse-damage |
+| +0x138 / +0x13C / +0x140 / +0x144 | `calc1` / `calc2` / `calc3` / `calc4` | 0x19 | skill-assassin-sentry-firing-and-range, skill-assassin-sentry-missile-launch, skill-assassin-death-sentry-corpse-damage |
 | +0x148..+0x164 (step 4) | `Param1`..`Param8` | 2 | skill-assassin-death-sentry-corpse-selection (`Param3` +0x150, `Param4` +0x154; see note) |
 | +0x16A | `ItemEffect` | 3 | skill-assassin-blade-sentinel-and-fury (item-effect override) |
 | +0x198 / +0x19C | `ToHit` / `LevToHit` | 2 | skill-leveled-damage-tohit-and-elements |

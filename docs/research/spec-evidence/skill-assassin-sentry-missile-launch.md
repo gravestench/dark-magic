@@ -55,7 +55,7 @@ stored-point production remains gated. The duration setter narrows the callback 
 argument to u8 before capping at 77; a negative signed frame count therefore cannot be
 modeled as min(f,77). The callback's total/current frame clamp still tests signed f>=78.
 
-The initializer's imported operations read current frame count, set total/current frame
+The initializer's imported operations read total frame count, set total/current frame
 counts, read path stored-point X, initialize seed, set path kind/duration and prepare path. The
 byte-equivalent callback contains no direct LCG step; only the seed-initializer request
 is local. Actual underlying path allocation/motion is unverified. Likewise action 17's
@@ -302,3 +302,28 @@ zero speed skipping the 75% scale). STT-V04 keeps all eight cases unchanged and 
 MCI-R05/MCI-R06/MCI-R07; MCI-V04 remains the owner's vector. The STT-R03 label stays asm-only
 because it covers this spec's local binding, not the owner's verified arithmetic. No rule
 behavior, label, value or vector result changed.
+
+## Publication review — 2026-10-23
+
+A fresh independent blind reader reviewed the complete post-split SFR and STT specs,
+their gap files and the source/review sections of both companions. It recomputed the
+STT creation-attempt, failed-creator, signed-frame clamp/narrowing and slow-before-75%
+speed cases, and representative SFR timing/range/budget/selection cases. No blocking
+mismatch was found, and the reader approved bounded draft publication. The 2026-10-15
+FULL12 pending suggestions above remain dated history; not all proposed discriminator
+cases were added. This fresh review accepts the current explicit static/supplied-input
+boundary without claiming exhaustive branch coverage or a renewed original-image read.
+
+An independent evidence reader checked both three-file sets' artifact identities,
+effective-text data limits, links and open gaps. A separate architecture reader checked
+the think/action-17 split, MCI speed ownership, later MMC flight/collision ownership
+and #418 gameplay boundary. All three approved bounded 1.13c publication. The import
+summary now says the initializer reads total frames, matching the existing #10534
+record and STT-R02/V03(k); no original instruction was newly inspected. STT-V04 now
+names stat 161=50 as a supplied final list-read result, leaving real minimum-adjustment
+applicability under STT-Q03. Issue #496 now names both three-file handoffs.
+
+STT-Q01–Q05, STT-O01 and the sibling SFR gates remain open. No STT behavioral rule,
+vector output or original-source evidence label changed; the historical implementation
+comparison was not renewed. No new protected game-data capture, gameplay test or 1.14d
+confirmation was added. Both specs remain draft.
