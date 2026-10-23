@@ -474,7 +474,7 @@ local function explode_corpse(context, entities, trap, autonomous, definition, c
     local maximum = math.floor(corpse_stats:get("max_health") * definition.corpse_maximum_percent / 100)
     local amount = damage.roll(minimum, maximum)
     local fire = math.floor(amount * definition.corpse_fire_percent / 100)
-    local physical = amount - fire
+    local physical = math.floor(amount * (100 - definition.corpse_fire_percent) / 100)
     local radius = progression.linear(
         definition.corpse_radius_base,
         definition.corpse_radius_per_level,
