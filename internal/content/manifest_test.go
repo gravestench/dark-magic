@@ -544,11 +544,11 @@ func TestD2LegacyPresentationAssetCoverageBaseline(t *testing.T) {
 	// dependency.
 	// The divergent skill-ID fixture names the selected Sorceress icon sheet;
 	// this adds one static code-owned path under the existing spells prefix.
-	// Decoded vendor/inventory fixtures name invbsc.dc6 and invhp1.dc6 as
+	// Decoded vendor/inventory fixtures name invbsc.dc6, invhp1.dc6 and invwps.dc6 as
 	// code-owned test references. Production item pictures remain selected from
-	// records under the existing dynamic data/global/items/ prefix; neither path
+	// records under the existing dynamic data/global/items/ prefix; none of these paths
 	// is promoted to manifest/catalog/structural-fixture verification.
-	const auditedFingerprint = "3f3b8b9df52b8934da30775467f2cbdc6a54ed4a07e863528e9f1fa900cc84f9"
+	const auditedFingerprint = "ba995ca485e0855a31ae530aaf10a7acf9315035012963b9c0d3e2f39cffabba"
 	if coverage.Fingerprint != auditedFingerprint {
 		t.Fatalf(
 			"presentation asset coverage changed: got %s, want audited %s; "+
