@@ -2,7 +2,7 @@
 
 **Description**
 
-After an attack's hit roll succeeds, the defender gets a chance to block it with a shield or avoid it with Dodge, Avoid, Evade or weapon block. Shields are checked before passive avoidance. Movement changes which defenses apply, and missiles can use different checks from melee attacks. The result decides whether the attack lands, was blocked or was avoided.
+A defender can block an incoming contact with a shield or avoid it with Dodge, Avoid, Evade or weapon block. Ordinary melee and missiles with nonzero ToHit first check accuracy; a running player melee defender or a missile with zero ToHit can bypass that roll while defender checks still run. Shields are checked before passive avoidance, and movement changes which defenses apply. The result decides whether the contact lands, was blocked or was avoided.
 
 Status: draft
 Evidence build: Lord of Destruction Expansion 1.13c
@@ -42,7 +42,7 @@ Arithmetic is `i32`, wrapping addition, subtraction, multiplication and shift; d
 | missile data | Missiles.ToHit, KnockBack, GetHit, SoftHit; missile stat 19 | `u8`, `u8`, bits, `i32` | Optional hit, knockback and flags |
 | damage fields | resultWord, physicalDamage | `u16` flags, `i32` raw physical damage | Prior flags; physical !=0 enables missile shield |
 | hit result | [combat-hit-roll](combat-hit-roll.md) HIT-R08 | `i32` 0/1 | Supplied hit-roll return |
-| seeds | Defender, missile | Pairs of `u32` | NRF-R01/NRF-R02 |
+| seeds | Attacker, defender, missile | Pairs of `u32` | NRF-R01/NRF-R02; attacker draw belongs to HIT-R08 |
 
 | Mapping | Origin | Binding |
 |---|---|---|
@@ -118,11 +118,11 @@ Execution: supplied preconditions -> hit roll ([combat-hit-roll](combat-hit-roll
 | SBA-R04c | Standing Dodge/Avoid | verified in 1.13c code (static) | none with supplied inputs | SBA-V06/SBA-V12/SBA-V16 |
 | SBA-R04d | Consumer cap | verified in 1.13c code (static) | none with supplied inputs | SBA-V19 |
 | SBA-R04e | Token producer | unresolved | SBA-Q02 token | none |
-| SBA-R05 | Melee word | verified in 1.13c code (static) | SBA-Q08 actual preconditions only | SBA-V06/SBA-V12/SBA-V13 |
-| SBA-R06 | Other maps | verified in 1.13c code (static) | SBA-Q08 actual contact/owner only | SBA-V08/SBA-V15/SBA-V16/SBA-V20 |
+| SBA-R05 | Melee word | verified in 1.13c code (static) | SBA-Q08 actual preconditions only | SBA-V06/SBA-V12/SBA-V13/SBA-V25 |
+| SBA-R06 | Other maps | verified in 1.13c code (static) | SBA-Q08 actual contact/owner only | SBA-V08/SBA-V15/SBA-V16/SBA-V20/SBA-V25 |
 | SBA-R07a | Skips | verified in 1.13c code (static) | none with supplied inputs | SBA-V09/SBA-V20 |
 | SBA-R07b | Other skill callers | unresolved | SBA-Q03 callers | none |
-| SBA-R08 | RNG order | verified in 1.13c code (static) | none with supplied inputs | SBA-V06/SBA-V07/SBA-V09/SBA-V12/SBA-V15 |
+| SBA-R08 | RNG order | verified in 1.13c code (static) | none with supplied inputs | SBA-V06/SBA-V07/SBA-V09/SBA-V12/SBA-V15/SBA-V25 |
 | SBA-R09a | Defender type differences | verified in 1.13c code (static) | none with supplied inputs | SBA-V01/SBA-V05 |
 | SBA-R09b | Upstream PvP | unresolved | SBA-Q04/SBA-Q08 upstream | none |
 | SBA-R10 | Attacker assertion | verified in 1.13c code (static) | none with supplied inputs | SBA-V14 |
@@ -159,7 +159,7 @@ The [gap file](../plans/gaps/combat-shield-block-and-avoidance.md) records attem
 | **SBA-Q05** Special monster | behavior | Complete class selector and definition lookup |
 | **SBA-Q06** Gameplay coverage | observation | Pending original-game observations |
 | **SBA-Q07** Extra defender steps | observation | Subsequent durability trace, not seed correspondence alone |
-| **SBA-Q08** Other roots/preconditions/owners | integration | Complete callers and hostile/range/owner contracts |
+| **SBA-Q08** Other roots/preconditions/owners | integration | Complete callers, hostile/range/owner contracts and the failed missile ToHit exit/result word |
 | **SBA-Q09** Elemental missile | observation | Physical-zero shield gate with physical control |
 | **SBA-Q10** Shield selection | integration | Equipment candidates and exclusion consumers/producers |
 | **SBA-Q11** Item types/slots | integration | Equivalence/secondary-type and slot population |
@@ -168,7 +168,7 @@ The [gap file](../plans/gaps/combat-shield-block-and-avoidance.md) records attem
 
 ### 8.1 Executable vectors
 
-Boundary for all vectors: supplied-input stage unless the vector stops at an isolated arithmetic/fold result. Inputs may name an intermediate block or successful hit to start at that stage; earlier producers are not executed. Defaults: non-null monster attacker/player defender, valid supplied records, passing hostility/range/owner checks, raw/effective mode 1, no mode override, no states, all unlisted stats zero, entries empty, shield absent, type matches false, classification 0, expansion 1, resultWord 0, KnockBack 0, GetHit/SoftHit false, blockEnable 1 and nDamageParam 0. An ordinary monster means type 1 with boss, hireling, demon, lUndead, hUndead, NoShldBlock and both neutral defense conditions false, special eligibility result 0 and valid class 5; unlisted monster flags use those defaults. Supplied operations log requests in order, draw nothing, and do not persist producer effects. No-weapon/supplied shield/token/type outcomes verify consumers only. Final seed is the successor after the listed draw count; every other seed remains unchanged. A supplied hit starts result mapping at hit bit 1 without a prior attacker draw. All numeric seeds/results below are exact.
+Boundary for all vectors: supplied-input stage unless the vector stops at an isolated arithmetic/fold result. Inputs may name an intermediate block or successful hit to start at that stage; earlier producers are not executed. Defaults: non-null monster attacker/player defender, valid supplied records, passing hostility/range/owner checks, raw/effective mode 1, no mode override, no states, all unlisted stats zero, entries empty, shield absent, type matches false, classification 0, expansion 1, resultWord 0, KnockBack 0, GetHit/SoftHit false, blockEnable 1 and nDamageParam 0. An ordinary monster means type 1 with boss, hireling, demon, lUndead, hUndead, NoShldBlock and both neutral defense conditions false, special eligibility result 0 and valid class 5; unlisted monster flags use those defaults. Supplied operations log requests in order, draw nothing, and do not persist producer effects. No-weapon/supplied shield/token/type outcomes verify consumers only. Final seed is the successor after the listed draw count; every other seed remains unchanged. A supplied hit starts result mapping at hit bit 1 without a prior attacker draw. A vector that supplies the final HIT-R07 chance exercises HIT-R08 and the stated caller/consumer order, but does not re-evaluate hit chance. All numeric seeds/results below are exact.
 
 Seed aliases in the vectors are exact pairs and successors: B={4,0x29A}, B1={0xAB1A45AE,1}, B2={0x62FD7EE7,0x475D97EE}; C={5,0x29A}, C1={0x15E0D673,2}, C2={0xC997B681,0x09201110}; D={8,0x29A}, D1={0x563488C2,3}, D2={0xFD665D4D,0x23F49E01}; E={12,0x29A}, E1={0x014ECBD6,5}, E2={0x97CF3BB3,0x008BA415}; F={2,0x29A}, F1={0xD58D2424,0}. Draw notation is owner/modulus/result, ordered left to right. Numeric outputs use decimal unless prefixed 0x. Case(a)/(b) labels below give independent input overrides, seeds, draws and outputs; no case inherits another case's outputs.
 
@@ -721,6 +721,28 @@ Seed aliases in the vectors are exact pairs and successors: B={4,0x29A}, B1={0xA
   - Discriminates: A w4-only match must work; a w5 match must skip w4 rather than query both.
   - runtime_observed: no
 
+- **SBA-V25** Hit-roll handoff order (SBA-R05/SBA-R06/SBA-R08 and HIT-R08/HIT-R09a; boundary: supplied final HIT-R07 chance and caller preconditions)
+  - (a)
+    - Inputs: melee result, player attacker with Stat 117=1, monster defender class 5 with NoShldBlock=true and Stat 20=20, raw/effective mode 1, supplied HIT-R07 chance 50, blockEnable 1, nDamageParam 0, state 54=false, resultWord 0, valid supplied preconditions; HIT-R09a's state applier records the request without adding draws or effects.
+    - Seeds: attacker F, defender B.
+    - Draws: attacker/100/36 then defender/100/10.
+    - Trace: 36<50 returns hit 1; before returning, HIT-R09a requests state 52 with level 1, duration 120000 frames, auxStat 31/value 0, effectIdentity 0 and the default removal callback. Melee then checks monster block 20; 10<20 returns code 1, maps flag 16 and clears hit. The request precedes the defender draw.
+    - Outputs: code 1, word 16, attacker F1, defender B1; exactly one state-applier request with attacker and defender as arguments.
+  - (b)
+    - Inputs: case (a) except supplied HIT-R07 chance 30.
+    - Seeds: attacker F, defender B.
+    - Draws: attacker/100/36.
+    - Trace: 36>=30 returns miss 0; no hit hook or defender check runs.
+    - Outputs: word 0, attacker F1, defender B unchanged; no block/avoidance code is produced and no state-applier request is made.
+  - (c)
+    - Inputs: missile unit contact with Missiles.ToHit=1, missile Stat 19=7, valid owner/record and accepted contact, monster attacker/player defender, supplied HIT-R07 chance 50, state 54=false, KnockBack 50, GetHit=true, physicalDamage 1, supplied standing defender block 20 after penalty, avoidance zero, resultWord 0. The hit-roll request uses isMissile 1 and bonus 7.
+    - Seeds: attacker F, missile F, defender B.
+    - Draws: attacker/100/36 then missile/100/36 then defender/100/10.
+    - Trace: HIT-R08 returns hit 1; the monster attacker is ineligible for HIT-R09a. Missile application presets hit 1, ORs GetHit flag 4, successful knockback ORs 8, then 10<20 blocks and ORs flag 16 while clearing hit.
+    - Outputs: word 28, attacker F1, missile F1, defender B1; no hit-hook request.
+  - Discriminates: standing melee success and failure consume the attacker draw before any defender draw; the successful player hit hook precedes monster block; nonzero missile ToHit consumes attacker, missile and defender seeds in that order rather than taking the zero-ToHit skip path. The rejected missile contact's exact outgoing word remains SBA-Q08.
+  - runtime_observed: no
+
 ### 8.2 Observation vectors
 
 Tool-neutral procedures and exact dated scope are in the [companion](../research/spec-evidence/combat-shield-block-and-avoidance.md#observations).
@@ -738,7 +760,7 @@ Tool-neutral procedures and exact dated scope are in the [companion](../research
 
 ## 9. Acceptance and dependencies
 
-The verified supplied-input subset consists of SBA-V01 through SBA-V24 at their stated boundaries, including exact intermediates, flags, requests and seed changes. Passing it does not establish unresolved special-monster, shield, classification, caller, precondition or owner integration. Full reproduction requires those gates closed, the [combat-hit-roll](combat-hit-roll.md) contract, and pending gameplay observations. Observation gaps alone do not gate verified supplied-input arithmetic.
+The verified supplied-input subset consists of SBA-V01 through SBA-V25 at their stated boundaries, including exact intermediates, flags, requests and seed changes. Passing it does not establish unresolved special-monster, shield, classification, caller, precondition or owner integration. Full reproduction requires those gates closed, the [combat-hit-roll](combat-hit-roll.md) contract, and pending gameplay observations. Observation gaps alone do not gate verified supplied-input arithmetic.
 
 **Depends on:** [foundations](core-numeric-and-rng-foundations.md) NRF-R01/NRF-R02 steps/modulus, RLI-R03/RLI-R02a/RLI-R02b list/state/stat reads; [data fields](core-game-data-fields.md) GDF-R01/GDA-R06a/GDA-R08/GDA-R10/GDF-R02/GDF-R03/GDF-R05a/GDF-R06a/GDF-R07/GDA-R16 names/schema/modes; [hit roll](combat-hit-roll.md) HIT-R01 through HIT-R10 for the hit return, attacker draw and post-hit request. Section 2 supplies upstream trigger/bonus/contact/precondition results; SBA-Q08 retains incomplete integration. Owners of the cited GDA, RLI ids: [core-game-data-table-records](core-game-data-table-records.md) (GDA); [core-record-layouts-and-ids](core-record-layouts-and-ids.md) (RLI).
 
