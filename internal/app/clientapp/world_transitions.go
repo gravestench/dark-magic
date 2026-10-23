@@ -80,9 +80,10 @@ func controlledPlayerLevel(world *akara.World, playerID string) (int, bool) {
 func (app *application) transitionBootstrapData() map[string]any {
 	app.worldMu.RLock()
 	seam := app.transitionSeam
+	additional := app.additionalTransitionSeams
 	app.worldMu.RUnlock()
 
-	return entryworld.TransitionData(seam)
+	return entryworld.TransitionData(seam, additional...)
 }
 
 // warpBootstrapData creates paired portals solely for the named acceptance scene. Production scenes

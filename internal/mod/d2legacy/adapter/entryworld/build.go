@@ -12,7 +12,7 @@ import (
 	gametransition "github.com/gravestench/dark-magic/internal/mod/d2legacy/adapter/transition"
 )
 
-// Build generates and materializes the canonical Act I entry pair. The operation resolves the seam and town spawn
+// Build generates and materializes the canonical Act I entry areas. The operation resolves connections and town spawn
 // before publication so callers never receive a partially usable authority world.
 func Build(
 	ctx context.Context,
@@ -56,7 +56,27 @@ func Build(
 		return nil, errors.New("d2legacy entry world: Act I town has no campfire entry")
 	}
 
-	return preparedWorld(generated, town, moor, seam, townX, townY, difficulty), nil
+	prepared := preparedWorld(generated, town, moor, seam, townX, townY, difficulty)
+	if generated.Dungeon != nil {
+		dungeon, err := materialize(ctx, content, generated.Dungeon, resolver)
+		if err != nil {
+			return nil, fmt.Errorf("materialize entry dungeon: %w", err)
+		}
+		connection := generated.DungeonConnection
+		first, err := authoredStampEndpoint(moor, generated.Wilderness, connection.FirstStamp)
+		if err != nil {
+			return nil, err
+		}
+		second, err := authoredStampEndpoint(dungeon, generated.Dungeon, connection.SecondStamp)
+		if err != nil {
+			return nil, err
+		}
+		prepared.Worlds[connection.SecondLevel] = dungeon
+		prepared.Zones[connection.SecondLevel] = generated.Dungeon
+		prepared.Spawns[connection.SecondLevel] = [2]float64{second.ArrivalX, second.ArrivalY}
+		prepared.AdditionalSeams = append(prepared.AdditionalSeams, gametransition.Seam{Town: first, Wilderness: second})
+	}
+	return prepared, nil
 }
 
 // validateDependencies rejects incomplete composition before generation starts. The single check intentionally keeps

@@ -10,6 +10,26 @@ local worldgen = require("engine.worldgen/v1")
 local M = {}
 local CELL = 8
 
+local function cave_entrance(seed, route, structures, level_type, columns, rows)
+    for _, cell in ipairs(route.ordered) do
+        if cell.x > 0 and cell.y > 0 and cell.x < columns - 1 and cell.y < rows - 1
+            and cell.x ~= structures.river.column and cell.x ~= structures.river.column + 1
+            and cell.y ~= structures.cliff.row then
+            local preset = assert(data.preset_by_definition(51), "d2legacy mapgen: cave entrance LvlPrest is absent")
+            local files = assets.preset_files(preset)
+            local variant = draw(seed, "d2legacy.mapgen.outdoor.den_entrance", #files)
+            return {
+                id = cell.y * columns + cell.x + 1, preset_def = 51, role = "den-of-evil-entry",
+                x = cell.x * CELL, y = cell.y * CELL, width = CELL, height = CELL,
+                ds1_path = assets.path(files[variant + 1]),
+                tile_paths = assets.masked_tiles(level_type, data.integer(preset.Dt1Mask, 0)),
+                variant = variant, populate = false, logical_walls = preset.Logicals == "1",
+            }
+        end
+    end
+    error("d2legacy mapgen: no route cell can fit the Den of Evil entrance")
+end
+
 local function level_size(level, difficulty)
     local suffix = ({[0] = "", [1] = "(N)", [2] = "(H)"})[difficulty]
     assert(suffix, "d2legacy mapgen: difficulty must be 0, 1, or 2")
@@ -35,7 +55,7 @@ local function fill_stamp(seed, id, x, y, route_cells, level_type)
     }
 end
 
-function M.generate(level_id, seed, town_exit, difficulty)
+function M.generate(level_id, seed, town_exit, difficulty, include_den)
     level_id, seed = math.floor(assert(tonumber(level_id))), math.floor(assert(tonumber(seed)))
     difficulty = math.floor(tonumber(difficulty) or 0)
     assert(level_id == 2, "d2legacy mapgen: current outdoor strategy supports Blood Moor level 2")
@@ -51,11 +71,12 @@ function M.generate(level_id, seed, town_exit, difficulty)
     local level_type = assert(data.level_type(2), "d2legacy mapgen: Blood Moor LvlTypes row is absent")
     local structures = structure_policy.plan(seed, columns, rows, route.entry.direction, route.path, level_type)
 
+    local entrance = include_den and cave_entrance(seed, route, structures, level_type, columns, rows)
     local stamps, rooms, links = {}, {}, {}
     for y = 0, rows - 1 do
         for x = 0, columns - 1 do
             local id = y * columns + x + 1
-            local stamp = fill_stamp(seed, id, x * CELL, y * CELL, route.cells, level_type)
+            local stamp = entrance and id == entrance.id and entrance or fill_stamp(seed, id, x * CELL, y * CELL, route.cells, level_type)
             stamps[#stamps + 1] = stamp
             rooms[#rooms + 1] = {id = id, x = stamp.x, y = stamp.y, width = CELL, height = CELL, stamp_id = id}
             if x > 0 then links[#links + 1] = {from = id - 1, to = id} end
