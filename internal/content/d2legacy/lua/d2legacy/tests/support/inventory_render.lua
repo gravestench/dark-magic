@@ -61,6 +61,16 @@ return {
                             height = 1,
                             inventory_dc6 = "data/global/items/invhp1.dc6",
                         },
+                        {
+                            id = "owned-vps",
+                            code = "vps",
+                            container = "inventory",
+                            x = 2,
+                            y = 0,
+                            width = 1,
+                            height = 1,
+                            inventory_dc6 = "data/global/items/invwps.dc6",
+                        },
                     },
                 }
             end,

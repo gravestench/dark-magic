@@ -359,6 +359,12 @@ transfers an existing ground item and refuses failed placement. Dark Magic's
 radius and backpack-only destination do not establish native distance or automatic
 belt/equipment/stack behavior.
 
+Game World renders existing ground items and routes their selected targets through
+the normal approach/pickup intent. Hover alone submits no pickup or skill, and
+retained art is removed on pickup or world teardown. These screen/module and decoded
+inventory checks do not supply a monster-death producer or a fresh running-client
+observation.
+
 Needed transaction:
 
 ```text

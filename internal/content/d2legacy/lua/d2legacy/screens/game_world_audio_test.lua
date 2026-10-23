@@ -38,7 +38,11 @@ local function fixture()
     })
     test.mock_module("engine.data/v1", {
         load_manifest = function()
-            return { resolution = { width = 800, height = 600 }, screens = { game_world = { map = {} } } }
+            return {
+                resolution = { width = 800, height = 600 },
+                palettes = { units = "units" },
+                screens = { game_world = { map = {} } },
+            }
         end,
     })
     test.mock_module("engine.network/v1", {
@@ -65,6 +69,11 @@ local function fixture()
         destroy = function() end,
         create = function()
             return { root = node() }
+        end,
+    })
+    test.mock_module("d2legacy.gameplay.ground_items", {
+        new = function()
+            return { update = function() end, destroy = function() end }
         end,
     })
     test.mock_module("engine.records/v1", {
