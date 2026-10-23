@@ -277,12 +277,17 @@ local function request_melee(tick)
     })
 end
 
-local function expect_latest_melee_defense(count, defense)
+local function expect_latest_melee_chance(count, defense, chance)
     local ecs = require("engine.ecs/v1")
     local events = test.entities_with("d2legacy.combat.melee_event")
     test.expect(#events):equals(count)
+    local melee = ecs.get(events[#events], "d2legacy.combat.melee_event")
     local result = ecs.get(events[#events], "d2legacy.combat.attack_result")
     test.expect(result:get("defense")):equals(defense)
+    test.expect(result:get("hit_chance")):equals(chance)
+    test.expect(melee:get("defense")):equals(defense)
+    test.expect(melee:get("hit_chance")):equals(chance)
+    test.expect(result:get("outcome")):equals(melee:get("hit") and "hit" or "miss")
 end
 
 -- Assert that a source is present with an exact value,
@@ -410,7 +415,7 @@ return test.suite({
             end),
             test.step(1),
             test.run(function()
-                expect_latest_melee_defense(1, 0)
+                expect_latest_melee_chance(1, 0, 95)
             end),
             test.submit({
                 tick = 6,
@@ -425,7 +430,7 @@ return test.suite({
             end),
             test.step(1),
             test.run(function()
-                expect_latest_melee_defense(2, 500)
+                expect_latest_melee_chance(2, 500, 11)
             end),
             test.submit({
                 tick = 9,
@@ -440,7 +445,7 @@ return test.suite({
             end),
             test.step(1),
             test.run(function()
-                expect_latest_melee_defense(3, 0)
+                expect_latest_melee_chance(3, 0, 95)
             end),
             test.submit(move_item(12, 5, "weapon", { container = "inventory", x = 2, y = 0 })),
             test.step(2),
@@ -449,7 +454,7 @@ return test.suite({
             end),
             test.step(1),
             test.run(function()
-                expect_latest_melee_defense(4, 500)
+                expect_latest_melee_chance(4, 500, 11)
             end),
         }),
         test.case("ignore_target_defense_modifier_follows_active_equipment", {

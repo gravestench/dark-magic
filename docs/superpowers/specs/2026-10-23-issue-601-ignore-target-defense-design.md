@@ -28,7 +28,7 @@ HIT-R02c is verified in original 1.13c static code; HIT-V10 is a supplied-input 
 
 - Pure supplied-input cases pin stat 0, positive and negative nonzero stat, ordinary monster, boss, hireling, player defender, and monster attacker. They retain or zero defense as HIT-R02c requires for the known classifications.
 - Production melee cases assert the event defense and chance for ordinary (0, 95%) versus protected (500, 37%) equal-level targets at AR 300, and assert the actual draw outcome on a controlled random input where 37% misses and 95% hits. The same effective defense must be used by both chance and draw.
-- Item modifier tests cover equip, switch away, and removal through existing `sync_sources`; player-entry tests cover passive admission and its production effect. The tests assert the actual post-switch and post-removal melee outcomes after structural changes settle, with no stale source on the next authoritative tick.
+- Item modifier tests cover equip, switch away, and removal through existing `sync_sources`; player-entry tests cover passive admission and its production effect. The tests assert authoritative defense and hit chance after each equipment change, with no stale source on the next authoritative tick. The separate controlled-draw cases prove that eligible and protected defenses lead to distinct hit outcomes.
 - Run focused Lua tests, the Lua harness, `go test ./...`, architecture, and Lua format checks on the final commit. State explicitly whether real game assets and race tests ran locally. CI must pass before merge.
 
 ## Remaining decision
