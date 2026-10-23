@@ -100,6 +100,19 @@ return test.suite({
                 StaminaPerVitality = "4",
                 ManaRegen = "0",
             },
+            {
+                class = "Necromancer",
+                StartSkill = "Fixture Idle",
+                ToHitFactor = "5",
+                WalkVelocity = "6",
+                RunVelocity = "9",
+                stamina = "84",
+                vit = "20",
+                RunDrain = "20",
+                StaminaPerLevel = "4",
+                StaminaPerVitality = "4",
+                ManaRegen = "1",
+            },
         },
         ["data/global/excel/skills.txt"] = {
             {
@@ -224,6 +237,19 @@ return test.suite({
             maximum = 25600,
             bonus = -130,
             expected = 0,
+        }),
+        mana_tick_case("negative_percent_truncates_toward_zero", {
+            current = 256,
+            maximum = 25600,
+            bonus = -130,
+            expected = 254,
+        }),
+        mana_tick_case("large_class_base_uses_second_operand_branch_first", {
+            class = "Necromancer",
+            current = 0,
+            maximum = 2000000000,
+            bonus = 65437,
+            expected = 889992448,
         }),
         mana_tick_case("suppression_keeps_flat_mana_recovery", {
             current = 1000,
