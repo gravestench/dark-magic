@@ -6,7 +6,6 @@
 -- Quest completion/progression is a separate authority problem.
 
 local render = require("engine.render/v1")
-local ecs = require("engine.ecs/v1")
 local input = require("engine.input/v1")
 local scenes = require("engine.scene/v1")
 local data = require("engine.data/v1")
@@ -33,6 +32,7 @@ local function translated(key, fallback)
 end
 
 local function status()
+    local ecs = require("engine.ecs/v1")
     local owner = "local-player"
     local available, network = pcall(require, "engine.network/v1")
     if available and network.status().player_id and network.status().player_id ~= "" then
