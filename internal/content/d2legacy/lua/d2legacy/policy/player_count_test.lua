@@ -1,5 +1,28 @@
 local test = require("d2legacy.tests/v1")
 
+local function isolated_policy(maximum_players)
+    local stored
+    test.mock_module("d2legacy.policy.game_rules", {
+        get = function()
+            return { maximum_players = maximum_players }
+        end,
+    }, { "get" })
+    test.mock_module("engine.authority_state/v1", {
+        register = function(_, _, value)
+            stored = value
+        end,
+        read = function()
+            return stored
+        end,
+        replace = function(_, _, value)
+            stored = value
+        end,
+    }, { "register", "read", "replace" })
+    local policy = require("d2legacy.policy.player_count")
+    policy.initialize()
+    return policy
+end
+
 return test.suite({
     name = "purpose-specific player counts",
     profile = "module",
@@ -63,6 +86,24 @@ return test.suite({
                 policy.clear_override()
                 test.expect(policy.snapshot().override):is_nil()
                 test.expect(policy.effective(2)):equals(2)
+            end)
+        end),
+        test.case("nodrop_keeps_party_members_above_effective_count", function(t)
+            t:run(function()
+                local policy = isolated_policy(8)
+                test.expect(policy.no_drop(3, 4, 8).no_drop_player_count):equals(4)
+                test.expect(policy.no_drop(1, 3, 8).no_drop_player_count):equals(3)
+            end)
+        end),
+        test.case("zero_living_players_do_not_create_negative_monster_scaling", function(t)
+            t:run(function()
+                local policy = isolated_policy(8)
+                test.expect(policy.effective(0)):equals(0)
+                test.expect(policy.no_drop(0, 0, 8).effective_player_count):equals(0)
+                local spawn = policy.monster_spawn(0, true)
+                test.expect(spawn.effective_player_count):equals(1)
+                test.expect(spawn.life_bonus_percent):equals(0)
+                test.expect(spawn.experience_bonus_percent):equals(0)
             end)
         end),
     },
