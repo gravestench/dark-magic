@@ -15,7 +15,7 @@ function M.register(component, handler)
     handlers[component] = handler
 end
 
-function M.apply(owner, entity)
+function M.apply(owner, entity, command)
     local names = {}
     for component in pairs(handlers) do
         names[#names + 1] = component
@@ -24,7 +24,7 @@ function M.apply(owner, entity)
     for _, component in ipairs(names) do
         local value = ecs.get(entity, component)
         if value then
-            handlers[component](owner, entity, value)
+            handlers[component](owner, entity, value, command)
             return true
         end
     end
