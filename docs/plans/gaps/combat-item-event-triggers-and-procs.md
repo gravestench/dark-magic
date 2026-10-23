@@ -16,3 +16,10 @@ Spec: [Item Event Triggers and Procs](../../specs/combat-item-event-triggers-and
 | IEP-Q09 | integration | IEP-R15, IEP-R16, IEP-R17 | Stored overlay attach/list-write/update effects; local search/creation and ordered requests consumed from LSE-R13, and ordered callback overlay requests, remain verified | Complete owning contracts for attach (STL-R06b), list stat write (STL-R06c) and update queue (RLI-Q02), as LSE-Q01 | 2026-10-14: read D2Common 0x32C10, reused Crushing Blow overlay evidence; helpers 0x37F40, 0x38100, 0x3A7D0, 0x3A280, 0x665C0 not all established. 2026-10-15: reused LSE-R13 dated 2026-10-14 as Crushing Blow does; the local helper question closes and the overlay-execution rule is removed, while downstream stored effects remain gated | Accept complete owning attach/write/update contracts with integration vectors |
 | IEP-Q10 | integration | IEP-R08, IEP-R15, IEP-R16, IEP-R17 | Actual replacing stat writes; supplied values/logged requests remain verified | Replacing-write dependency effects | 2026-10-14: read maximum getters/classifier and resolved their targets, consumed RLI-R02a/RLI-R02b and HIT-R02g to close those reading gaps; checked RLI-Q03 for remaining write effects | Establish replacing-write effects and close RLI-Q03 for relied-on writes |
 | IEP-Q11 | observation | IEP-R01, IEP-R02, IEP-R03, IEP-R05, IEP-R06, IEP-R07, IEP-R08, IEP-R09a, IEP-R10, IEP-R11, IEP-R12a, IEP-R13a, IEP-R13b, IEP-R14, IEP-R15, IEP-R16, IEP-R17, IEP-R18, IEP-O01, IEP-O02, IEP-O03, IEP-O04 | Runtime-confirmation claims only | Matching attributed gameplay captures | 2026-10-14: reused existing observation records; none exist; migration excludes gameplay campaign | Authorized original-1.13c campaign matching named vector assertions |
+
+## Publication review (2026-10-23, issue #482)
+
+Independent blind, evidence and publication reviews corrected supplied-input vector gates
+and reference defects in the spec. No open gap above was closed: especially, static 1.13c
+dispatch evidence does not establish complete original item bindings, stored effects,
+gameplay observations or 1.14d behavior.
