@@ -192,6 +192,55 @@ return test.suite({
         },
     },
     cases = {
+        test.case("admits_flat_demon_and_undead_attack_rating_passive_sources", {
+            test.submit_system({
+                tick = 1,
+                sequence = 1,
+                kind = "system.player.enter",
+                payload = fixtures.player_entry({
+                    passive_stat_sources = {
+                        { id = "demon-ar", stat = "item_demon_tohit", operation = "add", value = 50 },
+                        { id = "undead-ar", stat = "item_undead_tohit", operation = "add", value = 40 },
+                    },
+                }),
+            }),
+            test.step(1),
+            test.run(function()
+                local sources = require("d2legacy.gameplay.stat_sources")
+                local player = test.only_entity_with("d2legacy.player.identity")
+                local entities = test.entities_with("d2legacy.stat.source")
+                test.expect(sources.resolve(entities, player, "item_demon_tohit", 0)):equals(50)
+                test.expect(sources.resolve(entities, player, "item_undead_tohit", 0)):equals(40)
+            end),
+        }),
+        test.case("rejects_percent_demon_attack_rating_passive_source", {
+            test.run(function()
+                local entry = fixtures.player_entry({
+                    passive_stat_sources = {
+                        { id = "wrong-operation", stat = "item_demon_tohit", operation = "percent", value = 50 },
+                    },
+                })
+                local ok, reason = pcall(require("d2legacy.commands.enter_player").apply, { tick = 1, payload = entry })
+                test.assert(
+                    not ok and tostring(reason):find("Target type attack rating must be additive", 1, true),
+                    "percent demon attack rating must fail the additive guard"
+                )
+            end),
+        }),
+        test.case("rejects_percent_undead_attack_rating_passive_source", {
+            test.run(function()
+                local entry = fixtures.player_entry({
+                    passive_stat_sources = {
+                        { id = "wrong-operation", stat = "item_undead_tohit", operation = "percent", value = 50 },
+                    },
+                })
+                local ok, reason = pcall(require("d2legacy.commands.enter_player").apply, { tick = 1, payload = entry })
+                test.assert(
+                    not ok and tostring(reason):find("Target type attack rating must be additive", 1, true),
+                    "percent undead attack rating must fail the additive guard"
+                )
+            end),
+        }),
         test.case("admits_fractional_target_defense_passive_source", {
             test.submit_system({
                 tick = 1,

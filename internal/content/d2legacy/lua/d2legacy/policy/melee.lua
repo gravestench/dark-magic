@@ -53,6 +53,28 @@ function M.fractional_defense(defense, value, half)
     return signed32(defense - cut)
 end
 
+function M.target_type_attack_rating(
+    attack_rating,
+    demon_bonus,
+    undead_bonus,
+    player_attacker,
+    monster_defender,
+    demon,
+    low_undead,
+    high_undead
+)
+    if not player_attacker or not monster_defender then
+        return attack_rating
+    end
+    if demon and demon_bonus ~= 0 then
+        attack_rating = signed32(attack_rating + demon_bonus)
+    end
+    if (low_undead or high_undead) and undead_bonus ~= 0 then
+        attack_rating = signed32(attack_rating + undead_bonus)
+    end
+    return attack_rating
+end
+
 function M.hit_chance(attacker_level, defender_level, attack_rating, defense)
     assert(attacker_level > 0 and defender_level > 0, "unit levels must be positive")
     if defense < 0 then attack_rating, defense = attack_rating-defense, 0 end

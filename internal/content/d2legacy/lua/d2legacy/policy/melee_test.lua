@@ -41,6 +41,27 @@ return test.suite({
                 test.expect(melee.fractional_defense(-2147483648, 50, false)):equals(-2147483648)
             end),
         }),
+        test.case("player_target_type_bonuses_add_each_matching_stat_once", {
+            test.run(function()
+                local melee = require("d2legacy.policy.melee")
+                local bonus = melee.target_type_attack_rating
+                test.expect(bonus(300, 50, 40, true, true, true, false, false)):equals(350)
+                test.expect(bonus(300, 50, 40, true, true, false, true, false)):equals(340)
+                test.expect(bonus(300, 50, 40, true, true, false, false, true)):equals(340)
+                test.expect(bonus(300, 50, 40, true, true, true, false, true)):equals(390)
+                test.expect(bonus(300, 50, 40, true, true, false, true, true)):equals(340)
+                test.expect(bonus(300, -50, -40, true, true, true, false, true)):equals(210)
+            end),
+        }),
+        test.case("target_type_bonuses_leave_ineligible_attacks_unchanged", {
+            test.run(function()
+                local bonus = require("d2legacy.policy.melee").target_type_attack_rating
+                test.expect(bonus(300, 50, 40, true, true, false, false, false)):equals(300)
+                test.expect(bonus(300, 50, 40, true, false, true, true, true)):equals(300)
+                test.expect(bonus(300, 50, 40, false, true, true, true, true)):equals(300)
+                test.expect(bonus(300, 0, 0, true, true, true, true, true)):equals(300)
+            end),
+        }),
         test.case("hit_chance_preserves_recovered_integer_order", {
             test.run(function()
                 local melee = require("d2legacy.policy.melee")
