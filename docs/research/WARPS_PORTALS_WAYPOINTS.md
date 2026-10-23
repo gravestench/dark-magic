@@ -1,6 +1,13 @@
 # Warps, portals, waypoints, teleportation, and level-transition research
 
-Status: implementation-oriented research baseline. Dark Magic already has a trusted `internal/game/transition` authority for the Act I town/Blood Moor seam, semantic map seams/warps, fixed-tick commands, persistent player location, and generated world boundaries. Warp Lab materializes a paired authoritative interaction/transition entity set; both endpoints now acquire stable level/room residency from generated geometry and are pinned by the mounted-asset lab. This document generalizes that boundary to the full Diablo II transition vocabulary.
+Status: implementation-oriented research baseline. Dark Magic now prepares Rogue
+Encampment, Blood Moor, and Cold Plains together and crosses both Act I seam
+pairs through an authoritative Lua collision-phase system. The generated
+topology and per-seam trigger policy are pinned by a runtime checksum; original
+1.13c/1.14d seam coordinates remain unverified. Warp Lab also materializes a
+paired authoritative interaction/transition entity set with stable level/room
+residency from generated geometry. This document generalizes those boundaries
+to the full Diablo II transition vocabulary.
 
 ## Executive conclusion
 
@@ -39,17 +46,23 @@ Stairs, level seams, doors, red/blue portals, town portals, waypoints, teleport 
 
 ## Current Dark Magic transition authority
 
-The existing package already establishes several correct principles:
+The generic `internal/game/transition` command path and the Lua collision-phase
+Act I seam path both keep final relocation in the authority:
 
-- command kind is system/admin-authority rather than presentation-authority;
-- destination is validated server-side;
-- player must be near the authored source endpoint;
+- the generic command path requires system/admin authority rather than
+  presentation authority; Act I seams run directly in the authoritative Lua
+  tick without submitting a transition command;
+- prepared Act I seam destinations are validated against materialized map
+  bounds and collision;
+- the player must be within the admitted seam's source radius;
 - level ID and world position update atomically in ECS;
 - velocity is reset;
 - presentation/cache observer fires only after authoritative commit and cannot veto;
-- the source generates a system transition when the player crosses the current Act I seam.
+- Lua's collision-phase system applies either prepared Act I seam after movement enters its source radius;
+- connected movement samples stamped with their source level are ignored after an authoritative seam crossing.
 
-Keep these properties while replacing the current hard-coded `1 <-> 2` endpoint limitation with data/instance-driven transitions.
+Both `1↔2` and `2↔3` now use prepared endpoint data. Other level links still
+need data/instance-driven transition coverage.
 
 ## Transition source kinds
 
@@ -347,7 +360,9 @@ See [GAMEPLAY_AUDIO_BEHAVIOR.md](GAMEPLAY_AUDIO_BEHAVIOR.md). Audio/load complet
 
 ### T1 — generalize transition endpoints
 
-Replace the hard-coded Act I seam endpoint switch with immutable endpoint/link definitions while preserving current town/Blood Moor behavior/tests.
+The two prepared Act I seams establish this boundary for Rogue Encampment,
+Blood Moor, and Cold Plains. Extend endpoint/link definitions to other levels
+while preserving both existing seam tests.
 
 ### T2 — authored stair/warp
 
