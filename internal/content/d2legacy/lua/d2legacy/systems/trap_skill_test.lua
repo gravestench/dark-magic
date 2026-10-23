@@ -44,6 +44,8 @@ local sentry_monstats = {
         Align = "1",
         Code = "DS",
         enabled = "1",
+        boss = "1",
+        primeevil = "1",
         noRatio = "1",
         minHP = "20",
         maxHP = "20",
@@ -355,6 +357,9 @@ return test.suite({
                 test.expect(defense:get("base_fire_resist")):equals(23)
                 test.expect(defense:get("fire_resist")):equals(23)
                 test.expect(ecs.get(sentries[1], "d2legacy.monster.stats"):get("defense")):equals(27)
+                test.expect(ecs.get(sentries[1], "d2legacy.monster.boss") ~= nil):equals(true)
+                test.expect(ecs.get(sentries[1], "d2legacy.monster.freeze_immune") ~= nil):equals(true)
+                test.expect(ecs.get(sentries[1], "d2legacy.monster.prime_evil") ~= nil):equals(true)
             end),
             test.expect_checkpoint_parity(1),
         }),
