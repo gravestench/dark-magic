@@ -2,6 +2,7 @@ package transition
 
 import (
 	"fmt"
+	"math"
 
 	gameworld "github.com/gravestench/dark-magic/internal/game/world"
 	d2mapgen "github.com/gravestench/dark-magic/internal/mod/d2legacy/adapter/mapgen"
@@ -20,8 +21,9 @@ type SeamEndpoint struct {
 // Seam is a verified bidirectional relationship between two materialized
 // zones. Transition commands consume this value; presentation only observes it.
 type Seam struct {
-	Town       SeamEndpoint
-	Wilderness SeamEndpoint
+	First         SeamEndpoint
+	Second        SeamEndpoint
+	TriggerRadius float64
 }
 
 // ResolveSeam applies a mod-authored seam specification to two materialized
@@ -31,25 +33,51 @@ func ResolveSeam(spec d2mapgen.SeamSpec, firstMap, secondMap *gameworld.Map) (Se
 		return Seam{}, fmt.Errorf("world: seam requires both materialized maps")
 	}
 
-	firstX, firstY, err := resolveAuthoredEdge(spec, firstMap)
+	var firstX, firstY float64
+	var err error
+	if spec.FirstGenerated {
+		firstX, firstY, err = resolveGeneratedTile(firstMap, spec.FirstTileX, spec.FirstTileY)
+	} else {
+		firstX, firstY, err = resolveAuthoredEdge(spec, firstMap)
+	}
 	if err != nil {
 		return Seam{}, err
 	}
 
-	secondX, secondY, err := resolveGeneratedEdge(spec, secondMap)
+	secondX, secondY, err := resolveGeneratedTile(secondMap, spec.SecondTileX, spec.SecondTileY)
 	if err != nil {
 		return Seam{}, err
 	}
 
 	// Validate arrivals only after both edge points, preserving the established error precedence for malformed seams.
-	firstArrivalX, firstArrivalY, found := insetArrival(firstMap, firstX, firstY, spec.FirstDirection)
+	inset := spec.ArrivalInset
+	if inset == 0 {
+		inset = 6
+	}
+	firstArrivalX, firstArrivalY, found := insetArrival(firstMap, firstX, firstY, spec.FirstDirection, inset)
 	if !found {
 		return Seam{}, fmt.Errorf("world: first seam arrival is blocked")
 	}
 
-	secondArrivalX, secondArrivalY, found := insetArrival(secondMap, secondX, secondY, spec.SecondDirection)
+	secondArrivalX, secondArrivalY, found := insetArrival(secondMap, secondX, secondY, spec.SecondDirection, inset)
 	if !found {
 		return Seam{}, fmt.Errorf("world: second seam arrival is blocked")
+	}
+	if spec.FirstGenerated {
+		for _, side := range []struct {
+			world              *gameworld.Map
+			tileX, tileY       int
+			edgeX, edgeY       float64
+			arrivalX, arrivalY float64
+		}{
+			{firstMap, spec.FirstTileX, spec.FirstTileY, firstX, firstY, firstArrivalX, firstArrivalY},
+			{secondMap, spec.SecondTileX, spec.SecondTileY, secondX, secondY, secondArrivalX, secondArrivalY},
+		} {
+			if err := generatedArrivalSafe(spec, side.world, side.tileX, side.tileY,
+				side.edgeX, side.edgeY, side.arrivalX, side.arrivalY); err != nil {
+				return Seam{}, err
+			}
+		}
 	}
 
 	first := newSeamEndpoint(
@@ -71,7 +99,54 @@ func ResolveSeam(spec d2mapgen.SeamSpec, firstMap, secondMap *gameworld.Map) (Se
 		secondMap,
 	)
 
-	return Seam{Town: first, Wilderness: second}, nil
+	radius := spec.TriggerRadius
+	if radius == 0 {
+		radius = 2
+	}
+	return Seam{First: first, Second: second, TriggerRadius: float64(radius)}, nil
+}
+
+// Generated edges have no authored DS1 anchor. Bound collision search and require a walkable route to both the
+// interior and return trigger before advertising a reciprocal transition.
+func generatedArrivalSafe(
+	spec d2mapgen.SeamSpec, world *gameworld.Map, tileX, tileY int,
+	edgeX, edgeY, arrivalX, arrivalY float64,
+) error {
+	anchorX := float64(tileX*gameworld.SubtilesPerTile) + 2.5
+	anchorY := float64(tileY*gameworld.SubtilesPerTile) + 2.5
+	limit := float64(spec.MaxArrivalDistance)
+	if math.Hypot(edgeX-anchorX, edgeY-anchorY) > limit ||
+		math.Hypot(arrivalX-edgeX, arrivalY-edgeY) > limit {
+		return fmt.Errorf("world: generated seam exceeds collision search bound")
+	}
+	if math.Hypot(arrivalX-edgeX, arrivalY-edgeY) <= float64(spec.TriggerRadius) {
+		return fmt.Errorf("world: generated seam arrival is inside return trigger")
+	}
+	interiorX, interiorY, found := world.OpenPointNearCenter()
+	if !found || !insideCentralHalf(world, interiorX, interiorY) ||
+		math.Hypot(interiorX-edgeX, interiorY-edgeY) <= float64(spec.ArrivalInset+spec.TriggerRadius) {
+		return fmt.Errorf("world: generated seam has no open interior")
+	}
+	if _, err := world.FindPath(gameworld.PathRequest{
+		Start: gameworld.Point{X: arrivalX, Y: arrivalY},
+		Goal:  gameworld.Point{X: interiorX, Y: interiorY},
+	}); err != nil {
+		return fmt.Errorf("world: generated seam has no route inward: %w", err)
+	}
+	if _, err := world.FindPath(gameworld.PathRequest{
+		Start:      gameworld.Point{X: arrivalX, Y: arrivalY},
+		Goal:       gameworld.Point{X: edgeX, Y: edgeY},
+		StopRadius: float64(spec.TriggerRadius),
+	}); err != nil {
+		return fmt.Errorf("world: generated seam has no route to return trigger: %w", err)
+	}
+	return nil
+}
+
+// insideCentralHalf prevents a center search from treating a narrow open border strip as playable interior.
+func insideCentralHalf(world *gameworld.Map, x, y float64) bool {
+	return x >= float64(world.WidthSubtiles)/4 && x < float64(world.WidthSubtiles)*3/4 &&
+		y >= float64(world.HeightSubtiles)/4 && y < float64(world.HeightSubtiles)*3/4
 }
 
 // resolveAuthoredEdge anchors the first zone to the extreme authored exit in the requested cardinal direction.
@@ -89,10 +164,10 @@ func resolveAuthoredEdge(spec d2mapgen.SeamSpec, world *gameworld.Map) (float64,
 	return x, y, nil
 }
 
-// resolveGeneratedEdge converts the wilderness tile coordinate to its center subtile before collision lookup.
-func resolveGeneratedEdge(spec d2mapgen.SeamSpec, world *gameworld.Map) (float64, float64, error) {
-	x := float64(spec.SecondTileX*gameworld.SubtilesPerTile) + 2.5
-	y := float64(spec.SecondTileY*gameworld.SubtilesPerTile) + 2.5
+// resolveGeneratedTile converts a generated warp tile coordinate to its center subtile before collision lookup.
+func resolveGeneratedTile(world *gameworld.Map, tileX, tileY int) (float64, float64, error) {
+	x := float64(tileX*gameworld.SubtilesPerTile) + 2.5
+	y := float64(tileY*gameworld.SubtilesPerTile) + 2.5
 
 	x, y, found := world.OpenPointNearSubtile(x, y)
 	if !found {
@@ -124,9 +199,10 @@ func newSeamEndpoint(
 	}
 }
 
-// insetArrival moves six subtiles into the destination so arrivals do not immediately retrigger the seam.
-func insetArrival(world *gameworld.Map, x, y float64, edge string) (float64, float64, bool) {
-	delta := map[string][2]float64{"north": {0, 6}, "east": {-6, 0}, "south": {0, -6}, "west": {6, 0}}[edge]
+// insetArrival moves the policy-specified distance inward so arrivals do not immediately retrigger the seam.
+func insetArrival(world *gameworld.Map, x, y float64, edge string, inset int) (float64, float64, bool) {
+	step := float64(inset)
+	delta := map[string][2]float64{"north": {0, step}, "east": {-step, 0}, "south": {0, -step}, "west": {step, 0}}[edge]
 	return world.OpenPointNearSubtile(x+delta[0], y+delta[1])
 }
 

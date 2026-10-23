@@ -1,9 +1,9 @@
 -- Move players through authored level seams during the authoritative tick.
 --
--- Go supplies only collision-derived endpoints. This module owns every Diablo
--- rule: which level pairs are connected, how close a player must be, where the
--- player arrives, and that movement stops after crossing. Keeping the rule in
--- one small system also makes replay deterministic: no wall-clock or native
+-- Go materializes collision-derived endpoints and transports the admitted seam
+-- radius. This module owns when to cross, where the player arrives, and that
+-- movement stops after crossing. One small system makes replay deterministic:
+-- no wall-clock or native
 -- input state is consulted while the fixed-tick schedule is running.
 
 local ecs = require("engine.ecs/v1")
@@ -11,12 +11,13 @@ local initial_available, initial = pcall(require, "engine.initial_data/v1")
 local transition = require("d2legacy.gameplay.transition")
 
 local M = {}
-local trigger_radius = 2
 
+-- Reject NaN and infinity before they can make geometric trigger comparisons nondeterministic.
 local function finite(value)
     return type(value) == "number" and value == value and value ~= math.huge and value ~= -math.huge
 end
 
+-- Validate each authored directed seam before the tick system captures it.
 local function validate(seam)
     assert(type(seam) == "table", "world transition seam must be a table")
     for _, name in ipairs({
@@ -28,15 +29,18 @@ local function validate(seam)
         "arrival_y",
         "world_width",
         "world_height",
+        "trigger_radius",
     }) do
         assert(finite(seam[name]), "world transition " .. name .. " must be finite")
     end
     assert(seam.source_level ~= seam.destination_level, "world transition must change levels")
+    assert(seam.trigger_radius > 0, "world transition trigger radius must be positive")
     assert(seam.world_width > 0 and seam.world_height > 0, "world transition bounds must be positive")
     assert(seam.arrival_x >= 0 and seam.arrival_x < seam.world_width, "world transition arrival x is outside bounds")
     assert(seam.arrival_y >= 0 and seam.arrival_y < seam.world_height, "world transition arrival y is outside bounds")
 end
 
+-- Load all admitted directions once for registration and on demand for placement checks.
 local function configured_seams()
     local configuration = initial_available and initial.get("d2legacy.world_transitions") or {}
     local seams = configuration.seams or {}
@@ -46,11 +50,12 @@ local function configured_seams()
     return seams
 end
 
+-- First matching seam wins in authored order when two trigger circles overlap.
 local function matching_seam(seams, level, x, y)
     for _, seam in ipairs(seams) do
         if seam.source_level == level then
             local dx, dy = x - seam.source_x, y - seam.source_y
-            if math.sqrt(dx * dx + dy * dy) <= trigger_radius then
+            if math.sqrt(dx * dx + dy * dy) <= seam.trigger_radius then
                 return seam
             end
         end
@@ -63,6 +68,7 @@ function M.at_trigger(level, x, y)
     return matching_seam(configured_seams(), level, x, y) ~= nil
 end
 
+-- Register crossing at the collision barrier after movement updates player position.
 function M.register()
     local seams = configured_seams()
     ecs.system({

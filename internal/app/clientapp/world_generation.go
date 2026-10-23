@@ -9,7 +9,7 @@ import (
 	modruntime "github.com/gravestench/dark-magic/internal/runtime/lua"
 )
 
-// buildEntryWorld prepares town and wilderness as one unit, validates the requested fixture level,
+// buildEntryWorld prepares town, Blood Moor, and Cold Plains as one unit, validates the requested fixture level,
 // and publishes only a complete result. A failed generation cannot replace the currently usable
 // world with partial maps.
 func (app *application) buildEntryWorld() error {
@@ -30,8 +30,13 @@ func (app *application) buildEntryWorld() error {
 		return fmt.Errorf("development fixture world level %d is unavailable", activeLevel)
 	}
 
+	checksum := prepared.TopologyChecksum
+	if app.pendingEntryRecovery != nil && checksum != app.pendingEntryRecovery.TopologyChecksum {
+		return fmt.Errorf("saved d2legacy entry topology differs from prepared world")
+	}
+
 	pointerAcceptance := app.newFixturePointerAcceptance(activeWorld, spawns[activeLevel])
-	app.publishEntryWorld(prepared, spawns, activeLevel, pointerAcceptance)
+	app.publishEntryWorld(prepared, checksum, spawns, activeLevel, pointerAcceptance)
 
 	if app.movementSource != nil {
 		app.movementSource.SetNavigation(activeWorld)
@@ -48,15 +53,15 @@ func (app *application) prepareEntryWorld() (*entryworld.Prepared, error) {
 		return nil, wrap("resolve d2legacy package", err)
 	}
 
-	prepared, err := entryworld.Build(
-		app.ctx,
-		app.options.Content,
-		d2legacySource,
-		app.records,
-		app.worldObjectResolver,
-		1,
-		app.options.GameDifficulty,
-	)
+	var prepared *entryworld.Prepared
+	if len(app.entryWorldSnapshot) != 0 {
+		prepared, err = entryworld.RestorePrepared(app.ctx, app.options.Content, d2legacySource,
+			app.records, app.worldObjectResolver, app.entryWorldSnapshot)
+	} else {
+		prepared, err = entryworld.Build(app.ctx, app.options.Content, d2legacySource,
+			app.records, app.worldObjectResolver, 1, app.options.GameDifficulty)
+	}
+
 	if err != nil {
 		return nil, wrap("prepare d2legacy entry world", err)
 	}
@@ -69,14 +74,44 @@ func (app *application) prepareEntryWorld() (*entryworld.Prepared, error) {
 func (app *application) resolveEntryWorldSpawns(
 	prepared *entryworld.Prepared,
 ) (map[int][2]float64, error) {
-	townSpawn := prepared.Spawns[prepared.Seam.Town.LevelID]
+	townSeam := prepared.Seams[0]
 
-	return entryWorldSpawns(
+	townSpawn := prepared.Spawns[townSeam.First.LevelID]
+	if app.options.FixtureWorldSpawn == "cold_plains_seam" {
+		if len(prepared.Seams) < 2 {
+			return nil, fmt.Errorf("development Cold Plains seam is unavailable")
+		}
+
+		spawns := make(map[int][2]float64, len(prepared.Spawns))
+		for level, spawn := range prepared.Spawns {
+			spawns[level] = spawn
+		}
+
+		spawns[2] = [2]float64{
+			prepared.Seams[1].First.ArrivalX,
+			prepared.Seams[1].First.ArrivalY,
+		}
+
+		return spawns, nil
+	}
+
+	spawns, err := entryWorldSpawns(
 		app.options.FixtureWorldSpawn,
-		prepared.Seam,
+		townSeam,
 		townSpawn[0],
 		townSpawn[1],
 	)
+	if err != nil {
+		return nil, err
+	}
+
+	for level, spawn := range prepared.Spawns {
+		if _, exists := spawns[level]; !exists {
+			spawns[level] = spawn
+		}
+	}
+
+	return spawns, nil
 }
 
 // fixtureActiveLevel confines direct world selection to development fixtures and defaults ordinary
@@ -112,12 +147,16 @@ func (app *application) newFixturePointerAcceptance(
 // section. Readers can never pair geometry from one generation with metadata from another.
 func (app *application) publishEntryWorld(
 	prepared *entryworld.Prepared,
+	checksum string,
 	spawns map[int][2]float64,
 	activeLevel int,
 	pointerAcceptance *pointerMovementAcceptance,
 ) {
 	app.worldMu.Lock()
-	app.transitionSeam = prepared.Seam
+	app.transitionSeam = prepared.Seams[0]
+	app.transitionSeams = append([]gametransition.Seam(nil), prepared.Seams...)
+	app.entryWorldTopology = prepared.Topology
+	app.entryWorldChecksum = checksum
 	app.gameWorldZones = prepared.Zones
 	app.gameWorlds = prepared.Worlds
 	app.gameWorldSpawns = spawns
@@ -138,12 +177,12 @@ func entryWorldSpawns(
 	case "", "entry":
 		return map[int][2]float64{
 			1: {townX, townY},
-			2: {seam.Wilderness.ArrivalX, seam.Wilderness.ArrivalY},
+			2: {seam.Second.ArrivalX, seam.Second.ArrivalY},
 		}, nil
 	case "seam":
 		return map[int][2]float64{
-			1: {seam.Town.ArrivalX, seam.Town.ArrivalY},
-			2: {seam.Wilderness.ArrivalX, seam.Wilderness.ArrivalY},
+			1: {seam.First.ArrivalX, seam.First.ArrivalY},
+			2: {seam.Second.ArrivalX, seam.Second.ArrivalY},
 		}, nil
 	default:
 		return nil, fmt.Errorf("development fixture world spawn %q is unavailable", fixtureSpawn)

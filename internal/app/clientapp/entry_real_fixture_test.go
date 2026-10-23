@@ -17,10 +17,15 @@ import (
 // realD2LegacyFixtureConfig exposes only scene differences needed by production-data scenarios,
 // keeping shared authority startup identical across acceptance tests.
 type realD2LegacyFixtureConfig struct {
-	startScene         string
-	fixtureCharacters  int
-	fixtureWorldLevel  int
-	applySceneDefaults bool
+	startScene              string
+	fixtureCharacters       int
+	fixtureWorldLevel       int
+	fixtureWorldSpawn       string
+	gameDifficulty          int
+	topologySnapshot        []byte
+	recovery                *entryWorldRecovery
+	skipPopulationBootstrap bool
+	applySceneDefaults      bool
 }
 
 // requireRealStore makes a missing production schema fail at the fixture boundary with scenario
@@ -59,6 +64,9 @@ func newRealD2LegacyFixture(t *testing.T, config realD2LegacyFixtureConfig) *rea
 	options.FixtureCharacters = config.fixtureCharacters
 
 	options.FixtureWorldLevel = config.fixtureWorldLevel
+	options.FixtureWorldSpawn = config.fixtureWorldSpawn
+
+	options.GameDifficulty = config.gameDifficulty
 	if config.applySceneDefaults {
 		options = applyDevelopmentSceneDefaults(options)
 	}
@@ -73,11 +81,19 @@ func newRealD2LegacyFixture(t *testing.T, config realD2LegacyFixtureConfig) *rea
 		t.Fatal(err)
 	}
 
+	if config.recovery != nil {
+		if err := app.prepareOfflineEntryWorldRecovery(*config.recovery); err != nil {
+			t.Fatal(err)
+		}
+	} else if len(config.topologySnapshot) != 0 {
+		app.entryWorldSnapshot = append([]byte(nil), config.topologySnapshot...)
+	}
+
 	if err := app.buildOfflineSession(); err != nil {
 		t.Fatal(err)
 	}
 
-	startTestD2LegacyAuthority(t, app)
+	startTestD2LegacyAuthority(t, app, !config.skipPopulationBootstrap)
 	t.Cleanup(func() {
 		app.loading.Close()
 		_ = app.offlineSession.Close()
@@ -100,7 +116,7 @@ func requireRealD2LegacyAssets(t *testing.T) {
 
 // startTestD2LegacyAuthority uses the same managed component definition and population command as the
 // application, preventing acceptance tests from bypassing Lua-owned gameplay policy.
-func startTestD2LegacyAuthority(t *testing.T, app *application) {
+func startTestD2LegacyAuthority(t *testing.T, app *application, queuePopulation bool) {
 	t.Helper()
 
 	if err := app.scripts.Start(t.Context()); err != nil {
@@ -131,8 +147,16 @@ func startTestD2LegacyAuthority(t *testing.T, app *application) {
 		t.Fatal(err)
 	}
 
-	if err := app.queueEntryPopulation(); err != nil {
-		t.Fatal(err)
+	if app.pendingEntryRecovery != nil {
+		if err := app.restoreOfflineEntryWorldRecovery(*app.pendingEntryRecovery); err != nil {
+			t.Fatal(err)
+		}
+
+		app.pendingEntryRecovery = nil
+	} else if queuePopulation {
+		if err := app.queueEntryPopulation(); err != nil {
+			t.Fatal(err)
+		}
 	}
 
 	t.Cleanup(func() {

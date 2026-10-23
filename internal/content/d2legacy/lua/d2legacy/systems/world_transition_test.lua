@@ -16,11 +16,31 @@ return test.suite({
                     arrival_y = 40,
                     world_width = 400,
                     world_height = 400,
+                    trigger_radius = 2,
+                },
+                {
+                    source_level = 2,
+                    destination_level = 1,
+                    source_x = 20,
+                    source_y = 20,
+                    arrival_x = 30,
+                    arrival_y = 30,
+                    world_width = 400,
+                    world_height = 400,
+                    trigger_radius = 0.5,
                 },
             },
         },
     },
     cases = {
+        test.case("each_seam_uses_its_supplied_trigger_radius", {
+            test.run(function()
+                local world_transition = require("d2legacy.systems.world_transition")
+                test.assert(world_transition.at_trigger(1, 11.5, 12), "first seam lost its radius")
+                test.assert(not world_transition.at_trigger(2, 21, 20), "second seam used the first seam's radius")
+                test.assert(world_transition.at_trigger(2, 20.4, 20), "second seam rejected its own trigger")
+            end),
+        }),
         test.case("entry_crosses_authored_seam", {
             test.submit_system({
                 tick = 1,

@@ -168,11 +168,39 @@ func movementAxis(negative, positive inputstate.ActionState) int {
 // encodeMovePayload serializes a closed value-only schema whose fields cannot fail JSON encoding.
 func (source *MovementSource) encodeMovePayload(x, y int, target *MoveTarget) []byte {
 	payload, _ := json.Marshal(MovePayload{
-		X:       x,
-		Y:       y,
-		Running: source.control.Running(),
-		Target:  target,
+		X:           x,
+		Y:           y,
+		Running:     source.control.Running(),
+		Target:      target,
+		SourceLevel: source.controlledLevel(),
 	})
 
 	return payload
+}
+
+// controlledLevel stamps the observed world on a movement sample so delayed commands cannot resume an old route
+// after the authority has crossed a seam. A missing projection keeps legacy startup samples compatible.
+func (source *MovementSource) controlledLevel() int {
+	controls, found := akara.GetDynamicStore(source.engine.World(), "d2legacy.world.player_control")
+	if !found {
+		return 0
+	}
+	locations, found := akara.GetDynamicStore(source.engine.World(), "d2legacy.world.location")
+	if !found {
+		return 0
+	}
+	for _, entity := range controls.Entities() {
+		control, _ := controls.Get(entity)
+		player, _ := control.Get("player")
+		if player != source.player {
+			continue
+		}
+		location, present := locations.Get(entity)
+		if !present {
+			return 0
+		}
+		level, _ := location.Get("level_id")
+		return int(level.(int64))
+	}
+	return 0
 }

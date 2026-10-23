@@ -44,6 +44,14 @@ function M.validate(command)
     assert(type(payload.x) == "number" and payload.x >= -1 and payload.x <= 1, "horizontal movement must be normalized")
     assert(type(payload.y) == "number" and payload.y >= -1 and payload.y <= 1, "vertical movement must be normalized")
     assert(type(payload.running) == "boolean", "movement mode is required")
+    if payload.source_level ~= nil then
+        assert(
+            type(payload.source_level) == "number"
+                and payload.source_level > 0
+                and payload.source_level == math.floor(payload.source_level),
+            "movement source level must be positive integer"
+        )
+    end
 
     if payload.target then
         assert(is_finite(payload.target.x) and is_finite(payload.target.y), "movement target must be finite")
@@ -60,6 +68,11 @@ function M.apply(command)
     end
 
     local payload = command.payload
+    local location = ecs.get(entity, "d2legacy.world.location")
+    -- Network samples can arrive after a seam transaction. Their coordinates belong to the prior map.
+    if payload.source_level ~= nil and payload.source_level ~= location:get("level_id") then
+        return
+    end
     local explicit = payload.target ~= nil or payload.x ~= 0 or payload.y ~= 0
 
     -- An idle native input sample means "no new decision." It must not cancel

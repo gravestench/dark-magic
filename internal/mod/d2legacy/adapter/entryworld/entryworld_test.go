@@ -24,7 +24,7 @@ func TestPreparedWorldOwnsDestinationAndBootstrapLevelIdentity(t *testing.T) {
 		Worlds: map[int]*gameworld.Map{7: {WidthSubtiles: 100, HeightSubtiles: 50}},
 		Zones:  map[int]*worldgen.Zone{7: zone},
 		Spawns: map[int][2]float64{7: {11, 12}},
-		Seam:   gametransition.Seam{Wilderness: gametransition.SeamEndpoint{LevelID: 7}},
+		Seams:  []gametransition.Seam{{Second: gametransition.SeamEndpoint{LevelID: 7}}},
 	}
 
 	destination, err := prepared.Destination(7)
@@ -77,7 +77,7 @@ func TestPopulationDataPreservesRoomBoundsAndAdjacency(t *testing.T) {
 	prepared := &Prepared{
 		Worlds: map[int]*gameworld.Map{2: gameMap},
 		Zones:  map[int]*worldgen.Zone{2: zone},
-		Seam:   gametransition.Seam{Wilderness: gametransition.SeamEndpoint{LevelID: 2}},
+		Seams:  []gametransition.Seam{{Second: gametransition.SeamEndpoint{LevelID: 2}}},
 	}
 	population := prepared.PopulationData(0)
 	rooms := population["rooms"].([]any)
@@ -137,10 +137,15 @@ func TestInteractionDataAttachesDS1TargetsToGeneratedRooms(t *testing.T) {
 // TestInitialDataUsesSharedInteractionAndTransitionContracts verifies that session bootstrap publishes owner,
 // development, difficulty, and bidirectional seam policy without client-specific rewrites.
 func TestInitialDataUsesSharedInteractionAndTransitionContracts(t *testing.T) {
-	prepared := &Prepared{Worlds: map[int]*gameworld.Map{}, Difficulty: 2, Seam: gametransition.Seam{
-		Town:       gametransition.SeamEndpoint{LevelID: 1, X: 4, Y: 5, Width: 20, Height: 30},
-		Wilderness: gametransition.SeamEndpoint{LevelID: 2, X: 6, Y: 7, Width: 40, Height: 50},
-	}}
+	seam := gametransition.Seam{
+		First:  gametransition.SeamEndpoint{LevelID: 1, X: 4, Y: 5, Width: 20, Height: 30},
+		Second: gametransition.SeamEndpoint{LevelID: 2, X: 6, Y: 7, Width: 40, Height: 50},
+	}
+	seam.TriggerRadius = 2
+	prepared := &Prepared{
+		Worlds: map[int]*gameworld.Map{}, Difficulty: 2, Seams: []gametransition.Seam{seam},
+		TopologyChecksum: "saved-entry-world",
+	}
 	initial := prepared.InitialData("realm-authority", false)
 
 	interactions := initial["d2legacy.interactions"].(map[string]any)
@@ -161,6 +166,9 @@ func TestInitialDataUsesSharedInteractionAndTransitionContracts(t *testing.T) {
 	rules := initial["d2legacy.game_rules"].(map[string]any)
 	if rules["difficulty"] != 2 {
 		t.Fatalf("game rules = %#v", rules)
+	}
+	if got := initial["d2legacy.entry_world_checksum"]; got != prepared.TopologyChecksum {
+		t.Fatalf("entry world checksum = %v, want %q", got, prepared.TopologyChecksum)
 	}
 }
 

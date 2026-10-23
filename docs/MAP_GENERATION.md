@@ -282,7 +282,8 @@ Shared behavior includes:
 
 Act-specific files such as `DrlgOutWild`, `DrlgOutDesr`, `DrlgOutJung`, `DrlgOutSiege`, and generic placement helpers encode materially different rules. Dark Magic should expose Act/level strategy hooks rather than hide these rules behind a generic `OutdoorGenerator` with random callbacks.
 
-Dark Magic's first executable outdoor strategy is deliberately Blood Moor-only.
+Dark Magic's first executable outdoor strategy covers Blood Moor, followed by
+a bounded Cold Plains entry recipe described below.
 The production level is 80x80 tiles, represented as a 10x10 graph of authored
 8x8 Act I outdoor stamps. Its initial fill layer uses independent per-cell
 streams and records the town-facing edge opposite the selected Rogue
@@ -308,17 +309,27 @@ the verified eight-way neighbor mask to Act I DT1 `(main-index 0, sub-index)`
 floor identities, then rebuilds collision from the chosen metadata before
 publishing the world. Rendering and navigation consume the same realized road.
 
-A separate, headless Cold Plains strategy now admits level 3 as a deterministic
-zone recipe. It uses the recovered generic Act I stone-fill definitions 29 and
-30 as provisional Dark Magic policy. A caller supplies the direction of Blood
-Moor's admitted level-3 exit; Cold Plains places one opposite-facing entry and
-a semantic route into its interior. An owned-asset test verifies that entry
-resolves close to the edge and reaches the interior through materialized
-collision. Production sessions still load only Rogue Encampment and Blood Moor.
-Cold Plains' original layout, placed outward exits, waypoint, population, and
-live transition remain separate work; the
+A Cold Plains strategy admits level 3 as a deterministic zone recipe. It uses
+the recovered generic Act I stone-fill definitions 29 and 30 as provisional
+Dark Magic policy. The admitted Blood Moor level-3 exit selects an
+opposite-facing Cold Plains entry and a semantic route into its interior.
+Production sessions prepare Rogue Encampment, Blood Moor, and Cold Plains
+together, resolve both seam pairs against materialized collision, and publish
+all three maps only after both arrivals are safe. The authoritative Lua
+transition system crosses 1↔2 and 2↔3 through ordinary movement; offline and
+connected tests verify both directions of the new seam.
+
+New entry-world recovery captures use a canonical v2 envelope for the
+three-zone topology, whose checksum also enters the runtime identity. Recovery
+reopens the saved topology before composing the replacement authority, then
+compares the saved runtime identity before restoring state. Existing v1
+two-zone snapshots still restore as two zones. The seed, stone-fill choices,
+seam radius, and arrival offsets are Dark Magic policy. They do not establish
+original 1.13c/1.14d geometry. Cold Plains' outward exits, waypoint,
+population, and original layout remain separate work. The
 [issue #618 design](superpowers/specs/2026-10-23-issue-618-cold-plains-design.md)
-records the evidence and limits.
+and [issue #620 design](superpowers/specs/2026-10-23-issue-620-live-cold-plains-design.md)
+record the evidence and limits.
 
 ## Preset variant selection
 
@@ -413,17 +424,20 @@ Warp creation combines:
 The runtime records representative warp/waypoint room centers in subtile coordinates after level generation. Exit cells can also create hidden linked floor tiles for lit-version warp behavior.
 
 Hidden DS1 wall cells with legacy orientation 10/11 remain semantic exit
-placements even when they have no renderable DT1 reference. The Act I seam
-contract selects the cardinal town anchor from those facts, pairs it with the
-opposite generated Blood Moor edge, and resolves both to walkable subtiles.
-This seam value is suitable for an authoritative transition command; neither
-transparent pixels nor generic open map borders are accepted as exits.
+placements even when they have no renderable DT1 reference. The first Act I
+seam selects the cardinal town anchor from those facts and pairs it with the
+opposite generated Blood Moor edge. The second selects Blood Moor's unique
+admitted level-3 exit and pairs it with an opposite-facing Cold Plains entry.
+Both pairs resolve to walkable subtiles; the generated Blood Moor↔Cold Plains
+pair also verifies interior routes and clearance from immediate return.
+Neither transparent pixels nor generic open map borders are accepted as exits.
 
-The transition command is system/admin-authority only. It verifies current ECS
-level and distance from the source endpoint, then changes level, collision
-bounds, position, and velocity in one session step. Arrival points are resolved
-several subtiles inward from the destination edge so an admitted transition
-does not immediately retrigger in reverse.
+The authoritative Lua collision-phase system checks the player's current level
+and each seam's source radius, then updates level, position, collision bounds,
+velocity, and motion together. Both arrivals are inset from their destination
+edges; the generated pair also validates that its arrival cannot immediately
+retrigger in reverse. Connected movement samples carry their observed source
+level; a delayed sample from the prior map cannot restart motion after crossing.
 
 ## Automap implications
 
