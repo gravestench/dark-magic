@@ -176,15 +176,23 @@ func (endpoint *Endpoint) scheduleReconnectReplayExpiry(request ReconnectRequest
 	})
 }
 
-// replayedReconnect returns only a nonce-matched replay so a reused old credential cannot obtain another rotation.
+// replayedReconnect resumes only the retained, nonce-matched membership after a lost response.
 func (endpoint *Endpoint) replayedReconnect(request ReconnectRequest) (JoinResponse, bool) {
-	endpoint.mu.RLock()
-	defer endpoint.mu.RUnlock()
+	endpoint.mu.Lock()
+	defer endpoint.mu.Unlock()
 
 	replay, found := endpoint.reconnects[string(request.Credential)]
 	if !found || replay.nonce != request.Nonce {
 		return JoinResponse{}, false
 	}
+
+	member, found := endpoint.connections[string(replay.response.Credential)]
+	if !found || endpoint.host.ValidateReconnect(member.admission, request.Identity) != nil {
+		return JoinResponse{}, false
+	}
+
+	member.connected = true
+	endpoint.connections[string(replay.response.Credential)] = member
 
 	return replay.response, true
 }

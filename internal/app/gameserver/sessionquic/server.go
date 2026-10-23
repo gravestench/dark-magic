@@ -5,6 +5,7 @@ import (
 	"crypto/tls"
 	"errors"
 	"net"
+	"sync"
 	"time"
 
 	"github.com/gravestench/dark-magic/internal/app/gameserver"
@@ -13,10 +14,12 @@ import (
 
 // Server owns a QUIC listener and adapts reliable streams and datagrams to one transport-neutral endpoint.
 type Server struct {
-	listener *quic.Listener
-	endpoint *gameserver.Endpoint
-	profiles ProfileAdmissions
-	packages PackageProvider
+	listener     *quic.Listener
+	endpoint     *gameserver.Endpoint
+	profiles     ProfileAdmissions
+	packages     PackageProvider
+	membershipMu sync.Mutex
+	memberships  map[gameserver.SessionCredential]*membershipCleanup
 }
 
 // Listen opens a production UDP listener after cloning and constraining the caller's TLS configuration.
@@ -92,8 +95,21 @@ func (server *Server) serveConnection(ctx context.Context, connection *quic.Conn
 
 // disconnectMemberships suspends rather than removes members because transport loss may be recoverable.
 func (server *Server) disconnectMemberships(memberships *connectionMemberships) {
+	memberships.operationMu.Lock()
+	defer memberships.operationMu.Unlock()
+
+	memberships.closed = true
 	for _, credential := range memberships.snapshot() {
-		server.endpoint.Disconnect(credential)
+		cleanup := server.lockCleanup(credential)
+		if cleanup.owner == memberships {
+			server.endpoint.Disconnect(cleanup.current)
+			cleanup.owner = nil
+		}
+
+		if cleanup.owner == nil {
+			server.removeCleanup(cleanup)
+		}
+		cleanup.mu.Unlock()
 	}
 }
 
@@ -121,8 +137,7 @@ func (server *Server) serveStream(
 	}
 
 	requestContext := server.clientContext(ctx, connection)
-	result := server.dispatchRateLimited(requestContext, message, memberships.packages, time.Now())
-	memberships.observe(message, result)
+	result := server.dispatchConnection(requestContext, message, memberships)
 	_ = writeFrame(stream, result)
 }
 
