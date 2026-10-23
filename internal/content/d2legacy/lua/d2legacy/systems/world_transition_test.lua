@@ -137,11 +137,19 @@ return test.suite({
                     start_tick = 1,
                 })
                 local writer = {
-                    create = function(_, components) return ecs.create(components) end,
-                    remove = function(_, entity, component) return ecs.remove(entity, component) end,
+                    create = function(_, components)
+                        return ecs.create(components)
+                    end,
+                    remove = function(_, entity, component)
+                        return ecs.remove(entity, component)
+                    end,
                 }
                 local ok = pcall(transition.apply, { tick = 1 }, player, {
-                    level_id = 2, x = -1, y = 40, width = 400, height = 400,
+                    level_id = 2,
+                    x = -1,
+                    y = 40,
+                    width = 400,
+                    height = 400,
                 }, writer)
                 test.assert(not ok, "invalid transition unexpectedly succeeded")
                 test.assert(ecs.get(player, "d2legacy.world.forced_motion"), "invalid transition removed motion")
