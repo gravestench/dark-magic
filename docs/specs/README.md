@@ -15,7 +15,7 @@ specs to the project's tracker and are the only place issue numbers appear.
 | [core-numeric-and-rng-foundations](core-numeric-and-rng-foundations.md) | #469; shared by all specs | #442 |
 | [core-record-layouts-and-ids](core-record-layouts-and-ids.md) | #469; shared by all specs | #442 |
 | [core-game-data-fields](core-game-data-fields.md) | #470; shared by all specs | #442 |
-| [core-game-data-table-records](core-game-data-table-records.md) | #470; shared by all specs | #442 |
+| [core-game-data-table-records](core-game-data-table-records.md) | #568; shared by all specs | #442 |
 
 ### Combat (`combat-`)
 
