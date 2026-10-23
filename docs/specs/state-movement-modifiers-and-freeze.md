@@ -929,7 +929,7 @@ MMF-Q04, MMF-Q05, MMF-Q07, MMF-Q09, MMF-Q10 and GDA-Q05 integrations, named actu
 needed, and matching gameplay observations for every verified behavioral rule (MMF-Q08). A partial
 pass does not establish parity.
 
-**Depends on:** NRF-R01/NRF-R02 seed/draw, NRF-R05 multiplication/division, NRF-R06a/NRF-R06b Owners of the cited GDA, RLI ids: [core-game-data-table-records](core-game-data-table-records.md) (GDA); [core-record-layouts-and-ids](core-record-layouts-and-ids.md) (RLI).
+**Depends on:** NRF-R01/NRF-R02 seed/draw, NRF-R05 multiplication/division, NRF-R06a/NRF-R06b
 signed/unsigned arithmetic, NRF-R07 diminishing, NRF-R08b speed writes, NRF-R11a/NRF-R11b step and
 scale, RLI-R03/RLI-R02a/RLI-R02b state/stat reads and requests, RLI-R04a mode writes; GDA-R05/
 GDA-R06a/GDA-R08a/GDA-R08b/GDA-R09a/GDF-R02/GDF-R04/GDF-R03/GDF-R05a/GDF-R06a names, fields and
@@ -937,7 +937,9 @@ derived values; CSA-R01/CSA-R02/CSA-R05/CSA-R06/CSA-R07/CSA-R08/CSA-R09/CSA-R13 
 application, shatter draw and cold callback, consumed without restatement; DPO-R10 strip, DPO-R17/DPO-R26 placement; DMI-R01/DMI-R02/DMI-R05/
 DMI-R06/DMI-R07/DMI-R08/DMI-R09 mitigation; HRC-R12a/HRC-R14 get-hit/block/knockback; STL-R01/
 STL-R04/STL-R05/STL-R06a/STL-R06b/STL-R06c/STL-R07/STL-R11/STL-R12a event/list/state/expiry operations.
-Every consumed integration retains its owner's gate. Prior creation helpers consumed in the
+Owners of the cited GDA and RLI ids: [core-game-data-table-records](core-game-data-table-records.md)
+(GDA) and [core-record-layouts-and-ids](core-record-layouts-and-ids.md) (RLI). Every consumed
+integration retains its owner's gate. Prior creation helpers consumed in the
 monster fixed-write slice are [monster scaling](monster-scaling-by-players-and-difficulty.md)
 MSD-R02/MSD-R03; their complete output effects are not inferred here.
 
