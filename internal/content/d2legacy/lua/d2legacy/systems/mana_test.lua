@@ -126,5 +126,43 @@ return test.suite({
                 test.expect(vitals:get("mana")):equals(300)
             end),
         }),
+        test.case("mana_percent_uses_original_divide_first_operand_order", {
+            test.submit_system({
+                tick = 1,
+                sequence = 1,
+                kind = "system.player.enter",
+                payload = fixtures.player_entry({
+                    character_id = "hero-order",
+                    player = "order",
+                    name = "order",
+                    class = "Amazon",
+                    mana = 0,
+                    max_mana = 300,
+                }),
+            }),
+            test.step(2),
+            test.run(function()
+                local ecs = require("engine.ecs/v1")
+                local owner = player()
+                local vitals = ecs.get(owner, "d2legacy.player.vitals")
+                vitals:set("mana_raw", 0)
+                vitals:set("max_mana_raw", 30000000)
+                ecs.create({
+                    ["d2legacy.stat.source"] = {
+                        target = owner,
+                        source_id = "fixture:large-mana-percent",
+                        stat = "manarecoverybonus",
+                        operation = "add",
+                        value = 65437,
+                        order = 1,
+                    },
+                })
+            end),
+            test.step(1),
+            test.run(function()
+                local ecs = require("engine.ecs/v1")
+                test.expect(ecs.get(player(), "d2legacy.player.vitals"):get("mana_raw")):equals(6550000)
+            end),
+        }),
     },
 })
