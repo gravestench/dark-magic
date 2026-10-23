@@ -1,13 +1,15 @@
 -- Experience a player gains from killing a monster.
 --
--- High-confidence recovered from pinned 1.10f D2MOO
+-- Level scaling was recovered from pinned 1.10f D2MOO
 -- (UNIT/SUnitDmg.cpp SUNITDMG_ComputeExperienceGain and
--- SUNITDMG_AddExperienceForPlayer); awaiting 1.14d runtime confirmation.
+-- SUNITDMG_AddExperienceForPlayer). The nonpositive-share branch follows
+-- PXL-R05a's 1.13c static evidence. Both await 1.14d runtime confirmation.
 --
 -- The monster's experience is reduced when the levels are far apart, scaled by
 -- the killer level's Experience.txt ExpRatio, raised by item_addexperience,
--- and nothing is gained at the class level cap. Party sharing and hireling
--- experience are separate consumers.
+-- and positive shares gain nothing at the class level cap. The recovered
+-- nonpositive-share return precedes that cap check. Hireling experience is a
+-- separate consumer.
 
 local M = {}
 
@@ -49,7 +51,7 @@ end
 -- rules comes from d2legacy.data.progression.experience_rules().
 function M.gain(rules, class, killer_level, monster_level, experience, add_experience_percent)
     if experience <= 0 then
-        return 0
+        return 1
     end
     experience = math.min(experience, shr(INT_MAX, 8))
     local max_level = rules.max_levels[class]

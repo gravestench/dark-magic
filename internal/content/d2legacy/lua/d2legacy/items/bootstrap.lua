@@ -191,6 +191,20 @@ local function create_service_rules(service_rules)
 end
 
 local function create_target(target)
+    if target.gold_amount ~= nil then
+        local amount = target.gold_amount
+        local function finite(value)
+            return type(value) == "number" and value == value and value ~= math.huge and value ~= -math.huge
+        end
+        assert(type(amount) == "number" and amount % 1 == 0 and amount >= 1 and amount <= 2147483647,
+            "gold pile amount must be a positive signed-32-bit integer")
+        assert(target.selectable == true, "gold pile must be selectable")
+        assert(finite(target.act) and target.act % 1 == 0 and target.act > 0, "gold pile act is required")
+        assert(finite(target.level_id) and target.level_id % 1 == 0 and target.level_id > 0,
+            "gold pile level is required")
+        assert(finite(target.x) and finite(target.y), "gold pile position is required")
+        assert(finite(target.radius) and target.radius > 0, "gold pile radius is required")
+    end
     local wanted = string.lower(target.id)
     for _, entity in ipairs(ecs.query({ all = { "d2legacy.interaction.target" } })) do
         if ecs.get(entity, "d2legacy.interaction.target"):get("id") == wanted then
@@ -216,6 +230,9 @@ local function create_target(target)
             radius = target.radius,
         },
     }
+    if target.gold_amount ~= nil then
+        components["d2legacy.gold.pile"] = { amount = target.gold_amount }
+    end
     if target.selectable or appearance then
         local act = appearance and 1 or target.act
         assert(type(act) == "number" and act > 0, "selectable act is required")

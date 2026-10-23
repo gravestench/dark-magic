@@ -30,10 +30,6 @@ local function existing(id)
     return false
 end
 
-local function count_game_players()
-    return math.max(#ecs.query({ all = { "d2legacy.player.identity" } }), 1)
-end
-
 local function percentage(value, percent)
     return math.floor(value * percent / 100)
 end
@@ -160,7 +156,8 @@ end
 function M.apply(command)
     local spawn = command.payload
     assert(not existing(spawn.spawn_id), "monster spawn already exists")
-    ecs.create(M.components(command, count_game_players()))
+    local players = ecs.query({ all = { "d2legacy.player.identity" }, none = { "d2legacy.world.inactive" } })
+    ecs.create(M.components(command, player_count.live_population(players)))
 end
 
 -- Startup population is already trusted mod policy and does not need to forge

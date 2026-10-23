@@ -71,21 +71,29 @@ func TestMonsterScalingFollowsPopulationUntilExplicitlyOverridden(t *testing.T) 
 	submit(6, "system.monster.spawn", playerCountMonsterPayload(t, "lower-override", 12))
 	assertMonsterPlayerCount(t, engine, "lower-override", 2)
 	assertMonsterHealthAndExperience(t, engine, "lower-override", 6*256, 150)
+	stageLethalPlayerEvent(t, engine, "bob", 6)
+	if err := session.Step(); err != nil {
+		t.Fatal(err)
+	}
+	assertPlayerDead(t, engine, "bob")
+	submit(8, "system.monster.spawn", playerCountMonsterPayload(t, "after-death", 13))
+	assertMonsterPlayerCount(t, engine, "after-death", 1)
+	assertMonsterHealthAndExperience(t, engine, "after-death", 4*256, 100)
 
 	follow, _ := json.Marshal(map[string]any{})
-	submit(7, "game.player_count.follow_population", follow)
+	submit(9, "game.player_count.follow_population", follow)
 	leave, _ := json.Marshal(map[string]any{"player": "bob"})
-	submit(8, "system.player.leave", leave)
-	submit(9, "system.monster.spawn", playerCountMonsterPayload(t, "after-leave", 13))
+	submit(10, "system.player.leave", leave)
+	submit(11, "system.monster.spawn", playerCountMonsterPayload(t, "after-leave", 14))
 	assertMonsterPlayerCount(t, engine, "after-leave", 1)
 
 	override, _ := json.Marshal(map[string]any{"count": 8})
-	submit(10, "game.player_count.override", override)
-	submit(11, "system.monster.spawn", playerCountMonsterPayload(t, "overridden", 14))
+	submit(12, "game.player_count.override", override)
+	submit(13, "system.monster.spawn", playerCountMonsterPayload(t, "overridden", 15))
 	assertMonsterPlayerCount(t, engine, "overridden", 8)
 
-	submit(12, "game.player_count.follow_population", follow)
-	submit(13, "system.monster.spawn", playerCountMonsterPayload(t, "following-again", 15))
+	submit(14, "game.player_count.follow_population", follow)
+	submit(15, "system.monster.spawn", playerCountMonsterPayload(t, "following-again", 16))
 	assertMonsterPlayerCount(t, engine, "following-again", 1)
 }
 
@@ -221,4 +229,59 @@ func assertMonsterHealthAndExperience(t *testing.T, engine *gameecs.Engine, spaw
 		return
 	}
 	t.Fatalf("monster %s was not created", spawnID)
+}
+
+func stageLethalPlayerEvent(t *testing.T, engine *gameecs.Engine, playerID string, tick int64) {
+	t.Helper()
+	identities, _ := akara.GetDynamicStore(engine.World(), "d2legacy.player.identity")
+	vitals, _ := akara.GetDynamicStore(engine.World(), "d2legacy.player.vitals")
+	for _, entity := range identities.Entities() {
+		identity, _ := identities.Get(entity)
+		current, _ := identity.Get("player")
+		if current != playerID {
+			continue
+		}
+		values, found := vitals.Get(entity)
+		if !found {
+			t.Fatalf("player %s has no vitals", playerID)
+		}
+		if err := values.Set("health", int64(0)); err != nil {
+			t.Fatal(err)
+		}
+		combatEvents, _ := akara.GetDynamicStore(engine.World(), "d2legacy.combat.event")
+		if _, err := combatEvents.Set(engine.World().MustCreateEntity(), map[string]any{
+			"kind": "unit_died", "tick": tick,
+			"attacker_id": "monster:fixture", "target_id": "player:" + playerID,
+			"source_kind": "melee", "damage_channel": "physical",
+			"rolled_damage_raw": int64(256), "damage_raw": int64(256),
+			"remaining_health_raw": int64(0),
+		}); err != nil {
+			t.Fatal(err)
+		}
+		return
+	}
+	t.Fatalf("player %s was not created", playerID)
+}
+
+func assertPlayerDead(t *testing.T, engine *gameecs.Engine, playerID string) {
+	t.Helper()
+	identities, _ := akara.GetDynamicStore(engine.World(), "d2legacy.player.identity")
+	deaths, _ := akara.GetDynamicStore(engine.World(), "d2legacy.player.death")
+	for _, entity := range identities.Entities() {
+		identity, _ := identities.Get(entity)
+		current, _ := identity.Get("player")
+		if current != playerID {
+			continue
+		}
+		death, found := deaths.Get(entity)
+		if !found {
+			t.Fatalf("player %s has no committed death marker", playerID)
+		}
+		stage, _ := death.Get("stage")
+		if stage != "dead" {
+			t.Fatalf("player %s death stage = %v, want dead", playerID, stage)
+		}
+		return
+	}
+	t.Fatalf("player %s was not created", playerID)
 }

@@ -35,7 +35,10 @@ return test.suite({
                 test.expect(xp.gain(r, "Amazon", 99, 99, 1000, 0)):equals(0)
                 -- item_addexperience applies after the ratio.
                 test.expect(xp.gain(r, "Amazon", 10, 10, 1000, 10)):equals(1100)
-                test.expect(xp.gain(r, "Amazon", 10, 10, 0, 10)):equals(0)
+                -- PXL-R05a returns one for nonpositive raw party shares
+                -- before checking the recipient's class level cap.
+                test.expect(xp.gain(r, "Amazon", 10, 10, 0, 10)):equals(1)
+                test.expect(xp.gain(r, "Amazon", 99, 10, -1, 0)):equals(1)
             end),
         }),
         test.case("recovered_overflow_branches_are_kept", {
