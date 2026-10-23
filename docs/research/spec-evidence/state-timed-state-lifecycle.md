@@ -528,3 +528,33 @@ Run 12 outcomes:
 | HARDEST (3) | No change |
 
 All executable vectors, including the new cases, recomputed without difference in runs 11 and 12. The four-run cap for this task was reached with the open items above, so the blind-implementer pass for the current contract is not complete. These need spec edits and a further reader run.
+
+## Issue #481 publication review (2026-10-23)
+
+The 2026-10-15 run-12 record above remains a historical report of that revision: it ended
+with four open fixture findings and did not complete the blind-implementer pass. The current
+publication revision addresses each finding without changing the rule boundary. STL-R10a,
+STL-V07 and STL-V18 now assert the literal `on = 1` for state-on/forced-change requests,
+as the earlier D2Game+0x29240 reading records. V07 and V18 log the duration evaluation
+before state-list lookup, including the allocation-failure path. V13 supplies a release
+that clears A's successor link and checks that traversal still reaches B. V03, V09 and V19
+supply a secondary list that remains untouched while the primary chain is traversed. Death
+traversal does not test the secondary list's expiry. V03 now supplies B's callback for its
+STL-R05-gated before-callback assertion. STL-R13a explicitly excludes a type-1 unit without
+loaded monster data from its accepted input domain; that malformed case has no asserted
+outcome.
+
+A fresh blind implementer independently recomputed the changed STL-V03, V07, V09, V13,
+V18 and V19 cases against the spec and named dependencies before consulting this companion.
+The result was MISMATCH 0 and no remaining GUESS, GAP or DISCRIM finding for those supplied
+verified assertions after the two fixture/boundary clarifications. Independent evidence and
+publication reviewers checked the four source relationships, evidence labels, ownership,
+local links and document scope. The prior full-corpus runs remain applicable to unchanged
+vector families; this delta pass covers the newly changed assertions. This combined review
+completes the applicable blind-implementer check for the current contract.
+
+No original binary, archive cell or gameplay observation was newly read for this
+publication pass. Queue ordering, actual list free/attach/stat effects, mask production,
+state synchronization, client callbacks, transitions, auxiliary effects and runtime
+confirmation remain gated exactly as in the spec and [gap record](../../plans/gaps/state-timed-state-lifecycle.md).
+No 1.14d parity is claimed.
