@@ -48,7 +48,7 @@ local function validate(endpoint)
     })
 end
 
-local function create(endpoint)
+function M.create(endpoint)
     validate(endpoint)
     for _, entity in
         ipairs(ecs.query({
@@ -100,12 +100,48 @@ local function create(endpoint)
             room_id = tostring(endpoint.room_id),
         }
     end
-    ecs.create(components)
+    if endpoint.owner then
+        components["d2legacy.world.town_portal"] =
+            { owner = endpoint.owner, return_endpoint = endpoint.return_endpoint == true, expired = false }
+    end
+    return ecs.create(components)
 end
 
 function M.register()
-    operations.register("d2legacy.world.warp", function(owner, _, warp, command)
+    operations.register("d2legacy.world.warp", function(owner, target_entity, warp, command)
         local entity = assert(player(owner), "warp owner has no admitted player")
+        local portal = ecs.get(target_entity, "d2legacy.world.town_portal")
+        if portal then
+            local vitals = ecs.get(entity, "d2legacy.player.vitals")
+            if not vitals or vitals:get("health") <= 0 or ecs.get(entity, "d2legacy.player.death") then
+                return
+            end
+            if portal:get("owner") ~= owner or portal:get("expired") then
+                return
+            end
+            local paired
+            for _, candidate in ipairs(ecs.query({
+                all = { "d2legacy.world.warp", "d2legacy.world.selectable", "d2legacy.world.town_portal" },
+            })) do
+                if ecs.get(candidate, "d2legacy.world.selectable"):get("id") == warp:get("pair_id") then
+                    paired = candidate
+                    break
+                end
+            end
+            if not paired then
+                return
+            end
+            local pair = ecs.get(paired, "d2legacy.world.town_portal")
+            local id = ecs.get(target_entity, "d2legacy.world.selectable"):get("id")
+            if pair:get("owner") ~= owner or pair:get("expired")
+                or ecs.get(paired, "d2legacy.world.warp"):get("pair_id") ~= id then
+                return
+            end
+            if portal:get("return_endpoint") then
+                portal:set("expired", true)
+                pair:set("expired", true)
+            end
+        end
         transition.apply({ tick = command.tick }, entity, {
             level_id = warp:get("destination_level"),
             x = warp:get("destination_x"),
@@ -126,7 +162,7 @@ function M.register()
         local pair = assert(by_id[endpoint.pair_id], "unknown paired warp " .. endpoint.pair_id)
         assert(pair.pair_id == endpoint.id, "warp pair relationship must be reciprocal")
         assert(pair.level_id == endpoint.destination_level, "warp destination level must contain its pair")
-        create(endpoint)
+        M.create(endpoint)
     end
 end
 

@@ -1,6 +1,8 @@
 package clientapp
 
 import (
+	"fmt"
+
 	"github.com/gravestench/akara"
 	gameworld "github.com/gravestench/dark-magic/internal/game/world"
 	entryworld "github.com/gravestench/dark-magic/internal/mod/d2legacy/adapter/entryworld"
@@ -197,6 +199,25 @@ func (app *application) warpEndpointData(
 	if found {
 		result["resident_id"] = id
 		result["room_id"] = roomID
+	}
+
+	return result
+}
+
+// worldSpawnBootstrapData publishes generated geometry without choosing gameplay destinations.
+func (app *application) worldSpawnBootstrapData() map[string]any {
+	result := map[string]any{}
+
+	for level, point := range app.gameWorldSpawns {
+		worldMap := app.gameWorlds[level]
+		if worldMap == nil {
+			continue
+		}
+
+		result[fmt.Sprint(level)] = map[string]any{
+			"x": point[0], "y": point[1],
+			"width": float64(worldMap.WidthSubtiles), "height": float64(worldMap.HeightSubtiles),
+		}
 	}
 
 	return result

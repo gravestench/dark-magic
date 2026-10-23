@@ -221,6 +221,11 @@ function M.register()
         { name = "destination_width", type = "f64" },
         { name = "destination_height", type = "f64" },
     })
+    component("d2legacy.world.town_portal", {
+        { name = "owner", type = "string" },
+        { name = "return_endpoint", type = "bool" },
+        { name = "expired", type = "bool" },
+    })
     component("d2legacy.world.warp_appearance", {
         { name = "token", type = "string" },
     })
