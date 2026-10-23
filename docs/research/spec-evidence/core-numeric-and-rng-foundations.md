@@ -929,3 +929,9 @@ A fresh reader checked the delta-check-2 changes. Counts: MISMATCH 0, UNRESOLVED
 DISCRIM 0. No change was needed. The blind-implementer pass for the split revision is complete (full
 runs 1 to 3, delta checks 1 to 3). Status remains draft: in-scope gates and gameplay observations stay
 open in the gap file.
+
+## Focused publication review of the split contract (2026-10-23)
+
+A fresh blind implementer read the current split NRF contract and cited dependencies without this companion or the prior combined/split review records. It recomputed NRF-V01–NRF-V18 at their stated supplied-input boundaries, including LCG seed words, V05 parentless rounds and unsigned time underflow, V09's mulDiv branches, V15's unsigned multiply-high and V18's object animation draw/clamp. It found no arithmetic, width, branch-order, seed-owner or draw-count mismatch. One discrimination improvement was identified: V05's fixed clock values showed the final counter but did not distinguish sampling before versus after the increment. The writer added V05(g) with supplied FILETIME and tick providers that record the counter on entry. A separate blind delta review independently recomputed `arg=14`, stored counter 8, the three rounds 1037207573/2355444336/1741392655 and return 1741392655, and approved the provider log without a blocker.
+
+An independent publication review checked the spec, this companion, the gap record, source manifest and specification index. It found source links and explicit NRF-Q01–NRF-Q09 limits consistent with a qualified 1.13c static/supplied-input handoff. The earlier 2026-10-12/13/14/15 readings and split full/delta reviews retain their dated scope; this review adds no original binary read, original-game observation, new table-profile claim, complete creation/callback integration, gameplay implementation or 1.14d equivalence. Status remains draft. Exact committed-document checks are reported in the publication PR.
