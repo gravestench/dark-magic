@@ -237,3 +237,28 @@ HARDEST, all no change: V12 explicitly orders all seven seed draws, resets the r
 ## Restructure (2026-10-15)
 
 The creation-parameter alias stubs (rules, reference-status questions, vectors and one observation that only pointed to [missile-damage-parameters](../../specs/missile-damage-parameters.md)) were removed; creation-time behavior, its questions, vectors and observation are owned and evidenced there. The remaining ids were renumbered cleanly in execution order: entry, return, target gates, pierce, definition stopping, hit/miss, no-target routing, cooldown/event, hit callback, then the hit-time fill with sub-ids in execution order (reset/physical, element rolls, draw placement, copies, target adjustment, critical/bypass), the damage callback/hand-off group (ordering, damage selection, armor request), direct apply, final stop and finally the separate no-target entry. Questions and vectors were renumbered sequentially in their existing order. No rule behavior, label, value, gate or vector result changed. Records above cite the current ids; dated review counts describe the contract as reviewed on their dates.
+
+## Publication review — 2026-10-23
+
+A fresh independent blind reader reviewed the complete contact, fill, callback and direct
+hand-off contract, its sixteen executable vector families, and the current companion and
+gap record. It recomputed representative LCG seed/damage cases MHD-V07 and MHD-V12,
+physical adjustment and relation/cap cases in MHD-V12, and shared-record ordering in
+MHD-V14. It found no blocking arithmetic or branch contradiction within the documented
+supplied-input boundary. This is a current review, separate from the 2026-10-15 historical
+reader passes and not a gameplay observation.
+
+An independent evidence reader checked the public source-manifest identities, recorded
+RVA/table labels and dates, static evidence labels, cross-document links, and the eight
+question-to-gap mappings. It did not inspect private binaries or independently decode
+instructions. A separate architecture reader checked the MDP creation, MHD contact/fill,
+movement/removal, and DPO downstream-combat ownership against issues #501, #383, #387 and
+#442. All three approved this bounded 1.13c documentation publication.
+
+Two stale input-table citations in the spec were corrected: resolved-stat list inputs now
+point to RLI section 3.7, and DamageRecord semantic fields to RLI section 3.1. No rule,
+vector output, evidence label or integration gate changed. MHD-Q01–Q08 still gate special
+callback content and reachability, registry/matrix/footprint production, stat and cooldown
+lifecycle effects, and original-game confirmation. No new original-image investigation,
+protected game-data capture, implementation comparison, gameplay test or 1.14d confirmation
+was added. The contract remains draft.
