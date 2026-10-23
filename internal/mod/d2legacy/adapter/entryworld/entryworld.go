@@ -24,11 +24,12 @@ type Records interface {
 // Prepared owns the generated zones, materialized maps, trusted spawns, and seam as one consistent entry-world result.
 // Consumers should not mix fields from different Prepared values because their geometry is seed-dependent.
 type Prepared struct {
-	Worlds     map[int]*gameworld.Map
-	Zones      map[int]*worldgen.Zone
-	Spawns     map[int][2]float64
-	Seam       gametransition.Seam
-	Difficulty int
+	Worlds          map[int]*gameworld.Map
+	Zones           map[int]*worldgen.Zone
+	Spawns          map[int][2]float64
+	Seam            gametransition.Seam
+	AdditionalSeams []gametransition.Seam
+	Difficulty      int
 }
 
 // Destination converts one prepared level into the player's admission contract. Both generated and materialized forms

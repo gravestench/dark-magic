@@ -68,10 +68,11 @@ func (app *application) interactionBootstrapData() map[string]any {
 // bootstrap helpers, avoiding a second generation or divergent spawn calculation.
 func (app *application) preparedEntryWorld() *entryworld.Prepared {
 	return &entryworld.Prepared{
-		Worlds: app.gameWorlds,
-		Zones:  app.gameWorldZones,
-		Spawns: app.gameWorldSpawns,
-		Seam:   app.transitionSeam,
+		Worlds:          app.gameWorlds,
+		Zones:           app.gameWorldZones,
+		Spawns:          app.gameWorldSpawns,
+		Seam:            app.transitionSeam,
+		AdditionalSeams: app.additionalTransitionSeams,
 	}
 }
 

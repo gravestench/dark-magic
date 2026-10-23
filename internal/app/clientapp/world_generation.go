@@ -71,12 +71,23 @@ func (app *application) resolveEntryWorldSpawns(
 ) (map[int][2]float64, error) {
 	townSpawn := prepared.Spawns[prepared.Seam.Town.LevelID]
 
-	return entryWorldSpawns(
+	spawns, err := entryWorldSpawns(
 		app.options.FixtureWorldSpawn,
 		prepared.Seam,
 		townSpawn[0],
 		townSpawn[1],
 	)
+	if err != nil {
+		return nil, err
+	}
+
+	for level, spawn := range prepared.Spawns {
+		if _, found := spawns[level]; !found {
+			spawns[level] = spawn
+		}
+	}
+
+	return spawns, nil
 }
 
 // fixtureActiveLevel confines direct world selection to development fixtures and defaults ordinary
@@ -118,6 +129,7 @@ func (app *application) publishEntryWorld(
 ) {
 	app.worldMu.Lock()
 	app.transitionSeam = prepared.Seam
+	app.additionalTransitionSeams = prepared.AdditionalSeams
 	app.gameWorldZones = prepared.Zones
 	app.gameWorlds = prepared.Worlds
 	app.gameWorldSpawns = spawns

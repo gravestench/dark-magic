@@ -27,19 +27,18 @@ func (world *Prepared) InitialData(owner string, developmentItems bool) map[stri
 			"create_empty_containers": !developmentItems,
 		},
 		"d2legacy.interactions":      InteractionData(world.Worlds, world.Zones, owner, ""),
-		"d2legacy.world_transitions": TransitionData(world.Seam),
+		"d2legacy.world_transitions": TransitionData(world.Seam, world.AdditionalSeams...),
 	}
 }
 
 // TransitionData serializes both directions of the prepared seam. Explicit reverse data lets Lua perform transitions
 // without inferring that every topology is symmetric.
-func TransitionData(seam gametransition.Seam) map[string]any {
-	return map[string]any{
-		"seams": []any{
-			transitionEndpoint(seam.Town, seam.Wilderness),
-			transitionEndpoint(seam.Wilderness, seam.Town),
-		},
+func TransitionData(seam gametransition.Seam, additional ...gametransition.Seam) map[string]any {
+	seams := []any{transitionEndpoint(seam.Town, seam.Wilderness), transitionEndpoint(seam.Wilderness, seam.Town)}
+	for _, connection := range additional {
+		seams = append(seams, transitionEndpoint(connection.Town, connection.Wilderness), transitionEndpoint(connection.Wilderness, connection.Town))
 	}
+	return map[string]any{"seams": seams}
 }
 
 // transitionEndpoint converts one directed seam into the stable Lua field contract. Destination dimensions accompany

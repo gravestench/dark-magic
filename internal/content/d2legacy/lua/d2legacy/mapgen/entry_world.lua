@@ -1,10 +1,29 @@
 -- Compose the first playable d2legacy world without leaking level identities
 -- into the generic host. Rogue Encampment and Blood Moor are mod choices; the
--- Go adapter only transports the two admitted recipes returned here.
+-- Go adapter transports admitted recipes and resolves their authored exits.
 
 local preset = require("d2legacy.mapgen.preset")
 local outdoor = require("d2legacy.mapgen.outdoor")
+local maze = require("d2legacy.mapgen.maze")
 local M = {}
+
+function M.dungeon(seed, difficulty)
+    return maze.generate(8, seed, difficulty)
+end
+
+function M.dungeon_connection(wilderness, dungeon)
+    local function stamp_id(zone, role)
+        for _, stamp in ipairs(zone.stamps) do
+            if stamp.role == role then return stamp.id end
+        end
+        error("d2legacy entry world has no " .. role)
+    end
+    return {
+        first_level = wilderness.request.level_id, second_level = dungeon.request.level_id,
+        first_stamp = stamp_id(wilderness, "den-of-evil-entry"),
+        second_stamp = stamp_id(dungeon, "previous-level"),
+    }
+end
 
 function M.town(seed, difficulty)
     return preset.generate(1, seed, difficulty)
@@ -14,7 +33,7 @@ function M.wilderness(seed, difficulty, town)
     local stamp = assert(town.stamps and town.stamps[1], "d2legacy entry town has no stamp")
     local direction = assert(stamp.role:match("^act1%-town:exit%-(%a+)$"),
         "d2legacy entry town has no cardinal exit")
-    return outdoor.generate(2, seed, direction, difficulty)
+    return outdoor.generate(2, seed, direction, difficulty, true)
 end
 
 -- Describe how the two recipes meet. The values here are policy: which levels

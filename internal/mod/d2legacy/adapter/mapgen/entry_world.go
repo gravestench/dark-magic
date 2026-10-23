@@ -11,20 +11,29 @@ import (
 	modruntime "github.com/gravestench/dark-magic/internal/runtime/lua"
 )
 
-// EntryWorld contains the two generated recipes plus the mod-authored seam specification that tells the generic
-// collision adapter how they meet.
+// EntryWorld contains admitted entry-area recipes and their mod-authored connections.
 type EntryWorld struct {
-	Town, Wilderness *worldgen.Zone
-	Seam             SeamSpec
+	Town, Wilderness  *worldgen.Zone
+	Seam              SeamSpec
+	Dungeon           *worldgen.Zone
+	DungeonConnection *ConnectionSpec
 }
 
 // entryWorldSnapshot is the versioned durable envelope. Definitions are stored rather than live zones so restoration
 // reruns generic validation without rerunning Lua policy.
 type entryWorldSnapshot struct {
-	Version    int                 `json:"version"`
-	Town       worldgen.Definition `json:"town"`
-	Wilderness worldgen.Definition `json:"wilderness"`
-	Seam       SeamSpec            `json:"seam"`
+	Version           int                  `json:"version"`
+	Town              worldgen.Definition  `json:"town"`
+	Wilderness        worldgen.Definition  `json:"wilderness"`
+	Seam              SeamSpec             `json:"seam"`
+	Dungeon           *worldgen.Definition `json:"dungeon,omitempty"`
+	DungeonConnection *ConnectionSpec      `json:"dungeon_connection,omitempty"`
+}
+
+// ConnectionSpec joins authored exit tiles within two policy-selected stamps.
+type ConnectionSpec struct {
+	FirstLevel, SecondLevel int
+	FirstStamp, SecondStamp uint32
 }
 
 // SeamSpec is serialized policy chosen by d2legacy. Coordinates remain in tile space until the generic transition
@@ -38,15 +47,22 @@ type SeamSpec struct {
 // Snapshot returns the canonical durable envelope for the joined entry topology. It stores admitted recipes and their
 // Lua-authored seam, not transient generator or runtime state.
 func (world EntryWorld) Snapshot() ([]byte, error) {
-	if world.Town == nil || world.Wilderness == nil {
+	if world.Town == nil || world.Wilderness == nil || (world.Dungeon == nil) != (world.DungeonConnection == nil) {
 		return nil, fmt.Errorf("d2legacy entry world is incomplete")
 	}
 
+	var dungeon *worldgen.Definition
+	if world.Dungeon != nil {
+		definition := world.Dungeon.Definition()
+		dungeon = &definition
+	}
 	return json.Marshal(entryWorldSnapshot{
-		Version:    1,
-		Town:       world.Town.Definition(),
-		Wilderness: world.Wilderness.Definition(),
-		Seam:       world.Seam,
+		Version:           1,
+		Town:              world.Town.Definition(),
+		Wilderness:        world.Wilderness.Definition(),
+		Seam:              world.Seam,
+		Dungeon:           dungeon,
+		DungeonConnection: world.DungeonConnection,
 	})
 }
 
@@ -88,11 +104,39 @@ func RestoreEntryWorld(encoded []byte) (EntryWorld, error) {
 		return EntryWorld{}, fmt.Errorf("restore entry world: seam level identities do not match recipes")
 	}
 
-	return EntryWorld{Town: town, Wilderness: wilderness, Seam: snapshot.Seam}, nil
+	result := EntryWorld{Town: town, Wilderness: wilderness, Seam: snapshot.Seam}
+	if (snapshot.Dungeon == nil) != (snapshot.DungeonConnection == nil) {
+		return EntryWorld{}, fmt.Errorf("restore entry world: incomplete dungeon connection")
+	}
+	if snapshot.Dungeon != nil {
+		result.Dungeon, err = worldgen.NewZone(*snapshot.Dungeon)
+		if err != nil {
+			return EntryWorld{}, fmt.Errorf("restore entry dungeon: %w", err)
+		}
+		result.DungeonConnection = snapshot.DungeonConnection
+		if wilderness.Request().LevelID != result.DungeonConnection.FirstLevel ||
+			result.Dungeon.Request().LevelID != result.DungeonConnection.SecondLevel ||
+			result.Dungeon.Request().LevelID == town.Request().LevelID ||
+			result.Dungeon.Request().LevelID == wilderness.Request().LevelID ||
+			!hasConnectionStamp(wilderness, result.DungeonConnection.FirstStamp) ||
+			!hasConnectionStamp(result.Dungeon, result.DungeonConnection.SecondStamp) {
+			return EntryWorld{}, fmt.Errorf("restore entry world: dungeon connection identities do not match recipes")
+		}
+	}
+	return result, nil
 }
 
-// GenerateEntryWorld asks d2legacy for the first town and wilderness recipes and for the policy-owned description of
-// how their materialized edges meet. The headless runtime prevents authoritative policy from observing client state.
+func hasConnectionStamp(zone *worldgen.Zone, id uint32) bool {
+	for _, stamp := range zone.Stamps() {
+		if stamp.ID == id {
+			return true
+		}
+	}
+	return false
+}
+
+// GenerateEntryWorld asks d2legacy for entry-area recipes and their authored connections.
+// The headless runtime prevents authoritative policy from observing client state.
 func GenerateEntryWorld(
 	ctx context.Context,
 	source fs.FS,
@@ -156,7 +200,41 @@ func GenerateEntryWorld(
 		return EntryWorld{}, err
 	}
 
-	return EntryWorld{Town: town, Wilderness: wilderness, Seam: seam}, nil
+	dungeon, err := runtime.generateFrom(ctx, "d2legacy.mapgen.entry_world", "dungeon", float64(seed), float64(difficulty))
+	if err != nil {
+		return EntryWorld{}, fmt.Errorf("generate d2legacy entry dungeon: %w", err)
+	}
+	dungeonFacts, err := zoneFacts(dungeon, "dungeon")
+	if err != nil {
+		return EntryWorld{}, err
+	}
+	value, err := modruntime.Call(ctx, runtime.lua, "d2legacy.mapgen.entry_world", "dungeon_connection", wildernessFacts, dungeonFacts)
+	if err != nil {
+		return EntryWorld{}, fmt.Errorf("describe d2legacy dungeon connection: %w", err)
+	}
+	facts, ok := value.(map[string]any)
+	if !ok {
+		return EntryWorld{}, fmt.Errorf("describe d2legacy dungeon connection: result is not a table")
+	}
+	firstLevel, err := seamNumber(facts, "first_level")
+	if err != nil {
+		return EntryWorld{}, err
+	}
+	secondLevel, err := seamNumber(facts, "second_level")
+	if err != nil {
+		return EntryWorld{}, err
+	}
+	firstStamp, err := seamNumber(facts, "first_stamp")
+	if err != nil {
+		return EntryWorld{}, err
+	}
+	secondStamp, err := seamNumber(facts, "second_stamp")
+	if err != nil {
+		return EntryWorld{}, err
+	}
+	connection := &ConnectionSpec{FirstLevel: firstLevel, SecondLevel: secondLevel,
+		FirstStamp: uint32(firstStamp), SecondStamp: uint32(secondStamp)}
+	return EntryWorld{Town: town, Wilderness: wilderness, Seam: seam, Dungeon: dungeon, DungeonConnection: connection}, nil
 }
 
 // zoneFacts round-trips an admitted zone through its JSON contract before passing it back to Lua. This guarantees seam

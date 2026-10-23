@@ -1,13 +1,15 @@
 package entryworld
 
 import (
+	"math"
+	"sort"
 	"strconv"
 
 	gameworld "github.com/gravestench/dark-magic/internal/game/world"
 	"github.com/gravestench/dark-magic/internal/game/worldgen"
 )
 
-// PopulationData converts the prepared wilderness into deterministic room, point, and adjacency facts. Nil results
+// PopulationData converts prepared combat areas into deterministic room, point, and adjacency facts. Nil results
 // signal that no complete wilderness exists, allowing composition roots to reject bootstrap before command admission.
 func (world *Prepared) PopulationData(nearby int) map[string]any {
 	zone, gameMap, found := world.wilderness()
@@ -15,16 +17,44 @@ func (world *Prepared) PopulationData(nearby int) map[string]any {
 		return nil
 	}
 
+	result := world.populationZone(zone, gameMap, nearby)
+	additional := []any{}
+	for _, levelID := range sortedLevelIDs(world.Worlds) {
+		if levelID == world.Seam.Town.LevelID || levelID == zone.Request().LevelID {
+			continue
+		}
+		other := world.Zones[levelID]
+		if other == nil {
+			return nil
+		}
+		additional = append(additional, world.populationZone(other, world.Worlds[levelID], 0))
+	}
+	if len(additional) > 0 {
+		result["additional_zones"] = additional
+	}
+	return result
+}
+
+func (world *Prepared) populationZone(zone *worldgen.Zone, gameMap *gameworld.Map, nearby int) map[string]any {
 	request := zone.Request()
-	player := world.Spawns[world.Seam.Wilderness.LevelID]
+	player := world.Spawns[request.LevelID]
 	populated := populatedStamps(zone)
+	var reachable map[gameworld.Point]bool
+	if zone.Kind() == "maze" {
+		reachable = reachablePopulationCells(gameMap, player)
+	}
 
 	rooms := make([]any, 0, len(zone.Rooms()))
 	for _, room := range zone.Rooms() {
 		anchors := populationAnchors(room, player, nearby)
 		points := openPopulationPoints(gameMap, anchors)
 
-		rooms = append(rooms, populationRoom(room, populated[room.StampID], points))
+		facts := populationRoom(room, populated[room.StampID], points)
+		if reachable != nil {
+			points, tiles := mazePopulationPoints(gameMap, room, reachable)
+			facts["points"], facts["eligible_tiles"] = points, float64(tiles)
+		}
+		rooms = append(rooms, facts)
 	}
 
 	return map[string]any{
@@ -121,4 +151,68 @@ func populationLinks(links []worldgen.Link) []any {
 	}
 
 	return result
+}
+
+// reachablePopulationCells excludes isolated open pockets using the player's collision footprint.
+func reachablePopulationCells(gameMap *gameworld.Map, spawn [2]float64) map[gameworld.Point]bool {
+	start := gameworld.Point{X: float64(gameworld.CollisionCell(spawn[0])), Y: float64(gameworld.CollisionCell(spawn[1]))}
+	reachable := map[gameworld.Point]bool{}
+	if !gameMap.WalkableStep(start, start, 1) {
+		return reachable
+	}
+	queue := []gameworld.Point{start}
+	reachable[start] = true
+	for head := 0; head < len(queue); head++ {
+		current := queue[head]
+		for dy := -1.0; dy <= 1; dy++ {
+			for dx := -1.0; dx <= 1; dx++ {
+				next := gameworld.Point{X: current.X + dx, Y: current.Y + dy}
+				if !reachable[next] && gameMap.WalkableStep(current, next, 1) {
+					reachable[next] = true
+					queue = append(queue, next)
+				}
+			}
+		}
+	}
+	return reachable
+}
+
+// mazePopulationPoints counts usable authored tiles and separates pack members within their chamber.
+func mazePopulationPoints(gameMap *gameworld.Map, room worldgen.Room, reachable map[gameworld.Point]bool) ([]any, int) {
+	candidates := []gameworld.Point{}
+	for y := room.Y; y < room.Y+room.Height; y++ {
+		for x := room.X; x < room.X+room.Width; x++ {
+			point := gameworld.Point{X: float64(x*gameworld.SubtilesPerTile + 2), Y: float64(y*gameworld.SubtilesPerTile + 2)}
+			if reachable[point] && gameMap.WalkableStep(point, point, 2) {
+				candidates = append(candidates, point)
+			}
+		}
+	}
+	count := len(candidates)
+	centerX, centerY := float64((room.X+room.Width/2)*gameworld.SubtilesPerTile), float64((room.Y+room.Height/2)*gameworld.SubtilesPerTile)
+	sort.SliceStable(candidates, func(i, j int) bool {
+		ix, iy := candidates[i].X-centerX, candidates[i].Y-centerY
+		jx, jy := candidates[j].X-centerX, candidates[j].Y-centerY
+		return ix*ix+iy*iy < jx*jx+jy*jy
+	})
+	selected := []gameworld.Point{}
+	points := []any{}
+	for _, candidate := range candidates {
+		separated := true
+		for _, previous := range selected {
+			if math.Hypot(candidate.X-previous.X, candidate.Y-previous.Y) < 6 {
+				separated = false
+				break
+			}
+		}
+		if !separated {
+			continue
+		}
+		selected = append(selected, candidate)
+		points = append(points, map[string]any{"x": candidate.X, "y": candidate.Y, "clearance": float64(2)})
+		if len(points) == 4 {
+			break
+		}
+	}
+	return points, count
 }
