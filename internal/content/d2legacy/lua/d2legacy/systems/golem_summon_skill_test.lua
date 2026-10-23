@@ -108,11 +108,15 @@ return test.suite({
     },
     cases = {
         test.case("admitted_golem_retains_monster_boss_markers", {
-            test.submit_system(fixtures.command("system.player.enter", fixtures.player_entry({
-                level = 1,
-                mana = 100,
-                max_mana = 100,
-            }), { tick = 1, sequence = 1 })),
+            test.submit_system(fixtures.command(
+                "system.player.enter",
+                fixtures.player_entry({
+                    level = 1,
+                    mana = 100,
+                    max_mana = 100,
+                }),
+                { tick = 1, sequence = 1 }
+            )),
             test.step(1),
             test.run(function()
                 local ecs = require("engine.ecs/v1")
