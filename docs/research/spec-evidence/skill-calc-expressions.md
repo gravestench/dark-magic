@@ -456,3 +456,31 @@ in the current numbering; rows that name SLD rules or vectors describe the damag
 and vectors then in this spec, whose assertions now live in those SLD ids (case letters refer to
 the cases as then written). No source reading, gameplay observation or reader pass was performed
 for this restructure.
+
+## Publication review — 2026-10-23
+
+A fresh independent blind reader read the complete post-split SCX spec, companion and
+gap file, including all current SCX-V01–V31 vector families. It independently recomputed
+representative random, diminishing, negative mana, retained-stack and first-passive-match
+results, and checked the SLD percentage-order dependency. No blocking arithmetic or
+boundary mismatch was found. The 2026-10-15 full/delta review counts above describe the
+pre-split contract; its 36-family and damage/synergy coverage is dated history. The
+current expression contract has SCX-V01–V31, SCX-Q01–Q09 and SCX-O01. This new reader
+approved bounded 1.13c static/supplied-input publication without claiming original-game
+observation or exhaustive producer integration.
+
+An independent evidence reader checked D2Common/Fog identities against the source
+manifest, dated reuse, the narrow Experience.MaxLvl/Amazon text-cell claim, public links
+and open gates. A separate architecture reader checked SCX's evaluator/parameter ownership
+against SLD's leveled damage, duration, to-hit and synergy arithmetic, SCD cast dispatch,
+and #387 gameplay. All three approved bounded publication. Issue #485 now names the
+current three files and assigns synergy application to #487. The SCX-Q02 gap row now
+names only the still-unresolved special to-hit producer; own/selected getter routing
+remains the verified supplied-result contract. SCX-V22(a) now says "corresponding getter"
+to distinguish qualifier 1's own-array read from qualifier 2's selected-array read.
+
+SCX-Q01–Q09 and SCX-O01 remain open at their stated behavior, integration, build and
+observation limits; SLD's own gates still apply to returned damage/duration/to-hit
+values. No rule behavior, vector output or original-source evidence label changed. No
+new original-image investigation, protected game-data capture, gameplay test, renewed
+implementation comparison or 1.14d confirmation was added. The spec remains draft.

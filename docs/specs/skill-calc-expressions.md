@@ -538,7 +538,7 @@ Defaults: each case starts independently; the unit is absent unless explicitly s
   - Outputs: per case
   - Discriminates: own-array return differs from selected-array returns; the special to-hit override differs from both
   - runtime_observed: no
-  - (a) Inputs: stat(34,0), stat(34,1), stat(34,2), stat(34,9) independently. Draws:none. Outputs:37,11,37,37 respectively; each selected getter logged once with id 34/layer 0.
+  - (a) Inputs: stat(34,0), stat(34,1), stat(34,2), stat(34,9) independently. Draws:none. Outputs:37,11,37,37 respectively; each corresponding getter logged once with id 34/layer 0.
   - (b) Inputs: stat(19,2). Draws:none. Outputs:91; special to-hit call only.
   - (c) Inputs: stat(359,0). Draws:none. Outputs:0; no call.
   - (d) Inputs: selector 0x28 with ordinary stat 12 supplied 37. Draws:none. Outputs:37; log[(12,0)].
