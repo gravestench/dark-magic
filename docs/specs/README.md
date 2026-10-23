@@ -32,7 +32,7 @@ specs to the project's tracker and are the only place issue numbers appear.
 | [combat-knockback](combat-knockback.md) | #489 (spec); #378, #379 (gameplay) | #345 |
 | [combat-hit-recovery](combat-hit-recovery.md) | #490 (spec); #383, #378, #375 (gameplay) | #348 |
 | [combat-pvp-damage-and-kill-credit](combat-pvp-damage-and-kill-credit.md) | #493 (spec); #383, #420 (gameplay) | #348 |
-| [player-hostility-declaration](player-hostility-declaration.md) | #493 (spec); #383, #420 (gameplay) | #348 |
+| [player-hostility-declaration](player-hostility-declaration.md) | #493 (spec); #383 (gameplay) | #348 |
 | [combat-item-event-triggers-and-procs](combat-item-event-triggers-and-procs.md) | #482 (spec); #383 (gameplay) | #348 |
 
 ### States (`state-`)

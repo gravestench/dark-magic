@@ -2,7 +2,7 @@
 
 **Description**
 
-A player can ask to declare hostility toward another player in the same game. The request is accepted only while the declaring player stands in town and both characters are at least level 9, and after a declaration, declaring again within about one minute is refused with a chat message. The setting the request controls is the one checked when that player's attacks try to hurt the other character, but the full effects of switching hostility on or off, such as leaving a shared party and the notices other players see, are still being confirmed.
+A player can ask to declare hostility toward another player in the same game. The request is accepted only while the declaring player stands in town and both characters are at least level 9, and a later enable request can be refused while its stored timer is still in the future. The setting the request controls is the one checked when that player's attacks try to hurt the other character, but the full effects of switching hostility on or off, such as leaving a shared party and the notices other players see, are still being confirmed.
 
 Status: draft
 Evidence build: Lord of Destruction Expansion 1.13c
@@ -138,7 +138,7 @@ Full reproduction also requires HOS-Q01 settled with a source-complete contract 
 ## 10. Related specs
 
 - [PvP damage, hostility and kill credit](combat-pvp-damage-and-kill-credit.md): hit-time hostility predicate and early damage gates that consume the relation flag.
-- [Party experience and loot sharing](player-party-experience-sharing.md): party membership that the accepted branches' cleanup affects.
+- [Party experience sharing](player-party-experience-sharing.md): party membership that the accepted branches' cleanup affects.
 - [Core numeric and RNG foundations](core-numeric-and-rng-foundations.md): stat-array reads and u32 wrapping.
 
 ## Appendix A. Provenance

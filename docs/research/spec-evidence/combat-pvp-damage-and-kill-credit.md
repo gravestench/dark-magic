@@ -310,3 +310,29 @@ remain outstanding.
 ## Restructure (2026-10-15)
 
 The approved specification review split the hostility-declaration request into [player hostility declaration](../../specs/player-hostility-declaration.md) (prefix HOS). Moved there: the command-role, declaration-check and side-effect rules, the relation-meaning rule, the declaration integration question, the low-level rejection and timing vectors, the declaration rows of sections 3 and 5, the level and delay constants, the declaration dispatch anchors, function and import rows, and the declaration correction and level-source records. The declaration slice of the no-draw vector became HOS-V03, and the declaration part of the general gameplay question and observation became HOS-Q02 and HOS-O01. This specification keeps the damage scale, hostility predicate and early gates, owner resolution, related effect inputs, kill credit, experience routing, same-party predicate and local no-draw rules, renumbered cleanly because it is unconsumed; the review records above use the current ids. No rule behavior, label, value or vector result changed. The file name and title still fit the remaining scope. No source campaign, implementation test or gameplay observation ran for this restructure, and no blind-implementer pass has reviewed the resulting text.
+
+## Publication review — 2026-10-23
+
+A fresh independent blind reader reviewed the complete post-split PvP spec, companion
+and gap file, recomputing representative scale, leech, wrapped arithmetic and hireling
+share vectors. It also checked directional relation order, early gate result masks,
+attacker/defender owner depth and kill-credit redirect/null cases. No blocking mismatch
+was found within the 1.13c static/supplied-input boundary. The current PvP contract has
+PVP-V01–V25 and PVP-Q01–Q09; the 2026-10-15 full/delta review counts above describe the
+pre-split contract and remain dated history. A separate fresh blind review covered the
+split HOS-V01–V03 declaration contract.
+
+An independent evidence reader checked both three-file sets' public source identities,
+dated evidence, named dependencies, links and unresolved gates. A separate architecture
+reader checked PVP's factor/hostility/owner/credit ownership against DPO/DMI damage, PXL
+experience amounts and HOS declaration. All three approved bounded publication. Issue
+#493 now names both three-file handoffs. Death Sentry in #420 consumes PvP scaling; the
+HOS index row now lists #383 as its gameplay issue and the HOS spec uses the current party
+experience title. The HOS description clarifies that the timer can refuse a later enable
+request, while exact no-op and guard branches remain in HOS-R02.
+
+PVP-Q01–Q09 and HOS-Q01–Q02 remain open at their stated producer, integration and
+observation boundaries. The historical implementation comparison was not renewed.
+No behavioral rule, vector output, evidence label or gate changed; no new original-image
+investigation, protected game-data capture, gameplay test or 1.14d confirmation was
+added. Both contracts remain draft.
