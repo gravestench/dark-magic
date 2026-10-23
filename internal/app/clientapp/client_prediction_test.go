@@ -83,6 +83,7 @@ func TestPredictionTownStaminaUsesRecoveredLevels(t *testing.T) {
 		}
 		prediction := newPositionPrediction(hud, nil, nil, 40*time.Millisecond, catalog)
 		prediction.advanceTick(11)
+
 		if prediction.staminaRaw != tc.wantRaw {
 			t.Errorf("level %d predicted stamina = %d raw, want %d", tc.levelID, prediction.staminaRaw, tc.wantRaw)
 		}
