@@ -5,6 +5,8 @@ Evidence: [companion records](../../research/spec-evidence/combat-status-applica
 
 ## Open evidence gaps
 
+The 2026-10-23 [publication review](../../research/spec-evidence/combat-status-application.md#issue-472-publication-review-2026-10-23) left all six existing rows open. It checked the stated boundaries without a new original-image read, fixture execution or gameplay observation.
+
 | Gap | Kind | Affects | Blocked assertions / boundary | Missing evidence | Attempted (date, sources, result) | Would close it |
 |-----|------|---------|-------------------------------|------------------|-----------------------------------|----------------|
 | Stored list, stat and state effects | integration | CSA-Q01, CSA-R01, CSA-R04, CSA-R05, CSA-R06, CSA-R08, CSA-R12, CSA-R13; CSA-V02, CSA-V03, CSA-V05 to CSA-V15 | Actual attachment, replacing list-stat propagation, disguise and update-queue integration of the requested operations; ordered requests, arithmetic, comparisons and draws with supplied operations remain eligible | Complete contracts for attach (STL-R06b), list `SetStat` (STL-R06c) and disguise bookkeeping (STL-R07a) and update integration (RLI-Q02) | 2026-10-14: NRF's independent listings of D2Common `0x3A280`, `0x3A7D0`, `0x3A740` and their callees (reused, no promotion); applier call sites reread in D2Game `0xDC780`, `0xDCC20`, `0xDDAC0`, `0xDCAB0`; result: call arguments verified, callee integration remains unresolved under the current lifecycle owner; 2026-10-15 reused these compatible dated records and current STL/NRF contracts, with no repeat source reading | Accept STL-R06b, STL-R06c, STL-R07a and RLI-Q02 with complete callee readings and integration vectors; verified membership and supplied requests remain available |
