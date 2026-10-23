@@ -19,6 +19,15 @@ func TestValidateClientViewRejectsUnboundedOrInvalidNetworkState(t *testing.T) {
 	}
 
 	tests := map[string]func(*ClientView){
+		"pre-quest private schema":  func(view *ClientView) { view.Private.Version = 2 },
+		"pre-quest envelope":        func(view *ClientView) { view.Version = 16 },
+		"rewarded incomplete quest": func(view *ClientView) { view.Private.Quest = &QuestView{QuestID: 1, Rewarded: true} },
+		"negative remaining":        func(view *ClientView) { view.Private.Quest = &QuestView{QuestID: 1, Remaining: -1} },
+		"unbounded room count":      func(view *ClientView) { view.Private.Quest = &QuestView{QuestID: 1, UnsettledRooms: 100001} },
+		"cleared unknown rooms": func(view *ClientView) {
+			view.Private.Quest = &QuestView{QuestID: 1, Completed: true, UnsettledRooms: 1}
+		},
+		"cleared living resident":         func(view *ClientView) { view.Private.Quest = &QuestView{QuestID: 1, Completed: true, Remaining: 1} },
 		"pre-commerce private schema":     func(view *ClientView) { view.Private.Version = 1 },
 		"pre-commerce client schema":      func(view *ClientView) { view.Version = 14 },
 		"previous combined client schema": func(view *ClientView) { view.Version = 15 },

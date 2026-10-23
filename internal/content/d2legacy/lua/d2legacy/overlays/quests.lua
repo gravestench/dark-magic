@@ -6,6 +6,7 @@
 -- Quest completion/progression is a separate authority problem.
 
 local render = require("engine.render/v1")
+local ecs = require("engine.ecs/v1")
 local input = require("engine.input/v1")
 local scenes = require("engine.scene/v1")
 local data = require("engine.data/v1")
@@ -29,6 +30,40 @@ local function translated(key, fallback)
     -- Prefer localization. If a recovered row has no usable string key, retain a
     -- readable catalog name, and as a last resort show the key itself.
     return locale.text(key) or fallback or key
+end
+
+local function status()
+    local owner = "local-player"
+    local available, network = pcall(require, "engine.network/v1")
+    if available and network.status().player_id and network.status().player_id ~= "" then
+        owner = network.status().player_id
+    end
+    for _, entity in ipairs(ecs.query({ all = { "d2legacy.player.identity" } })) do
+        if ecs.get(entity, "d2legacy.player.identity"):get("player") == owner then
+            local progress = ecs.get(entity, "d2legacy.quest.progress")
+            if progress and progress:get("quest_id") == 1 then
+                if progress:get("rewarded") then return "Den of Evil: rewarded. Akara granted one skill point." end
+                if progress:get("completed") then return "Den of Evil: cleared. Return to Akara for one skill point." end
+                if not progress:get("population_available") then return "Den of Evil: population information unavailable." end
+                local remaining, unsettled = progress:get("remaining"), progress:get("unsettled_rooms")
+                if unsettled > 0 then
+                    return string.format("Den of Evil: %d known living monsters; %d chambers not yet surveyed.", remaining, unsettled)
+                end
+                return string.format("Den of Evil: %d %s remaining.", remaining, remaining == 1 and "monster" or "monsters")
+            end
+        end
+    end
+    return "Den of Evil: enter the cave and defeat its monsters."
+end
+
+local function refresh(self)
+    local value = status()
+    if self.status == value then return end
+    self.status = value
+    if self.status_node then self.status_node:destroy() end
+    self.status_node = text.create(self.root, "formal_small", value, screen.unavailable.x + offset_x,
+        screen.unavailable.y + offset_y, screen.unavailable.width)
+    self.status_node:set_z(1)
 end
 
 return {
@@ -70,8 +105,8 @@ return {
             end
         end
 
-        -- Current UI is still a catalog/presentation shell, so say that clearly.
-        text.create(self.root, "disabled", assert(locale.text("d2legacy.quests.unavailable")), screen.unavailable.x + offset_x, screen.unavailable.y + offset_y, screen.unavailable.width)
+        self.status, self.status_node = nil, nil
+        refresh(self)
 
         local close = screen.close
         local close_placement = {
@@ -85,6 +120,7 @@ return {
     end,
 
     update = function(self)
+        if render.assets_available() then refresh(self) end
         self.controls:update()
         if input.pressed("quests") or input.pressed("cancel") then scenes.pop() end
     end,

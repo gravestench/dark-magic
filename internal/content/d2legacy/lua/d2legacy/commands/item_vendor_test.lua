@@ -45,7 +45,20 @@ local function state(gold, bought)
     return layout, value
 end
 
-return test.suite({
+local function quest_state(id, completed, rewarded)
+    return test.run(function()
+        local ecs = require("engine.ecs/v1")
+        local player = ecs.query({ all = { "d2legacy.player.identity" } })[1]
+        ecs.set(player, "d2legacy.quest.progress", {
+            quest_id = id,
+            stage = 1,
+            completed = completed,
+            rewarded = rewarded,
+        })
+    end)
+end
+
+local suite = {
     profile = "authority",
     tier = "integration",
     records = {
@@ -104,6 +117,41 @@ return test.suite({
         },
     },
     cases = {
+        setup("den_keeps_quotes_debits_supply_and_reward_across_checkpoint", {
+            quest_state(1, false, false),
+            buy(4, 3, "hp1"),
+            test.step(1),
+            quest_state(1, true, false),
+            buy(5, 4, "tsc"),
+            test.step(1),
+            submit(6, 5, "quest.claim_reward", {}),
+            test.step(1),
+            buy(7, 6, "hp1"),
+            test.step(1),
+            test.run(function()
+                state(840, 3)
+                local ecs = require("engine.ecs/v1")
+                local player = ecs.query({ all = { "d2legacy.player.identity" } })[1]
+                test.expect(ecs.get(player, "d2legacy.quest.progress"):get("rewarded")):is_true()
+                test.expect(ecs.get(player, "d2legacy.player.progress"):get("unspent_skill_points")):equals(1)
+                test.expect(require("d2legacy.items.vendor_offers").supported("alice")):is_true()
+                require("d2legacy.commands.quests").complete({ payload = { player = "alice", quest_id = 1 } })
+                test.expect(ecs.get(player, "d2legacy.quest.progress"):get("rewarded")):is_true()
+                test.expect(#ecs.query({ all = { "d2legacy.quest.event" } })):equals(1)
+            end),
+            test.expect_checkpoint_parity(1),
+            test.restore_checkpoint(),
+            submit(9, 1, "quest.claim_reward", {}),
+            test.step(1),
+            buy(10, 2, "hp1"),
+            test.step(1),
+            test.run(function()
+                state(810, 4)
+                local ecs = require("engine.ecs/v1")
+                local player = ecs.query({ all = { "d2legacy.player.identity" } })[1]
+                test.expect(ecs.get(player, "d2legacy.player.progress"):get("unspent_skill_points")):equals(1)
+            end),
+        }),
         test.case("valid_empty_stock_allows_trade_refusal_and_close", {
             test.submit_system({
                 tick = 1,
@@ -274,6 +322,7 @@ return test.suite({
             end),
         }),
         setup("reduced_price_sources_refuse_the_undiscounted_offer", {
+            quest_state(1, true, true),
             test.run(function()
                 local ecs = require("engine.ecs/v1")
                 local player = ecs.query({ all = { "d2legacy.player.identity" } })[1]
@@ -306,4 +355,27 @@ return test.suite({
             end),
         }),
     },
-})
+}
+
+for _, id in ipairs({ 4, 999 }) do
+    for _, rewarded in ipairs({ false, true }) do
+        suite.cases[#suite.cases + 1] = setup("completed_quest_refused_" .. id .. "_" .. tostring(rewarded), {
+            quest_state(id, true, rewarded),
+            buy(4, 3, "tsc"),
+            test.step(1),
+            submit(5, 4, "interaction.open", { target = "npc:akara" }),
+            test.step(1),
+            test.run(function()
+                state(1000, 0)
+                local ecs = require("engine.ecs/v1")
+                local player = ecs.query({ all = { "d2legacy.player.identity" } })[1]
+                test.expect(ecs.get(player, "d2legacy.quest.progress"):get("quest_id")):equals(id)
+                local context = require("d2legacy.interactions.context").for_owner("alice")
+                test.expect(context:get("trade_available")):is_false()
+                test.expect(context:get("dialogue_page")):equals("menu")
+            end),
+        })
+    end
+end
+
+return test.suite(suite)
