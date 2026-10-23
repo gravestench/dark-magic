@@ -25,3 +25,7 @@ The following historical finding is retained verbatim from the combined party ex
 ## Restructure (2026-10-15)
 
 Created from the gold parts of the [party experience gap file](player-party-experience-sharing.md) when gold-pickup sharing became its own spec. The rows keep their original attempt dates; ids use this spec's numbering.
+
+## Publication review - 2026-10-23
+
+Fresh blind and evidence reviews approved the separated 1.13c supplied-input gold-pickup contract, including GPS-V02(n) through (p). No question or observation gap above was closed; stat writes, excess creation, ownership policy, runtime behavior and 1.14d parity remain gated.

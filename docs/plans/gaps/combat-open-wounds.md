@@ -21,3 +21,7 @@ Evidence: [investigation records](../../research/spec-evidence/combat-open-wound
 Affects entries identify the blocked assertion boundary, not a blanket gate on each cited
 rule. Supplied-array arithmetic, local returns and ordered requests remain independently
 usable where the main labels them verified. No implementation comparison was requested.
+
+## Publication review - 2026-10-23
+
+Fresh blind, evidence and boundary reviews approved the 1.13c supplied-input Open Wounds contract and corrected the companion's source chronology. OWD-V14 now names only the poison list's candidate killer; actual death and kill-credit effects remain OWD-Q10. No gap above was closed. State storage, equal-frame expiry/payment ordering, notification, death effects, gameplay observations and 1.14d parity remain unverified.

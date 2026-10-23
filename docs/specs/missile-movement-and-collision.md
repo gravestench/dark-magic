@@ -245,8 +245,9 @@ No damage or footprint request on miss.
 On target hit, or absent target with force or AlwaysExplode, run cooldown,event,then valid hit
 handler. Handler return replaces act entirely; act&4 returns 1 immediately. Bounds do not guard
 null pointers; selected null slots fault. Absent event owner invokes no callbacks (IEP-R07).
-Target plus act&2 requests damage fill,then handler when 0<damage selector<31,then application;
-ignore damage-handler/application numeric results for ending. No target,force=0,AlwaysExplode=0
+Target plus act&2 requests damage fill,then handler when 0<damage selector<31,then
+direct apply. MHD-R12 can return before combat processing when creator lookup is absent;
+ignore damage-handler/direct-apply numeric results for ending. No target,force=0,AlwaysExplode=0
 skips those operations. Finish at MMC-R15. Handler/damage/proc/draw interiors retain MHD/IEP/SBA
 contracts and gates (MMC-Q07).
 

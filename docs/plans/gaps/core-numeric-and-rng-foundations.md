@@ -38,3 +38,7 @@ they affect. No attempt, date or boundary changed.
 | Gameplay confirmation | observation | NRF-Q09, NRF-O01 to NRF-O03; verified local rules and their vectors | Runtime-confirmation claims only; static/supplied-input assertions remain eligible | Valid matching observations of the stated rule/vector cases | 2026-10-14: retained prior observation procedures and reviewed recorded idle/layout/table/global reads; no traces/actions/memory writes performed | Run a separately authorized gameplay/helper observation campaign and record actual matching coverage |
 
 No implementation comparison was requested; this file contains evidence gaps only.
+
+## Publication review (2026-10-23)
+
+A fresh blind review found no new behavioral or integration gap beyond the NRF-Q01–NRF-Q09 rows above. NRF-V05(g)'s supplied clock providers distinguish the local counter-before-sampling order; they do not identify an actual no-parent gameplay creator or close the incoming-seed, callback, animation, live-rate or observation gates. No 1.14d comparison was performed.

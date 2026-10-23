@@ -101,3 +101,29 @@ The declaration rules were reviewed while they were part of the [PvP damage and 
 ## Restructure (2026-10-15)
 
 The approved specification review split the hostility-declaration request out of [PvP damage, hostility and kill credit](../../specs/combat-pvp-damage-and-kill-credit.md) into this specification with prefix HOS. Moved here: the command-role, declaration-check and side-effect rules, the relation-meaning rule, the declaration integration question, the low-level rejection and timing vectors, the declaration rows of section 3 and section 5, the level and delay constants, the declaration dispatch anchors, function and import rows, and the declaration correction records above. New in this file, derived from existing content without changing behavior: HOS-V03 carries the declaration slice of the source no-draw vector; HOS-Q02 and HOS-O01 carry the declaration part of the source general gameplay-confirmation question and observation. No rule behavior, label, value or vector result changed. The id correspondence is kept outside the repository for the follow-up reference update. Neither specification is consumed, so both are numbered cleanly. No source campaign, implementation test or gameplay observation ran for this restructure, and the new specification has not had its own blind-implementer pass.
+
+## Publication review — 2026-10-23
+
+A fresh independent blind reader reviewed the complete post-split HOS spec, companion
+and gap file, independently recomputing the own-array versus effective-array level
+checks, unsigned timer comparison, low32 timestamp wrap, raw relation equality,
+disable-branch bypass and local no-draw boundary in HOS-V01–V03. No blocking mismatch
+was found. The 2026-10-15 restructure sentence above correctly described review status
+at that time; this is the new blind pass of the resulting HOS contract. The same reader
+also reviewed the full post-split PvP three-file set. These are static documentation
+reviews, not gameplay observations.
+
+An independent evidence reader checked both public three-file sets' source identities,
+dates, own/effective getter imports, links and typed gaps. A separate architecture reader
+checked HOS declaration/request ownership against PvP's hit-time relation consumption,
+party experience and #383 gameplay. All three approved bounded 1.13c publication.
+The HOS description now states the timer refusal as a conditional later enable request,
+its related-spec label uses the current party-experience title, and the README no longer
+assigns Death Sentry issue #420 to general hostility-declaration gameplay. Issue #493
+now names both split handoffs.
+
+HOS-Q01/Q02 and sibling PVP-Q01–Q09 remain open with their stated limits. Stored relation,
+party/skill cleanup and message delivery are not established by request logs. No rule,
+vector output, evidence label or gate changed; no new original-image investigation,
+protected game-data capture, gameplay test or 1.14d confirmation was added. Both
+contracts remain draft.

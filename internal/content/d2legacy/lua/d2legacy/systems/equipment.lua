@@ -354,6 +354,10 @@ function M.register()
                             for _, stat in ipairs({
                                 "velocitypercent",
                                 "item_fastermovevelocity",
+                                "item_ignoretargetac",
+                                "item_fractionaltargetac",
+                                "item_demon_tohit",
+                                "item_undead_tohit",
                                 "staminarecoverybonus",
                                 "item_staminadrainpct",
                                 "vitality",
@@ -403,6 +407,10 @@ function M.register()
                             for _, stat in ipairs({
                                 "velocitypercent",
                                 "item_fastermovevelocity",
+                                "item_ignoretargetac",
+                                "item_fractionaltargetac",
+                                "item_demon_tohit",
+                                "item_undead_tohit",
                                 "staminarecoverybonus",
                                 "item_staminadrainpct",
                                 "vitality",

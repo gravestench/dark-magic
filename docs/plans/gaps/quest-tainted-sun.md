@@ -33,3 +33,7 @@ Restructure (2026-10-15): the dated table was divided by subject when the combin
 | G10 | Ownership | Owner candidates: `commands/quests.lua`, `systems/environment.lua`, or `d2legacy.quest.event` component as bridge | Open | n/a | gated (decision for plan) |
 | G11 | Risk | Do not enable the flag until start trigger (3.1) resolved or a maintainer accepts "quest started" as trigger | n/a | n/a | gated (plan decision) |
 | G12 | Process | Done checklist: runtime vectors for both boundaries and a reload case outstanding; #415 should link spec; implementation tests: events change Act II clock once, no repeat on retry, survive checkpoint/restore | n/a | n/a | gated |
+
+## Publication review - 2026-10-23
+
+Fresh blind and evidence reviews approved the separated 1.13c supplied-input quest contract. The old stage-return ambiguity is now an explicit TSW-Q06 boundary: join selection, animation and event slices, and direct retry have no specified return value here; caller use still needs evidence. No evidence gap above was closed. Quest triggers, helper effects, message delivery, runtime observations and 1.14d parity remain unverified.

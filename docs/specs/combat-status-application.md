@@ -994,7 +994,8 @@ frame-event node removal, handler execution and actual lifecycle free/callback i
 gated by CSA-Q01 and CSA-Q02; passing the vectors
 with supplied operations does not accept those integrations. Full reproduction additionally requires
 accepting those dependency contracts and matching observations for CSA-O01, CSA-O02 and the verified
-rules (CSA-Q05).
+rules (CSA-Q05). Acceptance of this supplied-input 1.13c contract would not establish 1.14d
+parity or Dark Magic implementation.
 
 **Depends on:** [core-numeric-and-rng-foundations](core-numeric-and-rng-foundations.md) NRF-R01
 (seed step); [core-record-layouts-and-ids](core-record-layouts-and-ids.md) RLI-R03 (state lookup,

@@ -26,7 +26,7 @@ historical pass or this migration. No vector is runtime-confirmed; no mismatch o
 | `LOD113C-D2GAME` | `0xAC940` | n/a | Piecewise level curve | R03 | 2026-10-13 reconstruction checked against original bytes |
 | `LOD113C-D2GAME` | `0x22A80` | n/a | Monster-data condition mask | R04a | 2026-10-13 disassembly reading |
 | `LOD113C-D2GAME` | `0xA00B0` | n/a | Generic timed-state request applier | R06-R08 | 2026-10-13 disassembly reading |
-| `LOD113C-D2GAME` | `0x1320` | n/a | MonStats-linked extended-record lookup | R06a | 2026-10-13 disassembly reading; decoding limits below |
+| `LOD113C-D2GAME` | `0x1320` | n/a | MonStats-linked extended-record lookup | R06a | 2026-10-13 locator/partial reading; complete 2026-10-15 instruction check below |
 | `LOD113C-D2GAME` | `0x76740` | n/a | Monster regeneration/life/death tail | R09a-R09d, R10 | 2026-10-13 disassembly reading |
 | `LOD113C-D2GAME` | `0x79B10`, `0x77CB0` | n/a | Player event handler and life helper | R11a, R11b | 2026-10-13 disassembly reading |
 | `LOD113C-D2GAME` | `0xDE0C0` | n/a | Hit application | R01, R12, section 2 | 2026-10-13 disassembly reading |
@@ -39,10 +39,10 @@ historical pass or this migration. No vector is runtime-confirmed; no mismatch o
 | `LOD113C-D2GAME` | `0xFBC14`, `0xFBB74`, `0xFA3DC` | n/a | Monster/player unit-event tables and unit-type queue map | section 2 | 2026-10-13 original-image/import record |
 | `LOD113C-D2GAME` | `0x1077A8` | n/a | Item-event callback table | R01 | 2026-10-13 original-image/import record |
 | `LOD113C-D2GAME` | `0x8EA80` | n/a | Frame-event scheduler | R07a, R08, R09a, R11a, R12, R13 | 2026-10-13 disassembly reading; decoding limits below |
-| `LOD113C-D2GAME` | `0x8E680`, `0x8E6F0` | n/a | Frame-event allocation/removal | R09c, R13 | 2026-10-13 disassembly reading |
+| `LOD113C-D2GAME` | `0x8E680`, `0x8E6F0` | n/a | Frame-event allocation/removal | R09c, R13 | 2026-10-13 locator/partial reading; targeted 2026-10-15 link-step/removal checks below |
 | `LOD113C-D2GAME / LOD113C-D2COMMON` | `0x74870`, `0x77820`, `0x3ADD0` | D2Common 11093 (thunk `0xAA2A`) | Monster/player expiry handlers and shared expiry walk | R08, R13, Q09 | 2026-10-13 disassembly reading |
 | `LOD113C-D2GAME` | `0x9F7A0` | n/a | Generic state removal callback | R08 | 2026-10-13 disassembly reading; one or more noted callees not read |
-| `LOD113C-D2GAME` | `0xE03A0` | n/a | Registered-unit lookup | R10 | 2026-10-13 disassembly reading; byte decoding not checked; decoding limits below |
+| `LOD113C-D2GAME` | `0xE03A0` | n/a | Registered-unit lookup | R10 | 2026-10-13 local reading with unchecked byte decoding; compatible complete 2026-10-14 lookup record reused below |
 | `LOD113C-D2GAME` | `0xDEEE0` | n/a | Death request target; body not read | R10 | 2026-10-13 locator only; body not read |
 | `LOD113C-D2GAME` | `0x14D0` | n/a | Signed multiply/divide helper | R06b (NRF-R05) | 2026-10-13 disassembly reading |
 | `LOD113C-D2COMMON` | `0x39430` | D2Common 10910 (thunk `0xA802`) | Effective unit-stat reader wrapper | R02 | 2026-10-13 disassembly reading |
@@ -67,7 +67,7 @@ historical pass or this migration. No vector is runtime-confirmed; no mismatch o
 | `LOD113C-D2COMMON` | `0x3A7D0` | D2Common 10807 (thunk `0xA60A`) | Full/filtered attach target | R08 | 2026-10-13 disassembly reading |
 | `LOD113C-D2COMMON` | `0x37D70` | D2Common 10911 (thunk `0xA75A`) | Set list callback | R08 | 2026-10-13 reconstruction checked against original bytes |
 | `LOD113C-D2COMMON` | `0x3A5F0`, `0x3AD40` | D2Common 11111 (thunk `0xABB6`), 11108 (thunk `0xABAA`) | Detach/free list request wrappers | R07b, R11b | 2026-10-13 reconstruction checked against original bytes; one or more noted callees not read |
-| `LOD113C-D2COMMON` | `0x384F0` | D2Common 10195 (thunk `0xA7B4`) | Curse-list lookup target; body not read | R06b | 2026-10-13 locator only; body not read |
+| `LOD113C-D2COMMON` | `0x384F0` | D2Common 10195 (thunk `0xA7B4`) | Curse-list lookup target | R06b | 2026-10-13 locator only; compatible complete 2026-10-15 PvP reading reused below |
 | `LOD113C-D2COMMON` | `0x38080`, `0x380E0` | D2Common 10473 (thunk `0xA84A`), 11131 (thunk `0xA7FC`) | Read list owner id/type | R10 | 2026-10-13 reconstruction checked against original bytes |
 | `LOD113C-D2COMMON` | `0x2FE10`, `0x3C390` | D2Common 10331 (thunk `0xA478`), 10057 (thunk `0xA808`) | Unit-room lookup and room-town test | R09a | 2026-10-13 disassembly reading |
 | `LOD113C-FOG` | `0x26798` | Fog 10259 | Bit-mask data export, GDA-R16 | R06a, R08, R09b | 2026-10-13 import record; current GDA-R16 data-export resolution |
@@ -569,3 +569,9 @@ New readings used in triage (LOD113C-D2GAME original disassembly, 2026-10-15):
 
 The applicable stopping condition is met by run 8 (MISMATCH 0, no unresolved GUESS, GAP or
 DISCRIM). No gameplay observation was made; status remains draft and approval is pending.
+
+## Publication review - 2026-10-23
+
+A fresh independent blind reader checked OWD-R01–R13 and every OWD-V01–V14 family within the stated 1.13c static, supplied-input and ordered-request boundaries. It independently recomputed seed transitions, signed level and defender arithmetic, monster/player life steps, percentage updates, refresh and cancellation, and candidate death requests. The applicable review reported MISMATCH 0, GUESS 0, GAP 0 and DISCRIM 0. After the publication edits, the reader rechecked the changed material and found no changed vector meaning or new blocker.
+
+A separate evidence review reconciled four function-table chronology entries with the dated readings already recorded here: 2026-10-13 partial/locator work, the compatible 2026-10-14 registered-unit lookup, and the targeted or reused 2026-10-15 helper, frame-event and curse-list checks. The table changes attribution only, not source findings. An independent boundary review clarified OWD-V14's poison-list result as a candidate killer, leaving actual death and credit effects under OWD-Q10. The spec index now links both gameplay issues #383 and #384. The readers approved the publication delta. OWD-Q01/Q05/Q06/Q08–Q14 and OWD-O01–O05 remain open at their stated boundaries; no gameplay observation, implementation comparison, new source artifact or 1.14d confirmation was added.

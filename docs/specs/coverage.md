@@ -51,7 +51,7 @@ were not enumerated.
 | [combat-knockback](combat-knockback.md) | `UNIT\SUnitEvent`, `SUnitDmg` | MonStats2 | `0xACE60`, `0x75160` | written | |
 | [combat-hit-recovery](combat-hit-recovery.md) | `UNIT\SUnitDmg` | MonStats2 | `0xDCF20`, `0x75210` | written | |
 | [combat-pvp-damage-and-kill-credit](combat-pvp-damage-and-kill-credit.md) | `UNIT\SUnitDmg` | hostility, party | `0xDEEE0`, `0xDEA00`, `0x6F930` | written | Hostility declaration is player-hostility-declaration. |
-| [combat-item-event-triggers-and-procs](combat-item-event-triggers-and-procs.md) | `UNIT\SUnitEvent` | ItemStatCost itemevent1/2, itemeventfunc1/2 | dispatcher `0x37030`; callback table VA `0x6FD277A8` slots 1-31 (e.g. `0xAD910`, `0xAF2E0`, `0xAE0E0`); trigger callers `0xDE0C0` (hit), `0x76740` (kill), `0xDE6D0` (level-up) | written | Dispatcher and trigger points; only the knockback, Open Wounds and Crushing Blow slots are written. Likely splits: chance-to-cast, attacker-takes-damage (thorns), after-kill life/mana, slow/freeze target, reanimate. |
+| [combat-item-event-triggers-and-procs](combat-item-event-triggers-and-procs.md) | `UNIT\SUnitEvent` | ItemStatCost itemevent1/2, itemeventfunc1/2 | dispatcher `0x37030`; callback table VA `0x6FD277A8` slots 1-31 (e.g. `0xAD910`, `0xAF2E0`, `0xAE0E0`); trigger callers `0xDE0C0` (hit), `0x76740` (kill), `0xDE6D0` (level-up) | written | Dispatcher and trigger points; IEP-R14–R18 specify retaliation, damage-to-mana, after-kill resource, and Rest in Peace callbacks. Knockback, Open Wounds and Crushing Blow have separate specs. Unread selector effects and complete original item bindings remain gated by IEP-Q06/IEP-Q08; chance-to-cast, slow/freeze target and reanimation spawning retain separate ownership. |
 | combat-area-damage-sweep | `UNIT\SUnitDmg` | Missiles/Skills radius columns | `0xDE380` (callers `0x76270`, `0x265E0`, `0x44300`, `0x457D0`) | candidate | Target filtering and order for area hits. |
 
 ## state
@@ -240,7 +240,7 @@ leads.
 | ai-hireling | `Ai\AiGeneral` | Hireling | `0x1DD40` (aux `0x16060`) | candidate | |
 | ai-necromancer-and-druid-summons | `Ai\AiThink4`, `AiGeneral` | aip* | `0x1E900`, `0xAC8E0`, `0xAB360` | candidate | |
 | ai-shadow-warrior-and-master | `Ai\AiThink4` | aip* | `0xAC410`, `0xAB580`, `0xA6B70`, `0xA5350` | candidate | |
-| (sentry and death sentry AI) | `Ai\AiThink4` | none | `0xA7DC0`, `0xA7C20` | written | In [skill-assassin-sentry-firing-and-range](skill-assassin-sentry-firing-and-range.md), [skill-assassin-sentry-missile-launch](skill-assassin-sentry-missile-launch.md) and [skill-assassin-death-sentry-corpse-selection](skill-assassin-death-sentry-corpse-selection.md). |
+| (sentry and death sentry AI) | `Ai\AiThink4` | none | `0xA7DC0`, `0xA7C20` | written | In [skill-assassin-sentry-firing-and-range](skill-assassin-sentry-firing-and-range.md) and [skill-assassin-death-sentry-corpse-selection](skill-assassin-death-sentry-corpse-selection.md). |
 
 ## game
 
@@ -311,11 +311,11 @@ leads.
 
 | Candidate spec | Original source | Data tables and columns | 1.13c entry points | Status | Notes |
 |---|---|---|---|---|---|
-| [player-party-experience-sharing](player-party-experience-sharing.md) | D2Game `UNIT\Party`, `PLAYER` | Experience, DifficultyLevels | `0xDEA00`, `0xDE8F0`, `0x9C270` | written | Renamed 2026-10-15; gold pickup sharing is player-party-gold-sharing. |
-| [player-party-gold-sharing](player-party-gold-sharing.md) | D2Game `UNIT\Party`, `PLAYER` | ItemTypes gold | see spec | written | Split from player-party-experience-sharing (2026-10-15). |
+| [player-party-experience-sharing](player-party-experience-sharing.md) | D2Game `UNIT\Party`, `PLAYER` | Experience, DifficultyLevels | `0xDEA00`, `0xDE8F0`, collector `0xDAED0` | written | Renamed 2026-10-15; gold pickup sharing is player-party-gold-sharing. |
+| [player-party-gold-sharing](player-party-gold-sharing.md) | D2Game `UNIT\Party`, `PLAYER` | ItemTypes gold | split caller `0x9C270`; see spec | written | Split from player-party-experience-sharing (2026-10-15). |
 | [player-hostility-declaration](player-hostility-declaration.md) | D2Game `UNIT\Party` | none | see spec | written | Split from combat-pvp-damage-and-kill-credit (2026-10-15). |
 | player-life-mana-stamina-regeneration | D2Game regen tick | regen stats, stamina | `0x6CEE0` (table VA `0x6FD27BBC` slot 21); `0x8DA80` | candidate | Includes per-frame poison drain; table `0x6FD27BBC` (37 handlers) unidentified. Monster regeneration is in scope too. Mana part written as player-mana-regeneration: the per-frame player tick is `0x79B10` (type-3 unit event, slot 3 of table RVA `0xFBB74`) calling life `0x77CB0`, stamina `0x77A50`, mana `0x77950`; `0x6CEE0`/`0x6A560` is the object or monster refill tick, not player regeneration. Life and stamina regeneration remain candidates. |
-| [player-mana-regeneration](player-mana-regeneration.md) | D2Game `PLAYER\PlrModes` | CharStats.ManaRegen; ItemStatCost rows 8, 9, 26, 27; States 85, 106 | `0x79B10` -> `0x77950`; D2Common ordinals 10973, 10186, 10494, 10871, 11111, 11108, 10551 | written | Draft: trigger chain runtime-confirmed, arithmetic static only. |
+| [player-mana-regeneration](player-mana-regeneration.md) | D2Game `PLAYER\PlrModes` | CharStats.ManaRegen; ItemStatCost rows 8, 9, 26, 27; States 85, 106 | `0x79B10` -> `0x77950`; D2Common ordinals 10973, 10186, 10494, 10871, 11111, 11108, 10551 | written | Draft: handler requests and arithmetic verified statically; only the dead-player mode-17 exit is runtime-confirmed. |
 | [player-stamina-drain-while-running](player-stamina-drain-while-running.md) | D2Game `PLAYER\PlrModes` | CharStats.RunDrain; Armor.speed; ItemStatCost row 154; BodyLocs row 3 | `0x79A10` -> mode table `.data` RVA `0x1079D0` slot 3 -> `0x79B90` -> `0x77BB0` | written | Draft: static only; split out of player-modes-and-transitions. |
 | player-level-up-and-attribute-points | D2Game `PLAYER\Player` | CharStats per-level columns, Experience | `0xEB090`, `0xEAEE0`, `0xE7940` | candidate | Effect only; commands in `net`. |
 | player-modes-and-transitions | `PLAYER\PlrModes` | PlrMode, CharStats | mode table VA `0x6FD1A3F8`; `0x78430`, `0x78610`, `0x79A10`; walk/run `0x78710`, `0x78760` | candidate | Stamina drain on run probably here. Stamina drain written as player-stamina-drain-while-running; the rest remains a candidate. |

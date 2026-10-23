@@ -14,9 +14,38 @@ const (
 
 // connectionMemberships binds credential cleanup and package bandwidth to one physical QUIC connection.
 type connectionMemberships struct {
+	operationMu sync.Mutex
 	mu          sync.Mutex
 	credentials map[gameserver.SessionCredential]struct{}
 	packages    *packageRateLimiter
+	closed      bool
+	superseded  map[gameserver.SessionCredential]struct{}
+}
+
+// retire prevents an open, superseded socket from reclaiming a recovered membership.
+func (memberships *connectionMemberships) retire(credentials ...gameserver.SessionCredential) {
+	memberships.mu.Lock()
+	defer memberships.mu.Unlock()
+
+	if memberships.superseded == nil {
+		memberships.superseded = make(map[gameserver.SessionCredential]struct{})
+	}
+
+	for _, credential := range credentials {
+		if credential != "" {
+			delete(memberships.credentials, credential)
+			memberships.superseded[credential] = struct{}{}
+		}
+	}
+}
+
+func (memberships *connectionMemberships) isSuperseded(credential gameserver.SessionCredential) bool {
+	memberships.mu.Lock()
+	defer memberships.mu.Unlock()
+
+	_, found := memberships.superseded[credential]
+
+	return found
 }
 
 // newConnectionMemberships starts a connection with no players and a full package-transfer burst allowance.

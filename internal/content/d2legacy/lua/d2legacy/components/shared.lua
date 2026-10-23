@@ -248,6 +248,11 @@ function M.register()
     -- monster classes without re-reading MonStats or matching definition IDs.
     component("d2legacy.monster.boss", {})
     component("d2legacy.monster.prime_evil", {})
+    component("d2legacy.monster.type_flags", {
+        { name = "demon", type = "bool" },
+        { name = "low_undead", type = "bool" },
+        { name = "high_undead", type = "bool" },
+    })
     -- Champions, uniques, super uniques, and bosses cannot receive a hard
     -- freeze. Population policy can add this capability without teaching a
     -- skill system how a monster acquired its quality.

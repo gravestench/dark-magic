@@ -72,7 +72,8 @@ This requires the reader's own original files, not unpublished reconstructed sou
 ## Game-data identity and limits
 
 The [numeric and RNG evidence](spec-evidence/core-numeric-and-rng-foundations.md),
-[game-data field evidence](spec-evidence/core-game-data-fields.md) and
+[game-data field evidence](spec-evidence/core-game-data-fields.md),
+[game-data table-record evidence](spec-evidence/core-game-data-table-records.md) and
 [mitigation evidence](spec-evidence/combat-damage-mitigation.md) record narrow original-profile
 table reads by effective virtual filename, row convention, column and named value. The
 companions retain their own dates, coverage and compiled/memory correspondence limits.

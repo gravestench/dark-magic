@@ -13,20 +13,22 @@ Spec: [Damage mitigation](../../specs/combat-damage-mitigation.md)
 
 ## Implementation gaps
 
-Comparison of the original 1.13c behavior with the Dark Magic implementation, as previously
-recorded. Findings are unchanged; rule and vector references use the spec's current ids.
-The comparison's status column records its earlier assessment, including the old runtime gate
-in row 6; current static labels and observation boundaries are defined by the spec and the open
-evidence gaps above. This regeneration did not inspect or update the implementation comparison.
+Historical comparison of the original 1.13c behavior with the Dark Magic implementation,
+preserved during the 2026-10-15 regeneration. The exact code snapshot for the earlier comparison
+was not recorded; do not read these rows as a current implementation audit. Rule and vector
+references use the spec's current ids. The comparison's status column records its earlier
+assessment, including the old runtime gate in row 6; current static labels and observation
+boundaries are defined by the spec and the open evidence gaps above. This publication did not
+refresh the implementation comparison.
 
 Repo files named in the comparison: `internal/content/d2legacy/lua/d2legacy/policy/mitigation.lua`, `policy/damage.lua`, `docs/research/COMBAT_DAMAGE_AND_DEATH.md` (stage map). The comparison treated repo values as implemented assumptions unless marked verified.
 
-| # | Spec rule | Repo file/function | Current repo behavior | Original (1.13c) behavior | Original status |
+| # | Spec rule | Repo file/function at earlier comparison | Repo behavior recorded earlier | Original (1.13c) behavior | Original status |
 |---|-----------|--------------------|-----------------------|---------------------------|-----------------|
 | 1 | DMI-R06 (order flat reduction -> resist -> absorb); vector DMI-V01 | `policy/mitigation.lua` | Percent resist first, then subtracts flat `physical_reduction_raw`. DMI-V01: `5120*75/100 - 1280 = 2560` | Flat reduction first, then percent: `(5120-1280)*75/100 = 2880` | verified (static) |
 | 2 | DMI-R07 caps | `policy/mitigation.lua` | Clamps physical resist to [-100, 100]; clamps element resist to [-100, 95], which matches only when the max-resist stat >= 20 | Non-monster defender: physical cap 50 (no max stat); element cap 75 + max stat, clamped at 95; with no max stat id cap is 75. No player cap above 95 | verified (static) |
 | 3 | DMI-R07 step 3 difficulty penalty | `policy/mitigation.lua` | Missing | Applied to non-regular-monster defenders for elements (not stats 36/37) after pierce | verified (static) |
-| 4 | DMI-R08 percent absorb cap | `policy/mitigation.lua` (`fire_absorb_percent`) | Clamped to 100 | Capped at 40 | verified (static) |
+| 4 | DMI-R08 percent absorb cap | `policy/damage.lua` (`fire_absorb_percent`; locator corrected 2026-10-23) | Clamped to 100 | Capped at 40 | verified (static) |
 | 5 | DMI-R08 flat absorb | `policy/mitigation.lua` | Absent | Present, after percent absorb, whole-HP (`<<8`) | verified (static) |
 | 6 | Negative result of flat reduction (DMI-Q03) | `policy/mitigation.lua` | Not stated in the earlier spec text | Code stores `v - reduction` unclamped; the earlier spec text said to implement a clamp only after a probe | asm-only observation, runtime gated |
 | 7 | Items 6+ of original contradiction list (life, crit, leech, poison) | n/a | Moved to combat-damage-pipeline-order spec | n/a | n/a |

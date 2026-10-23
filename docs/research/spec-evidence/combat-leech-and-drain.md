@@ -617,3 +617,11 @@ were written; this record maps them to the current ids.
   ids; dated records do not.
 - No rule's behavior, label, value or vector result changed. Sibling references to the old file
   name and rule ids are updated separately from the restructure id map.
+
+## Issue #473 publication review (2026-10-23)
+
+Issue [#473](https://github.com/gravestench/dark-magic/issues/473) owns the current leech-and-drain documentation handoff; its issue-body paths were corrected from the pre-rename `combat-leech-and-status-effects` filenames to the current files. A fresh blind reader used only the main contract and its named dependency specs to review LSE-R01..R15 and LSE-V01..V14. The reader recomputed the hit-game Drain versus attacker-game divisor selection, truncating arithmetic, caps, negative amounts, one-step seed results, apparent-form routing, the monster room cap and signed defender mana drain without a material contradiction. This was supplied-input document review, not execution or original-game corroboration.
+
+A separate publication reviewer checked the current spec, public evidence, gap file, source manifest, index and dependency owners. The current spec still cited several former NRF section-3 record locations after the RLI split, and its section 9 mixed GDA field ids into a GDF link with an interrupted NRF list. Sections 3 and 9 now name RLI sections 3.1, 3.2, 3.3 and 3.7 for the relevant logical records and reads, and separate NRF numeric/RNG, GDF identity and GDA table-field owners. Section 10 adds direct owner links. These are citation/ownership repairs; no LSE rule, vector input or expected result changed.
+
+The gap file now identifies its older implementation comparison as historical, with no recorded exact code snapshot. Its old `asm-only` assessment of the monster-attacker branch does not supersede the current LSE-R14 static label or the LSE-Q01 stored-write integration gate. The spec acceptance paragraph explicitly limits this 1.13c supplied-input handoff: it establishes neither 1.14d parity nor Dark Magic implementation. The original-profile named-cell limits, five open LSE-Q questions, pending observations and draft status remain. This audit did not read original bytes or game files, execute fixtures, capture gameplay, or refresh the current implementation comparison.

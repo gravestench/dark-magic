@@ -167,6 +167,40 @@ func TestAdvanceStaminaUsesFixedPointDrainRecoveryAndTownRules(t *testing.T) {
 	}
 }
 
+func TestAdvanceStaminaMatchesSigned32DrainArithmetic(t *testing.T) {
+	for _, tc := range []struct {
+		name        string
+		runDrain    int64
+		armorSpeed  int64
+		percentage  int64
+		wantStamina int64
+	}{
+		{name: "percentage product wraps", runDrain: 20, percentage: 107374183, wantStamina: 23512},
+		{name: "torso weight wraps", runDrain: 20, armorSpeed: 1000000000, wantStamina: 23551},
+		{name: "positive percentage truncates", runDrain: 20, percentage: 33, wantStamina: 23525},
+		{name: "negative percentage truncates", runDrain: 20, percentage: -33, wantStamina: 23499},
+		{name: "positive torso multiplier", runDrain: 20, armorSpeed: 10, wantStamina: 23472},
+		{name: "negative torso division", runDrain: 20, armorSpeed: -9, wantStamina: 23512},
+		{name: "full slower drain has minimum", runDrain: 20, percentage: 100, wantStamina: 23551},
+		{name: "zero base has minimum", runDrain: 0, wantStamina: 23551},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			got := AdvanceStamina(StaminaTick{
+				CurrentRaw:          23552,
+				MaximumRaw:          23552,
+				RunDrain:            tc.runDrain,
+				ArmorRunDrain:       tc.armorSpeed,
+				StaminaDrainPercent: tc.percentage,
+				Running:             true,
+				Moving:              true,
+			})
+			if got.CurrentRaw != tc.wantStamina || got.ForceWalk {
+				t.Fatalf("running stamina = %+v, want raw=%d and no force-walk", got, tc.wantStamina)
+			}
+		})
+	}
+}
+
 // TestMaximumStaminaUsesExpansionFixedPointDependencyGraph pins source order and integer scaling.
 func TestMaximumStaminaUsesExpansionFixedPointDependencyGraph(t *testing.T) {
 	rates := ClassRates{StartingVitality: 20, StartingStamina: 84, StaminaPerLevel: 4, StaminaPerVitality: 4}
@@ -211,17 +245,17 @@ func TestRescaleCurrentStaminaMatchesMaxStatCallback(t *testing.T) {
 	}
 }
 
-// TestTownLevelsAreTheFiveExpansion114dActTowns prevents broad ranges from accidentally receiving town recovery.
-func TestTownLevelsAreTheFiveExpansion114dActTowns(t *testing.T) {
-	for _, level := range []int64{1, 45, 80, 108, 114} {
-		if !IsTownLevel(level) {
-			t.Fatalf("level %d was not recognized as town", level)
+// TestTownLevelsMatchRecovered113cPredicate protects the original five-town lookup.
+func TestTownLevelsMatchRecovered113cPredicate(t *testing.T) {
+	towns := map[int64]bool{1: true, 40: true, 75: true, 103: true, 109: true}
+	for level := int64(0); level <= 120; level++ {
+		if got := IsTownLevel(level); got != towns[level] {
+			t.Errorf("level %d town = %t, want %t", level, got, towns[level])
 		}
 	}
-
-	for _, level := range []int64{0, 2, 44, 79, 107, 115} {
+	for _, level := range []int64{-1, -100, 121, 1024, 1 << 31} {
 		if IsTownLevel(level) {
-			t.Fatalf("level %d was recognized as town", level)
+			t.Errorf("out-of-range level %d was recognized as town", level)
 		}
 	}
 }

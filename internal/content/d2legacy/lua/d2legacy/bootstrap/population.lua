@@ -12,6 +12,7 @@ local state = require("engine.authority_state/v1")
 local monster = require("d2legacy.data.monster")
 local spawn = require("d2legacy.commands.spawn_monster")
 local game_rules = require("d2legacy.policy.game_rules")
+local player_count = require("d2legacy.policy.player_count")
 
 local M = {}
 
@@ -289,14 +290,14 @@ local function include_neighbors(active, links)
     return expanded
 end
 
-local function player_count(entities)
-    local count = 0
+local function live_player_count(entities)
+    local players = {}
     for _, entity in ipairs(entities) do
-        if ecs.get(entity, "d2legacy.player.identity") then
-            count = count + 1
+        if ecs.get(entity, "d2legacy.player.identity") and not ecs.get(entity, "d2legacy.world.inactive") then
+            players[#players + 1] = entity
         end
     end
-    return math.max(count, 1)
+    return player_count.live_population(players)
 end
 
 local function deactivate_room(room, entities, structural)
@@ -398,7 +399,7 @@ local function activate(context, entities, structural)
                 then
                     local definition = weighted_monster(candidates, rarity)
                     plan.created = plan.created
-                        + materialize_group(context, plan, room, definition, player_count(entities), structural)
+                        + materialize_group(context, plan, room, definition, live_player_count(entities), structural)
                 end
                 room.activated = true
             end
@@ -433,6 +434,8 @@ function M.register()
         },
         read = {
             "d2legacy.player.identity",
+            "d2legacy.player.vitals",
+            "d2legacy.player.death",
             "d2legacy.world.location",
             "d2legacy.world.position",
             "d2legacy.world.room_resident",
@@ -459,8 +462,12 @@ function M.register()
             "d2legacy.monster.identity",
             "d2legacy.monster.corpse_selectable",
             "d2legacy.monster.revivable",
+            "d2legacy.monster.boss",
+            "d2legacy.monster.freeze_immune",
+            "d2legacy.monster.prime_evil",
             "d2legacy.world.room_resident",
             "d2legacy.monster.stats",
+            "d2legacy.monster.type_flags",
             "d2legacy.combat.defense",
             "d2legacy.combat.melee_profile",
             "d2legacy.monster.appearance",

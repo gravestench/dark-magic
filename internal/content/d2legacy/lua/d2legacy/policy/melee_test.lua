@@ -5,6 +5,63 @@ return test.suite({
     tier = "fast",
     covers = { "internal/game/stats" },
     cases = {
+        test.case("ignore_target_defense_only_zeroes_eligible_monster_defense", {
+            test.run(function()
+                local melee = require("d2legacy.policy.melee")
+                test.expect(melee.effective_defense(500, 0, true, true, false, false)):equals(500)
+                test.expect(melee.effective_defense(500, 1, true, true, false, false)):equals(0)
+                test.expect(melee.effective_defense(500, -1, true, true, false, false)):equals(0)
+                test.expect(melee.effective_defense(500, 1, true, true, true, false)):equals(500)
+                test.expect(melee.effective_defense(500, 1, true, true, false, true)):equals(500)
+                test.expect(melee.effective_defense(500, 1, true, false, false, false)):equals(500)
+                test.expect(melee.effective_defense(500, 1, false, true, false, false)):equals(500)
+                test.expect(melee.hit_chance(20, 20, 300, 0)):equals(95)
+                test.expect(melee.hit_chance(20, 20, 300, 500)):equals(37)
+            end),
+        }),
+        test.case("fractional_target_defense_reduces_after_ignore_defense", {
+            test.run(function()
+                local melee = require("d2legacy.policy.melee")
+                test.expect(melee.fractional_defense(500, 50, false)):equals(250)
+                test.expect(melee.fractional_defense(500, 50, true)):equals(375)
+                test.expect(melee.fractional_defense(500, 250, false)):equals(0)
+                test.expect(melee.fractional_defense(500, 250, true)):equals(0)
+                test.expect(melee.fractional_defense(500, 1, true)):equals(500)
+                test.expect(melee.fractional_defense(500, 0, false)):equals(500)
+                test.expect(melee.fractional_defense(500, -50, false)):equals(500)
+                local ignored = melee.effective_defense(500, 1, true, true, false, false)
+                test.expect(melee.fractional_defense(ignored, 50, false)):equals(0)
+            end),
+        }),
+        test.case("fractional_target_defense_preserves_signed_integer_order", {
+            test.run(function()
+                local melee = require("d2legacy.policy.melee")
+                test.expect(melee.fractional_defense(1048577, 50, false)):equals(524327)
+                test.expect(melee.fractional_defense(-501, 50, false)):equals(-251)
+                test.expect(melee.fractional_defense(-2147483648, 50, false)):equals(-2147483648)
+            end),
+        }),
+        test.case("player_target_type_bonuses_add_each_matching_stat_once", {
+            test.run(function()
+                local melee = require("d2legacy.policy.melee")
+                local bonus = melee.target_type_attack_rating
+                test.expect(bonus(300, 50, 40, true, true, true, false, false)):equals(350)
+                test.expect(bonus(300, 50, 40, true, true, false, true, false)):equals(340)
+                test.expect(bonus(300, 50, 40, true, true, false, false, true)):equals(340)
+                test.expect(bonus(300, 50, 40, true, true, true, false, true)):equals(390)
+                test.expect(bonus(300, 50, 40, true, true, false, true, true)):equals(340)
+                test.expect(bonus(300, -50, -40, true, true, true, false, true)):equals(210)
+            end),
+        }),
+        test.case("target_type_bonuses_leave_ineligible_attacks_unchanged", {
+            test.run(function()
+                local bonus = require("d2legacy.policy.melee").target_type_attack_rating
+                test.expect(bonus(300, 50, 40, true, true, false, false, false)):equals(300)
+                test.expect(bonus(300, 50, 40, true, false, true, true, true)):equals(300)
+                test.expect(bonus(300, 50, 40, false, true, true, true, true)):equals(300)
+                test.expect(bonus(300, 0, 0, true, true, true, true, true)):equals(300)
+            end),
+        }),
         test.case("hit_chance_preserves_recovered_integer_order", {
             test.run(function()
                 local melee = require("d2legacy.policy.melee")

@@ -301,7 +301,8 @@ local coordinate-width and waypoint-write ambiguities, and block/stun selection 
 contracts. Compiled binding/timing, dependent mode/player/collision/movement effects, state
 disguise/update integration, subtype/client ownership and gameplay observations remain as precise
 [gap rows](../../plans/gaps/combat-knockback.md#open-evidence-gaps). No full-behavior label
-or gameplay confirmation is claimed. Publication and user approval remain pending.
+or gameplay confirmation is claimed. At this 2026-10-15 handoff, publication and user
+approval remained pending.
 
 ### Fresh-reader full pass 1 and triage
 
@@ -529,3 +530,39 @@ HRC-R15 `unresolved`, matching that rule's current label. The implementation-gap
 mechanical rename artefacts (`item_combat-knockback`, `missile_combat-knockback` and similar);
 they were restored to the implementation's actual names `item_knockback`/`missile_knockback`
 and to plain "knockback", without changing any finding. No vector, rule or gate changed.
+
+### Focused publication review (2026-10-23)
+
+The broad qualified-draft collection, including this contract, entered `main` through
+[PR #531](https://github.com/gravestench/dark-magic/pull/531) on 2026-10-22. The focused
+review for [issue #489](https://github.com/gravestench/dark-magic/issues/489) retains its
+1.13c static and supplied-stage boundary. A publication reader checked the current spec,
+companion, gap file and conventions and found no additional original-game evidence gate
+for a qualified handoff. This was a document review, not a new binary read or gameplay
+observation.
+
+A separate fresh blind implementer read only the main contract and cited behavioral
+dependencies. It independently checked the 36 vector families and found the RNG and
+endpoint arithmetic consistent, but found two integrated missile-vector mismatches:
+V24/V25 omitted hit bit 1 even though MHD-R12 presets it before chance and conditional
+apply. V24 now starts with result 1 and carries 9 into later stages; V25 starts with 5
+and carries 13 or 5. The reader also found that V28 did not distinguish player avoidance
+before block/KB and V33 did not distinguish availability refusal before the mode-0 guard
+or exercise the missing-unit success branch. V28c and V33b/c now cover those supplied
+selection/start cases. These are vector corrections and additions within the existing
+36 families; no rule, source label, evidence date or open question is promoted. The
+earlier reader passes above remain historical evidence for their then-current text.
+
+The blind reader did not inspect this companion, prior review reports, implementation,
+private source, runtime or community material. A second fresh blind reader then checked
+only V24/V25/V28c/V33b/c against the main contract and cited dependencies. It recomputed
+missile seed `{1,0}` to `{0x6AC690C5,0}`, remainder 85, V25c's defender draw result 1,
+result words 9/13/5, V28c's 152 and the V33 guard-order returns 1/0/1. The reader found
+**MISMATCH 0; GUESS 0; GAP 0; DISCRIM 0** in this delta and approved the bounded static
+contract. The reader did not inspect this companion, prior reports, implementation,
+private source, runtime or community material. This review checks the corrected fixtures,
+not the original binary or gameplay.
+
+KNB-Q01/Q02/Q04/Q06/Q07/Q08/Q10/Q11/Q12 remain open exactly as recorded in the
+[gap file](../../plans/gaps/combat-knockback.md). Neither the broad draft publication
+nor this review establishes 1.14d equivalence, completed motion or gameplay confirmation.

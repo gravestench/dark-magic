@@ -70,10 +70,10 @@ Integers use the foundations notation (NRF section 1). Life, mana and stamina ar
 | attacker `A`, defender `D` | units passed by the hit-application operation | association; either may be null | Roles are named; no positional order is required. The apply gate (DPO-R13) never passes a null `D`; LSE-R02 reads one as `P = 100` |
 | absorb heal and life write | `AbsorbHeal(D, R.absorbHeal)` (DPO-R16) and `LifeWrite(D, R.total)` (DPO-R17) | consumed operations | Called by the hit-application operation after leech whatever their amounts; each applies its own amount guard inside (DPO-R16 returns for a nonpositive amount, DPO-R17 writes only for a positive total) |
 | hit game `G` | the game the hit-application operation passes to leech | association | `G.difficulty` 0, 1 or 2 selects the defender's drain column; this contract covers 0..2 only (CSA-Q06) |
-| unit identity | `unit.type`, `unit.classId`, `unit.id`, `unit.mode`, `unit.game`, `unit.pool` | i32 type/class/mode, u32 id, associations | Types 0 player, 1 monster (NRF section 3.4); modes GDF-R05/GDF-R06; `unit.pool` is the unit's allocation context for new lists |
+| unit identity | `unit.type`, `unit.classId`, `unit.id`, `unit.mode`, `unit.game`, `unit.pool` | i32 type/class/mode, u32 id, associations | Types 0 player, 1 monster (RLI section 3.3); modes GDF-R05a/GDF-R06a; `unit.pool` is the unit's allocation context for new lists |
 | seed | `A.seed` | pair `{lo,hi}` of u32 | One step is NRF-R01; `Rand` is NRF-R02 |
-| current stats and definitions | existing unit stat arrays and ItemStatCost definitions of NRF section 3.8; stats 6, 7, 8, 9 and 10 at layer 0 | i32 raw values; getter selection and minimum metadata | `Stat` consumes RLI-R02a/RLI-R02b; supplied fixtures define their own stat view below, without verifying array construction or stored-write integration |
-| damage record `R` | NRF section 3.2 fields `physical`, `fire`, `lightning`, `magic`, `cold`, `poison`, `lifeLeech`, `manaBurn`, `staminaBurn`, `absorbHeal`, `total` | i32; magnitudes 8.8 | On entry `lifeLeech` and `manaBurn` are the leech percents built by the pipeline; leech rewrites both in place; `manaBurn` as left by leech is the defender mana drain amount (LSE-R15). The pipeline names `lifeLeech`, `manaBurn`, `staminaBurn` and `poison` as `lifeDrain`, `manaDrain`, `staminaDrain` and `poisonMagnitude` (same quantities) |
+| current stats and definitions | existing unit stat arrays and ItemStatCost definitions of RLI section 3.7; stats 6, 7, 8, 9 and 10 at layer 0 | i32 raw values; getter selection and minimum metadata | `Stat` consumes RLI-R02a/RLI-R02b; supplied fixtures define their own stat view below, without verifying array construction or stored-write integration |
+| damage record `R` | RLI section 3.1 fields `physical`, `fire`, `lightning`, `magic`, `cold`, `poison`, `lifeLeech`, `manaBurn`, `staminaBurn`, `absorbHeal`, `total` | i32; magnitudes 8.8 | On entry `lifeLeech` and `manaBurn` are the leech percents built by the pipeline; leech rewrites both in place; `manaBurn` as left by leech is the defender mana drain amount (LSE-R15). The pipeline names `lifeLeech`, `manaBurn`, `staminaBurn` and `poison` as `lifeDrain`, `manaDrain`, `staminaDrain` and `poisonMagnitude` (same quantities) |
 | monster data | `D.monsterData` present or absent; its MonStats record present or absent | association | Missing data aborts leech (LSE-R02) |
 | `MonStats.Drain`, `Drain(N)`, `Drain(H)` | per-class column for difficulty 0, 1, 2 | u8, read unsigned | Leech effectiveness `P` of a monster defender |
 | difficulty divisors | `DifficultyLevels.LifeStealDivisor`, `ManaStealDivisor` | i32 | Row Normal, Nightmare or Hell for `A.game.difficulty` 0, 1 or 2 (GDA-R05); this contract covers 0..2 only (CSA-Q06) |
@@ -84,7 +84,7 @@ Integers use the foundations notation (NRF section 1). Life, mana and stamina ar
 | state form kind | `States.gfxtype` of a state | u8 | GDA-R13 field; values 1 and 2 select a form (LSE-R14) |
 | state membership | `HasState(unit, s)` | RLI-R03 | States 92 `death_delay` and the form states |
 | overlay count | `overlayCount` | i32 | Upper bound for an overlay id (LSE-R13); table identity LSE-Q03 |
-| attached lists | `A.statList`, its `hasStateStorage` condition, its primary attached-list chain, each list's `overlayListCondition`; the base list's `overlayPendingCondition` | NRF section 3 list fields; the two overlay conditions are neutral names for engine-defined list conditions (LSE-Q03) | Searched and set by LSE-R13 |
+| attached lists | `A.statList`, its `hasStateStorage` condition, its primary attached-list chain, each list's `overlayListCondition`; the base list's `overlayPendingCondition` | RLI section 3.2 logical StatList record; the two overlay conditions are neutral names for engine-defined list conditions (LSE-Q03) | Searched and set by LSE-R13 |
 | dependency operations | unit replacing `SetStat`, unit additive `AddStat`, `NewList`, `Attach`, list `SetStat`, `MarkForUpdate`; supplied `AbsorbHeal`, `LifeWrite` and later status requests in the stage fixture | named operations and supplied effects | The fixture preamble defines persistence and logging; requested writes do not establish their stored integration (LSE-Q01) |
 
 | Mapping / constant | Origin | Binding |
@@ -792,13 +792,17 @@ DPO-R18 and CSA-R01) are accepted under those owners. Stored effects of
 the replacing and additive unit writes, the overlay list attach, the list stat write and the update
 mark remain gated by LSE-Q01; passing the vectors with supplied operations does not accept them.
 Full reproduction additionally requires accepting those dependency contracts and matching
-observations for LSE-O01, LSE-O02 and the verified rules (LSE-Q05).
+observations for LSE-O01, LSE-O02 and the verified rules (LSE-Q05). Acceptance of this
+supplied-input 1.13c contract would not establish 1.14d parity or Dark Magic implementation.
 
-**Depends on:** [core-numeric-and-rng-foundations](core-numeric-and-rng-foundations.md) NRF-R01, Owners of the cited GDA, RLI ids: [core-game-data-table-records](core-game-data-table-records.md) (GDA); [core-record-layouts-and-ids](core-record-layouts-and-ids.md) (RLI).
-NRF-R02 (draws), NRF-R05 (mulDiv), NRF-R08a (raw formats), RLI-R03 (state test), RLI-R02a and
-RLI-R02b (stat reads), section 3.2 (damage record);
-[core-game-data-fields](core-game-data-fields.md) GDA-R05, GDA-R08a, GDF-R02, GDF-R03, GDA-R13,
-GDF-R05a, GDF-R06a, GDF-R08 (fields and names);
+**Depends on:** [core-numeric-and-rng-foundations](core-numeric-and-rng-foundations.md)
+NRF-R01 and NRF-R02 (seed steps and draws), NRF-R05 (mulDiv), NRF-R08a (raw formats);
+[core-record-layouts-and-ids](core-record-layouts-and-ids.md) RLI-R02a/RLI-R02b (stat reads),
+RLI-R03 (state test), sections 3.1 to 3.3 (damage record, logical records and unit types);
+[core-game-data-fields](core-game-data-fields.md) GDF-R02, GDF-R03, GDF-R05a, GDF-R06a, GDF-R08
+(stat, state, mode and class identities);
+[core-game-data-table-records](core-game-data-table-records.md) GDA-R05, GDA-R08a and GDA-R13
+(difficulty, monster and state-definition fields);
 [combat-status-application](combat-status-application.md) CSA-R02 (`unitGate`);
 [state-timed-state-lifecycle](state-timed-state-lifecycle.md) STL-R04 (expiry condition), STL-R06a,
 STL-R06b and STL-R06c (overlay list requests). Stored attach and list-write effects remain gated;
@@ -833,7 +837,9 @@ DPO-R18 (leech, the capped add used by the absorb heal, the drain value);
 - [combat-hit-recovery](combat-hit-recovery.md): stages after the status stage.
 - [combat-pvp-damage-and-kill-credit](combat-pvp-damage-and-kill-credit.md): player-versus-player
   scaling of the record before this stage.
-- [core-game-data-fields](core-game-data-fields.md): column, stat, state, mode and class names.
+- [core-game-data-fields](core-game-data-fields.md): stat, state, mode and class identities.
+- [core-game-data-table-records](core-game-data-table-records.md): monster, state and difficulty fields.
+- [core-record-layouts-and-ids](core-record-layouts-and-ids.md): damage and unit records, stat and state reads.
 
 ## Appendix A. Provenance
 

@@ -292,15 +292,15 @@ Dependencies log ordered requests. A synthetic AddStat also adds the requested d
   - runtime_observed: no
 
 - **PMR-V14** Operand order and wrap (PMR-R04/R05/R07a; boundary: supplied-input stage)
-  - Inputs: Cases (a) ManaRegen 1, maximum 25000000, current 0, percent 65437, flat 0; (b) maximum 25600, current 100, percent 0, flat 2147483647.
+  - Inputs: Cases (a) ManaRegen 120, maximum 30000000, current 0, percent 65437, flat 0; (b) maximum 25600, current 100, percent 0, flat 2147483647.
   - Seeds: no draw
   - Draws: none
-  - Trace: (a) base 1000000; factor 65537; mulDiv(65537, 1000000, 100)=(65537/100)*1000000=655000000; upper clamp 25000000. (b) 8+2147483647 wraps to -2147483641; lower clamp -100.
-  - Outputs: (a) scaled intermediate 655000000, AddStat(8, 25000000, 0), balance 25000000; (b) AddStat(8, -100, 0), balance 0.
+  - Trace: (a) base 10000; factor 65537; mulDiv(65537, 10000, 100)=(65537/100)*10000=6550000; room 30000000 leaves the request unchanged. (b) 8+2147483647 wraps to -2147483641; lower clamp -100.
+  - Outputs: (a) scaled intermediate 6550000, AddStat(8, 6550000, 0), balance 6550000; (b) AddStat(8, -100, 0), balance 0.
   - (c) Inputs: maximum 25600, current 0, percent 2147483647, flat 0, ManaRegen 120. Draws: none. Trace: class base 8; i32(100+2147483647)=-2147483549; NRF-R05 takes its final branch, low32(-2147483549*8)=792, then 792/100=7; room 25600/lower 0 leave 7 unchanged. Outputs: scaled intermediate 7, AddStat(8, 7, 0), model balance 7; no cleanup.
   - (d) Inputs: maximum 1, current -2147483648, percent 0, flat 0, ManaRegen 120. Draws: none. Trace: class quotient 0 floors to 1; regen 1; room=i32(1-(-2147483648))=-2147483647, so upper test sets regen=-2147483647; lower=i32(-(-2147483648))=-2147483648, so lower test leaves regen unchanged. Outputs: AddStat(8, -2147483647, 0), model balance i32(-2147483648-2147483647)=1; no cleanup.
   - (e) Inputs: maximum -100, current 100, state 85 on, flat 0; supplied getter values are not replaced by minimum adjustment. Draws: none. Trace: suppression sets base 0, flat leaves regen 0, so cleanup is skipped. Upper room=-100-100=-200 sets regen=-200; lower=-100 then sets regen=-100. Outputs: AddStat(8,-100,0), synthetic balance 0; no class/percent read or cleanup.
-  - Discriminates: Swapping mulDiv arguments gives 655370000 intermediate in (a), although final clamp hides the difference. Saturating add in (b) gives a positive request. A nonwrapping factor or product fails (c); a mathematical clamp without i32 subtraction/negation wrap fails (d). Reversing the two clamp tests in (e) requests -200 and leaves balance -100, failing the exact request and balance.
+  - Discriminates: Swapping mulDiv arguments gives 6553700 in (a), yielding a distinct AddStat request and balance. Saturating add in (b) gives a positive request. A nonwrapping factor or product fails (c); a mathematical clamp without i32 subtraction/negation wrap fails (d). Reversing the two clamp tests in (e) requests -200 and leaves balance -100, failing the exact request and balance.
   - runtime_observed: no
 
 - **PMR-V15** Cleanup guards and captured values (PMR-R06a/R07a; boundary: supplied-input stage)

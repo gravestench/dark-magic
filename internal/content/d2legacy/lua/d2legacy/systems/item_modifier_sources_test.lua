@@ -52,6 +52,14 @@ local weapon = {
             order = 40,
         },
         {
+            source_id = "ignore-defense",
+            source_kind = "affix",
+            stat = "item_ignoretargetac",
+            operation = "add",
+            value = 1,
+            order = 50,
+        },
+        {
             source_id = "mastery",
             source_kind = "attribute",
             stat = "attack_rating",
@@ -224,6 +232,64 @@ local function collect_sources()
     return sources
 end
 
+local function ignore_target_defense_stat()
+    local player = test.entities_with("d2legacy.player.identity")[1]
+    return require("d2legacy.gameplay.stat_sources").resolve(
+        test.entities_with("d2legacy.stat.source"),
+        player,
+        "item_ignoretargetac",
+        0
+    )
+end
+
+local function spawn_melee_target()
+    require("engine.ecs/v1").create({
+        ["d2legacy.monster.stats"] = {
+            level = 1,
+            health = 100000,
+            max_health = 100000,
+            defense = 500,
+            attack_rating = 0,
+            physical_min = 0,
+            physical_max = 0,
+            experience = 0,
+        },
+        ["d2legacy.world.position"] = { x = 12, y = 12 },
+        ["d2legacy.world.location"] = { act = 1, level_id = 1 },
+        ["d2legacy.world.collider"] = { radius = 1 },
+        ["d2legacy.world.selectable"] = {
+            id = "monster:modifier-target",
+            kind = "hostile",
+            label = "Target",
+            owner = "",
+            radius = 1,
+            priority = 1,
+        },
+    })
+end
+
+local function request_melee(tick)
+    local ecs = require("engine.ecs/v1")
+    ecs.set(test.only_entity_with("d2legacy.player.identity"), "d2legacy.combat.basic_attack_request", {
+        target_id = "monster:modifier-target",
+        request_tick = tick,
+        hand = "rarm",
+    })
+end
+
+local function expect_latest_melee_chance(count, defense, chance)
+    local ecs = require("engine.ecs/v1")
+    local events = test.entities_with("d2legacy.combat.melee_event")
+    test.expect(#events):equals(count)
+    local melee = ecs.get(events[#events], "d2legacy.combat.melee_event")
+    local result = ecs.get(events[#events], "d2legacy.combat.attack_result")
+    test.expect(result:get("defense")):equals(defense)
+    test.expect(result:get("hit_chance")):equals(chance)
+    test.expect(melee:get("defense")):equals(defense)
+    test.expect(melee:get("hit_chance")):equals(chance)
+    test.expect(result:get("outcome")):equals(melee:get("hit") and "hit" or "miss")
+end
+
 -- Assert that a source is present with an exact value,
 -- or assert that it has been removed when expected is nil.
 local function expect_source(sources, source_id, expected)
@@ -331,6 +397,119 @@ return test.suite({
         ["d2legacy.items"] = initial_items(),
     },
     cases = {
+        test.case("melee_uses_current_ignore_target_defense_after_weapon_changes", {
+            test.submit_system({
+                tick = 1,
+                sequence = 1,
+                kind = "system.player.enter",
+                payload = fixtures.player_entry(),
+            }),
+            test.step(1),
+            test.submit(move_item(2, 1, "weapon", { container = "held" })),
+            test.step(1),
+            test.submit(move_item(3, 2, "weapon", { container = "equipment", slot = "rarm", weapon_set = 0 })),
+            test.step(2),
+            test.run(function()
+                spawn_melee_target()
+                request_melee(5)
+            end),
+            test.step(1),
+            test.run(function()
+                expect_latest_melee_chance(1, 0, 95)
+            end),
+            test.submit({
+                tick = 6,
+                sequence = 3,
+                player = "alice",
+                kind = "item.weapon_set",
+                payload = { set = 1 },
+            }),
+            test.step(2),
+            test.run(function()
+                request_melee(8)
+            end),
+            test.step(1),
+            test.run(function()
+                expect_latest_melee_chance(2, 500, 11)
+            end),
+            test.submit({
+                tick = 9,
+                sequence = 4,
+                player = "alice",
+                kind = "item.weapon_set",
+                payload = { set = 0 },
+            }),
+            test.step(2),
+            test.run(function()
+                request_melee(11)
+            end),
+            test.step(1),
+            test.run(function()
+                expect_latest_melee_chance(3, 0, 95)
+            end),
+            test.submit(move_item(12, 5, "weapon", { container = "inventory", x = 2, y = 0 })),
+            test.step(2),
+            test.run(function()
+                request_melee(14)
+            end),
+            test.step(1),
+            test.run(function()
+                expect_latest_melee_chance(4, 500, 11)
+            end),
+        }),
+        test.case("ignore_target_defense_modifier_follows_active_equipment", {
+            test.submit_system({
+                tick = 1,
+                sequence = 1,
+                kind = "system.player.enter",
+                payload = fixtures.player_entry(),
+            }),
+            test.step(1),
+            test.submit(move_item(2, 1, "weapon", { container = "held" })),
+            test.step(1),
+            test.submit(move_item(3, 2, "weapon", { container = "equipment", slot = "rarm", weapon_set = 0 })),
+            test.step(2),
+            test.run(function()
+                test.expect(ignore_target_defense_stat()):equals(1)
+                expect_source(
+                    collect_sources(),
+                    "equipment:modifier:item_ignoretargetac:weapon:affix:50:ignore-defense",
+                    1
+                )
+            end),
+            test.submit({
+                tick = 5,
+                sequence = 3,
+                player = "alice",
+                kind = "item.weapon_set",
+                payload = { set = 1 },
+            }),
+            test.step(2),
+            test.run(function()
+                test.expect(ignore_target_defense_stat()):equals(0)
+            end),
+            test.submit({
+                tick = 7,
+                sequence = 4,
+                player = "alice",
+                kind = "item.weapon_set",
+                payload = { set = 0 },
+            }),
+            test.step(2),
+            test.run(function()
+                test.expect(ignore_target_defense_stat()):equals(1)
+            end),
+            test.submit(move_item(9, 5, "weapon", { container = "inventory", x = 2, y = 0 })),
+            test.step(2),
+            test.run(function()
+                test.expect(ignore_target_defense_stat()):equals(0)
+                expect_source(
+                    collect_sources(),
+                    "equipment:modifier:item_ignoretargetac:weapon:affix:50:ignore-defense",
+                    nil
+                )
+            end),
+        }),
         test.case("equipped_modifier_sources_preserve_provenance_and_remove_on_unequip", {
             -- Create Alice as a fresh Amazon so equipment rules can project stats.
             test.submit_system({

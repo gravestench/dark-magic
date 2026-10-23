@@ -132,6 +132,90 @@ return test.suite({
                 test.expect(vitals:get("stamina_raw")):equals(10 * 256 + 84 + 42)
             end),
         }),
+        test.case("act_ii_town_run_uses_town_recovery", {
+            test.submit_system({
+                tick = 1,
+                sequence = 1,
+                kind = "system.player.enter",
+                payload = fixtures.player_entry({ level_id = 40, stamina = 10, max_stamina = 84 }),
+            }),
+            test.step(1),
+            test.run(function()
+                local ecs = require("engine.ecs/v1")
+                ecs.get(player(), "d2legacy.player.vitals"):set("stamina_raw", 2560)
+            end),
+            test.submit({
+                tick = 2,
+                sequence = 1,
+                player = "alice",
+                kind = "player.move",
+                payload = { x = 1, y = 0, running = true },
+            }),
+            test.step(1),
+            test.run(function()
+                local ecs = require("engine.ecs/v1")
+                test.expect(ecs.get(player(), "d2legacy.player.vitals"):get("stamina_raw")):equals(2602)
+            end),
+        }),
+        test.case("former_false_positive_town_level_drains_running_stamina", {
+            test.submit_system({
+                tick = 1,
+                sequence = 1,
+                kind = "system.player.enter",
+                payload = fixtures.player_entry({ level_id = 45, stamina = 10, max_stamina = 84 }),
+            }),
+            test.step(1),
+            test.run(function()
+                local ecs = require("engine.ecs/v1")
+                ecs.get(player(), "d2legacy.player.vitals"):set("stamina_raw", 2560)
+            end),
+            test.submit({
+                tick = 2,
+                sequence = 1,
+                player = "alice",
+                kind = "player.move",
+                payload = { x = 1, y = 0, running = true },
+            }),
+            test.step(1),
+            test.run(function()
+                local ecs = require("engine.ecs/v1")
+                test.expect(ecs.get(player(), "d2legacy.player.vitals"):get("stamina_raw")):equals(2520)
+            end),
+        }),
+        test.case("large_stamina_drain_percentage_uses_signed32_product", {
+            test.submit_system({
+                tick = 1,
+                sequence = 1,
+                kind = "system.player.enter",
+                payload = fixtures.player_entry({
+                    level_id = 2,
+                    passive_stat_sources = {
+                        { id = "wrap", stat = "item_staminadrainpct", value = 107374183 },
+                    },
+                }),
+            }),
+            test.step(1),
+            test.run(function()
+                local ecs = require("engine.ecs/v1")
+                ecs.get(player(), "d2legacy.player.vitals"):set("stamina_raw", 2560)
+            end),
+            test.submit({
+                tick = 2,
+                sequence = 1,
+                player = "alice",
+                kind = "player.move",
+                payload = { x = 1, y = 0, running = true },
+            }),
+            test.step(1),
+            test.run(function()
+                local ecs = require("engine.ecs/v1")
+                local entity = player()
+                local stats = ecs.get(entity, "d2legacy.player.movement_stats")
+                local vitals = ecs.get(entity, "d2legacy.player.vitals")
+                test.expect(stats:get("item_staminadrainpct")):equals(107374183)
+                test.expect(vitals:get("stamina_raw")):equals(2520)
+            end),
+        }),
         test.case("item_frw_uses_the_generic_stat_source_and_diminishing_return_rule", {
             test.submit_system({
                 tick = 1,

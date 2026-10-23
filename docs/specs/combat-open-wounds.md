@@ -877,7 +877,7 @@ The NRF-R01 step pairs used below are `{1,666}->{0x6AC6935F,0}` (mod 100 = 51),
     Outputs: no registered-unit lookup for `(1,77)` and no killer `(1,77)`; the remaining
     no-list tail is OWD-Q10 and not asserted.
   - Discriminates: (f) rejects requiring a state-62 list; (g) rejects falling back to the
-    burning list. Poison owns credit when both lists exist; state 54 suppresses death/events,
+    burning list. The poison list supplies the candidate killer when both lists exist; state 54 suppresses death/events,
     null killer suppresses only event 9, and already-dead mode suppresses the entire hand-off.
   - runtime_observed: no.
 

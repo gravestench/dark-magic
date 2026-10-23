@@ -126,6 +126,9 @@ local function register_vendor_terms()
 end
 
 local function register_interactions()
+    register("d2legacy.gold.pile", {
+        { name = "amount", type = "i64" },
+    })
     register("d2legacy.interaction.target", {
         { name = "id", type = "string" },
         { name = "npc", type = "string" },
