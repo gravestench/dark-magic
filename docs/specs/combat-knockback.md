@@ -446,18 +446,18 @@ does not verify these dependencies. Unlisted seeds and fields remain unchanged.
   - Outputs: requested/planned (a) `(103,100)`, (b) `(100,103)`, (c) `(44,44)`, (d) `(100,100)`; all reference absent; (a–c) count 1/waypoint endpoint/return 1; (d) count 0/waypoint `(100,100)`/return 0. Actual positions retain starts.
   - Discriminates: floor division yields -1 on minor components in (a)/(b).
 - **KNB-V24** Missile stage order (KNB-R10b; boundary: supplied-input stage)
-  - Inputs: chance 86; later block/avoidance/multiplier/apply/reaction log-only, each records missile seed/result.
+  - Inputs: result initially 1 after MHD-R12's hit preset, chance 86; later block/avoidance/multiplier/apply/reaction log-only, each records missile seed/result.
   - Seeds: missile `{1,0}`, defender `{9,0}`, owner `{2,0}`.
   - Draws: `(missile,100,85)`.
-  - Trace: chance OR precedes all supplied stages.
-  - Outputs: log `[block,avoidance,multiplier,apply,reaction]`; each sees result 8/missile `{0x6AC690C5,0}`; defender `{9,0}`, owner `{2,0}` unchanged.
+  - Trace: chance ORs 8 into the preset hit result 1 before all supplied stages; hit remains set for conditional apply.
+  - Outputs: log `[block,avoidance,multiplier,apply,reaction]`; each sees result 9/missile `{0x6AC690C5,0}`; defender `{9,0}`, owner `{2,0}` unchanged.
   - Discriminates: chance after block changes block's recorded seed/result.
 - **KNB-V25** Conditional GH veto (KNB-R10d; boundary: supplied-input stage)
-  - Inputs: independent missile chance (a) 86, (b) 85, (c) 85; result initially 4; supplied apply/reaction, GH/KB log-only. GH veto returns 0 with no draw in a/b; in c it explicitly draws once through NRF-R02 RandMask(defender,4), logs that draw, then returns 0. The supplied c operation does not test HRC-R06's own threshold selection.
+  - Inputs: independent missile chance (a) 86, (b) 85, (c) 85; result initially 5 (MHD-R12's preset hit 1 plus GH 4); supplied apply/reaction, GH/KB log-only. GH veto returns 0 with no draw in a/b; in c it explicitly draws once through NRF-R02 RandMask(defender,4), logs that draw, then returns 0. The supplied c operation does not test HRC-R06's own threshold selection.
   - Seeds: missile `{1,0}` each; defender `{9,0}` in a/b, `{1,0}` in c.
   - Draws: a/b each `(missile,100,85)`; c in order `(missile,100,85)`, `(defender,mask 4,1)`.
-  - Trace: a result 12 selects KB; b/c result 4 reaches supplied GH-veto after apply; c defender low `0x6AC690C5 & 3 = 1`.
-  - Outputs: a result 12/log `[apply,KB(13)]`; b result 4/log `[apply,GH-veto,GH]`; c result 4/log `[apply,GH-veto,defenderDraw(mask4,1),GH]`; every missile `{0x6AC690C5,0}`; defender remains `{9,0}` in a/b and becomes `{0x6AC690C5,0}` in c.
+  - Trace: a result 13 selects KB; b/c result 5 reaches supplied GH-veto after apply; hit 1 remains set for conditional apply in every case; c defender low `0x6AC690C5 & 3 = 1`.
+  - Outputs: a result 13/log `[apply,KB(13)]`; b result 5/log `[apply,GH-veto,GH]`; c result 5/log `[apply,GH-veto,defenderDraw(mask4,1),GH]`; every missile `{0x6AC690C5,0}`; defender remains `{9,0}` in a/b and becomes `{0x6AC690C5,0}` in c.
   - Discriminates: unconditional GH veto adds a call in a; stepping defender during missile chance changes c's ordered draw/log assertions.
 - **KNB-V26** Type/dead-mode gates (KNB-R03a; boundary: supplied-input stage)
   - Inputs: independent null target, type-3 target, monster mode 0, monster mode 12; result 8, earlier gates passed.
@@ -474,12 +474,12 @@ does not verify these dependencies. Unlisted seeds and fields remain unchanged.
   - Outputs: continuation false a/b/g/i/j/k, true c/d/e/f/h; a–j no result/path/mode write in gate-only stage; k result 10, log `[]`, no SetState(92,1) request, mode 1/path type 2/B 5/count 0/planned `(7,7)`/actual `(100,100)` unchanged, and all seeds unchanged.
   - Discriminates: treating whole bounded range as towns rejects d; checking only the detached inTown flag wrongly permits i; missing source cannot satisfy permission in j; executing the lethal state-54 branch before town rejection adds SetState(92,1) to k's log.
 - **KNB-V28** Player block vs monster KB (KNB-R06b; boundary: supplied-input stage)
-  - Inputs: independent player/monster reaction defaults, result 24, no avoidance; operations log-only.
+  - Inputs: (a,b) independent player/monster reaction defaults, result 24, no avoidance; (c) player with result 152 (avoidance 128 + block 16 + KB 8). Selected terminal operations log only; c supplies an avoidance selection operation without asserting its gated skill/start effects.
   - Seeds: no draw.
   - Draws: none.
-  - Trace: player block precedes KB; monster KB precedes block.
-  - Outputs: player log `[block]`, monster log `[KB(13)]`; each result 24, no mode/motion write.
-  - Discriminates: one shared priority cannot produce both logs.
+  - Trace: a player block precedes KB; b monster KB precedes block; c player avoidance precedes both.
+  - Outputs: a log `[block]`, b log `[KB(13)]`, c log `[avoidance]`; results remain 24, 24 and 152 respectively, with no mode/motion write in the supplied selection stage.
+  - Discriminates: one shared priority cannot produce a/b; swapping player avoidance behind block or KB changes c's selected operation.
 - **KNB-V29** Static width (KNB-R08; boundary: supplied-input stage)
   - Inputs: path defaults, source kind 2/full i32 position `(65536,100)`; clip returns requested.
   - Seeds: no draw.
@@ -509,12 +509,12 @@ does not verify these dependencies. Unlisted seeds and fields remain unchanged.
   - Outputs: a result 20/log `[block]`; b result 12/log `[KB(13)]`; c result 4/log `[GH]`; no mode/motion write in these selection-only cases.
   - Discriminates: replacing whole result with 4 loses a's block; conversion before fallback loses b's KB; converting invalid bases changes c.
 - **KNB-V33** Start success without local writes (KNB-R06d; boundary: supplied-input stage)
-  - Inputs: monster start defaults, both availability flags true, target mode 0, path type 2, B 77, count 2, planned endpoint `(7,7)`.
+  - Inputs: independent monster-start cases: (a) both availability flags true, target mode 0/path type 2/B 77/count 2/planned `(7,7)`; (b) mGH false/mKB true, otherwise as a; (c) both availability flags supplied true, target absent and no target path.
   - Seeds: no draw.
   - Draws: none.
-  - Trace: availability checks pass, mode-0 guard skips path/mode operations but returns success.
-  - Outputs: return 1, log `[]`, mode 0/type 2/B 77/count 2/planned `(7,7)` unchanged.
-  - Discriminates: treating every no-op as failure would return 0; omitting mode guard would mutate path.
+  - Trace: a availability checks pass, then mode-0 guard returns success; b availability refuses before the mode-0 guard; c availability passes, then missing-unit guard returns success.
+  - Outputs: return 1, 0 and 1 respectively, each with log `[]` and no local path/mode write; a/b mode 0/type 2/B 77/count 2/planned `(7,7)` unchanged; c has no target path to mutate.
+  - Discriminates: treating every no-op as failure changes a/c; testing mode 0 before availability changes b; omitting the missing-unit guard attempts path/mode writes in c.
 - **KNB-V34** Endpoint integer widths (KNB-R08/KNB-R09a; boundary: supplied-input stage)
   - Inputs: path defaults except independent cases (a) start/actual `(65535,100)`, dynamic source `(65534,100)`; (b) static kind-2 source `(2147483647,100)`; (c) start/actual `(0,0)`, static kind-2 source `(-2147483648,0)`; each B 5/count 0, clip returns requested.
   - Seeds: no draw.
