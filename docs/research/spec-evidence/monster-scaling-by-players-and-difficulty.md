@@ -776,3 +776,33 @@ needed for these reference edits.
 Observed but not changed (reported as findings): when the prepared total `T` of a treasure
 class is 0, `0x12380` leaves that treasure-class level at `0x1248D` before the NoDrop count or
 any pick draw; MSD-R23 does not describe that branch.
+
+## Issue #474 publication review (2026-10-23)
+
+A fresh blind reader recomputed the supplied seed, life, experience, party-count and NoDrop
+vectors without a mismatch. This review applies to the current V01–V21 text, including the
+new V20(f) zero-total branch; it does not turn those supplied-input cases into gameplay
+observations. The earlier 2026-10-15 passes remain their historical records.
+
+The recorded original-image trace of D2Game `0x12380` exits this treasure-class level at
+`0x1248D` when its prepared total `T` is zero, before `0x379A0` supplies the count to
+NoDrop or a pick draws. MSD-R21/R23 and MSD-V20(f) now state this previously omitted
+branch. Dependency references were also checked against the named NRF, RLI, CSA, GDA, GDF
+and PXL rule owners; the GDA table-record rules were moved to their actual owner.
+
+A separate loot-count audit rechecked the existing 1.13c static chain: `0x379A0` calls
+`0xDFC10` with callback `0x37810`, whose iterator and callback exclude state 7 and dead
+player modes from the effective count `E`; `0x12380` reads this function again for NoDrop.
+The party bonus follows `0x9C070`/`0x9C000` and its own liveness test. These are distinct
+inputs. The [pinned 1.10f D2MOO reconstruction](../SYSTEMS_SOURCE_MATRIX.md) corroborates the
+living baseline through `PLAYER_GetPlayerCount` in
+[`Player.cpp`](https://github.com/ThePhrozenKeep/D2MOO/blob/3b21043b99e987bad41cf0f7b49f1f246db52d5c/source/D2Game/src/PLAYER/Player.cpp#L656-L677)
+and the separate living same-level party count through
+[`Party.cpp`](https://github.com/ThePhrozenKeep/D2MOO/blob/3b21043b99e987bad41cf0f7b49f1f246db52d5c/source/D2Game/src/UNIT/Party.cpp#L262-L274).
+This older reconstruction is not evidence of 1.14d behavior.
+No 1.14d gameplay observation was made. MSD-O03 now specifies a three-player test that
+distinguishes living count from connected occupancy; issue #373 tracks that parity check.
+
+The fresh publication review also corrected the historical implementation path for
+`systems/monster_death.lua` in the gap file. All eleven existing 1.13c evidence gaps remain
+open at their stated boundaries.
