@@ -56,3 +56,35 @@ func TestPredictionRetainsAndSettlesPendingTargets(t *testing.T) {
 		})
 	}
 }
+
+func TestPredictionTownStaminaUsesRecoveredLevels(t *testing.T) {
+	catalog, err := movement.LoadCatalog(predictionMovementRecords{})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	for _, tc := range []struct {
+		levelID int64
+		wantRaw int64
+	}{
+		{levelID: 40, wantRaw: 2602},
+		{levelID: 45, wantRaw: 2520},
+	} {
+		hud := playeradapter.HUD{
+			Tick:     10,
+			Player:   playeradapter.HUDIdentity{Class: "Amazon"},
+			Position: playeradapter.HUDPosition{X: 10, Y: 20},
+			Vitals:   playeradapter.HUDVitals{StaminaRaw: 2560, MaxStaminaRaw: 84 * 256},
+			Location: playeradapter.HUDLocation{LevelID: tc.levelID},
+			Movement: playeradapter.HUDMovement{
+				Running: true, Velocity: playeradapter.HUDPosition{X: 1},
+				Bounds: playeradapter.HUDPosition{X: 100, Y: 100}, Radius: 1, RunDrain: 20,
+			},
+		}
+		prediction := newPositionPrediction(hud, nil, nil, 40*time.Millisecond, catalog)
+		prediction.advanceTick(11)
+		if prediction.staminaRaw != tc.wantRaw {
+			t.Errorf("level %d predicted stamina = %d raw, want %d", tc.levelID, prediction.staminaRaw, tc.wantRaw)
+		}
+	}
+}

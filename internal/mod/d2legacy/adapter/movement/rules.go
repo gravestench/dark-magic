@@ -183,9 +183,9 @@ func staminaRecovery(tick StaminaTick) int64 {
 	return recovery
 }
 
-// IsTownLevel recognizes only the five Expansion 1.14d act towns used by stamina recovery policy.
+// IsTownLevel recognizes the five act-town level IDs recovered from 1.13c code.
 func IsTownLevel(level int64) bool {
-	return level == 1 || level == 45 || level == 80 || level == 108 || level == 114
+	return level == 1 || level == 40 || level == 75 || level == 103 || level == 109
 }
 
 // EffectiveRates converts shared percentage channels into world-subtile walk and run rates.
