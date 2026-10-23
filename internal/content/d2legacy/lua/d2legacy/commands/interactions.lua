@@ -112,7 +112,7 @@ function M.open(command)
     if not entity or not contexts.in_range(owner, entity, target) then
         return
     end
-    if operations.apply(owner, entity) then
+    if operations.apply(owner, entity, command) then
         return
     end
     local context = interaction_context(owner)

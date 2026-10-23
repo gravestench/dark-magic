@@ -190,3 +190,9 @@ that a missing list makes HasState 0 and the lookup absent) is no change: the tr
 it and RLI-R02a/RLI-R03 own those results. The reader also noted signed comparison appears in
 NRF-R05 rather than section 1; PMR-R04 states signed comparison itself, so no change. The
 applicable blind-reader review is complete for the restructured references.
+
+### Focused publication review of the current contract, 2026-10-23
+
+A fresh blind implementer read the current PMR spec and cited dependencies without this companion or earlier reviews. It recomputed the numeric and request-order examples, including V01, V04, V14(a)–(e), V15 and V16, and found no arithmetic or branch-order mismatch. It found one discrimination defect: V14(a)'s former 25000000 maximum clamped both correct and swapped NRF-R05 operand orders to the same AddStat request, so the final request could not distinguish them. The writer replaced that fixture with supplied ManaRegen 120, maximum 30000000 and current 0. A separate blind delta review recomputed the class base 10000, correct `mulDiv(65537,10000,100)=6550000`, swapped result 6553700, and unclamped final request/balance 6550000; it approved the revision without a blocker. The new values are synthetic supplied inputs, not a new table-cell or gameplay observation.
+
+An independent publication review checked the spec, companion, gap record, dependency IDs and relative links. It found the [coverage index](../../specs/coverage.md) overstated runtime support for the trigger chain; that row now limits runtime confirmation to PMR-R02a's narrow dead-player mode-17 exit. The earlier 2026-10-12/14/15 source and blind-review records keep their dated scope. PMR-Q01–Q06/Q08/Q09 remain open as recorded below; no new original-game observation, binary reading, integrated stat write, client delivery or 1.14d equivalence was established. Draft status remains appropriate.

@@ -1,6 +1,7 @@
 -- One relocation transaction shared by seams, warps, waypoints, and objects.
 
 local ecs = require("engine.ecs/v1")
+local forced_motion = require("d2legacy.gameplay.systems.forced_motion")
 local player_motion = require("d2legacy.gameplay.player_motion")
 local M = {}
 
@@ -18,12 +19,13 @@ function M.validate(destination)
     assert(destination.y >= 0 and destination.y < destination.height, "world transition y is outside bounds")
 end
 
-function M.apply(entity, destination)
+function M.apply(context, entity, destination, structural)
     M.validate(destination)
     local location = assert(ecs.get(entity, "d2legacy.world.location"))
     local position = assert(ecs.get(entity, "d2legacy.world.position"))
     local bounds = assert(ecs.get(entity, "d2legacy.world.bounds"))
     local velocity = assert(ecs.get(entity, "d2legacy.world.velocity"))
+    forced_motion.interrupt(context, entity, structural)
     location:set("level_id", destination.level_id)
     position:set("x", destination.x)
     position:set("y", destination.y)

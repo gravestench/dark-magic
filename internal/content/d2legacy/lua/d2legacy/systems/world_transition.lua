@@ -80,27 +80,33 @@ function M.register()
                 "d2legacy.world.velocity",
             },
         },
-        read = { "d2legacy.world.player_control" },
+        read = {
+            "d2legacy.world.player_control",
+            "d2legacy.world.forced_motion",
+            "d2legacy.world.selectable",
+        },
         write = {
             "d2legacy.world.location",
             "d2legacy.world.position",
             "d2legacy.world.bounds",
             "d2legacy.world.velocity",
             "d2legacy.player.motion",
+            "d2legacy.world.forced_motion",
+            "d2legacy.world.forced_motion_event",
         },
-        update = function(_, entities)
+        update = function(context, entities, structural)
             for _, entity in ipairs(entities) do
                 local location = ecs.get(entity, "d2legacy.world.location")
                 local position = ecs.get(entity, "d2legacy.world.position")
                 local seam = matching_seam(seams, location:get("level_id"), position:get("x"), position:get("y"))
                 if seam then
-                    transition.apply(entity, {
+                    transition.apply(context, entity, {
                         level_id = seam.destination_level,
                         x = seam.arrival_x,
                         y = seam.arrival_y,
                         width = seam.world_width,
                         height = seam.world_height,
-                    })
+                    }, structural)
                 end
             end
         end,

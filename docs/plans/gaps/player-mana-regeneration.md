@@ -17,3 +17,7 @@ Evidence and attempts: [Public companion](../../research/spec-evidence/player-ma
 | Unit teardown | outside-boundary | PMR-Q09, PMR-R01b | Chain cancellation on unit removal | Teardown producers | 2026-10-14 assessed lifecycle cancellation; all teardown roots not followed | Trace removal to event cancellation |
 
 No implementation comparison was requested. Pending observations limit confirmation, not verified supplied-input arithmetic or requests.
+
+## Publication review, 2026-10-23
+
+A fresh blind review corrected PMR-V14(a)'s operand-order discrimination and found no new evidence gap beyond the open integration, observation and outside-boundary questions above. The changed supplied-input vector does not establish scheduler lifecycle, potion effects, stored stat propagation, living-player observation or 1.14d parity.

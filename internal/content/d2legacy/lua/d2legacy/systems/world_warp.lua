@@ -11,6 +11,11 @@ local transition = require("d2legacy.gameplay.transition")
 
 local M = {}
 
+local immediate_writer = {
+    create = function(_, components) return ecs.create(components) end,
+    remove = function(_, entity, component) return ecs.remove(entity, component) end,
+}
+
 local function finite(value)
     return type(value) == "number" and value == value and value ~= math.huge and value ~= -math.huge
 end
@@ -103,7 +108,7 @@ function M.create(endpoint)
 end
 
 function M.register()
-    operations.register("d2legacy.world.warp", function(owner, target_entity, warp)
+    operations.register("d2legacy.world.warp", function(owner, target_entity, warp, command)
         local entity = assert(player(owner), "warp owner has no admitted player")
         local portal = ecs.get(target_entity, "d2legacy.world.town_portal")
         if portal then
@@ -137,13 +142,13 @@ function M.register()
                 pair:set("expired", true)
             end
         end
-        transition.apply(entity, {
+        transition.apply({ tick = command.tick }, entity, {
             level_id = warp:get("destination_level"),
             x = warp:get("destination_x"),
             y = warp:get("destination_y"),
             width = warp:get("destination_width"),
             height = warp:get("destination_height"),
-        })
+        }, immediate_writer)
     end)
     local configuration = initial_available and initial.get("d2legacy.world_warps") or {}
     local endpoints = configuration.endpoints or {}
