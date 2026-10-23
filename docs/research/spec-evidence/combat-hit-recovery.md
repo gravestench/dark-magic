@@ -301,7 +301,8 @@ Scope remains the existing HRC boundary. No source, implementation, test, plan, 
 GitHub write is part of this writer's changes. The contract is unconsumed by implementation
 plans/code/tests; numeric IDs retained for sibling references have no old aliases. V01–V15
 retain their identities with the source-proven interpretation corrections above; V16–V22 add
-discriminating cases for new supplied-boundary facts. User approval remains pending.
+discriminating cases for new supplied-boundary facts. At this 2026-10-15 handoff, user
+approval remained pending.
 
 Closed/narrowed gaps: town set; matching-stun-list versus active-bit semantics; monster entry-preparation order; state 92 request identity/membership; class width/helper rotation;
 missile rewrite through current SBA; local player GH decision; cooldown request/stamp; isolated
@@ -518,3 +519,40 @@ agree with the current rules. Edits added the root-anchor paragraph above, space
 run-together values and case labels in V06/V08/V09/V11-V17/V20-V22 and R10a/R10b, and
 replaced historical rule numbers in the implementation-gap Spec rule column. No vector
 input, output, rule, label or gate changed, so no reader rerun is required.
+
+### Focused publication review (2026-10-23)
+
+The broad qualified-draft collection, including this contract, entered `main` through
+[PR #531](https://github.com/gravestench/dark-magic/pull/531) on 2026-10-22. The focused
+review for [issue #490](https://github.com/gravestench/dark-magic/issues/490) retains the
+existing 1.13c static and supplied-stage boundary. Earlier statements that approval
+"remains pending" describe their dated 2026-10-15 handoffs. A publication reader checked
+the current contract, companion, gap file, index and source manifest; it found no new
+original-game evidence requirement for a qualified handoff. The gap file's implementation
+comparison remains explicitly historical and is not a current code audit.
+
+A separate fresh blind implementer read only the main contract and cited behavioral
+dependencies. It recomputed representative RNG and rate cases without mismatch, then
+identified one incomplete fixture input and five discrimination/coverage gaps: V14's
+state-42 list was absent from the shared defaults; V17 lacked an in-range non-town level;
+V20 tested only low-bit code 1; V21 lacked soft/unavailable monster block selections and
+player avoidance 256/512 branch order; V08 lacked an i32-wrap diminishing example; and
+V15's monster KB base equaled the fixed player value. The corrected fixtures supply the
+matching list in V14, level 2 in V17i, code 2 in V20e, selector cases V21f–i, F=20000000
+in V08d and signed monster base 317 in V15f. These remain within the existing 22 vector
+families. No rule, source label, evidence date or open question was promoted; prior reader
+passes above support their then-current text rather than these changed fixtures.
+
+A second fresh blind reader checked only that delta against the main contract and cited
+dependencies. It recomputed V08d's wrapped numerator -1894967296, D=-94, unsigned
+quotient 42949628 and stored rate 32767; V14's exact seed/roll pair; V15f's rate 317 and
+speed 4096; and V17i/V20e/V21f–i's guard and selected-branch results. It found
+**MISMATCH 0; GUESS 0; GAP 0; DISCRIM 0** for the changed cases and approved the bounded
+static delta. Both blind readers excluded this companion, prior reports, implementation,
+private source, runtime and web material. This is document review, not a new original
+binary read or gameplay observation.
+
+HRC-Q02/Q03/Q04/Q05/Q06/Q10/Q11 remain open in the
+[gap file](../../plans/gaps/combat-hit-recovery.md). All vectors retain
+`runtime_observed: no`; no completed GH timing, 1.14d equivalence or full feature parity
+is established by this focused publication review.
