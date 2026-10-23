@@ -547,3 +547,9 @@ DELTA6 (fresh reader) checked the three citation edits, the restructured Depends
 and getter row, and re-executed CBL-V02 plus related boss cases V04/V07. Counts: MISMATCH 0,
 GUESS 0, GAP 0, DISCRIM 0; all three DELTA5 findings resolved. No rule behavior, input,
 ownership or gate changed, so no full run is required. The applicable stopping condition is met.
+
+## Publication review - 2026-10-23
+
+A fresh independent blind reader checked the verified local rules CBL-R01, CBL-R02a/b, CBL-R03, CBL-R04a, and CBL-R05–R08, plus all CBL-V01–V15 families within the stated 1.13c static, supplied-input and ordered-request boundary. It independently recomputed attacker seed steps, signed low32/division and mulDiv arithmetic, target/hireling/boss/condition/player-count divisors, event-6 doubling, life/resistance/death-flag requests, and all four extreme-count cases. It also checked registration, apply-stage and record-transfer vectors. The applicable review reported MISMATCH 0, GUESS 0, GAP 0 and DISCRIM 0. A separate evidence reader checked artifact identities, dated provenance, links and historical review dispositions; an independent boundary reader checked item-event, damage-pipeline, PvP and Open Wounds ownership. All approved this bounded publication review.
+
+CBL-Q01/Q03–Q05/Q07–Q12 and CBL-O01–O03 remain open as recorded. The supplied monster stat-100 count is an input to this target divisor and does not establish a treasure-class NoDrop rule or dead-player loot behavior. Stored life/overlay effects, automatic registration, runtime relative callback order and runtime outcomes remain gated. No new original-game investigation, game capture, implementation comparison, gameplay test or 1.14d confirmation was added.
