@@ -148,7 +148,7 @@ func TestEquippedAttackRatingSourceIsAddedAndRemoved(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if err := session.Submit(itemCommand(t, 1, 1, "item.vendor_sell", map[string]any{
+	if err := session.Submit(adminItemCommand(t, 1, 1, "item.vendor_sell", map[string]any{
 		"item_id": "sale", "vendor": "charsi", "category": "weap",
 	})); err != nil {
 		t.Fatal(err)
@@ -214,7 +214,7 @@ func TestEquippedArmorDefenseSourcesAreAddedAndRemoved(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if err := session.Submit(itemCommand(t, 1, 1, "item.vendor_sell", map[string]any{
+	if err := session.Submit(adminItemCommand(t, 1, 1, "item.vendor_sell", map[string]any{
 		"item_id": "sale", "vendor": "charsi", "category": "weap",
 	})); err != nil {
 		t.Fatal(err)
@@ -327,7 +327,7 @@ func submitItemAcceptanceCommands(t *testing.T, session *gamesession.Session) {
 	t.Helper()
 
 	commands := []simulation.Command{
-		itemCommand(t, 2, 1, "item.vendor_sell", map[string]any{
+		adminItemCommand(t, 2, 1, "item.vendor_sell", map[string]any{
 			"item_id": "sale", "vendor": "charsi", "category": "weap",
 		}),
 		itemCommand(t, 2, 2, "item.move", map[string]any{
@@ -369,6 +369,13 @@ func itemCommand(
 		Tick: tick, Player: "alice", Authority: simulation.AuthorityPlayer,
 		Sequence: sequence, Kind: kind, Payload: data,
 	}
+}
+
+// Bootstrap sale fixtures establish inventory state without an NPC interaction.
+func adminItemCommand(t *testing.T, tick, sequence uint64, kind string, payload map[string]any) simulation.Command {
+	command := itemCommand(t, tick, sequence, kind, payload)
+	command.Authority = simulation.AuthorityAdmin
+	return command
 }
 
 // itemAcceptanceSteps advances through each phase separately so a failure names
