@@ -308,6 +308,18 @@ the verified eight-way neighbor mask to Act I DT1 `(main-index 0, sub-index)`
 floor identities, then rebuilds collision from the chosen metadata before
 publishing the world. Rendering and navigation consume the same realized road.
 
+A separate, headless Cold Plains strategy now admits level 3 as a deterministic
+zone recipe. It uses the recovered generic Act I stone-fill definitions 29 and
+30 as provisional Dark Magic policy. A caller supplies the direction of Blood
+Moor's admitted level-3 exit; Cold Plains places one opposite-facing entry and
+a semantic route into its interior. An owned-asset test verifies that entry
+resolves close to the edge and reaches the interior through materialized
+collision. Production sessions still load only Rogue Encampment and Blood Moor.
+Cold Plains' original layout, placed outward exits, waypoint, population, and
+live transition remain separate work; the
+[issue #618 design](superpowers/specs/2026-10-23-issue-618-cold-plains-design.md)
+records the evidence and limits.
+
 ## Preset variant selection
 
 `LvlPrest` can name multiple DS1 files. D2MOO uses deterministic level RNG to select file variants. In some outdoor paths it keeps per-preset build state and cycles the selected file after a seeded starting point, reducing immediate repetition.
