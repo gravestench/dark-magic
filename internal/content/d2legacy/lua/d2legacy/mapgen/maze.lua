@@ -34,7 +34,10 @@ function M.generate(level_id, seed, difficulty)
     local width, height = data.integer(rules.SizeX, 0), data.integer(rules.SizeY, 0)
     assert(width > 0 and height > 0, "d2legacy mapgen: maze room dimensions are invalid")
 
-    local cells, edges, roles = topology.generate(seed, room_count(rules, difficulty), data.integer(rules.Merge, 0))
+    local count = room_count(rules, difficulty)
+    -- shortcut: Den uses at least four chambers, replace when native special-room expansion is recovered.
+    if level_id == 8 then count = math.max(count, 4) end
+    local cells, edges, roles = topology.generate(seed, count, data.integer(rules.Merge, 0))
 	sorted_cells(cells)
     local ids, min_x, min_y, max_x, max_y = {}, cells[1].x, cells[1].y, cells[1].x, cells[1].y
     for index, cell in ipairs(cells) do
@@ -56,6 +59,10 @@ function M.generate(level_id, seed, difficulty)
 			error("d2legacy mapgen: disconnected cave cell " .. cell.x .. "," .. cell.y .. " across " .. table.concat(rendered, ";"))
 		end
         local definition = caves.preset_definition(role, mask)
+        if level_id == 8 and role == "next-level" then
+            definition = 95 + assert(({[1] = 0, [2] = 1, [4] = 2, [8] = 3})[mask])
+            role = "den-of-evil-end"
+        end
 		local preset = assert(data.preset_by_definition(definition),
 			"d2legacy mapgen: cave LvlPrest definition " .. definition .. " is absent (mask " .. mask .. ", role " .. role .. ")")
         assert(data.integer(preset.SizeX, 0) == width and data.integer(preset.SizeY, 0) == height,
@@ -86,7 +93,7 @@ function M.generate(level_id, seed, difficulty)
             string.format("LvlMaze[%d] requested %d rooms of %dx%d", level_id, #rooms, width, height),
             string.format("topology created %d canonical room links", #links),
             "Act I Cave chamber definitions selected by exact W/E/S/N masks",
-            "distinct leaf chambers assigned previous-level and next-level roles",
+            "distinct leaf chambers assigned entrance and destination-specific endpoint roles",
         },
     }))
 end

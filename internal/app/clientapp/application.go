@@ -148,6 +148,8 @@ type application struct {
 	commandSource        func(uint64) []simulation.Command
 
 	// World state shared by local and remote presentation paths.
+	additionalTransitionSeams []gametransition.Seam
+
 	worldMu           sync.RWMutex
 	gameWorlds        map[int]*gameworld.Map
 	gameWorldZones    map[int]*worldgen.Zone
