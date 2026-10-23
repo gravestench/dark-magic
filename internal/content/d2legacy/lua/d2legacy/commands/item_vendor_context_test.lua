@@ -1,10 +1,12 @@
 local test = require("d2legacy.tests/v1")
 local fixtures = require("d2legacy.tests.support.fixtures")
 
+-- Submit a player command through the authority harness so stale state is read at apply time.
 local function submit(tick, sequence, kind, payload)
     return test.submit({ tick = tick, sequence = sequence, player = "alice", kind = kind, payload = payload })
 end
 
+-- Keep sale payloads consistent while varying vendor and category refusal cases.
 local function sell(tick, sequence, vendor, category)
     return submit(tick, sequence, "item.vendor_sell", {
         vendor = vendor or "akara",
@@ -13,6 +15,7 @@ local function sell(tick, sequence, vendor, category)
     })
 end
 
+-- Keep buy payloads consistent while varying vendor and item refusal cases.
 local function buy(tick, sequence, vendor, item_id)
     return submit(tick, sequence, "item.vendor_buy", {
         vendor = vendor or "akara",
@@ -20,6 +23,7 @@ local function buy(tick, sequence, vendor, item_id)
     })
 end
 
+-- Assert the wallet, ordinary items, and permanent offer remain at expected trade states.
 local function state(gold, sale_container, stock_container)
     local ecs = require("engine.ecs/v1")
     local find = require("d2legacy.items.find")
@@ -48,6 +52,7 @@ local function state(gold, sale_container, stock_container)
     end
 end
 
+-- Establish an admitted player and real Akara Trade page before each scenario.
 local function opened(name, steps)
     local actions = {
         test.submit_system({ tick = 1, sequence = 1, kind = "system.player.enter", payload = fixtures.player_entry() }),
@@ -63,6 +68,8 @@ local function opened(name, steps)
     return test.case(name, actions)
 end
 
+-- Prove a refused queued sale leaves state intact and a later sale remains usable.
+-- Reopening uses revision 4 when range loss auto-closes the page, otherwise 3.
 local function refused_then_valid(name, change, invalid, restore, revision)
     return opened(name, {
         test.run(change),
@@ -92,10 +99,12 @@ local function refused_then_valid(name, change, invalid, restore, revision)
     })
 end
 
+-- Find the admitted actor even after a test removes its identity component.
 local function player_entity()
     return require("engine.ecs/v1").query({ all = { "d2legacy.player.progress" } })[1]
 end
 
+-- Locate the current Akara target so missing target facts can be tested without a second NPC.
 local function target_entity()
     local ecs = require("engine.ecs/v1")
     for _, entity in ipairs(ecs.query({ all = { "d2legacy.interaction.target" } })) do

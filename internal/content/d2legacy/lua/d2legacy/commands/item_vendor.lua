@@ -58,6 +58,7 @@ local function validate(command, buying)
     end
 end
 
+-- Require a complete category token; a shared prefix cannot authorize a trade.
 local function allowed_category(categories, wanted)
     for category in string.gmatch(categories, "[^,]+") do
         if category == wanted then return true end
@@ -65,6 +66,9 @@ local function allowed_category(categories, wanted)
     return false
 end
 
+-- Check player-only trade authority at application time. The general context
+-- helper permits missing player and location facts for bootstrap interactions,
+-- so transactions must establish those facts before trusting its range result.
 local function player_trading(command, owner_id, category)
     if command.authority ~= "player" then return true end
     local player_location
