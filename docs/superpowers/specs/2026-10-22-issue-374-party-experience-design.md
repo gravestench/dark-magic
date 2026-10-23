@@ -41,14 +41,15 @@ not 1.14d runtime observations.
 The exact binary floating-point environment and alternate divide path for
 PXL-R04b are **unresolved** in the
 [gap record](../../plans/gaps/player-party-experience-sharing.md). The
-distance-to-game-world unit correspondence and exceptional 32-bit arithmetic
-are also unresolved. This implementation uses the contract's ordinary,
-finite supplied examples and labels the share calculation as a **provisional
-Dark Magic interpretation**. Applying 1.13c static rules to the project's
-1.14d target is **inferred**. The original-game probe must eventually compare
-the boundary and share values in both supported patches before parity is
-claimed. Neither the design nor its tests promote synthetic fixtures to
-original-game evidence.
+distance-to-game-world unit correspondence and the 1.14d integer behavior
+remain unresolved. PXL-R04a **does verify 1.13c signed 32-bit wrapping** in
+the pool's products and sum; this implementation keeps that arithmetic. The
+floating share calculation uses the contract's ordinary, finite supplied
+examples and is labeled a **provisional Dark Magic interpretation**. Applying
+1.13c static rules to the project's 1.14d target is **inferred**. The
+original-game probe must eventually compare the boundary and share values in
+both supported patches before parity is claimed. Neither the design nor its
+tests promote synthetic fixtures to original-game evidence.
 
 ## Approaches considered
 
@@ -100,7 +101,8 @@ unchanged. It introduces no Go gameplay formula or dependency.
    award. If exactly one qualifies, award the original credited player through
    the existing solo route, matching PXL-R04a's unusual one-member branch.
    If at least two qualify, construct the integer pool with the recovered
-   `89/256` term. The supported game profile has at most eight party members;
+   `89/256` term and signed 32-bit wrapping at each product and sum. The
+   supported game profile has at most eight party members;
    reject a ninth instead of silently dropping one. Nonpositive level sums
    produce no party award. Do not use effective `/players` count in this pool.
 5. Divide the pool by the level sum, multiply by each member's frozen level,

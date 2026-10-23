@@ -108,6 +108,25 @@ return test.suite({
                 test.expect(result[1].raw):equals(3457134)
             end),
         }),
+        test.case("party_pool_uses_verified_1_13c_signed_32_bit_wrapping", {
+            test.run(function()
+                local credited = player("alice", 10, 100, 100)
+                local members = { "bob", "carol", "dave", "erin", "frank", "grace", "hank" }
+                for _, member in ipairs(members) do
+                    player(member, 10, 100, 100)
+                end
+                join("alice", members)
+
+                -- PXL-R04a wraps both products before truncating by 256.
+                -- X=4,000,000 and n=8 produce pool -3,042,841, hence this
+                -- ordinary finite raw share under the provisional quotient.
+                local result = shares(credited, victim(100, 100), 4000000)
+                test.expect(#result):equals(8)
+                for _, entry in ipairs(result) do
+                    test.expect(entry.raw):equals(-380355)
+                end
+            end),
+        }),
         test.case("missing_member_state_and_death_exclude_party_awards", {
             test.run(function()
                 local ecs = require("engine.ecs/v1")

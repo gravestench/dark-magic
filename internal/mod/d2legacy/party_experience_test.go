@@ -227,6 +227,51 @@ func TestPartyExperienceRequiresCreditedPlayerIdentityAndProgress(t *testing.T) 
 	}
 }
 
+func TestPartyExperienceScalesEachRecipientWithOwnLevelAndItemBonus(t *testing.T) {
+	engine, session := startPartyXPScenario(t)
+	joinPartyXP(t, session)
+	bob := partyPlayerEntity(t, engine, "bob")
+	progress, _ := akara.GetDynamicStore(engine.World(), "d2legacy.player.progress")
+	bobProgress, _ := progress.Get(bob)
+	if err := bobProgress.Set("level", int64(2)); err != nil {
+		t.Fatal(err)
+	}
+	sources, _ := akara.GetDynamicStore(engine.World(), "d2legacy.stat.source")
+	if _, err := sources.Set(engine.World().MustCreateEntity(), map[string]any{
+		"target": bob, "source_id": "fixture:bob-item-xp", "owner_source_id": "",
+		"stat": "item_addexperience", "operation": "add", "value": int64(100), "order": int64(1),
+	}); err != nil {
+		t.Fatal(err)
+	}
+	stagePartyXPMonsterDeath(t, engine, "player:alice", 4)
+	stepPartySession(t, session)
+	// Pool 13 is shared by levels 1 and 2: raw shares 4 and 8. Bob's
+	// item_addexperience doubles only his scaled share.
+	for player, want := range map[string]int64{"alice": 4, "bob": 16, "charlie": 0} {
+		if got := partyPlayerXP(t, engine, player); got != want {
+			t.Errorf("%s experience = %d, want %d", player, got, want)
+		}
+	}
+}
+
+func TestPartyExperienceZeroRawSharesReachRecoveredScalingBranch(t *testing.T) {
+	engine, session := startPartyXPScenario(t)
+	joinPartyXP(t, session)
+	stats, _ := akara.GetDynamicStore(engine.World(), "d2legacy.monster.stats")
+	monsterStats, _ := stats.Get(monsterEntity(t, engine, partyXPMonster))
+	if err := monsterStats.Set("experience", int64(1)); err != nil {
+		t.Fatal(err)
+	}
+	stagePartyXPMonsterDeath(t, engine, "player:alice", 4)
+	stepPartySession(t, session)
+	// Pool 1 / two level-1 recipients truncates to raw zero for each.
+	for player, want := range map[string]int64{"alice": 1, "bob": 1, "charlie": 0} {
+		if got := partyPlayerXP(t, engine, player); got != want {
+			t.Errorf("%s experience from zero raw share = %d, want %d", player, got, want)
+		}
+	}
+}
+
 func startPartyXPScenario(t *testing.T) (*gameecs.Engine, *gamesession.Session) {
 	t.Helper()
 	ctx := context.Background()

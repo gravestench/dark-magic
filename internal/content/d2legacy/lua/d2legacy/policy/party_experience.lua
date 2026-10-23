@@ -4,12 +4,22 @@ local ecs = require("engine.ecs/v1")
 local party = require("d2legacy.policy.party")
 
 local M = {}
+local U32 = 4294967296
+local I32_SIGN = 2147483648
 
 local function truncate(value)
     if value < 0 then
         return math.ceil(value)
     end
     return math.floor(value)
+end
+
+local function signed32(value)
+    local wrapped = value % U32
+    if wrapped >= I32_SIGN then
+        return wrapped - U32
+    end
+    return wrapped
 end
 
 local function players_by_id(entities)
@@ -100,7 +110,11 @@ function M.shares(entities, credited_player, victim_position, raw_experience)
         return { { entity = credited_player, raw = raw_experience } }
     end
 
-    local pool = raw_experience + truncate((#recipients - 1) * raw_experience * 89 / 256)
+    -- PXL-R04a verifies signed i32 wrapping at each product and the sum.
+    -- Only the following quotient/float storage remains provisional.
+    local base = signed32(raw_experience)
+    local product = signed32(signed32((#recipients - 1) * base) * 89)
+    local pool = signed32(base + truncate(product / 256))
     local quotient = pool / level_sum
     local result = {}
     for _, entry in ipairs(recipients) do
