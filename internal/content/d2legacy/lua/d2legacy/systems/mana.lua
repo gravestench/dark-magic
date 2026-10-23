@@ -48,16 +48,24 @@ local function update(entity, suppressed)
     local stats = ecs.get(entity, "d2legacy.player.resource_stats")
     local current = vitals:get("mana_raw")
     local maximum = vitals:get("max_mana_raw")
-    local recovery = stats:get("manarecovery")
+    local recovery = signed32(stats:get("manarecovery"))
     local frames = stats:get("mana_regen_frames")
     if not suppressed and frames > 0 then
         local base = math.floor(maximum / (25 * frames))
         if base < 1 then
             base = 1
         end
-        recovery = recovery + mul_div_100(signed32(100 + stats:get("manarecoverybonus")), base)
+        recovery = signed32(recovery + mul_div_100(signed32(100 + stats:get("manarecoverybonus")), base))
     end
-    current = math.max(0, math.min(maximum, current + recovery))
+    local room = signed32(maximum - current)
+    if recovery > room then
+        recovery = room
+    end
+    local lower = signed32(-current)
+    if recovery < lower then
+        recovery = lower
+    end
+    current = current + recovery
     vitals:set("mana_raw", current)
     vitals:set("mana", math.floor(current / 256))
     vitals:set("max_mana", math.floor(maximum / 256))
