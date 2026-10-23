@@ -96,20 +96,12 @@ local function summon_components(context, caster, corpse, definition, level, lev
         resist =
             progression.diminishing(definition.summon_resist.minimum, definition.summon_resist.maximum, resist_level)
     end
-    components["d2legacy.combat.defense"] = {
-        base_physical_resist = 0,
-        base_fire_resist = resist,
-        base_cold_resist = resist,
-        base_lightning_resist = resist,
-        physical_resist = 0,
-        fire_resist = resist,
-        cold_resist = resist,
-        lightning_resist = resist,
-        max_fire_resist = 75,
-        max_cold_resist = 75,
-        max_lightning_resist = 75,
-        physical_reduction_raw = 0,
-    }
+    local defense = components["d2legacy.combat.defense"]
+    defense.summon_resist_bonus = resist
+    defense.fire_resist = defense.base_fire_resist + resist
+    defense.lightning_resist = defense.base_lightning_resist + resist
+    defense.cold_resist = defense.base_cold_resist + resist
+    defense.poison_resist = defense.base_poison_resist + resist
     local limit = summon_policy.pet_limit(definition, level)
     components["d2legacy.owned_unit"] = {
         owner = caster,

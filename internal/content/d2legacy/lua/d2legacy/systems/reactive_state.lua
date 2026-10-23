@@ -124,6 +124,7 @@ local function spawn_return_missile(context, event_entity, reaction, defender, a
     structural:create(projectile_spawn.components(defender, missile, {
         owner_id = owner_id,
         cast_id = cast_id,
+        sound_owner_id = cast_id,
         velocity_x = dx * missile.speed_per_tick,
         velocity_y = dy * missile.speed_per_tick,
         target_x = target:get("x"),
@@ -135,7 +136,7 @@ local function spawn_return_missile(context, event_entity, reaction, defender, a
         on_hit_state_duration = reaction:get("reaction_duration"),
         on_hit_state_duration_policy = "cold",
     }))
-    local sound = projectile_spawn.sound_cue(defender, context.tick, "missile_spawn", missile.travel_sound)
+    local sound = projectile_spawn.sound_cue(defender, context.tick, "missile_spawn", missile.travel_sound, cast_id)
     if sound then
         structural:create(sound)
     end
@@ -182,6 +183,7 @@ function M.register(definitions)
             "d2legacy.world.location",
             "d2legacy.world.room_resident",
             "d2legacy.presentation.effect_cue",
+            "d2legacy.presentation.missile_sound_owner",
         },
         update = function(context, entities, structural)
             local by_id = selectable_index(entities)

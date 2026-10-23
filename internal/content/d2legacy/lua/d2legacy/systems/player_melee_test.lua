@@ -2,7 +2,7 @@ local test = require("d2legacy.tests/v1")
 
 -- Reusable fixtures keep test data in one place and explain what each value means.
 local fixtures = require("d2legacy.tests.support.fixtures")
-local active_barrier, active_target
+local active_barrier, active_target, poison_sample_health
 
 -- Spawn a stationary hostile monster exactly where the player can target it.
 -- This helper explains each component so the test case itself stays readable.
@@ -23,13 +23,13 @@ local function spawn_event_target_monster(overrides)
         -- not damage formulas or resistances.
         ["d2legacy.monster.stats"] = {
             level = 1,
-            health = 4096,
-            max_health = 4096,
+            health = overrides.health or 4096,
+            max_health = overrides.health or 4096,
             defense = 0,
             attack_rating = 0,
             physical_min = 0,
             physical_max = 0,
-            experience = 0,
+            experience = overrides.experience or 0,
         },
         -- Position the monster at a fixed world coordinate the player will target.
         ["d2legacy.world.position"] = { x = overrides.x or 12, y = overrides.y or 12 },
@@ -250,7 +250,9 @@ return test.suite({
                 test.assert(
                     bundle:get("physical_rolled_raw") == damage:get("rolled_damage_raw")
                         and bundle:get("physical_mitigated_raw") == damage:get("damage_raw")
-                        and bundle:get("fire_rolled_raw") == 0,
+                        and bundle:get("fire_rolled_raw") == 0
+                        and bundle:get("poison_rolled_raw") == 0
+                        and bundle:get("poison_length_frames") == 0,
                     [=[melee result preserves physical separately from other channels]=]
                 )
                 test.assert(
@@ -303,6 +305,131 @@ return test.suite({
                 test.expect(bundle:get("fire_rolled_raw")):equals(2048)
                 test.expect(bundle:get("fire_mitigated_raw")):equals(2048)
                 test.expect(ecs.get(resolved[1], "d2legacy.combat.event"):get("damage_channel")):equals("mixed")
+            end),
+        }),
+        test.case("weapon_poison_sources_stage_rate_and_length_without_immediate_poison_life_loss", {
+            test.submit_system({
+                tick = 1,
+                sequence = 1,
+                kind = "system.player.enter",
+                payload = fixtures.amazon_entry,
+            }),
+            test.step(1),
+            test.run(function()
+                local ecs = require("engine.ecs/v1")
+                local player = player_entity()
+                for _, source in ipairs({
+                    { stat = "poisonmindam", value = 128 },
+                    { stat = "poisonmaxdam", value = 128 },
+                    { stat = "poisonlength", value = 3 },
+                }) do
+                    ecs.create({
+                        ["d2legacy.stat.source"] = {
+                            target = player,
+                            source_id = "test:weapon:" .. source.stat,
+                            stat = source.stat,
+                            operation = "add",
+                            value = source.value,
+                            order = 300,
+                        },
+                    })
+                end
+                spawn_event_target_monster()
+            end),
+            submit_attack(),
+            test.step(10),
+            test.run(function()
+                local ecs = require("engine.ecs/v1")
+                local resolved = resolved_melee_events()
+                test.expect(#resolved):equals(1)
+                local bundle = ecs.get(resolved[1], "d2legacy.combat.damage_bundle")
+                local event = ecs.get(resolved[1], "d2legacy.combat.event")
+                local monster = ecs.query({ all = { "d2legacy.monster.identity" } })[1]
+                test.expect(bundle:get("poison_rolled_raw")):equals(128)
+                test.expect(bundle:get("poison_mitigated_raw")):equals(128)
+                test.expect(bundle:get("poison_length_frames")):equals(3)
+                test.expect(event:get("rolled_damage_raw")):equals(bundle:get("physical_rolled_raw"))
+                test.expect(ecs.get(monster, "d2legacy.monster.stats"):get("health"))
+                    :equals(4096 - bundle:get("physical_mitigated_raw"))
+            end),
+        }),
+        test.case("melee_poison_resistance_admits_one_timed_rate_and_spends_it_per_frame", {
+            test.submit_system({
+                tick = 1,
+                sequence = 1,
+                kind = "system.player.enter",
+                payload = fixtures.player_entry({ level_id = 2 }),
+            }),
+            test.step(1),
+            test.run(function()
+                local ecs = require("engine.ecs/v1")
+                local player = player_entity()
+                for _, source in ipairs({
+                    { stat = "poisonmindam", value = 128 },
+                    { stat = "poisonmaxdam", value = 128 },
+                    { stat = "poisonlength", value = 40 },
+                }) do
+                    ecs.create({
+                        ["d2legacy.stat.source"] = {
+                            target = player,
+                            source_id = "test:poison:" .. source.stat,
+                            stat = source.stat,
+                            operation = "add",
+                            value = source.value,
+                            order = 300,
+                        },
+                    })
+                end
+                local monster = spawn_event_target_monster({ level_id = 2, health = 2048, experience = 10 })
+                ecs.set(monster, "d2legacy.combat.defense", {
+                    base_poison_resist = 50,
+                    poison_resist = 50,
+                })
+            end),
+            submit_attack(),
+            test.step(10),
+            test.run(function()
+                local ecs = require("engine.ecs/v1")
+                local resolved = resolved_melee_events()
+                test.expect(#resolved):equals(1)
+                local bundle = ecs.get(resolved[1], "d2legacy.combat.damage_bundle")
+                test.expect(bundle:get("poison_rolled_raw")):equals(128)
+                test.expect(bundle:get("poison_mitigated_raw")):equals(64)
+                test.expect(bundle:get("poison_length_frames")):equals(40)
+                local states = ecs.query({ all = { "d2legacy.state.instance" } })
+                test.expect(#states):equals(1)
+                local state = ecs.get(states[1], "d2legacy.state.instance")
+                test.expect(state:get("stat_value")):equals(-64)
+                test.expect(state:get("source_attacker_id")):equals("player:alice")
+                test.expect(state:get("expires_tick") - state:get("applied_tick")):equals(40)
+                local monster = ecs.query({ all = { "d2legacy.monster.identity" } })[1]
+                poison_sample_health = ecs.get(monster, "d2legacy.monster.stats"):get("health")
+            end),
+            test.step(3),
+            test.run(function()
+                local ecs = require("engine.ecs/v1")
+                local monster = ecs.query({ all = { "d2legacy.monster.identity" } })[1]
+                local health = ecs.get(monster, "d2legacy.monster.stats"):get("health")
+                test.expect(health):equals(poison_sample_health - 3 * 64)
+            end),
+            test.step(40),
+            test.run(function()
+                local ecs = require("engine.ecs/v1")
+                test.expect(#ecs.query({ all = { "d2legacy.state.instance" } })):equals(0)
+                local monster = ecs.query({ all = { "d2legacy.monster.identity" } })[1]
+                local death = ecs.get(monster, "d2legacy.monster.death")
+                test.assert(death ~= nil, "melee-applied poison did not kill the monster")
+                test.expect(death:get("credited_id")):equals("player:alice")
+                local player = player_entity()
+                test.expect(ecs.get(player, "d2legacy.player.progress"):get("experience")):equals(10)
+                local deaths = 0
+                for _, entity in ipairs(ecs.query({ all = { "d2legacy.combat.event" } })) do
+                    local event = ecs.get(entity, "d2legacy.combat.event")
+                    if event:get("kind") == "unit_died" and event:get("source_kind") == "poison" then
+                        deaths = deaths + 1
+                    end
+                end
+                test.expect(deaths):equals(1)
             end),
         }),
         test.case("weapon_attacks_consume_generic_outgoing_damage_percentage_sources", {

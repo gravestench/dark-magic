@@ -2,6 +2,7 @@ package player
 
 import (
 	"encoding/json"
+	"fmt"
 	"strings"
 	"testing"
 
@@ -72,6 +73,12 @@ func TestProjectWorldViewFiltersOrdersAndBoundsPublicState(t *testing.T) {
 		{Name: "skill_level", Kind: akara.FieldInt64}, {Name: "state_id", Kind: akara.FieldString},
 		{Name: "refresh_delay", Kind: akara.FieldInt64},
 	})
+	timedState := registerProjectionStore(t, engine, "d2legacy.state.instance", []akara.Field{
+		{Name: "target", Kind: akara.FieldEntity}, {Name: "state_id", Kind: akara.FieldString},
+		{Name: "source_id", Kind: akara.FieldString}, {Name: "source_attacker_id", Kind: akara.FieldString},
+		{Name: "applied_tick", Kind: akara.FieldInt64}, {Name: "expires_tick", Kind: akara.FieldInt64},
+		{Name: "stat_value", Kind: akara.FieldInt64},
+	})
 	player := engine.World().MustCreateEntity()
 	nearB := engine.World().MustCreateEntity()
 	nearA := engine.World().MustCreateEntity()
@@ -92,6 +99,20 @@ func TestProjectWorldViewFiltersOrdersAndBoundsPublicState(t *testing.T) {
 		"emitter": nearA, "target": player, "source_id": "second-secret-source",
 		"skill_id": int64(99), "skill_level": int64(9), "state_id": "prayer", "refresh_delay": int64(75),
 	})
+	setPoison := func(target akara.Entity, stateID string) akara.Entity {
+		instance := engine.World().MustCreateEntity()
+		_, _ = timedState.Set(instance, map[string]any{
+			"target": target, "state_id": stateID, "source_id": "secret-poison-source",
+			"source_attacker_id": "secret-attacker", "applied_tick": int64(0),
+			"expires_tick": int64(10), "stat_value": int64(-128),
+		})
+		return instance
+	}
+	firstPoison := setPoison(player, "poison")
+	setPoison(nearA, "poison")
+	setPoison(nearB, "poison")
+	setPoison(far, "poison")
+	setPoison(player, "frozenarmor")
 	// setPublic materializes the shared public monster fixture contract.
 	setPublic := func(entity akara.Entity, id string, x, y float64) {
 		_, _ = position.Set(entity, map[string]any{"x": x, "y": y})
@@ -157,9 +178,11 @@ func TestProjectWorldViewFiltersOrdersAndBoundsPublicState(t *testing.T) {
 		t.Fatalf("living=%#v corpse=%#v", living, dead)
 	}
 
-	if len(view.States) != 2 ||
-		view.States[0] != (WorldState{TargetID: "player:alice", StateID: "might", PeriodTicks: 50}) ||
-		view.States[1] != (WorldState{TargetID: "player:alice", StateID: "prayer", PeriodTicks: 75}) {
+	if len(view.States) != 4 ||
+		view.States[0] != (WorldState{TargetID: "player:alice", StateID: "might", Aura: true, PeriodTicks: 50}) ||
+		view.States[1] != (WorldState{TargetID: "player:alice", StateID: "poison", Aura: false}) ||
+		view.States[2] != (WorldState{TargetID: "player:alice", StateID: "prayer", Aura: true, PeriodTicks: 75}) ||
+		view.States[3] != (WorldState{TargetID: "monster:a", StateID: "poison", Aura: false}) {
 		t.Fatalf("world states = %#v", view.States)
 	}
 
@@ -169,10 +192,89 @@ func TestProjectWorldViewFiltersOrdersAndBoundsPublicState(t *testing.T) {
 		strings.Contains(string(payload), "alice-secret") || strings.Contains(string(payload), "attack") ||
 		strings.Contains(string(payload), "server-secret-source") ||
 		strings.Contains(string(payload), "second-secret-source") ||
+		strings.Contains(string(payload), "secret-poison-source") ||
+		strings.Contains(string(payload), "secret-attacker") ||
+		strings.Contains(string(payload), "128") ||
+		strings.Contains(string(payload), "frozenarmor") ||
 		strings.Contains(string(payload), "source_id") ||
 		strings.Contains(string(payload), "skill_id") || strings.Contains(string(payload), "skill_level") ||
 		strings.Contains(string(payload), "monster:b") || strings.Contains(string(payload), "monster:far") {
 		t.Fatalf("world view leaked hidden/far state: %s", payload)
+	}
+
+	duplicate := setPoison(player, "poison")
+	snapshot, err = engine.Snapshot()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := ProjectWorldView("alice", simulation.Checkpoint{Tick: snapshot.Tick, Snapshot: &snapshot}); err == nil {
+		t.Fatal("duplicate active poison state was accepted")
+	}
+	timedState.Remove(duplicate)
+	poisonComponent, _ := timedState.Get(firstPoison)
+	if err := poisonComponent.Set("expires_tick", int64(0)); err != nil {
+		t.Fatal(err)
+	}
+	snapshot, err = engine.Snapshot()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := ProjectWorldView("alice", simulation.Checkpoint{Tick: snapshot.Tick, Snapshot: &snapshot}); err == nil {
+		t.Fatal("malformed poison state was accepted")
+	}
+}
+
+func TestProjectWorldViewOmitsPoisonOnTruncatedTarget(t *testing.T) {
+	engine := gameecs.New()
+	t.Cleanup(func() { _ = engine.Close() })
+	identity := registerProjectionStore(t, engine, "d2legacy.player.identity", []akara.Field{
+		{Name: "player", Kind: akara.FieldString},
+	})
+	position := registerPositionStore(t, engine)
+	location := registerLocationStore(t, engine)
+	selectable := registerSelectableStore(t, engine)
+	states := registerProjectionStore(t, engine, "d2legacy.state.instance", []akara.Field{
+		{Name: "target", Kind: akara.FieldEntity}, {Name: "state_id", Kind: akara.FieldString},
+		{Name: "applied_tick", Kind: akara.FieldInt64}, {Name: "expires_tick", Kind: akara.FieldInt64},
+		{Name: "stat_value", Kind: akara.FieldInt64},
+	})
+	owner := engine.World().MustCreateEntity()
+	_, _ = identity.Set(owner, map[string]any{"player": "alice"})
+	_, _ = position.Set(owner, map[string]any{"x": 0.0, "y": 0.0})
+	_, _ = location.Set(owner, map[string]any{"act": int64(1), "level_id": int64(2)})
+	var truncated akara.Entity
+	for i := range MaxWorldViewEntities + 1 {
+		entity := engine.World().MustCreateEntity()
+		x := 1.0
+		if i == MaxWorldViewEntities {
+			x = 70
+			truncated = entity
+		}
+		_, _ = position.Set(entity, map[string]any{"x": x, "y": 0.0})
+		_, _ = location.Set(entity, map[string]any{"act": int64(1), "level_id": int64(2)})
+		_, _ = selectable.Set(entity, map[string]any{
+			"id": fmt.Sprintf("object:%03d", i), "kind": "object", "radius": 1.0,
+		})
+	}
+	instance := engine.World().MustCreateEntity()
+	_, _ = states.Set(instance, map[string]any{
+		"target": truncated, "state_id": "poison", "applied_tick": int64(0),
+		"expires_tick": int64(10), "stat_value": int64(-128),
+	})
+	snapshot, err := engine.Snapshot()
+	if err != nil {
+		t.Fatal(err)
+	}
+	payload, err := ProjectWorldView("alice", simulation.Checkpoint{Tick: snapshot.Tick, Snapshot: &snapshot})
+	if err != nil {
+		t.Fatal(err)
+	}
+	var view WorldView
+	if err := json.Unmarshal(payload, &view); err != nil {
+		t.Fatal(err)
+	}
+	if !view.Truncated || len(view.Entities) != MaxWorldViewEntities || len(view.States) != 0 {
+		t.Fatalf("truncated view leaked poison state: entities=%d states=%+v", len(view.Entities), view.States)
 	}
 }
 

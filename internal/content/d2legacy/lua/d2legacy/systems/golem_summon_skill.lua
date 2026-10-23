@@ -85,7 +85,7 @@ local function golem_stats(definition, level, effective, hard, monster)
     monster.evil = false
 end
 
-local function defense(definition, level, effective)
+local function defense(definition, level, effective, values)
     local resist_level = effective[definition.summon_resist_skill_id] or 0
     local resist = resist_level > 0
             and progression.diminishing(
@@ -97,21 +97,13 @@ local function defense(definition, level, effective)
     local absorb = definition.fire_absorb_maximum > 0
             and progression.diminishing(definition.fire_absorb_minimum, definition.fire_absorb_maximum, level)
         or 0
-    return {
-        base_physical_resist = 0,
-        base_fire_resist = resist,
-        base_cold_resist = resist,
-        base_lightning_resist = resist,
-        physical_resist = 0,
-        fire_resist = resist,
-        cold_resist = resist,
-        lightning_resist = resist,
-        max_fire_resist = 75,
-        max_cold_resist = 75,
-        max_lightning_resist = 75,
-        physical_reduction_raw = 0,
-        fire_absorb_percent = absorb,
-    }
+    values.summon_resist_bonus = resist
+    values.fire_absorb_percent = absorb
+    values.fire_resist = values.base_fire_resist + (absorb > 0 and 0 or resist)
+    values.lightning_resist = values.base_lightning_resist + resist
+    values.cold_resist = values.base_cold_resist + resist
+    values.poison_resist = values.base_poison_resist + resist
+    return values
 end
 
 local function intrinsic(definition, level)
@@ -152,7 +144,8 @@ local function components(context, caster, cast, definition, resolved, effective
             definition = monster,
         },
     }, 1)
-    result["d2legacy.combat.defense"] = defense(definition, level, effective)
+    result["d2legacy.combat.defense"] =
+        defense(definition, level, effective, result["d2legacy.combat.defense"])
     result["d2legacy.owned_unit"] = {
         owner = caster,
         owner_id = "player:" .. identity:get("player"),

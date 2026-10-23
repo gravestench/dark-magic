@@ -1,8 +1,9 @@
 package modruntime
 
 import (
-	lua "github.com/yuin/gopher-lua"
 	"strconv"
+
+	lua "github.com/yuin/gopher-lua"
 )
 
 type recordsGateway interface {
@@ -19,8 +20,8 @@ func RecordsModule(records recordsGateway) Module {
 			"Load and inspect raw tabular content records.",
 			map[string]CommandHelp{
 				"load": commandHelp(
-					"engine.records.load(table)",
-					"Load records from a named game-data table.",
+					"engine.records.load(table[, columns])",
+					"Load independent rows, optionally selecting named columns.",
 				),
 				"reload": commandHelp(
 					"engine.records.reload()",
@@ -41,6 +42,33 @@ func RecordsModule(records recordsGateway) Module {
 				"load": func(state *lua.LState) int {
 					path := state.CheckString(1)
 
+					var columns []string
+
+					projected := state.Get(2) != lua.LNil
+					if projected {
+						list := state.CheckTable(2)
+						columns = make([]string, list.Len())
+
+						count := 0
+
+						list.ForEach(func(key, value lua.LValue) {
+							position, numeric := key.(lua.LNumber)
+							text, stringValue := value.(lua.LString)
+
+							if !numeric || position < 1 || position > lua.LNumber(len(columns)) ||
+								position != lua.LNumber(int(position)) || !stringValue {
+								state.ArgError(2, "expected a contiguous list of column names")
+							}
+
+							columns[int(position)-1] = string(text)
+							count++
+						})
+
+						if count != len(columns) {
+							state.ArgError(2, "expected a contiguous list of column names")
+						}
+					}
+
 					rows, err := records.Load(path)
 					if err != nil {
 						state.Push(lua.LNil)
@@ -51,9 +79,23 @@ func RecordsModule(records recordsGateway) Module {
 
 					result := state.CreateTable(len(rows), 0)
 					for _, row := range rows {
-						entry := state.CreateTable(0, len(row))
-						for key, value := range row {
-							entry.RawSetString(key, lua.LString(value))
+						capacity := len(row)
+						if projected {
+							capacity = min(capacity, len(columns))
+						}
+
+						entry := state.CreateTable(0, capacity)
+
+						if projected {
+							for _, key := range columns {
+								if value, found := row[key]; found {
+									entry.RawSetString(key, lua.LString(value))
+								}
+							}
+						} else {
+							for key, value := range row {
+								entry.RawSetString(key, lua.LString(value))
+							}
 						}
 
 						result.Append(entry)

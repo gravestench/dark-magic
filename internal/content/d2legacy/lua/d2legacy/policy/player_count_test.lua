@@ -50,11 +50,15 @@ return test.suite({
                 test.expect(friendly.life_bonus_percent):equals(0)
 
                 policy.set_override(1)
+                local scaled_with_lower_override = policy.monster_spawn(2, true)
+                test.expect(scaled_with_lower_override.effective_player_count):equals(2)
+                test.expect(scaled_with_lower_override.life_bonus_percent):equals(50)
+                test.expect(scaled_with_lower_override.experience_bonus_percent):equals(50)
                 local forced_low = policy.no_drop(2, 1, 8)
                 test.expect(forced_low.game_player_count):equals(2)
-                test.expect(forced_low.effective_player_count):equals(1)
+                test.expect(forced_low.effective_player_count):equals(2)
                 test.expect(forced_low.nearby_party_member_count):equals(1)
-                test.expect(forced_low.no_drop_player_count):equals(1)
+                test.expect(forced_low.no_drop_player_count):equals(2)
 
                 policy.clear_override()
                 test.expect(policy.snapshot().override):is_nil()
