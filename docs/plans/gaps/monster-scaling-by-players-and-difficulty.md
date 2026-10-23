@@ -25,6 +25,17 @@ the supplied terminated rows and zero preset count do not close MSD-Q10 or MSD-Q
 | MSD-Q10 | outside-boundary | MSD-R16 | none locally for supplied rows followed by another class; tables whose class rows reach the end of storage | Whether the prepared MonEquip storage guarantees a following row of another class | 2026-10-14: listing of `0x92F28..0x9302E` shows no row-count bound; loader storage end not read | Read the MonEquip loader's allocation and the table compiler's trailing storage |
 | MSD-Q11 | behavior | MSD-R02, MSD-R03, MSD-V02 | The appearance path of a class whose MonStats2 row has `TotalPieces <= 2`, with real storage; supplied variant count 0 remains available | Initialization of a level record's preset entry storage | 2026-10-12: preset lookup read, storage initialization not read; 2026-10-14: blind pass 2 identified the dependence | Read the allocation and initialization of the level preset records |
 
+## Version-parity follow-up
+
+The 1.13c static reading excludes dead players from both the effective player count used by
+NoDrop and the separate same-level party bonus. This has not been observed in an owned
+1.14d game. Issue #373 tracks the gameplay implementation and its dead-but-present player
+check. MSD-O03 gives the discriminating three-player setup: with a killer, one living
+unpartied player and a third player who remains connected after dying, the 1.13c path gives
+`E = 2` and `eligible = 1`; a raw connected-player count gives `E = 3` and `eligible = 2`.
+A two-player setup cannot separate the results because of the signed halving. Do not claim
+1.14d parity from the 1.13c disassembly or the older 1.10f reconstruction alone.
+
 ## Implementation gaps
 
 Historical comparison recorded before the 2026-10-14 migration and retained without a new
@@ -35,7 +46,7 @@ MSD-R22a cell predates the `(1 - q) / q * T` operation sequence.
 
 Comparison of the original behavior with the current Dark Magic code, kept as an input for a
 future implementation plan; not a plan. Code named: lua/d2legacy/policy/player_count.lua,
-commands/spawn_monster.lua, commands/monster_death.lua, loot/treasure_class.lua,
+commands/spawn_monster.lua, systems/monster_death.lua, loot/treasure_class.lua,
 policy/experience_gain.lua, data/difficulty_levels.lua, data/monster.lua. Test:
 internal/mod/d2legacy/party_nodrop_test.go. Values in that code were recovered from 1.10f D2MOO.
 The original issue is #373 (parent #344).
@@ -45,7 +56,7 @@ The original issue is #373 (parent #344).
 | MSD-R05 | policy/player_count.lua | `/players` override (1..8) else live count; checkpointed under `d2legacy.player_count`. Override is a debug rule, not an original-game fact | live count of players | verified (static) |
 | MSD-R06, MSD-R11, MSD-R12 | commands/spawn_monster.lua, data/monster.lua | `bonus = 50*(effective-1)` percent (0..350) applied at spawn; whole life capped at 2^23-1, stored 8.8 | same | verified (matches) |
 | MSD-R06, MSD-R13 | policy/experience_gain.lua | same bonus percent applied to stored experience at spawn | same, applied to stat 13 | verified (matches) |
-| MSD-R21 | loot/treasure_class.lua, commands/monster_death.lua | `party = nearby + 1`; `elig = min(party, effective)`; `eligible = floor((effective-elig)/2)+elig`, capped by spawn count | no clamp of elig to E (only min(party,8)); no distance ("nearby" is same-level, same-party, alive); CONTRADICTION: party 5, E 3 gives 4 not 3 | verified (static); "level" asm-only |
+| MSD-R21 | loot/treasure_class.lua, systems/monster_death.lua | `party = nearby + 1`; `elig = min(party, effective)`; `eligible = floor((effective-elig)/2)+elig`, capped by spawn count | no clamp of elig to E (only min(party,8)); no distance ("nearby" is same-level, same-party, alive); CONTRADICTION: party 5, E 3 gives 4 not 3 | verified (static); "level" asm-only |
 | MSD-R22a | loot/treasure_class.lua | converts chance back to weight | `N' = trunc(T*p/(1-p))`, `p=(N/(N+T))^eligible` | verified; x87 asm-only |
 | MSD-R14 (DifficultyLevels) | data/difficulty_levels.lua | columns ResistPenalty, MonsterFreezeDivisor, MonsterColdDivisor, DeathExpPenalty, LifeStealDivisor, ManaStealDivisor | all real columns; no life/XP/NoDrop column | verified |
 | tests | internal/mod/d2legacy/party_nodrop_test.go | two players in one party; checks count chain and credited player; no 3+ players, minion kills, or distance | n/a | n/a |
