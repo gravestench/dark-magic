@@ -35,6 +35,33 @@ local death_sentry = {
     Param1 = "5",
 }
 
+local sentry_monstats = {
+    {
+        Id = "death-sentry-fixture",
+        BaseId = "death-sentry-fixture",
+        MonStatsEx = "death-sentry-gfx",
+        AI = "DeathSentry",
+        Align = "1",
+        Code = "DS",
+        enabled = "1",
+        boss = "1",
+        primeevil = "1",
+        noRatio = "1",
+        minHP = "20",
+        maxHP = "20",
+        AC = "17",
+        ResFi = "23",
+        A1TH = "0",
+        A1MinD = "0",
+        A1MaxD = "0",
+        aip3 = "6",
+        aip4 = "10",
+    },
+}
+local sentry_monstats2 = {
+    { Id = "death-sentry-gfx", SizeX = "2", SizeY = "2", MeleeRng = "1" },
+}
+
 local function install_transaction()
     local ecs = require("engine.ecs/v1")
     local player = ecs.query({ all = { "d2legacy.player.identity" } })[1]
@@ -287,21 +314,55 @@ return test.suite({
             },
         },
         ["data/global/excel/PetType.txt"] = { { ["pet type"] = "trap", group = "1", range = "1" } },
-        ["data/global/excel/MonStats.txt"] = {
-            {
-                Id = "death-sentry-fixture",
-                MonStatsEx = "death-sentry-gfx",
-                AI = "DeathSentry",
-                aip3 = "6",
-                aip4 = "10",
-            },
+        ["data/global/excel/MonStats.txt"] = sentry_monstats,
+        ["data/global/excel/MonStats2.txt"] = sentry_monstats2,
+        ["data/global/excel/monstats.txt"] = sentry_monstats,
+        ["data/global/excel/monstats2.txt"] = sentry_monstats2,
+        ["data/global/excel/monlvl.txt"] = {
+            { Level = "1", ["L-AC"] = "10", ["L-TH"] = "20" },
         },
-        ["data/global/excel/MonStats2.txt"] = { { Id = "death-sentry-gfx" } },
         ["data/global/excel/SkillDesc.txt"] = {
             { skilldesc = "death sentry", ["str name"] = "fixture-death-sentry" },
         },
     },
     cases = {
+        test.case("deployed_death_sentry_retains_summoned_monster_defense", {
+            test.submit_system(fixtures.command("system.player.enter", fixtures.player_entry(), {
+                tick = 1,
+                sequence = 1,
+            })),
+            test.step(1),
+            test.run(function()
+                local ecs = require("engine.ecs/v1")
+                local player = ecs.query({ all = { "d2legacy.player.identity" } })[1]
+                ecs.set(player, "d2legacy.skill.cast", {
+                    skill_id = 276,
+                    skill_level = 1,
+                    target_x = 3,
+                    target_y = 0,
+                    target_id = "",
+                    effect_tick = 2,
+                    complete_tick = 3,
+                    elemental_damage_percent = 0,
+                    effect_duration_ticks = 0,
+                })
+            end),
+            test.step(1),
+            test.run(function()
+                local ecs = require("engine.ecs/v1")
+                local sentries = ecs.query({ all = { "d2legacy.trap.autonomous" } })
+                test.expect(#sentries):equals(1)
+                local defense = ecs.get(sentries[1], "d2legacy.combat.defense")
+                test.expect(defense ~= nil):equals(true)
+                test.expect(defense:get("base_fire_resist")):equals(23)
+                test.expect(defense:get("fire_resist")):equals(23)
+                test.expect(ecs.get(sentries[1], "d2legacy.monster.stats"):get("defense")):equals(27)
+                test.expect(ecs.get(sentries[1], "d2legacy.monster.boss") ~= nil):equals(true)
+                test.expect(ecs.get(sentries[1], "d2legacy.monster.freeze_immune") ~= nil):equals(true)
+                test.expect(ecs.get(sentries[1], "d2legacy.monster.prime_evil") ~= nil):equals(true)
+            end),
+            test.expect_checkpoint_parity(1),
+        }),
         test.case("death_sentry_centers_ordered_corpse_damage_on_the_consumed_corpse", {
             test.submit_system(fixtures.command("system.player.enter", fixtures.player_entry(), {
                 tick = 1,

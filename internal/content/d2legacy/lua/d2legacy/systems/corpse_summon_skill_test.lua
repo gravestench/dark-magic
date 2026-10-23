@@ -314,6 +314,8 @@ return test.suite({
                 Id = "fixturecorpse",
                 BaseId = "fixturecorpse",
                 MonStatsEx = "fixturecorpse",
+                boss = "1",
+                primeevil = "1",
                 NameStr = "FixtureCorpse",
                 AI = "Fallen",
                 Align = "0",
@@ -700,6 +702,9 @@ return test.suite({
                 local mitigation = require("d2legacy.policy.mitigation")
                 test.expect(mitigation.apply(100, "poison", defense, true)):equals(0)
                 test.assert(ecs.get(summon, "d2legacy.monster.revivable") == nil)
+                test.assert(ecs.get(summon, "d2legacy.monster.boss") ~= nil)
+                test.assert(ecs.get(summon, "d2legacy.monster.freeze_immune") ~= nil)
+                test.assert(ecs.get(summon, "d2legacy.monster.prime_evil") ~= nil)
                 test.expect(#ecs.query({ all = { "d2legacy.monster.death" } })):equals(0)
             end),
             test.expect_checkpoint_parity(1),
