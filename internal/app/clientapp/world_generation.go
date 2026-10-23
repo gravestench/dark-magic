@@ -29,6 +29,7 @@ func (app *application) buildEntryWorld() error {
 	if activeWorld == nil {
 		return fmt.Errorf("development fixture world level %d is unavailable", activeLevel)
 	}
+
 	checksum := prepared.TopologyChecksum
 	if app.pendingEntryRecovery != nil && checksum != app.pendingEntryRecovery.TopologyChecksum {
 		return fmt.Errorf("saved d2legacy entry topology differs from prepared world")
@@ -60,6 +61,7 @@ func (app *application) prepareEntryWorld() (*entryworld.Prepared, error) {
 		prepared, err = entryworld.Build(app.ctx, app.options.Content, d2legacySource,
 			app.records, app.worldObjectResolver, 1, app.options.GameDifficulty)
 	}
+
 	if err != nil {
 		return nil, wrap("prepare d2legacy entry world", err)
 	}
@@ -73,19 +75,23 @@ func (app *application) resolveEntryWorldSpawns(
 	prepared *entryworld.Prepared,
 ) (map[int][2]float64, error) {
 	townSeam := prepared.Seams[0]
+
 	townSpawn := prepared.Spawns[townSeam.First.LevelID]
 	if app.options.FixtureWorldSpawn == "cold_plains_seam" {
 		if len(prepared.Seams) < 2 {
 			return nil, fmt.Errorf("development Cold Plains seam is unavailable")
 		}
+
 		spawns := make(map[int][2]float64, len(prepared.Spawns))
 		for level, spawn := range prepared.Spawns {
 			spawns[level] = spawn
 		}
+
 		spawns[2] = [2]float64{
 			prepared.Seams[1].First.ArrivalX,
 			prepared.Seams[1].First.ArrivalY,
 		}
+
 		return spawns, nil
 	}
 
@@ -98,11 +104,13 @@ func (app *application) resolveEntryWorldSpawns(
 	if err != nil {
 		return nil, err
 	}
+
 	for level, spawn := range prepared.Spawns {
 		if _, exists := spawns[level]; !exists {
 			spawns[level] = spawn
 		}
 	}
+
 	return spawns, nil
 }
 

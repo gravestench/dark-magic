@@ -65,6 +65,7 @@ func newRealD2LegacyFixture(t *testing.T, config realD2LegacyFixtureConfig) *rea
 
 	options.FixtureWorldLevel = config.fixtureWorldLevel
 	options.FixtureWorldSpawn = config.fixtureWorldSpawn
+
 	options.GameDifficulty = config.gameDifficulty
 	if config.applySceneDefaults {
 		options = applyDevelopmentSceneDefaults(options)
@@ -79,6 +80,7 @@ func newRealD2LegacyFixture(t *testing.T, config realD2LegacyFixtureConfig) *rea
 	if err := app.loadGameCatalogs(); err != nil {
 		t.Fatal(err)
 	}
+
 	if config.recovery != nil {
 		if err := app.prepareOfflineEntryWorldRecovery(*config.recovery); err != nil {
 			t.Fatal(err)
@@ -149,6 +151,7 @@ func startTestD2LegacyAuthority(t *testing.T, app *application, queuePopulation 
 		if err := app.restoreOfflineEntryWorldRecovery(*app.pendingEntryRecovery); err != nil {
 			t.Fatal(err)
 		}
+
 		app.pendingEntryRecovery = nil
 	} else if queuePopulation {
 		if err := app.queueEntryPopulation(); err != nil {

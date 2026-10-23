@@ -99,9 +99,12 @@ func (app *application) bootstrapAuthoritativeComponents(desired map[string]bool
 		if err := app.restoreOfflineEntryWorldRecovery(*app.pendingEntryRecovery); err != nil {
 			return wrap("restore d2legacy entry world recovery", err)
 		}
+
 		app.pendingEntryRecovery = nil
+
 		return nil
 	}
+
 	return app.queueEntryPopulation()
 }
 
