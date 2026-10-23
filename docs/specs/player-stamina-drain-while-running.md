@@ -168,7 +168,7 @@ Defaults: present player, class 4/Barbarian, classCount=7, valid computed class 
 
 Call-log notation retains identities: G is the exact supplied game and U the exact current unit, called player in applicable cases. `WalkRequest(m)` expands to `WalkRequest(game=G,unit=U,mode=m)`; `PathStep` to `PathStep(game=G,unit=U)`; `Drain` to `Drain(unit=U)`. Unit `Add`, `Read` and `Replace` shorthand always target U, and list operations target the explicitly named list L. Each expected call asserts argument identity as well as values and order: a correct mode requested for any different game or unit fails. These are semantic logs, not required APIs or original calling conventions.
 
-V01..V07/V10 use supplied fixture persistence: log Add, supply post-add getter result `i32(low32(initialStamina+delta))`, and let Replace set a fixture stamina variable to 0. V05 also supplies distinct read outcomes. V09 repeats this model. These are conditional fixture outputs, not verified original storage. Every vector has no local RNG draw; dependency interiors are supplied.
+For drain-stage cases in V01..V07/V10 that reach Add, the default fixture logs Add, supplies post-add getter result `i32(low32(initialStamina+delta))`, and lets Replace set a fixture stamina variable to 0. V05(b)/(c) override that getter result with 0/7 instead of the arithmetic result -10, and the fixture stamina follows the supplied read unless Replace sets it to 0. V09 repeats the default model. These are conditional fixture outputs, not verified original storage. Every vector has no local RNG draw; dependency interiors are supplied.
 
 In V08 list cases, entries have type 0, target=player, A=11/B=22, no direct callback, frame=100, running=false and pending-removal=false unless overridden. Successors follow the listed order. Callback execution is supplied: it logs the event identity, makes no draw and changes no list/stat state except the explicit case override. Isolated selectors stop at their logged dependency call; they do not execute an unspecified movement handler. In V12, itemCount=10 and the items collection is present when an item is supplied.
 
@@ -284,7 +284,8 @@ V05(a)..(d) stop at the unit-replacement wrapper request: the wrapper is supplie
     - (a) speed=-10: multiplier=0/pre-floor w=0/final w=1/delta=-1/read=23551/fixture stamina=23551/drain=1.
     - (b) speed=-9: quotient=0/multiplier=1/w=40/delta=-40/read=23512/fixture stamina=23512/drain=1.
     - (c) RunDrain=0/speed=0: base=0/floor=1/delta=-1/read=23551/fixture stamina=23551/drain=1.
-  - Discriminates: (b) distinguishes truncation/floor division; (c) rejects skipping minimum for zero base.
+    - (d) Synthetic torso speed=1000000000/RunDrain=20: multiplier=100000001; 40*100000001=4000000040 wraps to signed pre-floor w=-294967256, then floor=1/delta=-1/read=23551/fixture stamina=23551/drain=1.
+  - Discriminates: (b) distinguishes truncation/floor division; (c) rejects skipping minimum for zero base; (d) rejects wide multiplication before the signed floor.
   - runtime_observed: no
 - **SDR-V11** Class failures (SDR-R03/SDR-R01f; boundary: supplied-input movement stage)
   - Inputs: defaults; independent class=7, class=-1, or class=4/absent computed record; count=7; Walk/Path log only.
