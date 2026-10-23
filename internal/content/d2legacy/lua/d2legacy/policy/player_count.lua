@@ -50,9 +50,23 @@ function M.clear_override()
     end
 end
 
+function M.live_population(entities)
+    local ecs = require("engine.ecs/v1")
+    local count = 0
+    for _, entity in ipairs(entities) do
+        if ecs.get(entity, "d2legacy.player.identity") then
+            local vitals = ecs.get(entity, "d2legacy.player.vitals")
+            if vitals and vitals:get("health") > 0 and not ecs.get(entity, "d2legacy.player.death") then
+                count = count + 1
+            end
+        end
+    end
+    return count
+end
+
 function M.effective(game_player_count)
     local rules = game_rules.get()
-    integer(game_player_count, "game player count", 1, rules.maximum_players)
+    integer(game_player_count, "game player count", 0, rules.maximum_players)
     local overridden = current().override
     if overridden ~= nil then
         return math.max(game_player_count, integer(overridden, "player-count override", 1, MAXIMUM_GAMEPLAY_COUNT))
@@ -62,10 +76,10 @@ end
 
 function M.monster_spawn(game_player_count, evil)
     local rules = game_rules.get()
-    integer(game_player_count, "game player count", 1, rules.maximum_players)
+    integer(game_player_count, "game player count", 0, rules.maximum_players)
     assert(type(evil) == "boolean", "monster alignment is required")
 
-    local effective = evil and M.effective(game_player_count) or 1
+    local effective = evil and math.max(M.effective(game_player_count), 1) or 1
     local bonus = 50 * (effective - 1)
     return {
         game_player_count = game_player_count,
@@ -82,14 +96,14 @@ end
 -- NoDrop benefits even if additional players enter the game before its death.
 function M.no_drop(game_player_count, nearby_party_member_count, monster_player_count)
     local rules = game_rules.get()
-    integer(game_player_count, "game player count", 1, rules.maximum_players)
+    integer(game_player_count, "game player count", 0, rules.maximum_players)
     integer(nearby_party_member_count, "nearby party member count", 0, rules.maximum_players - 1)
     integer(monster_player_count, "monster player count", 1, MAXIMUM_GAMEPLAY_COUNT)
 
     local effective = M.effective(game_player_count)
     local party_members = nearby_party_member_count + 1
-    local eligible_party_members = math.min(party_members, effective)
-    local eligible = math.floor((effective - eligible_party_members) / 2) + eligible_party_members
+    local eligible_party_members = math.min(party_members, MAXIMUM_GAMEPLAY_COUNT)
+    local eligible = math.modf((effective - eligible_party_members) / 2) + eligible_party_members
     eligible = math.min(eligible, monster_player_count)
 
     return {

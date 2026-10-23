@@ -32,6 +32,10 @@ return test.suite({
                     end,
                 }, { "query", "get", "create" })
                 test.mock_module("d2legacy.policy.player_count", {
+                    live_population = function(entities)
+                        test.expect(#entities):equals(2)
+                        return 2
+                    end,
                     monster_spawn = function(actual, evil)
                         test.expect(actual):equals(2)
                         test.expect(evil):equals(true)
@@ -41,7 +45,7 @@ return test.suite({
                             experience_bonus_percent = 50,
                         }
                     end,
-                }, { "monster_spawn" })
+                }, { "live_population", "monster_spawn" })
 
                 local spawn = fixtures.monster_spawn()
                 spawn.definition.evil = true

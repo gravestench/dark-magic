@@ -245,15 +245,19 @@ Its `maximum_players` field is only the admission cap. It is deliberately not
 an effective gameplay player count.
 
 `policy/player_count.lua` owns the separate `d2legacy.player_count/v1` state.
-Without an override, monster and reward consumers use the number of present
-authoritative player entities at the moment their policy runs. The privileged
-`game.player_count.override` command sets a `/players X` floor from 1 through
-8 without changing admission; it cannot reduce the effective count below the
-live population. `game.player_count.follow_population` returns to live join/leave
-behavior. This floor follows the 1.13c MSD-R05 static evidence and remains an
-inference for 1.14d. Monsters snapshot this as `spawn_player_count`, while
-death/NoDrop facts retain live, effective, nearby-party, spawn, and final
-eligible counts separately.
+Without an override, monster and reward consumers use the number of living
+authoritative players at the moment their policy runs. A player with zero
+health or a death marker remains connected but does not contribute to this
+count. The privileged `game.player_count.override` command sets a `/players X`
+floor from 1 through 8 without changing admission; it cannot reduce the
+effective count below the living population.
+`game.player_count.follow_population` returns to living
+population behavior. This floor and the living-player predicate follow the
+1.13c MSD-R05 static evidence and remain inferences for 1.14d. Monsters
+snapshot this as `spawn_player_count`, while death/NoDrop facts retain living,
+effective, nearby-party, spawn, and final eligible counts separately. NoDrop
+uses the signed, truncating MSD-R21 party calculation even when the party
+count exceeds the current living game count.
 
 ## Testing ownership
 

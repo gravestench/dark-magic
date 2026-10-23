@@ -72,16 +72,6 @@ local function credit_experience(entities, killer_id, stats)
     return after - before
 end
 
-local function count_game_players(entities)
-    local count = 0
-    for _, entity in ipairs(entities) do
-        if ecs.get(entity, "d2legacy.player.identity") then
-            count = count + 1
-        end
-    end
-    return math.max(count, 1)
-end
-
 local function no_drop_context(entities, credited_id, monster_player_count)
     local credited = selectable_by_id(entities, credited_id)
     local credited_identity = credited and ecs.get(credited, "d2legacy.player.identity")
@@ -89,7 +79,7 @@ local function no_drop_context(entities, credited_id, monster_player_count)
     if credited_identity then
         nearby_party_members = party.additional_living_members_in_same_level(credited_identity:get("player"), entities)
     end
-    return player_count.no_drop(count_game_players(entities), nearby_party_members, monster_player_count)
+    return player_count.no_drop(player_count.live_population(entities), nearby_party_members, monster_player_count)
 end
 
 local function roll_loot(entities, identity, stats, credited_id)
@@ -234,6 +224,7 @@ function M.register(experience_thresholds)
             "d2legacy.world.selectable",
             "d2legacy.player.identity",
             "d2legacy.player.vitals",
+            "d2legacy.player.death",
             "d2legacy.world.location",
             "d2legacy.owned_unit",
             "d2legacy.player.progress",
