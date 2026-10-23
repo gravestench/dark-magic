@@ -160,12 +160,15 @@ func AdvanceStamina(tick StaminaTick) ResolvedStamina {
 
 // staminaDrain preserves the runtime's armor multiplier, signed slower-drain channel, and one-unit minimum.
 func staminaDrain(tick StaminaTick) int64 {
-	drain := 2 * tick.RunDrain * (tick.ArmorRunDrain/10 + 1)
+	drain := int32(2 * tick.RunDrain)
+	multiplier := int32(tick.ArmorRunDrain/10 + 1)
+	drain *= multiplier
 	if tick.StaminaDrainPercent != 0 {
-		drain += drain * tick.StaminaDrainPercent / -100
+		product := int32(tick.StaminaDrainPercent) * drain
+		drain += product / -100
 	}
 
-	return max(1, drain)
+	return max(1, int64(drain))
 }
 
 // staminaRecovery halves regeneration while moving and applies the bonus after fixed-point base truncation.

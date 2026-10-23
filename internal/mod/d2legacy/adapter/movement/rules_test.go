@@ -167,6 +167,40 @@ func TestAdvanceStaminaUsesFixedPointDrainRecoveryAndTownRules(t *testing.T) {
 	}
 }
 
+func TestAdvanceStaminaMatchesSigned32DrainArithmetic(t *testing.T) {
+	for _, tc := range []struct {
+		name        string
+		runDrain    int64
+		armorSpeed  int64
+		percentage  int64
+		wantStamina int64
+	}{
+		{name: "percentage product wraps", runDrain: 20, percentage: 107374183, wantStamina: 23512},
+		{name: "torso weight wraps", runDrain: 20, armorSpeed: 1000000000, wantStamina: 23551},
+		{name: "positive percentage truncates", runDrain: 20, percentage: 33, wantStamina: 23525},
+		{name: "negative percentage truncates", runDrain: 20, percentage: -33, wantStamina: 23499},
+		{name: "positive torso multiplier", runDrain: 20, armorSpeed: 10, wantStamina: 23472},
+		{name: "negative torso division", runDrain: 20, armorSpeed: -9, wantStamina: 23512},
+		{name: "full slower drain has minimum", runDrain: 20, percentage: 100, wantStamina: 23551},
+		{name: "zero base has minimum", runDrain: 0, wantStamina: 23551},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			got := AdvanceStamina(StaminaTick{
+				CurrentRaw:          23552,
+				MaximumRaw:          23552,
+				RunDrain:            tc.runDrain,
+				ArmorRunDrain:       tc.armorSpeed,
+				StaminaDrainPercent: tc.percentage,
+				Running:             true,
+				Moving:              true,
+			})
+			if got.CurrentRaw != tc.wantStamina || got.ForceWalk {
+				t.Fatalf("running stamina = %+v, want raw=%d and no force-walk", got, tc.wantStamina)
+			}
+		})
+	}
+}
+
 // TestMaximumStaminaUsesExpansionFixedPointDependencyGraph pins source order and integer scaling.
 func TestMaximumStaminaUsesExpansionFixedPointDependencyGraph(t *testing.T) {
 	rates := ClassRates{StartingVitality: 20, StartingStamina: 84, StaminaPerLevel: 4, StaminaPerVitality: 4}
