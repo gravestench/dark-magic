@@ -38,13 +38,13 @@ These table entries and the computing output writers, rather than function label
 | LOD113C-D2COMMON | `0x51BF0`, #10786 | Skill calculation front end | R05/R19; byte-checked reconstruction 2026-10-12; SCX-R11 owns shared pool/context contract |
 | LOD113C-D2COMMON | `0x9270`, internal; `0x50B60`, internal | Evaluator and parameter callback | R09/R11/R12/R19; boundary crossing consumes the named SCX contracts/gates |
 | LOD113C-D2COMMON | `0x11E0`, internal | Argument-ordered percentage primitive | R05/R09/R10/R11; byte-checked reconstruction 2026-10-12; consumes NRF-R05 |
-| LOD113C-D2COMMON | `0x61EC0`, internal | Skills descriptor loader | Input field identity; 2026-10-12 original descriptor/string reading, consumed GDA-R11 |
+| LOD113C-D2COMMON | `0x61EC0`, internal | Skills descriptor loader | Input field identity; 2026-10-12 original descriptor/string reading, consumed GDA-R11a |
 | LOD113C-D2GAME | `0x9F1A0`, internal | Physical fill | R14; instructions 2026-10-12 and 2026-10-15; min/max requests, source condition zero, range draw, additive physical write |
 | LOD113C-D2GAME | `0x9F210`, internal | Elemental fill | R15; instructions 2026-10-12 and 2026-10-15; duration/min/max requests, range draw, router, unchanged d return |
 | LOD113C-D2GAME | `0x9EFE0`, internal | Router/random element | R16/R17; instructions/table read 2026-10-12; encoded jump corroborated against original image 2026-10-15 |
 | LOD113C-D2GAME | `0x11D0`, internal | Alternate random modulo | R14/R15; 2026-10-12 reading; consumes NRF-R01/NRF-R02 |
 | LOD113C-D2GAME | `0x93340`, `0x92CF0`, internal | Two caller record-construction stages | R18; instructions 2026-10-12, stage/order reread 2026-10-15; no proof of other caller eligibility/effects |
-| LOD113C-D2GAME | `0x92A60` -> `0xDE5A0` -> `0xDDE90`, internal | To-hit sum and conditional forwarding | R13; consumer instructions 2026-10-15; actual hit outcome consumes SBA |
+| LOD113C-D2GAME | `0x92A60` -> `0xDE5A0` -> `0xDDE90`, internal | To-hit sum and conditional forwarding | R13; consumer instructions 2026-10-15; actual hit outcome consumes SBA reach/order and the HIT roll |
 
 ### Import bindings
 
@@ -132,7 +132,7 @@ Both requests used offset 0 and length 0 (whole effective file). The complete re
 | TD-ETYPE5 | same complete file/headers | row 5, `Elemental Type` = `Poison`, `Code` = `pois` | Same correspondence limit |
 | TD-ETYPE12 | same complete file/headers | row 12, `Elemental Type` = `Freeze`, `Code` = `frze` | Same correspondence limit |
 
-These cell claims are **verified in 1.13c data** within the reported effective profile and stated correspondence limits. ItemStatCost full effective-file SHA-256 is `ee7fa82b48e0c4f27a566334b2da13cf1c83f5c4c0439552084a231cb5938375`; ElemTypes full effective-file SHA-256 is `91addf64ff87abb19dcceba77f6da6ed84e9e4194d30eeb1d69d36edd55cdc15`. No table or full row is reproduced. Other stat names and Skills descriptors consume GDF's existing data/loader evidence with its own dates and limits.
+These cell claims are **verified in 1.13c data** within the reported effective profile and stated correspondence limits. ItemStatCost full effective-file SHA-256 is `ee7fa82b48e0c4f27a566334b2da13cf1c83f5c4c0439552084a231cb5938375`; ElemTypes full effective-file SHA-256 is `91addf64ff87abb19dcceba77f6da6ed84e9e4194d30eeb1d69d36edd55cdc15`. No table or full row is reproduced. Other stat names consume GDF-R02's identity evidence; Skills descriptors and listed fields consume GDA-R11a's table-schema evidence. SLD-Q10 leaves record +0x134 unmapped to a named column.
 
 ## Records absorbed from the expression spec (2026-10-15)
 
@@ -433,3 +433,13 @@ into O02. R10 now states the mastery amount itself; R19, Q04, the dependencies a
 cite the renamed expression spec. No rule behavior, label, value or existing vector result changed.
 The folded cases were hand-checked against R02 through R11 and the NRF-R05/NRF-R06a contracts;
 no source reading, gameplay observation or fresh reader pass was performed for this restructure.
+
+## Publication review — 2026-10-23
+
+This is the current three-file 1.13c leveled-damage handoff after the 2026-10-15 expression/SLD split. The dated source readings, old reader counts and post-split hand check above remain historical records of their actual inputs. No original binary, owned game image or gameplay session was newly read for this publication review.
+
+A fresh blind implementer read the complete then-current SLD behavior contract and relevant sections of its cited public NRF, RLI, GDA/GDF, SCX, DPO and HIT dependencies without the companion, gap file, diff, original source, binary or runtime. It independently recomputed all SLD-V01–V20 cases and found no numerical, seed, routing, return, request-order or local-rule mismatch. In particular, it checked the physical/elemental percentage-order discriminators, V10–V15 range and seed steps, and V13's distinct do-function 38/53 record paths. The reader identified additional branch fixtures as coverage opportunities, not contradictions; the declared supplied-input contract and current gates determine its approval boundary. The later citation/ownership corrections in this publication receive separate delta review rather than being attributed to that full blind pass.
+
+Independent evidence and issue-boundary reviews checked the manifest-pinned 1.13c citations and dated reuse limits, all local links, current SCX/SLD ownership, the three-file issue boundary and the unresolved questions. They did not rehash binaries or perform gameplay observations. The publication corrects present-tense references: GDA-R11a owns the published Skills schema, GDF-R02 owns stat names, RLI section 3.1 owns semantic combat-record fields, SBA-R12 owns melee preconditions, SBA-R05 owns roll and block/avoidance invocation, SBA-R08 owns overall draw order, and HIT owns the hit roll itself. The earlier review narrative's reference to a missing GDF descriptor for Skills +0x134 was an owner attribution error; the current SLD-Q10 gap correctly records that GDA-R11a does not identify that field. This correction does not identify a new column or close Q10.
+
+SLD-Q02 and Q04–Q10 retain their declared equipment, expression-producer, caller, hit-outcome, linked-element, Kick, observation and descriptor limits. O01–O04 remain pending. This review approves only the 1.13c supplied-input/static handoff; it does not establish integrated gameplay or 1.14d parity. The `check_spec.py` result above belongs to 2026-10-15; the helper is absent from the current checkout and was not rerun here.
