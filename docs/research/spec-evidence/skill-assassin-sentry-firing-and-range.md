@@ -736,3 +736,29 @@ result changed. The constants rows are now separate in each spec, so the room ca
 appears beside action 17; this bears on FULL12's pending "cap 48" wording item, which still
 needs a fresh reader check. The other FULL12 pending items are unchanged, and the
 blind-implementer pass for both specs remains open as recorded under FULL12.
+
+## Publication review — 2026-10-23
+
+A fresh independent blind reader read both complete post-split SFR/STT specs, their gap
+files and the source/review sections of both companions. It recomputed representative
+SFR strict-range, budget-to-zero, second-owner-failure, directional-root and chooser
+cases and STT burst, callback-frame and speed cases without a blocking mismatch. This
+reader approved bounded draft publication. The 2026-10-15 combined-contract FULL12
+result above remains dated history: its suggested wording and discriminator additions
+were not all implemented or rerun as that historical review protocol. They remain
+visible leads for further coverage, while the fresh reader found no unmarked behavior
+guess within the current supplied-input/static boundaries. This is not a gameplay
+observation or an exhaustive branch-coverage claim.
+
+An independent evidence reader checked both three-file sets' original source identities,
+dated reuse, named text cells, public links and explicit Q/O gates. A separate
+architecture reader checked SFR/STT/MCI/MMC ownership and #418's gameplay boundary.
+All three approved the bounded 1.13c handoff. Issue #496 now names both three-file
+sets. Split-stale BSF, GDA and coverage-index references were corrected. The launch
+companion now names the initializer's total-frame read correctly, and STT-V04 states
+that its stat-161 value is a supplied final list-read result.
+
+SFR-Q01–Q09, SFR-O01–O03 and the sibling STT gates remain open. No SFR behavioral rule,
+vector output or original-source evidence label changed; the historical implementation
+comparison was not renewed. No new original-image investigation, protected game-data
+capture, gameplay test or 1.14d confirmation was added. Both specs remain draft.
