@@ -159,3 +159,28 @@ Outcome: MISMATCH 0; no unresolved GUESS or DISCRIM; the one GAP has a recorded 
 ## Restructure (2026-10-15)
 
 The approved review split the combined Death Sentry spec at its two independent triggers. This spec now holds the reached think and corpse selection: budget/skill, shared target, corpse search and integrated-search gate, corpse branch, fallback, and the remembered-corpse/competing-claim rules, with their four executable vectors and the two-sentry observation recipe. The explosion action (guards, corpse-valid producer, life/endpoint/roll/scale/split, geometry, victim hand-off, scaling/mitigation, duration/router and draw counts) stayed in [Death Sentry corpse damage](../../specs/skill-assassin-death-sentry-corpse-damage.md). The former combined local-producer question was divided: think-side producers are DST-Q03, explosion-side producers DSC-Q04. The state-order vector that also cites DST-R06a stays with the explosion, which owns the asserted request order. No rule behavior, label, value or vector result changed; ids were renumbered under the unconsumed-spec policy. Records above were partitioned by owning rule; their dates and counts are unchanged.
+
+## Publication review — 2026-10-23
+
+A fresh independent blind reader reviewed the complete post-split DST and DSC
+three-file contracts. For DST, the reader recomputed the strict corpse-distance,
+level-progression and wrapped-half cases in DST-V03, and the sentry-seed chance and
+equality cases in DST-V04. It confirmed that DST-R04 requests Skill1/mode 9 but does
+not itself request state 104; the later explosion owns that request. No blocking
+rule/vector mismatch or unmarked producer assumption was found within the 1.13c
+static/supplied-input boundary. DST-V01–V04 and DST-Q01–Q03 are the current IDs; the
+2026-10-15 combined-contract review counts above remain dated history.
+
+An independent evidence reader checked both complete three-file sets and the source
+manifest for artifact identity, dated reuse, table-cell limits, public links and typed
+open gaps. A separate architecture reader checked DST/DSC ownership, the SFR and GDA
+consumer references, and #420's gameplay boundary. All three approved bounded
+publication after the split-caused dependency references were corrected. Issue #498
+now names both three-file handoffs. The historical implementation-gap row now states
+only that the explosion requests state 104; its eligibility and competing-claim effects
+remain unresolved.
+
+DST-Q01–Q03, DST-O01 and the sibling DSC gates remain open. No spec behavioral rule or vector output changed. The historical comparison status
+wording was narrowed; original-source evidence labels were not changed, and the
+implementation comparison was not renewed. No new original-image investigation, protected game-data capture,
+gameplay test or 1.14d confirmation was added. Both specs remain draft.

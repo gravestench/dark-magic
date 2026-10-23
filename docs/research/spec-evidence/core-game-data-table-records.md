@@ -165,7 +165,7 @@ Direct kinds established here are 1 bounded byte string, 2 i32, 3 low16, 4/6 low
 | +0x3A | `MissA1` | 0x14 | none; bounds the descriptor gap at derived words +0x36/+0x38 |
 | +0x4C | `Align` | 4 | monster-scaling-by-players-and-difficulty (byte "noScaling") |
 | +0x4F / +0x50 / +0x51 | `aidel` / `aidel(N)` / `aidel(H)` | 4 | state-movement-modifiers-and-freeze |
-| +0x56 + 6k + 2d | `aip(k+1)` for difficulty d = 0/1/2 (`aip1` +0x56, `aip2` +0x5C, `aip3` +0x62, `aip4` +0x68, `aip5` +0x6E, `aip6` +0x74, `aip7` +0x7A, `aip8` +0x80; the `(N)`/`(H)` columns follow each at +2/+4) | 3 | skill-assassin-sentry-firing-and-range, skill-assassin-death-sentry-corpse-damage |
+| +0x56 + 6k + 2d | `aip(k+1)` for difficulty d = 0/1/2 (`aip1` +0x56, `aip2` +0x5C, `aip3` +0x62, `aip4` +0x68, `aip5` +0x6E, `aip6` +0x74, `aip7` +0x7A, `aip8` +0x80; the `(N)`/`(H)` columns follow each at +2/+4) | 3 | skill-assassin-sentry-firing-and-range, skill-assassin-death-sentry-corpse-selection |
 | +0xA0 / +0xA1 / +0xA2 | `Drain` / `Drain(N)` / `Drain(H)` | 4 | combat-leech-and-drain (drain effectiveness, read **unsigned**: `movzx ecx, byte ptr [edx + ecx + 0xA0]` with `ecx` = `Game +0x6D`, D2Game RVA 0xDBA40; earlier text said signed, corrected; now LSE-R02) |
 | +0xA3 / +0xA4 / +0xA5 | `ToBlock` / `ToBlock(N)` / `ToBlock(H)` | 4 | none |
 | +0xA6 | `Crit` | 4 | NRF-R04a (monster damage-doubling roll, D2Game rva 0x770E0) |
@@ -175,7 +175,7 @@ Direct kinds established here are 1 bounded byte string, 2 i32, 3 low16, 4/6 low
 | +0xBC / +0xBE / +0xC0 | `AC` / `(N)` / `(H)` | 3 | monster-scaling |
 | +0xD4 / +0xD6 / +0xD8 | `Exp` / `(N)` / `(H)` | 3 | monster-scaling |
 | +0x168 / +0x169 / +0x16A | `ColdEffect` / `(N)` / `(H)` | 4 | state-movement-modifiers-and-freeze (read signed) |
-| +0x170 / +0x172 ... +0x17E | `Skill1` / `Skill2` ... `Skill8` (16-bit skill index) | 0x14 | skill-assassin-sentry-firing-and-range (`nSkill[0]` = `Skill1`), skill-assassin-death-sentry-corpse-damage (`nSkill[1]` = `Skill2`) |
+| +0x170 / +0x172 ... +0x17E | `Skill1` / `Skill2` ... `Skill8` (16-bit skill index) | 0x14 | skill-assassin-sentry-firing-and-range (`nSkill[0]` = `Skill1`), skill-assassin-death-sentry-corpse-selection (`nSkill[1]` = `Skill2`) |
 | +0x198..+0x19F | `Sk1lvl`..`Sk8lvl` | 4 | none |
 
 ### Extended monster fields
@@ -210,7 +210,7 @@ Direct kinds established here are 1 bounded byte string, 2 i32, 3 low16, 4/6 low
 | +0x50 | `aurafilter` | 2 | skill-assassin-death-sentry-corpse-damage |
 | +0x64 | `aurarangecalc` | 0x19 | skill-assassin-death-sentry-corpse-damage |
 | +0x138 / +0x13C / +0x140 / +0x144 | `calc1` / `calc2` / `calc3` / `calc4` | 0x19 | skill-assassin-sentry-firing-and-range, skill-assassin-death-sentry-corpse-damage |
-| +0x148..+0x164 (step 4) | `Param1`..`Param8` | 2 | skill-assassin-death-sentry-corpse-damage (`Param3` +0x150, `Param4` +0x154; see note) |
+| +0x148..+0x164 (step 4) | `Param1`..`Param8` | 2 | skill-assassin-death-sentry-corpse-selection (`Param3` +0x150, `Param4` +0x154; see note) |
 | +0x16A | `ItemEffect` | 3 | skill-assassin-blade-sentinel-and-fury (item-effect override) |
 | +0x198 / +0x19C | `ToHit` / `LevToHit` | 2 | skill-leveled-damage-tohit-and-elements |
 | +0x1A0 | `ToHitCalc` | 0x19 | skill-leveled-damage-tohit-and-elements |
