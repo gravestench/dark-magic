@@ -2,6 +2,7 @@ package clientsession
 
 import (
 	"encoding/json"
+	"strings"
 	"testing"
 
 	"github.com/gravestench/dark-magic/internal/app/gameserver"
@@ -86,6 +87,14 @@ func TestDecodeViewCommerceSchema(t *testing.T) {
 func TestDecodeViewVersionsMissileSoundOwners(t *testing.T) {
 	view := validNetworkView(9)
 	view.HUD.Resistances = &playeradapter.HUDResistances{PoisonResist: 35, MaxPoisonResist: 80}
+	view.Private.Interaction.TradeAvailable = true
+	view.Private.Items.Items = []playeradapter.ItemEntityView{{
+		ID: "akara-offer:tsc", Code: "tsc", Container: "vendor", Slot: "misc", Vendor: "akara", BuyPrice: 100,
+	}}
+	view.World.Entities = []playeradapter.WorldEntity{{
+		ID: "item:1:" + strings.Repeat("a", 64), Kind: "item", Label: "vps", Radius: 3.5, Priority: 15,
+		WorldDC6: "data/global/items/flpvps.dc6", WorldAnimated: true,
+	}}
 	view.World.States = []playeradapter.WorldState{{TargetID: "player:player", StateID: "poison"}}
 	view.World.Missiles = []playeradapter.WorldMissile{{
 		ID: "missile:1", Kind: "projectile", MissileID: "fireball", SoundOwnerID: "projectile:1",
@@ -119,6 +128,15 @@ func TestDecodeViewVersionsMissileSoundOwners(t *testing.T) {
 			len(decoded.World.States) != 1 || decoded.World.States[0] != view.World.States[0] {
 			t.Fatal("poison presentation changed alongside missile sound ownership")
 		}
+
+		if len(decoded.World.Entities) != 1 || decoded.World.Entities[0] != view.World.Entities[0] {
+			t.Fatal("ground-item presentation changed alongside poison and missile ownership")
+		}
+
+		if !decoded.Private.Interaction.TradeAvailable || len(decoded.Private.Items.Items) != 1 ||
+			decoded.Private.Items.Items[0] != view.Private.Items.Items[0] {
+			t.Fatal("commerce facts changed alongside ground, poison and missile ownership")
+		}
 	}
 
 	for name, mutate := range map[string]func(*playeradapter.ClientView){
@@ -144,8 +162,11 @@ func TestDecodeViewVersionsMissileSoundOwners(t *testing.T) {
 
 func TestDecodeViewRejectsCollidingMissileAudioAndPoisonVersions(t *testing.T) {
 	for name, mutate := range map[string]func(*playeradapter.ClientView){
-		"published and upstream envelope 13": func(v *playeradapter.ClientView) { v.Version = 13 },
-		"published and upstream world 6":     func(v *playeradapter.ClientView) { v.World.Version = 6 },
+		"published and upstream envelope 13":      func(v *playeradapter.ClientView) { v.Version = 13 },
+		"published and upstream world 6":          func(v *playeradapter.ClientView) { v.World.Version = 6 },
+		"published loot and upstream envelope 14": func(v *playeradapter.ClientView) { v.Version = 14 },
+		"published loot and upstream world 7":     func(v *playeradapter.ClientView) { v.World.Version = 7 },
+		"previous loot and merchant envelope 15":  func(v *playeradapter.ClientView) { v.Version = 15 },
 	} {
 		t.Run(name, func(t *testing.T) {
 			view := validNetworkView(9)

@@ -46,7 +46,7 @@ function M.grid_size(layout, container)
         layout:get(container .. "_height")
 end
 
-function M.overlaps(item_entity, item, destination, entities)
+function M.overlaps(item_entity, item, destination, entities, layout_entity)
     local result = {}
     local candidate = {
         x = destination.x,
@@ -59,7 +59,8 @@ function M.overlaps(item_entity, item, destination, entities)
             local other = ecs.get(entity, "d2legacy.item.identity")
             local placed = ecs.get(entity, "d2legacy.item.placement")
             if other and placed
-                and belongs_to_same_owner(other, item)
+                and (layout_entity and other:get("owner"):id() == layout_entity:id()
+                    or not layout_entity and belongs_to_same_owner(other, item))
                 and placed:get("container") == destination.container then
                 local occupied = {
                     x = placed:get("x"),
@@ -74,6 +75,26 @@ function M.overlaps(item_entity, item, destination, entities)
         end
     end
     return result
+end
+
+function M.first_free(layout_entity, item_entity, item, entities)
+    local layout = assert(ecs.get(layout_entity, "d2legacy.items.layout"))
+    for _, entity in ipairs(entities) do
+        local owned = ecs.get(entity, "d2legacy.item.identity")
+        local placed = ecs.get(entity, "d2legacy.item.placement")
+        if owned and placed and owned:get("owner"):id() == layout_entity:id()
+            and placed:get("container") == "held" then return nil end
+    end
+    local width, height = M.grid_size(layout, "inventory")
+    for y = 0, height - item:get("height") do
+        for x = 0, width - item:get("width") do
+            local destination = { container = "inventory", x = x, y = y }
+            if #M.overlaps(item_entity, item, destination, entities, layout_entity) == 0 then
+                return destination
+            end
+        end
+    end
+    return nil
 end
 
 local function same_named_slot(placed, destination)

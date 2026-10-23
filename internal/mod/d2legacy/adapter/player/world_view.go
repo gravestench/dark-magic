@@ -12,7 +12,7 @@ import (
 	"github.com/gravestench/dark-magic/internal/game/simulation"
 )
 
-const WorldViewVersion uint32 = 7
+const WorldViewVersion uint32 = 8
 
 const (
 	WorldViewRadius         = 80.0
@@ -82,6 +82,8 @@ type WorldMissile struct {
 }
 
 type WorldEntity struct {
+	WorldDC6               string      `json:"world_dc6,omitempty"`
+	WorldAnimated          bool        `json:"world_animated,omitempty"`
 	ID                     string      `json:"id"`
 	Kind                   string      `json:"kind"`
 	Label                  string      `json:"label,omitempty"`
@@ -145,6 +147,7 @@ type worldProjection struct {
 	positions          gameecs.ComponentSnapshot
 	locations          gameecs.ComponentSnapshot
 	monsters           gameecs.ComponentSnapshot
+	itemPresentations  gameecs.ComponentSnapshot
 	monsterIdentities  gameecs.ComponentSnapshot
 	monsterAppearances gameecs.ComponentSnapshot
 	monsterDeaths      gameecs.ComponentSnapshot
@@ -228,6 +231,7 @@ func newWorldProjection(playerID string, checkpoint simulation.Checkpoint) (*wor
 // loadOptionalComponents centralizes the public projection's schema inventory.
 // Missing optional components remain empty snapshots and naturally add no data.
 func (projection *worldProjection) loadOptionalComponents() {
+	projection.itemPresentations, _ = findComponent(projection.snapshot, "d2legacy.item.presentation")
 	projection.selectables, _ = findComponent(projection.snapshot, "d2legacy.world.selectable")
 	projection.inactive, _ = findComponent(projection.snapshot, "d2legacy.world.inactive")
 	projection.monsters, _ = findComponent(projection.snapshot, "d2legacy.monster.stats")
@@ -333,6 +337,13 @@ func (projection *worldProjection) selectableEntity(source uint64) (WorldEntity,
 // decorateEntity adds public monster or player presentation fields. Gameplay
 // policy such as AI goals, damage, and collision never enters the result.
 func (projection *worldProjection) decorateEntity(entity *WorldEntity, source uint64) {
+	if entity.Kind == "item" {
+		if presentation, found := findInstance(projection.itemPresentations, source); found {
+			entity.WorldDC6 = stringField(presentation, "world_dc6")
+			entity.WorldAnimated = boolField(presentation, "world_animated")
+		}
+		return
+	}
 	if stats, found := findInstance(projection.monsters, source); found {
 		health := intField(stats, "health")
 		maximum := intField(stats, "max_health")
@@ -707,7 +718,7 @@ func validateWorldEntity(entity WorldEntity) error {
 		len(entity.Token) > maxWorldAssetBytes || len(entity.Mode) > maxWorldKindBytes ||
 		len(entity.WeaponClass) > maxWorldKindBytes ||
 		len(entity.Components) > maxWorldComponentsBytes ||
-		len(entity.DeathSound) > maxWorldAssetBytes ||
+		len(entity.DeathSound) > maxWorldAssetBytes || len(entity.WorldDC6) > maxWorldAssetBytes ||
 		entity.OverlayHeight < 0 || entity.OverlayHeight > 4 ||
 		math.IsNaN(entity.Position.X) || math.IsNaN(entity.Position.Y) ||
 		math.IsInf(entity.Position.X, 0) || math.IsInf(entity.Position.Y, 0) ||

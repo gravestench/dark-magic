@@ -5,53 +5,13 @@
 -- and systems consult ECS only; initial_data is never a mutable side channel.
 
 local ecs = require("engine.ecs/v1")
-local records = require("engine.records/v1")
 local development_fixtures = require("d2legacy.items.development_fixtures")
-local world = require("d2legacy.items.world")
+local item_entity = require("d2legacy.items.entity")
 local M = {}
 local interaction_data = {}
-local item_types_by_code
 
 -- Cain and ambient actors need their own quest or behavior contracts.
 local initial_town_npcs = { akara = true, charsi = true, gheed = true, kashya = true, warriv1 = true }
-
-local function item_type_index()
-    if item_types_by_code then
-        return item_types_by_code
-    end
-    item_types_by_code = {}
-    local available, rows = pcall(records.load, "data/global/excel/ItemTypes.txt")
-    rows = available and rows or {}
-    for _, row in ipairs(rows) do
-        local code = row.Code or row.code
-        if code and code ~= "" then
-            item_types_by_code[code] = row
-        end
-    end
-    return item_types_by_code
-end
-
-local function item_type_closure(item)
-    local index, found, visiting = item_type_index(), {}, {}
-    local function visit(code)
-        if not code or code == "" or found[code] then return end
-        assert(not visiting[code], "cyclic ItemTypes inheritance at " .. code)
-        visiting[code] = true
-        found[code] = true
-        local row = index[code]
-        if row then
-            visit(row.Equiv1 or row.equiv1)
-            visit(row.Equiv2 or row.equiv2)
-        end
-        visiting[code] = nil
-    end
-    visit(item.type)
-    visit(item.type2)
-    local result = {}
-    for code in pairs(found) do result[#result + 1] = code end
-    table.sort(result)
-    return table.concat(result, ",")
-end
 
 local function layout_exists(owner)
     for _, entity in
@@ -84,84 +44,6 @@ local function create_layout(data)
             stashed_gold = data.stashed_gold or 0,
         },
     })
-end
-
-local function create_item(layout, item)
-    local components = {
-        ["d2legacy.item.identity"] = {
-            owner = layout,
-            id = item.id,
-            code = item.code,
-            item_types = item_type_closure(item),
-            material_flags = item.material_flags or 0,
-            identified = item.identified ~= false,
-            width = item.width,
-            height = item.height,
-            body_slots = item.body_slots or "",
-            belt_eligible = item.belt_eligible or false,
-            base_cost = item.base_cost or 0,
-            applied_services = item.applied_services or "",
-        },
-        ["d2legacy.item.placement"] = {
-            container = item.container or "world",
-            x = item.x or 0,
-            y = item.y or 0,
-            slot = item.slot or "",
-            belt_slot = item.belt_slot or 0,
-            weapon_set = item.weapon_set or 0,
-            page = item.page or 0,
-        },
-        ["d2legacy.item.presentation"] = {
-            inventory_dc6 = item.inventory_dc6 or "",
-            world_dc6 = item.world_dc6 or "",
-            world_animated = item.world_animated or false,
-            composite = item.composite or "",
-            weapon_class = item.weapon_class or "",
-        },
-        ["d2legacy.item.melee"] = {
-            range = item.melee_range or 0,
-            physical_min = item.physical_min or 0,
-            physical_max = item.physical_max or 0,
-            attack_rating = item.attack_rating or 0,
-            attack_rate = item.attack_rate or 0,
-            weapon_class = item.melee_weapon_class or "",
-        },
-        ["d2legacy.item.armor"] = {
-            defense = item.defense or 0,
-            base_defense_max = item.base_defense_max or 0,
-            speed_penalty = item.speed_penalty or 0,
-        },
-    }
-    local layout_value = assert(ecs.get(layout, "d2legacy.items.layout"))
-    for name, values in pairs(world.initial_components(layout_value:get("owner"), item)) do
-        components[name] = values
-    end
-    local item_entity = ecs.create(components)
-
-    -- Property generation and stat activation are separate layers. Import the
-    -- already-normalized modifiers with their stable source identity intact;
-    -- equipment policy decides later whether each source is active.
-    local modifier_ids = {}
-    for index, modifier in ipairs(item.stat_modifiers or {}) do
-        local source_id = modifier.source_id or tostring(index)
-        local source_kind = modifier.source_kind or "item"
-        local order = modifier.order or index
-        local identity = source_kind .. ":" .. tostring(order) .. ":" .. source_id
-        assert(not modifier_ids[identity], "duplicate item stat modifier identity " .. identity)
-        modifier_ids[identity] = true
-        ecs.create({
-            ["d2legacy.item.stat_modifier"] = {
-                item = item_entity,
-                source_id = source_id,
-                source_kind = source_kind,
-                stat = modifier.stat or "",
-                operation = modifier.operation or "add",
-                value = modifier.value or 0,
-                order = order,
-            },
-        })
-    end
-    return item_entity
 end
 
 local function create_vendor_terms(trade_terms)
@@ -350,15 +232,32 @@ function M.ensure_player(owner)
     end
 end
 
+local function ensure_world_source()
+    local sources = ecs.query({ all = { "d2legacy.items.world_source" } })
+    assert(#sources <= 1, "multiple world item source layouts")
+    if #sources == 1 then return end
+    local layout = create_layout({ owner = "", inventory_width = 0, inventory_height = 0,
+        stash_width = 0, stash_height = 0, cube_width = 0, cube_height = 0,
+        belt_capacity = 0, vendor_width = 0, vendor_height = 0 })
+    ecs.set(layout, "d2legacy.items.world_source", {})
+end
+
 function M.load()
-    item_types_by_code = nil
+    item_entity.reset()
     local available, initial = pcall(require, "engine.initial_data/v1")
     if not available then
+        ensure_world_source()
         return
     end
 
     local fixture_config = initial.get("d2legacy.development_items") or {}
     interaction_data = initial.get("d2legacy.interactions") or {}
+    -- This session source marks completed bootstrap, including a checkpoint where a fixture owner departed.
+    -- Reconstructing that checkpoint must not recreate the departed owner's initial possessions.
+    if #ecs.query({ all = { "d2legacy.items.world_source" } }) > 0 then
+        ensure_world_source()
+        return
+    end
     -- Tests, save importers, and servers may supply already-decoded durable
     -- item facts. The development catalog is only a fallback explicitly
     -- requested by the interactive client.
@@ -373,25 +272,30 @@ function M.load()
     -- create_empty_containers is consumed by player admission through
     -- ensure_player. Startup cannot assign per-player ownership safely.
     if not data or not data.owner then
+        ensure_world_source()
         return
     end
+
+    assert(type(data.owner) == "string" and data.owner:match("%S"), "item bootstrap player owner is required")
 
     -- A reconstructed runtime registers schemas and runs this composition root
     -- before checkpoint participant state is attached. Its ECS snapshot already
     -- contains the durable layout, items, vendor terms, service rules, and
     -- interaction context. Never import immutable creation facts a second time.
     if layout_exists(data.owner) then
+        ensure_world_source()
         return
     end
 
     local layout = create_layout(data)
     for _, item in ipairs(data.items or {}) do
-        create_item(layout, item)
+        item_entity.create(layout, item)
     end
     create_vendor_terms(data.trade_terms)
     create_service_rules(data.service_rules)
 
     create_interactions(interaction_data, data.owner)
+    ensure_world_source()
 end
 
 return M

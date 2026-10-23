@@ -12,6 +12,7 @@ local function register(name, fields)
 end
 
 local function register_layout()
+    register("d2legacy.items.world_source", {})
     register("d2legacy.items.layout", {
         { name = "owner", type = "string" },
         { name = "inventory_width", type = "i64" },
@@ -63,6 +64,12 @@ local function register_item_location()
 end
 
 local function register_item_views()
+    register("d2legacy.item.origin", { { name = "key", type = "string" } })
+    register("d2legacy.item.generation", {
+        { name = "quality", type = "string" },
+        { name = "level", type = "i64" },
+        { name = "facts", type = "string" },
+    })
     register("d2legacy.item.presentation", {
         { name = "inventory_dc6", type = "string" },
         { name = "world_dc6", type = "string" },

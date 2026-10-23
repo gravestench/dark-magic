@@ -24,11 +24,20 @@ func DeterministicModule() Module {
 					"engine.deterministic.integer(seed, purpose, limit [, ordinal])",
 					"Return a stable zero-based integer below limit.",
 				),
+				"digest": commandHelp(
+					"engine.deterministic.digest(value)",
+					"Return the full hexadecimal SHA-256 digest of the exact string bytes.",
+				),
 			},
 		),
 		Loader: func(state *lua.LState) int {
 			module := state.SetFuncs(state.NewTable(), map[string]lua.LGFunction{
 				"integer": deterministicInteger,
+				"digest": func(state *lua.LState) int {
+					digest := sha256.Sum256([]byte(state.CheckString(1)))
+					state.Push(lua.LString(fmt.Sprintf("%x", digest)))
+					return 1
+				},
 			})
 			module.RawSetString("api", lua.LNumber(1))
 			state.Push(module)
