@@ -82,7 +82,7 @@ local function install_transaction()
     })
     ecs.create({
         ["d2legacy.monster.identity"] = { spawn_id = "corpse", definition_id = "fallen", seed = "corpse" },
-        ["d2legacy.monster.stats"] = { level = 1, health = 0, max_health = 10 * 256 },
+        ["d2legacy.monster.stats"] = { level = 1, health = 0, max_health = 202 },
         ["d2legacy.monster.death"] = { tick = 1, active = false, corpse_usable = true },
         ["d2legacy.world.position"] = { x = 5, y = 0 },
         ["d2legacy.world.location"] = { act = 1, level_id = 1 },
@@ -286,8 +286,8 @@ return test.suite({
                 Id = "904",
                 skill = "Corpse Explosion Fixture",
                 TargetCorpse = "1",
-                Param1 = "40",
-                Param2 = "80",
+                Param1 = "50",
+                Param2 = "50",
                 Param3 = "12",
                 Param4 = "0",
                 calc3 = "50",
@@ -380,6 +380,10 @@ return test.suite({
                 test.expect(event:get("target_id")):equals("monster:victim")
                 test.expect(event:get("source_kind")):equals("trap_corpse")
                 test.expect(event:get("damage_channel")):equals("mixed")
+                local bundle = ecs.get(events[1], "d2legacy.combat.damage_bundle")
+                test.expect(bundle:get("physical_rolled_raw")):equals(50)
+                test.expect(bundle:get("fire_rolled_raw")):equals(50)
+                test.expect(event:get("rolled_damage_raw")):equals(100)
             end),
             test.expect_checkpoint_parity(1),
         }),
