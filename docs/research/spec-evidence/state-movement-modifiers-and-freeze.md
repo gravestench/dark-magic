@@ -546,3 +546,26 @@ consumed CSA rules in their headings.
 The function table, semantic mapping, rationale, evidence-gap assessment and observation
 procedures above use the new ids. The dated migration, review and spot-check records above keep
 the ids they were written with.
+
+## Publication review — 2026-10-23
+
+A fresh independent blind reader reviewed the complete MMF contract, companion and gap
+record, then recomputed representative movement, attack, resistance, wrapped-arithmetic
+and paired-item fixtures in MMF-V01, V08, V09, V13, V18 and V20. It found no mismatch in
+those cases or blocking branch ambiguity within the static/supplied-input boundary.
+The dated 2026-10-15 full, delta and source spot-check records above remain historical;
+this is a separate review and not a gameplay observation.
+
+An independent evidence reader checked the 1.13c source-manifest identity and profile
+limits, dated provenance, static evidence labels, unresolved gates and local links. A
+separate architecture reader checked CSA cold/freeze application, DMI resistance, DPO
+placement, STL list effects and HRC rate ownership against MMF's movement/action consumers
+and freeze expiry callback. All three approved bounded publication after one dependency
+paragraph repair: the spec now keeps `NRF-R06a/NRF-R06b signed/unsigned arithmetic`
+together and places the GDA/RLI owner links in a separate sentence.
+
+MMF-Q01–Q10 and their cited dependency gates remain open as recorded. The historical
+implementation comparison in the gap file was not renewed. No rule arithmetic, vector
+output, evidence label or integration gate changed; no new original-image investigation,
+protected game-data capture, implementation comparison, gameplay test or 1.14d
+confirmation was added. The contract remains draft, and #375 retains gameplay acceptance.
