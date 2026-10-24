@@ -17,19 +17,24 @@ import (
 
 // Client owns one authenticated QUIC connection and serializes access to its shared datagram receive queue.
 type Client struct {
-	connection           *quic.Conn
-	datagramMu           sync.Mutex
-	datagramActive       bool
-	transformsReceived   atomic.Uint64
-	transformsSuperseded atomic.Uint64
+	connection            *quic.Conn
+	datagramMu            sync.Mutex
+	datagramActive        bool
+	datagramsRead         atomic.Uint64
+	transformDecodeErrors atomic.Uint64
+	transformsReceived    atomic.Uint64
+	transformsSuperseded  atomic.Uint64
 }
 
 // NetworkStats combines QUIC path timing with latest-wins transform delivery counters.
 type NetworkStats struct {
-	SmoothedRTT          time.Duration
-	RTTVariation         time.Duration
-	TransformsReceived   uint64
-	TransformsSuperseded uint64
+	SmoothedRTT           time.Duration
+	RTTVariation          time.Duration
+	DatagramsRead         uint64
+	TransformDecodeErrors uint64
+	TransformWatchActive  bool
+	TransformsReceived    uint64
+	TransformsSuperseded  uint64
 }
 
 // Dial opens a production UDP connection after cloning and constraining the caller's TLS configuration.
@@ -68,19 +73,25 @@ func DialPacket(
 // Close gracefully terminates the owned QUIC connection and all active stream watches.
 func (client *Client) Close() error { return client.connection.CloseWithError(0, "closed") }
 
-// NetworkStats takes atomic transform counters so presentation telemetry never blocks datagram delivery.
+// NetworkStats samples transform counters and synchronizes receiver ownership with its lifecycle mutex.
 func (client *Client) NetworkStats() NetworkStats {
 	if client == nil || client.connection == nil {
 		return NetworkStats{}
 	}
 
 	stats := client.connection.ConnectionStats()
+	client.datagramMu.Lock()
+	active := client.datagramActive
+	client.datagramMu.Unlock()
 
 	return NetworkStats{
-		SmoothedRTT:          stats.SmoothedRTT,
-		RTTVariation:         stats.MeanDeviation,
-		TransformsReceived:   client.transformsReceived.Load(),
-		TransformsSuperseded: client.transformsSuperseded.Load(),
+		DatagramsRead:         client.datagramsRead.Load(),
+		TransformDecodeErrors: client.transformDecodeErrors.Load(),
+		TransformWatchActive:  active,
+		SmoothedRTT:           stats.SmoothedRTT,
+		RTTVariation:          stats.MeanDeviation,
+		TransformsReceived:    client.transformsReceived.Load(),
+		TransformsSuperseded:  client.transformsSuperseded.Load(),
 	}
 }
 
