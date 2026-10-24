@@ -24,6 +24,45 @@ local function selected_size(level, difficulty)
     return width, height
 end
 
+-- Check the original table field before normalization can turn an empty or
+-- directory-only value into an apparently usable tile-root path.
+local function valid_asset_reference(value, extension)
+    if type(value) ~= "string" then return false end
+    local normalized = value:match("^%s*(.-)%s*$"):gsub("\\", "/")
+    if normalized == "" or normalized:sub(1, 1) == "/"
+        or normalized:find(":", 1, true) or normalized:find("//", 1, true)
+        or not normalized:lower():match("%." .. extension .. "$") then return false end
+    for segment in normalized:gmatch("[^/]+") do
+        if segment == "." or segment == ".." then return false end
+    end
+    return true
+end
+
+-- The shared asset helpers omit blank slots, so verify every declared DS1
+-- variant and every mask-selected DT1 before building an admissible recipe.
+local function validate_fill_references(row, level_type)
+    local declared = tonumber(row.Files) or 0
+    assert(declared >= 1 and declared <= 6 and declared == math.floor(declared),
+        "d2legacy mapgen: Stony Field stone-fill preset has invalid DS1 variant count")
+    for index = 1, declared do
+        assert(valid_asset_reference(row["File" .. index], "ds1"),
+            "d2legacy mapgen: Stony Field stone-fill preset has invalid DS1 reference")
+    end
+
+    local mask = tonumber(row.Dt1Mask) or 0
+    assert(mask > 0 and mask < 2 ^ 32 and mask == math.floor(mask),
+        "d2legacy mapgen: Stony Field stone-fill preset has invalid DT1 mask")
+    for index = 1, 32 do
+        local bit = 2 ^ (index - 1)
+        if math.floor(mask / bit) % 2 == 1 then
+            local reference = level_type["File " .. index] or level_type["File" .. index]
+            assert(valid_asset_reference(reference, "dt1"),
+                "d2legacy mapgen: Stony Field stone-fill preset has invalid DT1 reference")
+        end
+    end
+    return mask
+end
+
 -- Inspected 1.14d LvlPrest definitions 29/30 are generic outdoor fill.
 -- The runtime records may come from another version or a synthetic fixture.
 local function fill_candidates(level_type)
@@ -34,8 +73,9 @@ local function fill_candidates(level_type)
         assert(data.integer(row.LevelId, -1) == 0 and data.integer(row.Outdoors, -1) == 1
             and data.integer(row.SizeX, 0) == CELL and data.integer(row.SizeY, 0) == CELL,
             "d2legacy mapgen: Stony Field stone-fill preset is not a generic 8x8 outdoor piece")
+        local mask = validate_fill_references(row, level_type)
         local variants = assets.preset_files(row)
-        local tile_paths = assets.masked_tiles(level_type, data.integer(row.Dt1Mask, 0))
+        local tile_paths = assets.masked_tiles(level_type, mask)
         assert(#variants > 0 and #tile_paths > 0,
             "d2legacy mapgen: Stony Field stone-fill preset lacks DS1 or DT1 references")
         candidates[#candidates + 1] = {row = row, variants = variants, tile_paths = tile_paths}
@@ -110,7 +150,7 @@ function M.generate(level_id, seed, source_direction, difficulty)
     return assert(worldgen.admit({
         request = {version = 1, seed = seed, act = 1, level_id = level_id, difficulty = difficulty},
         kind = "outdoor", bounds = {x = 0, y = 0, width = width, height = height},
-        stamps = stamps, rooms = rooms, links = links, warps = {entry},
+        stamps = stamps, rooms = rooms, links = #links > 0 and links or nil, warps = {entry},
         paths = route_to_interior(entry, width, height),
         trace = {
             "Policy evidence: inspected 1.14d Levels level 4 is Act I outdoor DRLG 3, type 2, 80x80 in all modes",

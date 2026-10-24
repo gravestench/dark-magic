@@ -156,3 +156,115 @@ func TestStonyFieldChecksumSurvivesRestore(t *testing.T) {
 		t.Fatal("changing only source direction did not change the zone checksum")
 	}
 }
+
+// Admission must reject incomplete references before a draw can hide them.
+func TestStonyFieldRejectsInvalidInputsAndRecords(t *testing.T) {
+	cases := []struct {
+		name       string
+		level      int
+		direction  string
+		difficulty int
+		mutate     func(entryRecords)
+	}{
+		{name: "wrong level", level: 3, direction: "east"},
+		{name: "empty direction", level: 4},
+		{name: "diagonal direction", level: 4, direction: "northeast"},
+		{name: "negative difficulty", level: 4, direction: "east", difficulty: -1},
+		{name: "excess difficulty", level: 4, direction: "east", difficulty: 3},
+		{name: "wrong act", level: 4, direction: "east",
+			mutate: func(rows entryRecords) { rows[levelsPath][0]["Act"] = "1" }},
+		{name: "wrong drlg", level: 4, direction: "east",
+			mutate: func(rows entryRecords) { rows[levelsPath][0]["DrlgType"] = "2" }},
+		{name: "wrong type", level: 4, direction: "east",
+			mutate: func(rows entryRecords) { rows[levelsPath][0]["LevelType"] = "3" }},
+		{name: "zero normal size", level: 4, direction: "east",
+			mutate: func(rows entryRecords) { rows[levelsPath][0]["SizeX"] = "0" }},
+		{name: "misaligned normal size", level: 4, direction: "east",
+			mutate: func(rows entryRecords) { rows[levelsPath][0]["SizeX"] = "81" }},
+		{name: "misaligned nightmare size", level: 4, direction: "east", difficulty: 1,
+			mutate: func(rows entryRecords) { rows[levelsPath][0]["SizeX(N)"] = "81" }},
+		{name: "missing hell height", level: 4, direction: "east", difficulty: 2,
+			mutate: func(rows entryRecords) { rows[levelsPath][0]["SizeY(H)"] = "" }},
+		{name: "wrong preset level", level: 4, direction: "east",
+			mutate: func(rows entryRecords) { rows[presetsPath][0]["LevelId"] = "4" }},
+		{name: "nonoutdoor preset", level: 4, direction: "east",
+			mutate: func(rows entryRecords) { rows[presetsPath][0]["Outdoors"] = "0" }},
+		{name: "wrong preset width", level: 4, direction: "east",
+			mutate: func(rows entryRecords) { rows[presetsPath][0]["SizeX"] = "16" }},
+		{name: "wrong preset height", level: 4, direction: "east",
+			mutate: func(rows entryRecords) { rows[presetsPath][0]["SizeY"] = "16" }},
+		{name: "directory ds1", level: 4, direction: "east",
+			mutate: func(rows entryRecords) { rows[presetsPath][0]["File1"] = "Act1/Outdoors/" }},
+		{name: "absolute ds1", level: 4, direction: "east",
+			mutate: func(rows entryRecords) { rows[presetsPath][0]["File1"] = "/Act1/Outdoors/Circle.ds1" }},
+		{name: "windows absolute ds1", level: 4, direction: "east",
+			mutate: func(rows entryRecords) { rows[presetsPath][0]["File1"] = "C:/Act1/Outdoors/Circle.ds1" }},
+		{name: "missing declared ds1", level: 4, direction: "east",
+			mutate: func(rows entryRecords) { rows[presetsPath][0]["File2"] = "" }},
+		{name: "zero ds1 count", level: 4, direction: "east",
+			mutate: func(rows entryRecords) { rows[presetsPath][0]["Files"] = "0" }},
+		{name: "excess ds1 count", level: 4, direction: "east",
+			mutate: func(rows entryRecords) { rows[presetsPath][0]["Files"] = "7" }},
+		{name: "fractional ds1 count", level: 4, direction: "east",
+			mutate: func(rows entryRecords) { rows[presetsPath][0]["Files"] = "2.5" }},
+		{name: "zero mask", level: 4, direction: "east",
+			mutate: func(rows entryRecords) { rows[presetsPath][0]["Dt1Mask"] = "0" }},
+		{name: "invalid mask", level: 4, direction: "east",
+			mutate: func(rows entryRecords) { rows[presetsPath][0]["Dt1Mask"] = "invalid" }},
+		{name: "negative mask", level: 4, direction: "east",
+			mutate: func(rows entryRecords) { rows[presetsPath][0]["Dt1Mask"] = "-1" }},
+		{name: "excess mask", level: 4, direction: "east",
+			mutate: func(rows entryRecords) { rows[presetsPath][0]["Dt1Mask"] = "4294967296" }},
+		{name: "fractional mask", level: 4, direction: "east",
+			mutate: func(rows entryRecords) { rows[presetsPath][0]["Dt1Mask"] = "1.5" }},
+		{name: "missing selected dt1", level: 4, direction: "east",
+			mutate: func(rows entryRecords) { rows[presetsPath][0]["Dt1Mask"] = "3" }},
+
+		{name: "missing type", level: 4, direction: "east",
+			mutate: func(rows entryRecords) { rows[typesPath] = rows[typesPath][:2] }},
+		{name: "missing preset 29", level: 4, direction: "east",
+			mutate: func(rows entryRecords) { rows[presetsPath] = rows[presetsPath][1:] }},
+		{name: "missing preset 30", level: 4, direction: "east",
+			mutate: func(rows entryRecords) { rows[presetsPath] = rows[presetsPath][:1] }},
+	}
+	for _, test := range cases {
+		t.Run(test.name, func(t *testing.T) {
+			rows := stonyFieldRecords()
+			if test.mutate != nil {
+				test.mutate(rows)
+			}
+			runtime := stonyFieldRuntime(t, rows)
+			if _, err := runtime.Generate(t.Context(), "stony_field", float64(test.level), float64(42),
+				test.direction, float64(test.difficulty),
+			); err == nil {
+				t.Fatal("expected malformed Stony Field request or records to be rejected")
+			}
+		})
+	}
+	t.Run("unselected candidate has missing declared variant", func(t *testing.T) {
+		rows := stonyFieldRecords()
+		rows[levelsPath][0]["SizeX"], rows[levelsPath][0]["SizeY"] = "8", "8"
+		runtime := stonyFieldRuntime(t, rows)
+		zone, err := runtime.Generate(t.Context(), "stony_field", float64(4), float64(42), "east", float64(0))
+		if err != nil {
+			t.Fatal(err)
+		}
+		stamps := zone.Stamps()
+		if len(stamps) != 1 {
+			t.Fatalf("stamps = %d, want 1", len(stamps))
+		}
+		selected := stamps[0].PresetDef
+		if selected != 29 && selected != 30 {
+			t.Fatalf("unexpected selected definition %d", selected)
+		}
+		for _, row := range rows[presetsPath] {
+			if (selected == 29 && row["Def"] == "30") || (selected == 30 && row["Def"] == "29") {
+				row["File2"] = ""
+			}
+		}
+		malformed := stonyFieldRuntime(t, rows)
+		if _, err := malformed.Generate(t.Context(), "stony_field", float64(4), float64(42), "east", float64(0)); err == nil {
+			t.Fatalf("accepted invalid candidate unselected by seed 42 (selected definition %d)", selected)
+		}
+	})
+}
