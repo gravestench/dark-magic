@@ -316,7 +316,9 @@ local function fixture()
         player_snapshots = empty,
         monster_snapshots = actors,
         npc_snapshots = empty,
-        warp_snapshots = empty,
+        warp_snapshots = function()
+            return f.warp_snapshot and { f.warp_snapshot } or {}
+        end,
         state_snapshots = actors,
         missile_snapshots = actors,
         semantic_cues = empty,
@@ -582,6 +584,18 @@ return test.suite({
     profile = "module",
     tier = "fast",
     cases = {
+        test.case("tokenless_cave_snapshot_never_requests_portal_cof", function(t)
+            t:run(function()
+                local f = fixture()
+                f.warp_snapshot = { entity_id = 77, level_id = 1, x = 500, y = 500, label = "DEN OF EVIL" }
+                f:frame()
+                test.assert(not f.scene.warps or not f.scene.warps["77"], "tokenless cave built a sprite")
+                for _, job in ipairs(f.jobs) do
+                    test.assert(job.kind ~= "cof_animation", "tokenless cave requested a portal COF")
+                end
+                f:close()
+            end)
+        end),
         stony_approach_case("stony_field_art_visible_from_off_center_plains_approach", 3, 940),
         stony_approach_case("cold_plains_art_visible_from_off_center_stony_approach", 4, 60),
         test.case("pending_actor_jobs_release_on_removal_level_change_and_close", function(t)

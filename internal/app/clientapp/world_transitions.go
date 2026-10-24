@@ -86,11 +86,14 @@ func (app *application) transitionBootstrapData() map[string]any {
 	return entryworld.TransitionData(seams)
 }
 
-// warpBootstrapData creates paired portals solely for the named acceptance scene. Production scenes
-// receive the same empty schema shape and cannot accidentally enable fixture traversal.
+// warpBootstrapData publishes the prepared cave pair in production. The named
+// acceptance scene retains its generated portal fixture instead.
 func (app *application) warpBootstrapData() map[string]any {
 	if app.options.StartScene != "warp_lab" {
-		return emptyWarpBootstrap()
+		app.worldMu.RLock()
+		data := (&entryworld.Prepared{CaveWarp: app.caveWarp}).WarpData()
+		app.worldMu.RUnlock()
+		return data
 	}
 
 	townLevel := app.transitionSeam.First.LevelID

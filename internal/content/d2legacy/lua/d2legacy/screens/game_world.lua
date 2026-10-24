@@ -412,7 +412,7 @@ local function update_warps(self)
     self.warps = self.warps or {}
     local seen = {}
     for _, snapshot in ipairs(self.gameplay_world.warp_snapshots()) do
-        if snapshot.level_id == self.world_level_id then
+        if snapshot.level_id == self.world_level_id and snapshot.token ~= nil then
             local key = tostring(snapshot.entity_id)
             seen[key] = true
             local warp = self.warps[key]
