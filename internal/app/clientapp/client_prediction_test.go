@@ -124,3 +124,40 @@ func TestPredictionStaminaUsesSigned32Drain(t *testing.T) {
 		t.Fatalf("predicted stamina raw = %d, want 2520", prediction.staminaRaw)
 	}
 }
+
+// Old-level samples must not move the projected hero after an authoritative seam crossing.
+func TestPredictionIgnoresStaleSourceLevel(t *testing.T) {
+	catalog, err := movement.LoadCatalog(predictionMovementRecords{})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	hud := playeradapter.HUD{
+		Tick: 10, Position: playeradapter.HUDPosition{X: 10, Y: 20},
+		Player:   playeradapter.HUDIdentity{Class: "Amazon"},
+		Location: playeradapter.HUDLocation{LevelID: 4},
+		Movement: playeradapter.HUDMovement{Bounds: playeradapter.HUDPosition{X: 100, Y: 100}, Radius: 1},
+	}
+
+	for _, tc := range []struct {
+		name   string
+		source int
+		wantX  float64
+	}{
+		{"stale", 3, 10}, {"current", 4, 10.375}, {"legacy unstamped", 0, 10.375},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			payload, err := json.Marshal(movement.MovePayload{X: 1, SourceLevel: tc.source})
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			got := predictPosition(hud, []gameserver.CommandIntent{
+				{TargetTick: 11, Sequence: 1, Kind: movement.MoveCommand, Payload: payload},
+			}, networkclock.Moment{Tick: 11}, nil, 40*time.Millisecond, catalog)
+			if math.Abs(got.X-tc.wantX) > 1e-12 || got.Y != 20 {
+				t.Fatalf("predicted position = %#v, want (%v,20)", got, tc.wantX)
+			}
+		})
+	}
+}

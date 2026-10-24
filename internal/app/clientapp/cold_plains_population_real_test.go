@@ -78,7 +78,8 @@ func TestLiveColdPlainsOrdinaryPopulation(t *testing.T) {
 	f.advanceGame(t, 10)
 
 	before := populationPlan(t, f)
-	if len(before.Zones) != 2 || before.Zones[0].Created == 0 || before.Zones[1].Created != 0 {
+	if len(before.Zones) != 3 || before.Zones[0].Created == 0 ||
+		before.Zones[1].Created != 0 || before.Zones[2].Created != 0 {
 		t.Fatalf("initial plan = %#v", before)
 	}
 
