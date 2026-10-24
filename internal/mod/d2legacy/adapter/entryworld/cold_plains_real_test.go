@@ -67,6 +67,35 @@ func TestBuildColdPlainsReal(t *testing.T) {
 			t.Fatalf("level %d has no trusted destination: %v", level, err)
 		}
 	}
+	population, err := prepared.PopulationData(0)
+	if err != nil {
+		t.Fatal(err)
+	}
+	zones := population["zones"].([]any)
+	if len(zones) != 2 || zones[1].(map[string]any)["level_id"] != float64(3) {
+		t.Fatalf("owned population zones=%#v", zones)
+	}
+	populated := 0
+	for _, raw := range zones[1].(map[string]any)["rooms"].([]any) {
+		room := raw.(map[string]any)
+		if room["populate"] == true {
+			populated++
+		}
+		seen := map[[2]float64]bool{}
+		for _, rawPoint := range room["points"].([]any) {
+			point := rawPoint.(map[string]any)
+			x, y := point["x"].(float64), point["y"].(float64)
+			key := [2]float64{x, y}
+			flags, ok := prepared.Worlds[3].FlagsAt(int(x), int(y))
+			if seen[key] || !ok || flags.Blocked() || x < room["x"].(float64) || y < room["y"].(float64) || x >= room["x"].(float64)+room["width"].(float64) || y >= room["y"].(float64)+room["height"].(float64) {
+				t.Fatalf("invalid owned level-3 point=%v", key)
+			}
+			seen[key] = true
+		}
+	}
+	if populated == 0 {
+		t.Fatal("owned Cold Plains has no population rooms")
+	}
 	transitions := TransitionData(prepared.Seams)
 	if count := len(transitions["seams"].([]any)); count != 4 {
 		t.Fatalf("directed transitions = %d, want four", count)
@@ -105,6 +134,14 @@ func TestRestorePreparedV1KeepsTwoZonesReal(t *testing.T) {
 	if len(prepared.Worlds) != 2 || len(prepared.Zones) != 2 || len(prepared.Seams) != 1 || prepared.Worlds[3] != nil {
 		t.Fatalf("v1 restore gained level 3: maps=%d zones=%d seams=%d",
 			len(prepared.Worlds), len(prepared.Zones), len(prepared.Seams))
+	}
+	population, err := prepared.PopulationData(0)
+	if err != nil {
+		t.Fatal(err)
+	}
+	zones := population["zones"].([]any)
+	if len(zones) != 1 || zones[0].(map[string]any)["level_id"] != float64(2) {
+		t.Fatalf("v1 population zones=%#v", zones)
 	}
 	restoredSnapshot, err := prepared.Topology.Snapshot()
 	if err != nil || !bytes.Equal(restoredSnapshot, snapshot) {

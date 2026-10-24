@@ -47,7 +47,12 @@ func TestPreparedWorldOwnsDestinationAndBootstrapLevelIdentity(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if payload["level_id"] != float64(7) || payload["seed"] != float64(41) {
+	zones := payload["zones"].([]any)
+	if len(zones) != 1 {
+		t.Fatalf("population zones = %#v", zones)
+	}
+	zonePayload := zones[0].(map[string]any)
+	if zonePayload["level_id"] != float64(7) || zonePayload["seed"] != float64(41) {
 		t.Fatalf("population payload = %#v", payload)
 	}
 }
@@ -79,8 +84,16 @@ func TestPopulationDataPreservesRoomBoundsAndAdjacency(t *testing.T) {
 		Zones:  map[int]*worldgen.Zone{2: zone},
 		Seams:  []gametransition.Seam{{Second: gametransition.SeamEndpoint{LevelID: 2}}},
 	}
-	population := prepared.PopulationData(0)
-	rooms := population["rooms"].([]any)
+	population, err := prepared.PopulationData(0)
+	if err != nil {
+		t.Fatal(err)
+	}
+	zones := population["zones"].([]any)
+	if len(zones) != 1 {
+		t.Fatalf("population zones = %#v", zones)
+	}
+	zoneData := zones[0].(map[string]any)
+	rooms := zoneData["rooms"].([]any)
 
 	first := rooms[0].(map[string]any)
 	if first["x"] != float64(10) || first["y"] != float64(15) ||
@@ -88,7 +101,7 @@ func TestPopulationDataPreservesRoomBoundsAndAdjacency(t *testing.T) {
 		t.Fatalf("first population room = %#v", first)
 	}
 
-	links := population["links"].([]any)
+	links := zoneData["links"].([]any)
 	if len(links) != 1 {
 		t.Fatalf("population links = %#v", links)
 	}
@@ -202,4 +215,109 @@ func TestInteractionDataPreservesAuthoredTownNPCPlacements(t *testing.T) {
 		charsi["x"] != float64(31) || charsi["y"] != float64(56) {
 		t.Fatalf("authored NPC facts = %#v", charsi)
 	}
+}
+
+// Missing or mismatched prepared facts must never produce an admissible command.
+func TestPopulationDataOrdersAdmittedLevelsAndRejectsMissingMap(t *testing.T) {
+	prepared := populationPreparedFixture(t)
+	data, err := prepared.PopulationData(0)
+	if err != nil {
+		t.Fatal(err)
+	}
+	zones := data["zones"].([]any)
+	if len(zones) != 2 || zones[0].(map[string]any)["level_id"] != float64(2) || zones[1].(map[string]any)["level_id"] != float64(3) {
+		t.Fatalf("zones=%#v", zones)
+	}
+	for _, bad := range []string{"map", "zone", "duplicate", "identity"} {
+		t.Run(bad, func(t *testing.T) {
+			p := populationPreparedFixture(t)
+			switch bad {
+			case "map":
+				delete(p.Worlds, 3)
+			case "zone":
+				delete(p.Zones, 3)
+			case "duplicate":
+				p.Seams = append(p.Seams, p.Seams[1])
+			case "identity":
+				p.Zones[3] = p.Zones[2]
+			}
+			if data, err := p.PopulationData(0); err == nil || data != nil {
+				t.Fatalf("data=%#v err=%v", data, err)
+			}
+			if command, err := p.PopulationCommand(0); err == nil || command.Kind != "" {
+				t.Fatalf("command=%#v err=%v", command, err)
+			}
+		})
+	}
+}
+
+func TestPopulationDataV1KeepsOnlyLevelTwo(t *testing.T) {
+	p := populationPreparedFixture(t)
+	p.Seams = p.Seams[:1]
+	delete(p.Zones, 3)
+	delete(p.Worlds, 3)
+	data, err := p.PopulationData(1)
+	if err != nil {
+		t.Fatal(err)
+	}
+	zones := data["zones"].([]any)
+	if len(zones) != 1 {
+		t.Fatalf("zones=%#v", zones)
+	}
+	points := zones[0].(map[string]any)["rooms"].([]any)[0].(map[string]any)["points"].([]any)
+	for i, want := range [][2]float64{{20, 10}, {17, 17}, {10, 20}, {3, 17}} {
+		point := points[i].(map[string]any)
+		if point["x"] != want[0] || point["y"] != want[1] {
+			t.Fatalf("point %d=%#v", i, point)
+		}
+	}
+}
+
+func TestPopulationDataLevelThreePointsStayDistinctAndInRoom(t *testing.T) {
+	p := populationPreparedFixture(t)
+	for _, blocked := range []bool{false, true} {
+		if blocked {
+			p.Worlds[3] = &gameworld.Map{WidthSubtiles: 100, HeightSubtiles: 100}
+		}
+		data, err := p.PopulationData(1)
+		if err != nil {
+			t.Fatal(err)
+		}
+		room := data["zones"].([]any)[1].(map[string]any)["rooms"].([]any)[0].(map[string]any)
+		points := room["points"].([]any)
+		if blocked && len(points) != 0 {
+			t.Fatalf("blocked points=%#v", points)
+		}
+		if !blocked && len(points) < 2 {
+			t.Fatalf("open points=%#v", points)
+		}
+		seen := map[[2]float64]bool{}
+		for _, raw := range points {
+			pt := raw.(map[string]any)
+			xy := [2]float64{pt["x"].(float64), pt["y"].(float64)}
+			if seen[xy] || xy[0] < 25 || xy[0] >= 50 || xy[1] < 25 || xy[1] >= 50 {
+				t.Fatalf("invalid room-local point=%v", xy)
+			}
+			seen[xy] = true
+		}
+	}
+}
+
+func populationPreparedFixture(t *testing.T) *Prepared {
+	t.Helper()
+	p := &Prepared{Worlds: map[int]*gameworld.Map{}, Zones: map[int]*worldgen.Zone{}, Spawns: map[int][2]float64{2: {10, 10}}}
+	for _, id := range []int{2, 3} {
+		zone, err := worldgen.NewZone(worldgen.Definition{Request: worldgen.Request{Version: worldgen.ContractVersion, Seed: 41, Act: 1, LevelID: id}, Kind: "test", Bounds: worldgen.Bounds{Width: 20, Height: 20}, Rooms: []worldgen.Room{{ID: 1, X: 5, Y: 5, Width: 5, Height: 5}}})
+		if err != nil {
+			t.Fatal(err)
+		}
+		m, err := gameworld.NewOpenMap(100, 100)
+		if err != nil {
+			t.Fatal(err)
+		}
+		p.Zones[id] = zone
+		p.Worlds[id] = m
+		p.Seams = append(p.Seams, gametransition.Seam{Second: gametransition.SeamEndpoint{LevelID: id}})
+	}
+	return p
 }

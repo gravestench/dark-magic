@@ -1,0 +1,543 @@
+package d2legacy
+
+import (
+	"encoding/json"
+	"fmt"
+	"reflect"
+	"testing"
+
+	"github.com/gravestench/akara"
+	"github.com/gravestench/dark-magic/internal/content"
+	gameecs "github.com/gravestench/dark-magic/internal/game/ecs"
+	gamesession "github.com/gravestench/dark-magic/internal/game/session"
+	"github.com/gravestench/dark-magic/internal/game/simulation"
+	gameworld "github.com/gravestench/dark-magic/internal/game/world"
+	modruntime "github.com/gravestench/dark-magic/internal/runtime/lua"
+)
+
+func coldPopulationRecords() fixtureRecords {
+	r := difficultyMonsterRecords()
+	area := map[string]string{}
+	for k, v := range r["data/global/excel/levels.txt"][0] {
+		area[k] = v
+	}
+	area["Id"] = "3"
+	area["mon1"] = "cold"
+	area["nmon1"] = "cold"
+	r["data/global/excel/levels.txt"] = append(r["data/global/excel/levels.txt"], area)
+	stats := map[string]string{}
+	for k, v := range r["data/global/excel/monstats.txt"][0] {
+		stats[k] = v
+	}
+	stats["Id"] = "cold"
+	stats["BaseId"] = "cold"
+	stats["AI"] = "fallen"
+	stats["aidist"] = "0"
+	stats["MinGrp"] = "3"
+	stats["MaxGrp"] = "3"
+	r["data/global/excel/monstats.txt"] = append(r["data/global/excel/monstats.txt"], stats)
+	second := map[string]string{}
+	for k, v := range r["data/global/excel/monstats2.txt"][0] {
+		second[k] = v
+	}
+	second["Id"] = "cold"
+	r["data/global/excel/monstats2.txt"] = append(r["data/global/excel/monstats2.txt"], second)
+	return r
+}
+
+func coldPopulationSession(t *testing.T, difficulty int, records fixtureRecords, checkpoint *simulation.Checkpoint) (*Authority, *gameecs.Engine, *gamesession.Session) {
+	t.Helper()
+	engine := gameecs.New()
+	var restore []simulation.ParticipantState
+	if checkpoint != nil {
+		var err error
+		_ = engine.Close()
+		engine, err = gameecs.RestoreSnapshot(*checkpoint.Snapshot)
+		if err != nil {
+			t.Fatal(err)
+		}
+		restore = checkpoint.Participants
+	}
+	session, err := gamesession.New(engine, gamesession.Config{CheckpointInterval: 1})
+	if err != nil {
+		t.Fatal(err)
+	}
+	authority, err := StartWithConfig(t.Context(), content.D2Legacy(), records, engine, session, coldPopulationConfig(difficulty, restore))
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() {
+		_ = authority.Stop(t.Context())
+		_ = session.Close()
+		_ = engine.Close()
+	})
+	geometry, err := gameworld.NewOpenMap(100, 100)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, level := range []int{2, 3} {
+		if err := modruntime.SetWorldMapForLevel(t.Context(), authority.Runtime, "d2legacy.gameplay.systems.init", "set_collision", level, geometry); err != nil {
+			t.Fatal(err)
+		}
+	}
+	return authority, engine, session
+}
+
+func coldPopulationConfig(difficulty int, restore []simulation.ParticipantState) Config {
+	return Config{
+		Seed:    314,
+		Restore: restore,
+		InitialData: map[string]any{
+			"d2legacy.game_rules": map[string]any{
+				"target": "lod-1.14d", "expansion": true, "difficulty": difficulty,
+				"hardcore": false, "ladder": false, "maximum_players": 2,
+			},
+		},
+	}
+}
+
+func coldZone(level, difficulty int) map[string]any {
+	return map[string]any{
+		"act": 1, "level_id": level, "difficulty": difficulty,
+		"links": []any{},
+		"rooms": []any{map[string]any{
+			"id": "same", "populate": true,
+			"x": 0, "y": 0, "width": 50, "height": 50,
+			"points": []any{
+				map[string]any{"x": 10, "y": 10},
+				map[string]any{"x": 15, "y": 10},
+				map[string]any{"x": 20, "y": 10},
+			},
+		}},
+	}
+}
+
+func coldBootstrap(t *testing.T, s *gamesession.Session, tick uint64, zones ...map[string]any) {
+	t.Helper()
+	payload, err := json.Marshal(map[string]any{"zones": zones})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := s.Submit(simulation.Command{Tick: tick, Player: "population", Authority: simulation.AuthoritySystem, Sequence: tick, Kind: "system.population.bootstrap", Payload: payload}); err != nil {
+		t.Fatal(err)
+	}
+}
+func coldEnter(t *testing.T, s *gamesession.Session, level int, player string, seq uint64) {
+	t.Helper()
+	var payload map[string]any
+	if err := json.Unmarshal(generatedPlayerPayload(t, "hero-"+player, player, 1, 1), &payload); err != nil {
+		t.Fatal(err)
+	}
+	payload["level_id"] = level
+	data, _ := json.Marshal(payload)
+	if err := s.Submit(simulation.Command{Tick: 1, Player: "system", Authority: simulation.AuthoritySystem, Sequence: seq, Kind: "system.player.enter", Payload: data}); err != nil {
+		t.Fatal(err)
+	}
+}
+func coldPlan(t *testing.T, a *Authority) []map[string]any {
+	t.Helper()
+	v, _ := a.State.Read("d2legacy.population.plan")
+	var plan struct {
+		Zones []map[string]any `json:"zones"`
+	}
+	if err := json.Unmarshal(v.Data, &plan); err != nil {
+		t.Fatal(err)
+	}
+	return plan.Zones
+}
+
+func TestColdPlainsPopulationAdmitsBothLevelsAtomically(t *testing.T) {
+	for difficulty := 0; difficulty < 3; difficulty++ {
+		t.Run(fmt.Sprint(difficulty), func(t *testing.T) {
+			a, e, s := coldPopulationSession(t, difficulty, coldPopulationRecords(), nil)
+			coldBootstrap(t, s, 1, coldZone(2, difficulty), coldZone(3, difficulty))
+			coldEnter(t, s, 2, "alice", 1)
+			coldEnter(t, s, 3, "bob", 2)
+			stepPartySession(t, s)
+			zones := coldPlan(t, a)
+			if len(zones) != 2 || zones[0]["level_id"] != float64(2) || zones[1]["level_id"] != float64(3) {
+				t.Fatalf("zones=%#v", zones)
+			}
+			for level, want := range map[int]string{2: "fallen", 3: "cold"} {
+				id := fmt.Sprintf("level:%d:room:same:monster:1", level)
+				entity := monsterEntity(t, e, id)
+				identities, _ := akara.GetDynamicStore(e.World(), "d2legacy.monster.identity")
+				identity, _ := identities.Get(entity)
+				if got, _ := identity.Get("definition_id"); got != want {
+					t.Fatalf("definition=%v want=%s", got, want)
+				}
+			}
+		})
+	}
+}
+func TestColdPlainsPopulationRejectsDuplicateAndOutOfOrderZones(t *testing.T) {
+	for _, levels := range [][]int{{2, 2}, {3, 2}, {3}} {
+		t.Run(fmt.Sprint(levels), func(t *testing.T) {
+			a, e, s := coldPopulationSession(t, 0, coldPopulationRecords(), nil)
+			before, _ := a.State.Read("d2legacy.population.plan")
+			zones := []any{}
+			for _, level := range levels {
+				zones = append(zones, coldZone(level, 0))
+			}
+			payload, _ := json.Marshal(map[string]any{"zones": zones})
+			if err := s.Submit(simulation.Command{Tick: 1, Player: "population", Authority: simulation.AuthoritySystem, Sequence: 1, Kind: "system.population.bootstrap", Payload: payload}); err == nil {
+				t.Fatal("invalid zones admitted")
+			}
+			after, _ := a.State.Read("d2legacy.population.plan")
+			if !reflect.DeepEqual(before, after) || monsterCount(e) != 0 {
+				t.Fatal("invalid admission mutated plan/ECS")
+			}
+		})
+	}
+}
+func TestColdPlainsPopulationRejectsSecondBootstrapWithoutMutation(t *testing.T) {
+	a, e, s := coldPopulationSession(t, 0, coldPopulationRecords(), nil)
+	coldBootstrap(t, s, 1, coldZone(2, 0), coldZone(3, 0))
+	coldEnter(t, s, 3, "bob", 1)
+	stepPartySession(t, s)
+	before, _ := a.State.Read("d2legacy.population.plan")
+	beforeECS, err := e.Snapshot()
+	if err != nil {
+		t.Fatal(err)
+	}
+	coldBootstrap(t, s, 2, coldZone(2, 0), coldZone(3, 0))
+	if err := s.Step(); err == nil {
+		t.Fatal("second bootstrap admitted")
+	}
+	after, _ := a.State.Read("d2legacy.population.plan")
+	afterECS, err := e.Snapshot()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !reflect.DeepEqual(before, after) || !reflect.DeepEqual(beforeECS, afterECS) {
+		t.Fatal("second admission mutated plan/ECS")
+	}
+}
+func TestColdPlainsPopulationSparseAndEmptyCandidates(t *testing.T) {
+	for difficulty := 0; difficulty < 3; difficulty++ {
+		for _, empty := range []bool{false, true} {
+			t.Run(fmt.Sprintf("difficulty=%d/empty=%v", difficulty, empty), func(t *testing.T) {
+				r := coldPopulationRecords()
+				area := r["data/global/excel/levels.txt"][1]
+				area["NumMon"] = "3"
+				delete(area, "mon1")
+				delete(area, "nmon1")
+				area["mon3"] = "cold"
+				area["nmon3"] = "cold"
+				if empty {
+					area["NumMon"] = "0"
+				}
+				_, e, s := coldPopulationSession(t, difficulty, r, nil)
+				coldBootstrap(t, s, 1, coldZone(2, difficulty), coldZone(3, difficulty))
+				coldEnter(t, s, 3, "bob", 1)
+				stepPartySession(t, s)
+				want := 3
+				if empty {
+					want = 0
+				}
+				if got := monsterCount(e); got != want {
+					t.Fatalf("monsters=%d want=%d", got, want)
+				}
+			})
+		}
+	}
+}
+func TestColdPlainsPopulationRoomIDsAreLevelScoped(t *testing.T) {
+	a, e, s := coldPopulationSession(t, 0, coldPopulationRecords(), nil)
+	coldBootstrap(t, s, 1, coldZone(2, 0), coldZone(3, 0))
+	coldEnter(t, s, 3, "bob", 1)
+	stepPartySession(t, s)
+	zones := coldPlan(t, a)
+	if len(zones) != 2 {
+		t.Fatalf("zones=%#v", zones)
+	}
+	if zones[0]["created"] != float64(0) || zones[1]["created"] != float64(3) {
+		t.Fatalf("cross-level activation=%#v", zones)
+	}
+	monsterEntity(t, e, "level:3:room:same:monster:1")
+	for _, level := range []int{2, 3} {
+		value, err := modruntime.Call(t.Context(), a.Runtime, "d2legacy.bootstrap.population", "resident_at", "item", level, 1, 1)
+		if err != nil {
+			t.Fatal(err)
+		}
+		resident, ok := value.(map[string]any)
+		if !ok || resident["level_id"] != float64(level) || resident["room_id"] != "same" {
+			t.Fatalf("level %d residency=%#v", level, value)
+		}
+	}
+}
+func TestColdPlainsPopulationSkipsBlockedOrOccupiedFootprints(t *testing.T) {
+	for _, scenario := range []string{"blocked-footprint", "empty-points", "room-edge", "occupied", "unattached-collider", "queued", "mixed"} {
+		t.Run(scenario, func(t *testing.T) {
+			a, e, s := coldPopulationSession(t, 0, coldPopulationRecords(), nil)
+			zone := coldZone(3, 0)
+			room := zone["rooms"].([]any)[0].(map[string]any)
+			switch scenario {
+			case "empty-points":
+				room["points"] = []any{}
+			case "blocked-footprint":
+				blocked, err := gameworld.NewOpenMap(100, 100)
+				if err != nil {
+					t.Fatal(err)
+				}
+				reference := gameworld.TileReference{Path: "synthetic"}
+				for i := range reference.SubTileFlags {
+					if i != 20 {
+						reference.SubTileFlags[i].BlockWalk = true
+					}
+				}
+				blocked.ReplaceFloor(2, 2, gameworld.TileIdentity{}, reference)
+				blocked.RebuildFlags()
+				room["points"] = []any{map[string]any{"x": 10, "y": 10}}
+				if err := modruntime.SetWorldMapForLevel(t.Context(), a.Runtime, "d2legacy.gameplay.systems.init", "set_collision", 3, blocked); err != nil {
+					t.Fatal(err)
+				}
+			case "unattached-collider":
+				entity := e.World().MustCreateEntity()
+				for name, values := range map[string]map[string]any{
+					"d2legacy.world.position": {"x": 10.0, "y": 10.0},
+					"d2legacy.world.location": {"act": int64(1), "level_id": int64(3)},
+					"d2legacy.world.collider": {"radius": 1.0},
+				} {
+					store, _ := akara.GetDynamicStore(e.World(), name)
+					if _, err := store.Set(entity, values); err != nil {
+						t.Fatal(err)
+					}
+				}
+				room["points"] = []any{map[string]any{"x": 10, "y": 10}}
+			case "mixed":
+				room["points"] = []any{map[string]any{"x": 0, "y": 0}, map[string]any{"x": 10, "y": 10}, map[string]any{"x": 10.1, "y": 10}, map[string]any{"x": 15, "y": 10}, map[string]any{"x": 20, "y": 10}}
+			case "room-edge":
+				room["points"] = []any{map[string]any{"x": 0, "y": 0}}
+			case "occupied":
+				room["points"] = []any{map[string]any{"x": 1, "y": 1}}
+			case "queued":
+				room["points"] = []any{map[string]any{"x": 10, "y": 10}, map[string]any{"x": 10.1, "y": 10}, map[string]any{"x": 10.2, "y": 10}}
+			}
+			coldBootstrap(t, s, 1, coldZone(2, 0), zone)
+			coldEnter(t, s, 3, "bob", 1)
+			stepPartySession(t, s)
+			want := 0
+			if scenario == "queued" {
+				want = 1
+			}
+			if scenario == "mixed" {
+				want = 3
+				positions, _ := akara.GetDynamicStore(e.World(), "d2legacy.world.position")
+				for member, x := range []float64{10, 15, 20} {
+					entity := monsterEntity(t, e, fmt.Sprintf("level:3:room:same:monster:%d", member+1))
+					point, _ := positions.Get(entity)
+					gotX, _ := point.Get("x")
+					gotY, _ := point.Get("y")
+					if gotX != x || gotY != float64(10) {
+						t.Fatalf("member %d point=(%v,%v)", member+1, gotX, gotY)
+					}
+				}
+			}
+			if got := monsterCount(e); got != want {
+				t.Fatalf("monsters=%d want=%d", got, want)
+			}
+		})
+	}
+}
+
+// Visiting level 3 must not consume any of the established Blood Moor streams.
+func TestColdPlainsPopulationKeepsLevelTwoRandomSequence(t *testing.T) {
+	var previous map[string]map[string]any
+	var draws []uint64
+	for _, multi := range []bool{false, true} {
+		a, e, s := coldPopulationSession(t, 0, coldPopulationRecords(), nil)
+		zone := coldZone(2, 0)
+		if multi {
+			coldBootstrap(t, s, 1, zone, coldZone(3, 0))
+		} else {
+			payload, _ := json.Marshal(zone)
+			if err := s.Submit(simulation.Command{Tick: 1, Player: "population", Authority: simulation.AuthoritySystem, Sequence: 1, Kind: "system.population.bootstrap", Payload: payload}); err != nil {
+				t.Fatal(err)
+			}
+		}
+		coldEnter(t, s, 2, "alice", 1)
+		coldEnter(t, s, 3, "bob", 2)
+		stepPartySession(t, s)
+		got := map[string]map[string]any{}
+		entity := monsterEntity(t, e, "level:2:room:same:monster:1")
+		for _, name := range []string{"d2legacy.monster.identity", "d2legacy.monster.stats", "d2legacy.world.position", "d2legacy.world.location"} {
+			store, _ := akara.GetDynamicStore(e.World(), name)
+			component, _ := store.Get(entity)
+			snapshot, err := component.Snapshot()
+			if err != nil {
+				t.Fatal(err)
+			}
+			got[name] = snapshot
+		}
+		current := []uint64{}
+		for _, stream := range []string{"d2legacy.population.density", "d2legacy.population.family", "d2legacy.population.group", "d2legacy.population.seed", "d2legacy.monster.spawn.life"} {
+			v, err := a.Random.Uint64n(stream, 1000000)
+			if err != nil {
+				t.Fatal(err)
+			}
+			current = append(current, v)
+		}
+		if multi && (!reflect.DeepEqual(previous, got) || !reflect.DeepEqual(draws, current)) {
+			t.Fatalf("Cold Plains changed Blood Moor spawn or later draws: %v / %v", draws, current)
+		}
+		previous, draws = got, current
+	}
+}
+
+func TestColdPlainsPopulationReplayMatchesContinuation(t *testing.T) {
+	_, _, s := coldPopulationSession(t, 0, coldPopulationRecords(), nil)
+	coldBootstrap(t, s, 1, coldZone(2, 0), coldZone(3, 0))
+	coldEnter(t, s, 3, "bob", 1)
+	stepPartySession(t, s)
+	before, err := s.Replay()
+	if err != nil {
+		t.Fatal(err)
+	}
+	checkpoint := before.Checkpoints[len(before.Checkpoints)-1]
+	_, _, restored := coldPopulationSession(t, 0, coldPopulationRecords(), &checkpoint)
+	command := simulation.Command{Tick: 2, Player: "bob", Authority: simulation.AuthorityPlayer, Sequence: 1, Kind: "player.move", Payload: json.RawMessage(`{"x":1,"y":0,"running":false}`)}
+	for _, session := range []*gamesession.Session{s, restored} {
+		if err := session.Submit(command); err != nil {
+			t.Fatal(err)
+		}
+		stepSession(t, session, 3)
+	}
+	original, err := s.Replay()
+	if err != nil {
+		t.Fatal(err)
+	}
+	continued, err := restored.Replay()
+	if err != nil {
+		t.Fatal(err)
+	}
+	var suffix []simulation.Command
+	for _, c := range original.Commands {
+		if c.Tick > checkpoint.Tick {
+			suffix = append(suffix, c)
+		}
+	}
+	if !reflect.DeepEqual(suffix, continued.Commands) {
+		t.Fatalf("continuation commands differ: %#v / %#v", suffix, continued.Commands)
+	}
+	if original.Checkpoints[len(original.Checkpoints)-1].Checksum != continued.Checkpoints[len(continued.Checkpoints)-1].Checksum {
+		t.Fatal("restored continuation checksum differs")
+	}
+	verifyColdPopulationReplay(t, original)
+	verifyColdPopulationReplay(t, continued)
+}
+
+// VerifyReplay restores participant bytes before constructing Lua systems. These
+// test adapters retain those bytes until StartWithConfig performs real recovery.
+type coldReplayParticipant struct {
+	id       string
+	initial  []byte
+	delegate simulation.StateParticipant
+}
+
+func (p *coldReplayParticipant) StateID() string { return p.id }
+func (p *coldReplayParticipant) RestoreState(data []byte) error {
+	p.initial = append([]byte(nil), data...)
+	return nil
+}
+func (p *coldReplayParticipant) SnapshotState() ([]byte, error) { return p.delegate.SnapshotState() }
+
+func verifyColdPopulationReplay(t *testing.T, replay simulation.Replay) {
+	t.Helper()
+	var authority *Authority
+	var session *gamesession.Session
+	var pending []*coldReplayParticipant
+	var participants []simulation.StateParticipant
+	for _, v := range replay.InitialParticipants {
+		p := &coldReplayParticipant{id: v.ID}
+		pending = append(pending, p)
+		participants = append(participants, p)
+	}
+	prepare := func(engine *gameecs.Engine) error {
+		var err error
+		session, err = gamesession.New(engine, gamesession.Config{})
+		if err != nil {
+			return err
+		}
+		restore := []simulation.ParticipantState{}
+		for _, p := range pending {
+			restore = append(restore, simulation.ParticipantState{ID: p.id, Data: p.initial})
+		}
+		authority, err = StartWithConfig(t.Context(), content.D2Legacy(), coldPopulationRecords(), engine, session, coldPopulationConfig(0, restore))
+		if err != nil {
+			return err
+		}
+		identity, err := simulation.NewIdentityParticipant(authority.Identity)
+		if err != nil {
+			return err
+		}
+		for _, p := range pending {
+			for _, delegate := range []simulation.StateParticipant{identity, authority.State, authority.Random} {
+				if delegate.StateID() == p.id {
+					p.delegate = delegate
+				}
+			}
+		}
+		geometry, err := gameworld.NewOpenMap(100, 100)
+		if err != nil {
+			return err
+		}
+		for _, level := range []int{2, 3} {
+			if err := modruntime.SetWorldMapForLevel(t.Context(), authority.Runtime, "d2legacy.gameplay.systems.init", "set_collision", level, geometry); err != nil {
+				return err
+			}
+		}
+		return nil
+	}
+	apply := func(_ *gameecs.Engine, command simulation.Command) error {
+		modules := map[string]string{"system.population.bootstrap": "d2legacy.bootstrap.population", "system.player.enter": "d2legacy.commands.enter_player", "player.move": "d2legacy.commands.move_player"}
+		var payload map[string]any
+		if err := json.Unmarshal(command.Payload, &payload); err != nil {
+			return err
+		}
+		_, err := modruntime.Call(t.Context(), authority.Runtime, modules[command.Kind], "apply", map[string]any{"tick": command.Tick, "player": command.Player, "authority": string(command.Authority), "sequence": command.Sequence, "kind": command.Kind, "payload": payload})
+		return err
+	}
+	defer func() {
+		if authority != nil {
+			_ = authority.Stop(t.Context())
+		}
+		if session != nil {
+			_ = session.Close()
+		}
+	}()
+	if err := simulation.VerifyReplay(replay, prepare, apply, participants...); err != nil {
+		t.Fatal(err)
+	}
+}
+
+func TestColdPlainsPopulationRejectsMalformedSecondZoneAtomically(t *testing.T) {
+	for _, kind := range []string{"point", "duplicate-point", "link", "difficulty", "room"} {
+		t.Run(kind, func(t *testing.T) {
+			a, e, s := coldPopulationSession(t, 0, coldPopulationRecords(), nil)
+			zone := coldZone(3, 0)
+			room := zone["rooms"].([]any)[0].(map[string]any)
+			switch kind {
+			case "point":
+				room["points"] = []any{map[string]any{"x": 100, "y": 10}}
+			case "duplicate-point":
+				room["points"] = []any{map[string]any{"x": 10, "y": 10}, map[string]any{"x": 10, "y": 10}}
+			case "link":
+				zone["links"] = []any{map[string]any{"from": "same", "to": "missing"}}
+			case "difficulty":
+				zone["difficulty"] = 1
+			case "room":
+				zone["rooms"] = append(zone["rooms"].([]any), room)
+			}
+			before, _ := a.State.Read("d2legacy.population.plan")
+			payload, _ := json.Marshal(map[string]any{"zones": []any{coldZone(2, 0), zone}})
+			if err := s.Submit(simulation.Command{Tick: 1, Player: "population", Authority: simulation.AuthoritySystem, Sequence: 1, Kind: "system.population.bootstrap", Payload: payload}); err == nil {
+				t.Fatal("malformed second zone admitted")
+			}
+			after, _ := a.State.Read("d2legacy.population.plan")
+			if !reflect.DeepEqual(before, after) || monsterCount(e) != 0 {
+				t.Fatal("malformed second zone mutated authority")
+			}
+		})
+	}
+}

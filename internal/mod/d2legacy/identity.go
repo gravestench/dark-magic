@@ -207,6 +207,9 @@ func NewRandomStreams(seed uint64) (*simulation.RandomStreams, error) {
 		"d2legacy.monster.spawn.life",
 		"d2legacy.population.density", "d2legacy.population.family",
 		"d2legacy.population.group", "d2legacy.population.seed",
+		"d2legacy.population.level3.density", "d2legacy.population.level3.family",
+		"d2legacy.population.level3.group", "d2legacy.population.level3.seed",
+		"d2legacy.population.level3.life",
 		"d2legacy.loot.treasure_class", "d2legacy.loot.quality",
 		"d2legacy.loot.affix_slot", "d2legacy.loot.affix_choice", "d2legacy.loot.affix_value",
 	} {

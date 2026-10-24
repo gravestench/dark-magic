@@ -64,7 +64,11 @@ func transitionEndpoint(source, destination gametransition.SeamEndpoint, radius 
 // PopulationCommand encodes the generated wilderness topology as the first system-owned population command. Tick and
 // sequence remain fixed because this bootstrap must precede player-authored simulation input deterministically.
 func (world *Prepared) PopulationCommand(nearby int) (simulation.Command, error) {
-	payload, err := json.Marshal(world.PopulationData(nearby))
+	data, err := world.PopulationData(nearby)
+	if err != nil {
+		return simulation.Command{}, err
+	}
+	payload, err := json.Marshal(data)
 	if err != nil {
 		return simulation.Command{}, err
 	}

@@ -13,13 +13,14 @@ local monster = require("d2legacy.data.monster")
 local spawn = require("d2legacy.commands.spawn_monster")
 local game_rules = require("d2legacy.policy.game_rules")
 local player_count = require("d2legacy.policy.player_count")
+local collision = require("d2legacy.gameplay.collision")
 
 local M = {}
 
 local MAX_LEVEL_MONSTERS = 25
 local DENSITY_SCALE = 100000
 local PLAN_ID = "d2legacy.population.plan"
-local PLAN_SCHEMA = "d2legacy.population.plan/v5"
+local PLAN_SCHEMA = "d2legacy.population.plan/v6"
 
 local function integer(row, key, fallback)
     return math.floor(tonumber(row[key]) or fallback or 0)
@@ -82,8 +83,15 @@ local function total_rarity(values)
     return total
 end
 
-local function weighted_monster(values, total)
-    local roll = random.integer("d2legacy.population.family", total)
+local function stream(zone, purpose)
+    if zone.level_id == 3 then
+        return "d2legacy.population.level3." .. purpose
+    end
+    return "d2legacy.population." .. purpose
+end
+
+local function weighted_monster(zone, values, total)
+    local roll = random.integer(stream(zone, "family"), total)
     for _, value in ipairs(values) do
         if roll < value.rarity then
             return value
@@ -93,56 +101,100 @@ local function weighted_monster(values, total)
     return values[#values]
 end
 
-local function group_size(definition)
+local function group_size(zone, definition)
     local span = math.max(definition.max_group - definition.min_group + 1, 1)
-    return definition.min_group + random.integer("d2legacy.population.group", span)
+    return definition.min_group + random.integer(stream(zone, "group"), span)
 end
 
 local function spawn_id(zone, room, member)
     return "level:" .. zone.level_id .. ":room:" .. room.id .. ":monster:" .. member
 end
 
-local function materialize_group(context, zone, room, definition, game_player_count, structural)
-    local count = math.min(group_size(definition), #room.points)
-    for member = 1, count do
-        local point = room.points[member]
-        local command = {
-            tick = context.tick,
-            payload = {
-                spawn_id = spawn_id(zone, room, member),
-                seed = random.integer("d2legacy.population.seed", 2147483647),
-                x = point.x,
-                y = point.y,
-                act = zone.act,
-                level_id = zone.level_id,
-                definition = definition,
-            },
-        }
-        local components = spawn.components(command, game_player_count)
-        components["d2legacy.world.room_resident"] = {
-            id = command.payload.spawn_id,
-            level_id = zone.level_id,
-            room_id = room.id,
-        }
-        structural:create(components)
-    end
-    return count
+local function overlaps(point, radius, other)
+    local dx, dy = point.x - other.x, point.y - other.y
+    return dx * dx + dy * dy < (radius + other.radius) ^ 2
 end
 
-local function room_is_selected(room, density, created)
+local function safe_point(zone, room, point, radius, occupied)
+    if
+        point.x - radius < room.x
+        or point.y - radius < room.y
+        or point.x + radius >= room.x + room.width
+        or point.y + radius >= room.y + room.height
+    then
+        return false
+    end
+    if not collision.destination_clear(zone.level_id, point.x, point.y, radius) then
+        return false
+    end
+    for _, other in ipairs(occupied) do
+        if other.level_id == zone.level_id and overlaps(point, radius, other) then
+            return false
+        end
+    end
+    return true
+end
+
+local function materialize_group(context, zone, room, definition, game_player_count, structural, occupied)
+    local count = math.min(group_size(zone, definition), #room.points)
+    local created = 0
+    for _, point in ipairs(room.points) do
+        if created >= count then
+            break
+        end
+        if zone.level_id ~= 3 or safe_point(zone, room, point, definition.collider_radius, occupied) then
+            created = created + 1
+            local command = {
+                tick = context.tick,
+                payload = {
+                    spawn_id = spawn_id(zone, room, created),
+                    seed = random.integer(stream(zone, "seed"), 2147483647),
+                    x = point.x,
+                    y = point.y,
+                    act = zone.act,
+                    level_id = zone.level_id,
+                    definition = definition,
+                },
+            }
+            local life_stream = zone.level_id == 3 and stream(zone, "life") or nil
+            local components = spawn.components(command, game_player_count, life_stream)
+            components["d2legacy.world.room_resident"] = {
+                id = command.payload.spawn_id,
+                level_id = zone.level_id,
+                room_id = room.id,
+            }
+            structural:create(components)
+            if zone.level_id == 3 then
+                occupied[#occupied + 1] = {
+                    level_id = zone.level_id,
+                    x = point.x,
+                    y = point.y,
+                    radius = definition.collider_radius,
+                }
+            end
+        end
+    end
+    return created
+end
+
+local function room_is_selected(zone, room, density, created)
     if not room.populate then
         return false
     end
-    local roll = random.integer("d2legacy.population.density", DENSITY_SCALE)
+    local roll = random.integer(stream(zone, "density"), DENSITY_SCALE)
     -- Keep the first populated room useful even when a tiny test fixture rolls
     -- above density. Production zones normally contain many candidate rooms.
     return roll < density or created == 0
 end
 
-function M.validate(command)
-    local zone = command.payload
+local function validate_zone(zone)
     assert(type(zone) == "table", "population zone is required")
-    assert(type(zone.level_id) == "number", "population level is required")
+    assert(zone.level_id == 2 or zone.level_id == 3, "population level is required")
+    assert(zone.act == 1, "population act is required")
+    assert(
+        zone.difficulty == nil or zone.difficulty == game_rules.difficulty(),
+        "population difficulty differs from immutable game rules"
+    )
     assert(type(zone.rooms) == "table", "population rooms are required")
     assert(type(zone.links) == "table", "population room links are required")
     local room_ids = {}
@@ -154,6 +206,31 @@ function M.validate(command)
         assert(type(room.width) == "number" and room.width > 0, "population room width is required")
         assert(type(room.height) == "number" and room.height > 0, "population room height is required")
         assert(type(room.points) == "table", "population room points are required")
+        local points = {}
+        for _, point in ipairs(room.points) do
+            assert(
+                type(point) == "table"
+                    and type(point.x) == "number"
+                    and type(point.y) == "number"
+                    and point.x == point.x
+                    and point.y == point.y
+                    and math.abs(point.x) < math.huge
+                    and math.abs(point.y) < math.huge,
+                "population point is invalid"
+            )
+            if zone.level_id == 3 then
+                assert(
+                    point.x >= room.x
+                        and point.x < room.x + room.width
+                        and point.y >= room.y
+                        and point.y < room.y + room.height,
+                    "population point is outside its room"
+                )
+                local key = tostring(point.x) .. ":" .. tostring(point.y)
+                assert(not points[key], "population points must be distinct")
+                points[key] = true
+            end
+        end
     end
     for _, link in ipairs(zone.links) do
         assert(
@@ -165,51 +242,58 @@ function M.validate(command)
     end
 end
 
+local function normalized_zones(payload)
+    assert(type(payload) == "table", "population payload is required")
+    if payload.zones ~= nil then
+        assert(type(payload.zones) == "table" and #payload.zones > 0, "population zones are required")
+        return payload.zones
+    end
+    return { payload }
+end
+
+function M.validate(command)
+    local previous = 1
+    for _, zone in ipairs(normalized_zones(command.payload)) do
+        validate_zone(zone)
+        assert(zone.level_id == previous + 1, "population zones must be unique and ordered from level 2")
+        previous = zone.level_id
+    end
+end
+
 function M.apply(command)
-    local zone = command.payload
-    if zone.level_id ~= 2 then
-        return
-    end
-
-    local difficulty = game_rules.difficulty()
-    assert(
-        zone.difficulty == nil or zone.difficulty == difficulty,
-        "population difficulty differs from immutable game rules"
-    )
+    M.validate(command)
     assert(not state.read(PLAN_ID).installed, "population plan is already installed")
-
-    for _, room in ipairs(zone.rooms) do
-        room.level_id = zone.level_id
-        room.activated = false
-        room.active = false
-        room.inactive_residents = {}
+    local zones = normalized_zones(command.payload)
+    for _, zone in ipairs(zones) do
+        for _, room in ipairs(zone.rooms) do
+            room.level_id = zone.level_id
+            room.activated = false
+            room.active = false
+            room.inactive_residents = {}
+        end
+        zone.created = 0
     end
-    zone.created = 0
-    zone.installed = true
-    zone.schema = PLAN_SCHEMA
-    state.replace(PLAN_ID, PLAN_SCHEMA, zone)
+    state.replace(PLAN_ID, PLAN_SCHEMA, { schema = PLAN_SCHEMA, installed = true, zones = zones })
 
     -- Some authoritative entities (notably imported ground items) exist
     -- before this generated-room plan is admitted. Resolve their generic ECS
     -- attachment requests now; entity-specific bootstrap code does not need
     -- to know room IDs or keep a parallel pending archive.
-    for _, entity in ipairs(ecs.query({
-        all = {
-            "d2legacy.world.room_attach",
-            "d2legacy.world.position",
-            "d2legacy.world.location",
-        },
-        none = { "d2legacy.world.room_resident" },
-    })) do
+    for _, entity in
+        ipairs(ecs.query({
+            all = {
+                "d2legacy.world.room_attach",
+                "d2legacy.world.position",
+                "d2legacy.world.location",
+            },
+            none = { "d2legacy.world.room_resident" },
+        }))
+    do
         local request = ecs.get(entity, "d2legacy.world.room_attach")
         local location = ecs.get(entity, "d2legacy.world.location")
         local position = ecs.get(entity, "d2legacy.world.position")
-        local resident = M.resident_at(
-            request:get("id"),
-            location:get("level_id"),
-            position:get("x"),
-            position:get("y")
-        )
+        local resident =
+            M.resident_at(request:get("id"), location:get("level_id"), position:get("x"), position:get("y"))
         if resident then
             ecs.set(entity, "d2legacy.world.room_resident", resident)
             ecs.remove(entity, "d2legacy.world.room_attach")
@@ -234,14 +318,18 @@ function M.resident_at(id, level_id, x, y)
     assert(type(level_id) == "number", "room resident level is required")
     assert(type(x) == "number" and type(y) == "number", "room resident point is required")
     local plan = state.read(PLAN_ID)
-    if not plan or not plan.installed or plan.level_id ~= level_id then
+    if not plan or not plan.installed then
         return nil
     end
-    local room = room_at(plan, x, y)
-    if not room then
-        return nil
+    for _, zone in ipairs(plan.zones) do
+        if zone.level_id == level_id then
+            local room = room_at(zone, x, y)
+            if room then
+                return { id = id, level_id = level_id, room_id = room.id }
+            end
+        end
     end
-    return { id = id, level_id = level_id, room_id = room.id }
+    return nil
 end
 
 local function containing_rooms(plan, entities)
@@ -252,7 +340,9 @@ local function containing_rooms(plan, entities)
         local position = ecs.get(entity, "d2legacy.world.position")
         if identity and location and position and location:get("level_id") == plan.level_id then
             local room = room_at(plan, position:get("x"), position:get("y"))
-            if room then active[room.id] = true end
+            if room then
+                active[room.id] = true
+            end
         end
     end
     return active
@@ -364,12 +454,7 @@ local function restore_room(room, entities, structural)
     room.inactive_residents = {}
 end
 
-local function activate(context, entities, structural)
-    local plan = state.read(PLAN_ID)
-    if not plan or not plan.installed then
-        return
-    end
-
+local function activate_zone(context, plan, entities, structural, occupied)
     -- Movement runs after this phase, so synchronize the result of the prior
     -- fixed tick before deciding which rooms leave the active window.
     sync_resident_rooms(plan, entities)
@@ -395,15 +480,54 @@ local function activate(context, entities, structural)
                     rarity = total_rarity(candidates)
                 end
                 if
-                    #candidates > 0 and room_is_selected(room, integer(level, density_column(difficulty)), plan.created)
+                    #candidates > 0
+                    and room_is_selected(plan, room, integer(level, density_column(difficulty)), plan.created)
                 then
-                    local definition = weighted_monster(candidates, rarity)
+                    local definition = weighted_monster(plan, candidates, rarity)
                     plan.created = plan.created
-                        + materialize_group(context, plan, room, definition, live_player_count(entities), structural)
+                        + materialize_group(
+                            context,
+                            plan,
+                            room,
+                            definition,
+                            live_player_count(entities),
+                            structural,
+                            occupied
+                        )
                 end
                 room.activated = true
             end
             room.active, changed = true, true
+        end
+    end
+    return changed
+end
+
+local function activate(context, entities, structural)
+    local plan = state.read(PLAN_ID)
+    if not plan or not plan.installed then
+        return
+    end
+    -- Query all active colliders, including entities without room residency.
+    -- This list also receives creates queued before structural publication.
+    local occupied = {}
+    for _, entity in ipairs(entities) do
+        local point = ecs.get(entity, "d2legacy.world.position")
+        local location = ecs.get(entity, "d2legacy.world.location")
+        local collider = ecs.get(entity, "d2legacy.world.collider")
+        if point and location and collider and not ecs.get(entity, "d2legacy.world.inactive") then
+            occupied[#occupied + 1] = {
+                x = point:get("x"),
+                y = point:get("y"),
+                level_id = location:get("level_id"),
+                radius = collider:get("radius"),
+            }
+        end
+    end
+    local changed = false
+    for _, zone in ipairs(plan.zones) do
+        if activate_zone(context, zone, entities, structural, occupied) then
+            changed = true
         end
     end
     if changed then
@@ -415,10 +539,7 @@ function M.register()
     state.register(PLAN_ID, PLAN_SCHEMA, {
         schema = PLAN_SCHEMA,
         installed = false,
-        level_id = 0,
-        rooms = {},
-        links = {},
-        created = 0,
+        zones = {},
     })
     commands.register({
         kind = "system.population.bootstrap",
@@ -430,7 +551,7 @@ function M.register()
         id = "d2legacy.population.active_rooms",
         phase = "pre_simulation",
         query = {
-            any = { "d2legacy.player.identity", "d2legacy.world.room_resident" },
+            any = { "d2legacy.player.identity", "d2legacy.world.room_resident", "d2legacy.world.collider" },
         },
         read = {
             "d2legacy.player.identity",
