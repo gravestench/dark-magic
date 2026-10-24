@@ -146,6 +146,35 @@ indestructible state
 
 Research weapon/armor durability loss, throwing/ammo consumption, replenish cadence, repair restrictions/cost, consumables, tome/key stacks, broken-item behavior, and stat suppression.
 
+### Bounded minor healing potion use
+
+`item.use` admits an owned `hp1` from inventory or belt and retires that exact
+item through the shared modifier-first consumption path. Other potion codes,
+stored items, a held cursor item, inactive actors and dead actors are refused.
+Inventory and the bottom belt row use the same right-click intent.
+
+Recovered 1.10f rules, not a new native timing observation:
+[D2MOO at 1fe7444d, SkillItem.cpp, SKILLITEM_pSpell03_Potion](https://github.com/ThePhrozenKeep/D2MOO/blob/1fe7444dc2cfb6bf1c2934b8901e5699a4c36913/source/D2Game/src/SKILLS/SkillItem.cpp#L140-L312)
+interprets `Misc.pSpell=3`, `state=healthpot`, `stat1=hpregen`, `calc1` and `len`.
+The admitted subset requires positive integer amount/duration and no second or
+third stat. Life is scaled by 1.5 for Amazon/Paladin/Assassin, 2 for Barbarian,
+and 1 for the other classes, following
+[ITEMS_GetBonusLifeBasedOnClass](https://github.com/ThePhrozenKeep/D2MOO/blob/1fe7444dc2cfb6bf1c2934b8901e5699a4c36913/source/D2Common/src/Items/Items.cpp#L4572-L4592).
+An engine-stream roll below half a separate bounded Vitality roll doubles the
+amount. These streams do not reproduce native per-unit RNG sequences.
+
+The effect spends `floor(amount_raw / duration)` each 25 Hz frame, beginning
+on the admitted tick. A second drink combines the old rate's unspent frames
+with the new amount, extends the duration and truncates the new weighted rate.
+There is no final-frame remainder redistribution. The existing vitals fractional
+deficit holds sub-point gains; displayed life still uses its whole-point ceiling.
+[EVENTS_HpRegen](https://github.com/ThePhrozenKeep/D2MOO/blob/1fe7444dc2cfb6bf1c2934b8901e5699a4c36913/source/D2Game/src/PLAYER/PlrModes.cpp#L1086-L1135)
+supports the maximum-life ceiling and removal on overshoot. Full-life use spends
+the potion without banking healing. Death and departure discard the effect.
+Checkpoints retain the rate, remaining frames, vitals and remaining possessions.
+Logout persistence, native tick-phase parity, Blood Golem sharing and potion
+families beyond hp1 are not implemented by this boundary.
+
 ## Identification, personalization, ethereal, socketing
 
 Model semantic state for identified, ethereal, socketed/socket count, personalized, runeword, broken/indestructible, and quest/service flags. Preserve unknown legacy bits in save adapters separately.

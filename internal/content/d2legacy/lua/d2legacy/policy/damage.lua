@@ -67,6 +67,7 @@ function M.resolve(target, rolled_bundle, ecs)
     applied_raw = math.min(before * 256, applied_raw)
     local remaining = math.max(0, before - math.floor(applied_raw / 256))
     player:set("health", remaining)
+    if remaining == 0 then player:set("poison_remainder_raw", 0) end
     return {
         channel = bundle_policy.label(rolled),
         rolled = rolled,
