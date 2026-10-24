@@ -299,26 +299,53 @@ func TestColdPlainsPopulationRecoveryMatchesContinuation(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	moveAcrossColdPlainsSeam(t, source, 3, 2, seam.Second, seam.First)
-	source.advanceGame(t, 1)
-	moveAcrossColdPlainsSeam(t, source, 2, 3, seam.First, seam.Second)
-	source.advanceGame(t, 1)
+	for _, crossing := range []struct {
+		to   int
+		x, y float64
+	}{
+		{2, seam.Second.X, seam.Second.Y},
+		{3, seam.First.X, seam.First.Y},
+	} {
+		if err := source.app.playerControl.SetMoveTargetWithRadius(crossing.x, crossing.y, 0.5); err != nil {
+			t.Fatal(err)
+		}
+
+		crossed := false
+
+		for range 1500 {
+			advancePopulationRecoveryTick(t, source, target)
+
+			if hud := recoveryPlayerHUD(t, source); int(hud.Location.LevelID) == crossing.to {
+				crossed = true
+				break
+			}
+		}
+
+		if !crossed {
+			t.Fatalf("recovery continuation never crossed to level %d", crossing.to)
+		}
+
+		advancePopulationRecoveryTick(t, source, target)
+	}
 
 	continuation, err := source.app.offlineSession.Replay()
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	var admitted []simulation.Command
+	finalTick := continuation.Checkpoints[len(continuation.Checkpoints)-1].Tick
 
-	for _, command := range continuation.Commands {
-		if command.Tick > bundle.Session.State.Tick {
-			admitted = append(admitted, command)
+	var captured uint64
+
+	for _, checkpoint := range continuation.Checkpoints {
+		if checkpoint.Tick > bundle.Session.State.Tick {
+			captured++
 		}
 	}
-	// Recovery consumes the exact admitted future commands, independent of a new input connection's sequence.
-	finalTick := continuation.Checkpoints[len(continuation.Checkpoints)-1].Tick
-	replayPopulationCommands(t, target, admitted, bundle.Session.State.Tick, finalTick)
+
+	if want := finalTick - bundle.Session.State.Tick; captured != want {
+		t.Fatalf("continuation records %d checkpoints for %d completed ticks", captured, want)
+	}
 
 	a, err := source.app.offlineSession.CanonicalCheckpoint()
 	if err != nil {
@@ -378,29 +405,52 @@ func TestColdPlainsPopulationRecoveryMatchesContinuation(t *testing.T) {
 	verifyProductionPopulationReplay(t, source, br)
 }
 
-// Resume with the recorded future input stream, preserving admitted ticks and player sequences.
-func replayPopulationCommands(t *testing.T, f *realD2LegacyFixture, commands []simulation.Command, from, to uint64) {
+// Compare the complete state and visible semantic events before a transient divergence can leave the event window.
+func advancePopulationRecoveryTick(t *testing.T, source, target *realD2LegacyFixture) {
 	t.Helper()
+	source.advanceGame(t, 1)
 
-	index := 0
-	for tick := from + 1; tick <= to; tick++ {
-		for index < len(commands) && commands[index].Tick == tick {
-			if _, err := f.app.offlineSession.SubmitNetwork(commands[index]); err != nil {
-				t.Fatal(err)
-			}
-
-			index++
-		}
-
-		if _, err := f.app.offlineSession.Advance(time.Second / 25); err != nil {
-			t.Fatal(err)
-		}
-
-		f.app.syncActiveWorldFromPlayer()
+	recorded, err := source.app.offlineSession.Replay()
+	if err != nil {
+		t.Fatal(err)
 	}
 
-	if index != len(commands) {
-		t.Fatal("continuation did not consume every admitted command")
+	want := recorded.Checkpoints[len(recorded.Checkpoints)-1]
+	for _, command := range recorded.Commands {
+		if command.Tick == want.Tick {
+			if _, err := target.app.offlineSession.SubmitNetwork(command); err != nil {
+				t.Fatal(err)
+			}
+		}
+	}
+
+	if _, err := target.app.offlineSession.Advance(time.Second / 25); err != nil {
+		t.Fatal(err)
+	}
+
+	target.app.syncActiveWorldFromPlayer()
+
+	got, err := target.app.offlineSession.CanonicalCheckpoint()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if !reflect.DeepEqual(got, want) {
+		t.Fatalf("recovered continuation differs at tick %d: checksum %s, want %s", want.Tick, got.Checksum, want.Checksum)
+	}
+
+	wantEvents, err := playeradapter.ProjectEventView("local-player", want)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	gotEvents, err := playeradapter.ProjectEventView("local-player", got)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if !reflect.DeepEqual(gotEvents, wantEvents) {
+		t.Fatalf("recovered semantic events differ at continuation tick %d", want.Tick)
 	}
 }
 
