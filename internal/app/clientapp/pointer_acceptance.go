@@ -32,12 +32,23 @@ func newPointerMovementAcceptance(
 	screenHeight int,
 ) *pointerMovementAcceptance {
 	targetX, targetY := acceptanceMovementTarget(world, spawnX, spawnY)
+	return newPointerMovementAcceptanceAt(world, spawnX, spawnY, targetX, targetY,
+		screenWidth, float64(screenHeight)/2)
+}
+
+// newPointerMovementAcceptanceAt lets the explicit near-seam fixture aim its ordinary click at the resolved exit.
+func newPointerMovementAcceptanceAt(
+	world *gameworld.Map,
+	spawnX, spawnY, targetX, targetY float64,
+	screenWidth int,
+	anchorY float64,
+) *pointerMovementAcceptance {
 	spawnPixelX, spawnPixelY := world.SubtileToPixel(spawnX, spawnY)
 	targetPixelX, targetPixelY := world.SubtileToPixel(targetX, targetY)
 
 	return &pointerMovementAcceptance{
 		cursorX: float64(screenWidth)/2 + targetPixelX - spawnPixelX,
-		cursorY: float64(screenHeight)/2 + targetPixelY - spawnPixelY,
+		cursorY: anchorY + targetPixelY - spawnPixelY,
 	}
 }
 

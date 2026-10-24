@@ -109,6 +109,7 @@ func ResolveSeam(spec d2mapgen.SeamSpec, firstMap, secondMap *gameworld.Map) (Se
 	return Seam{First: first, Second: second, TriggerRadius: float64(seamTriggerRadius(spec))}, nil
 }
 
+// seamTriggerRadius applies the default used by both route validation and the published trigger.
 func seamTriggerRadius(spec d2mapgen.SeamSpec) int {
 	if spec.TriggerRadius == 0 {
 		return 2
@@ -230,13 +231,17 @@ type authoredEdgeLine struct {
 func newAuthoredEdgeLine(world *gameworld.Map, direction string) (authoredEdgeLine, bool) {
 	switch direction {
 	case "north":
-		return authoredEdgeLine{inner: gameworld.SubtilesPerTile, outer: 1, step: -1, length: world.WidthSubtiles}, world.HeightSubtiles > 2*gameworld.SubtilesPerTile
+		return authoredEdgeLine{
+			inner: gameworld.SubtilesPerTile, outer: 1, step: -1, length: world.WidthSubtiles,
+		}, world.HeightSubtiles > 2*gameworld.SubtilesPerTile
 	case "east":
 		return authoredEdgeLine{vertical: true, inner: world.WidthSubtiles - gameworld.SubtilesPerTile,
-			outer: world.WidthSubtiles - 2, step: 1, length: world.HeightSubtiles}, world.WidthSubtiles > 2*gameworld.SubtilesPerTile
+				outer: world.WidthSubtiles - 2, step: 1, length: world.HeightSubtiles},
+			world.WidthSubtiles > 2*gameworld.SubtilesPerTile
 	case "south":
 		return authoredEdgeLine{inner: world.HeightSubtiles - gameworld.SubtilesPerTile,
-			outer: world.HeightSubtiles - 2, step: 1, length: world.WidthSubtiles}, world.HeightSubtiles > 2*gameworld.SubtilesPerTile
+				outer: world.HeightSubtiles - 2, step: 1, length: world.WidthSubtiles},
+			world.HeightSubtiles > 2*gameworld.SubtilesPerTile
 	case "west":
 		return authoredEdgeLine{vertical: true, inner: gameworld.SubtilesPerTile,
 			outer: 1, step: -1, length: world.HeightSubtiles}, world.WidthSubtiles > 2*gameworld.SubtilesPerTile
@@ -245,6 +250,7 @@ func newAuthoredEdgeLine(world *gameworld.Map, direction string) (authoredEdgeLi
 	}
 }
 
+// point converts one corridor index and inward/outward position to subtile coordinates for either axis.
 func (line authoredEdgeLine) point(index, along int) gameworld.Point {
 	if line.vertical {
 		return gameworld.Point{X: float64(along), Y: float64(index)}
@@ -252,11 +258,13 @@ func (line authoredEdgeLine) point(index, along int) gameworld.Point {
 	return gameworld.Point{X: float64(index), Y: float64(along)}
 }
 
+// authoredFloorAt rejects open collision cells that have no visible authored floor placement.
 func authoredFloorAt(floors map[[2]int]bool, point gameworld.Point) bool {
 	return floors[[2]int{gameworld.CollisionCell(point.X) / gameworld.SubtilesPerTile,
 		gameworld.CollisionCell(point.Y) / gameworld.SubtilesPerTile}]
 }
 
+// authoredOutwardLane requires a continuous player-sized floor walk from the inset to the outer safe cell.
 func authoredOutwardLane(world *gameworld.Map, floors map[[2]int]bool, line authoredEdgeLine, index int) bool {
 	previous := line.point(index, line.inner)
 	for along := line.inner + line.step; ; along += line.step {
@@ -271,6 +279,7 @@ func authoredOutwardLane(world *gameworld.Map, floors map[[2]int]bool, line auth
 	}
 }
 
+// corridorDistance ranks edge openings by the authored guide without favoring one side of a wide corridor.
 func corridorDistance(corridor [2]int, guide int) int {
 	if guide < corridor[0] {
 		return corridor[0] - guide

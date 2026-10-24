@@ -35,7 +35,8 @@ func (app *application) buildEntryWorld() error {
 		return fmt.Errorf("saved d2legacy entry topology differs from prepared world")
 	}
 
-	pointerAcceptance := app.newFixturePointerAcceptance(activeWorld, spawns[activeLevel])
+	pointerAcceptance := app.newFixturePointerAcceptance(activeWorld, spawns[activeLevel], activeLevel,
+		prepared.Seams[0])
 	app.publishEntryWorld(prepared, checksum, spawns, activeLevel, pointerAcceptance)
 
 	if app.movementSource != nil {
@@ -129,9 +130,23 @@ func (app *application) fixtureActiveLevel() int {
 func (app *application) newFixturePointerAcceptance(
 	worldMap *gameworld.Map,
 	spawn [2]float64,
+	activeLevel int,
+	townSeam gametransition.Seam,
 ) *pointerMovementAcceptance {
 	if !app.options.FixturePointerMove {
 		return nil
+	}
+	if app.options.FixtureWorldSpawn == "seam" {
+		endpoint := townSeam.First
+		if activeLevel == townSeam.Second.LevelID {
+			endpoint = townSeam.Second
+		}
+		if activeLevel != endpoint.LevelID {
+			return nil
+		}
+		// The game-world manifest places the normal hero at y=330, not the 600px viewport midpoint.
+		return newPointerMovementAcceptanceAt(worldMap, spawn[0], spawn[1], endpoint.X, endpoint.Y,
+			app.profile.Width, 330)
 	}
 
 	return newPointerMovementAcceptance(

@@ -75,6 +75,7 @@ func TestOwnedTownExitCorridorsReachVisibleBoundary(t *testing.T) {
 	}
 }
 
+// ownedTownOuterPoint verifies the trigger is inset one tile, leaving a player-safe walk to the named outer edge.
 func ownedTownOuterPoint(t *testing.T, town *gameworld.Map, endpoint gametransition.SeamEndpoint) gameworld.Point {
 	t.Helper()
 	switch endpoint.Direction {
@@ -104,6 +105,7 @@ func ownedTownOuterPoint(t *testing.T, town *gameworld.Map, endpoint gametransit
 	}
 }
 
+// ownedTownFloorAt distinguishes a displayed floor from collision space that happens to be open.
 func ownedTownFloorAt(town *gameworld.Map, point gameworld.Point) bool {
 	tileX := gameworld.CollisionCell(point.X) / gameworld.SubtilesPerTile
 	tileY := gameworld.CollisionCell(point.Y) / gameworld.SubtilesPerTile
@@ -115,6 +117,7 @@ func ownedTownFloorAt(town *gameworld.Map, point gameworld.Point) bool {
 	return false
 }
 
+// assertOwnedEastBridgeRoute ties the selected seed to Bridge.dt1 and the ordinary spawn's trigger path.
 func assertOwnedEastBridgeRoute(
 	t *testing.T, town *gameworld.Map, spawn [2]float64,
 	seam gametransition.Seam, outer gameworld.Point,

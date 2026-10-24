@@ -1,6 +1,7 @@
 package transition_test
 
 import (
+	"strings"
 	"testing"
 
 	gameworld "github.com/gravestench/dark-magic/internal/game/world"
@@ -129,15 +130,16 @@ func TestResolveAuthoredTownEdgeSkipsBlindAlley(t *testing.T) {
 // A town arrival stranded behind collision cannot advertise a reversible transition.
 func TestResolveAuthoredTownEdgeRequiresReturnRoute(t *testing.T) {
 	town, _ := gameworld.NewOpenMap(40, 40)
-	town.SpecialTiles = []gameworld.SpecialTile{{X: 3, Y: 4, Orientation: 10}}
+	// The guide can reach the exit east of the wall; the inset return arrival cannot.
+	town.SpecialTiles = []gameworld.SpecialTile{{X: 6, Y: 4, Orientation: 10}}
 	town.Tiles = []gameworld.TilePlacement{{X: 7, Y: 4, Layer: gameworld.LayerFloor,
 		Reference: gameworld.TileReference{Path: "floor.dt1"}}}
 	blockSubtileColumn(town, 30)
 	moor, _ := gameworld.NewOpenMap(40, 40)
 	if _, err := gametransition.ResolveSeam(d2mapgen.SeamSpec{
 		FirstDirection: "east", SecondDirection: "west", SecondTileX: 4, SecondTileY: 4,
-	}, town, moor); err == nil {
-		t.Fatal("town seam with unreachable return trigger was accepted")
+	}, town, moor); err == nil || !strings.Contains(err.Error(), "no route to return trigger") {
+		t.Fatalf("town seam with unreachable return trigger error = %v", err)
 	}
 }
 
