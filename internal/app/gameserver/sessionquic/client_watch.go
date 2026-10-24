@@ -149,8 +149,11 @@ func (client *Client) receiveTransforms(
 			return
 		}
 
+		client.datagramsRead.Add(1)
 		frame, err := decodeTransformFrame(credential, payload)
 		if err != nil {
+			client.transformDecodeErrors.Add(1)
+
 			continue
 		}
 

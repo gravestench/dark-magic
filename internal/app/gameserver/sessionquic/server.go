@@ -14,12 +14,14 @@ import (
 
 // Server owns a QUIC listener and adapts reliable streams and datagrams to one transport-neutral endpoint.
 type Server struct {
-	listener     *quic.Listener
-	endpoint     *gameserver.Endpoint
-	profiles     ProfileAdmissions
-	packages     PackageProvider
-	membershipMu sync.Mutex
-	memberships  map[gameserver.SessionCredential]*membershipCleanup
+	listener         *quic.Listener
+	endpoint         *gameserver.Endpoint
+	profiles         ProfileAdmissions
+	packages         PackageProvider
+	membershipMu     sync.Mutex
+	memberships      map[gameserver.SessionCredential]*membershipCleanup
+	transformWatchMu sync.Mutex
+	transformWatches map[gameserver.SessionCredential]*transformWatchCounters
 }
 
 // Listen opens a production UDP listener after cloning and constraining the caller's TLS configuration.
