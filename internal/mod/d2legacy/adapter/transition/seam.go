@@ -16,6 +16,13 @@ type SeamEndpoint struct {
 	ArrivalX, ArrivalY float64
 	Width, Height      float64
 	Direction          string
+	TriggerStrip       *TriggerStrip
+}
+
+// TriggerStrip spans the safe tangential lanes of one authored town opening.
+// The seam radius remains its normal depth; generated and reverse sides use circles.
+type TriggerStrip struct {
+	LaneMin, LaneMax int
 }
 
 // Seam is a verified bidirectional relationship between two materialized
@@ -34,11 +41,12 @@ func ResolveSeam(spec d2mapgen.SeamSpec, firstMap, secondMap *gameworld.Map) (Se
 	}
 
 	var firstX, firstY float64
+	var townStrip *TriggerStrip
 	var err error
 	if spec.FirstGenerated {
 		firstX, firstY, err = resolveGeneratedTile(firstMap, spec.FirstTileX, spec.FirstTileY)
 	} else {
-		firstX, firstY, err = resolveAuthoredEdge(spec, firstMap)
+		firstX, firstY, townStrip, err = resolveAuthoredEdge(spec, firstMap)
 	}
 	if err != nil {
 		return Seam{}, err
@@ -105,8 +113,23 @@ func ResolveSeam(spec d2mapgen.SeamSpec, firstMap, secondMap *gameworld.Map) (Se
 		spec.SecondDirection,
 		secondMap,
 	)
+	first.TriggerStrip = townStrip
+	if townStrip != nil && authoredNormalDistance(first) <= float64(seamTriggerRadius(spec)) {
+		return Seam{}, fmt.Errorf("world: town arrival overlaps authored exit trigger")
+	}
+	if math.Hypot(second.ArrivalX-second.X, second.ArrivalY-second.Y) <= float64(seamTriggerRadius(spec)) {
+		return Seam{}, fmt.Errorf("world: reverse arrival overlaps seam trigger")
+	}
 
 	return Seam{First: first, Second: second, TriggerRadius: float64(seamTriggerRadius(spec))}, nil
+}
+
+// authoredNormalDistance checks the town arrival against the strip's short axis.
+func authoredNormalDistance(endpoint SeamEndpoint) float64 {
+	if endpoint.Direction == "east" || endpoint.Direction == "west" {
+		return math.Abs(endpoint.ArrivalX - endpoint.X)
+	}
+	return math.Abs(endpoint.ArrivalY - endpoint.Y)
 }
 
 // seamTriggerRadius applies the default used by both route validation and the published trigger.
@@ -161,19 +184,19 @@ func insideCentralHalf(world *gameworld.Map, x, y float64) bool {
 }
 
 // resolveAuthoredEdge projects the authored guide onto a traversable floor corridor at the named stamp edge.
-func resolveAuthoredEdge(spec d2mapgen.SeamSpec, world *gameworld.Map) (float64, float64, error) {
+func resolveAuthoredEdge(spec d2mapgen.SeamSpec, world *gameworld.Map) (float64, float64, *TriggerStrip, error) {
 	anchor, found := cardinalAnchor(world.AuthoredExitAnchors(), spec.FirstDirection)
 	if !found {
-		return 0, 0, fmt.Errorf("world: first map has no authored seam anchor")
+		return 0, 0, nil, fmt.Errorf("world: first map has no authored seam anchor")
 	}
 
 	guideX, guideY, found := world.OpenPointNearExit(anchor)
 	if !found {
-		return 0, 0, fmt.Errorf("world: first seam edge is blocked")
+		return 0, 0, nil, fmt.Errorf("world: first seam edge is blocked")
 	}
 	line, found := newAuthoredEdgeLine(world, spec.FirstDirection)
 	if !found {
-		return 0, 0, fmt.Errorf("world: first map has no authored edge")
+		return 0, 0, nil, fmt.Errorf("world: first map has no authored edge")
 	}
 
 	floors := make(map[[2]int]bool)
@@ -200,7 +223,7 @@ func resolveAuthoredEdge(spec d2mapgen.SeamSpec, world *gameworld.Map) (float64,
 		}
 	}
 	if len(corridors) == 0 {
-		return 0, 0, fmt.Errorf("world: first map has no reachable authored exit corridor")
+		return 0, 0, nil, fmt.Errorf("world: first map has no reachable authored exit corridor")
 	}
 
 	guideIndex := gameworld.CollisionCell(guideY)
@@ -217,8 +240,15 @@ func resolveAuthoredEdge(spec d2mapgen.SeamSpec, world *gameworld.Map) (float64,
 	if selected < best[0] || selected > best[1] {
 		selected = (best[0] + best[1]) / 2
 	}
+	// The supported town stamps use a bounded three-tile trigger policy around
+	// the chosen path. Inset one player-radius cell at each side because floor
+	// can continue beneath adjacent fence art.
+	selectedTile := selected / gameworld.SubtilesPerTile
+	apertureMin := (selectedTile-1)*gameworld.SubtilesPerTile + 1
+	apertureMax := (selectedTile+2)*gameworld.SubtilesPerTile - 2
+	lanes := TriggerStrip{LaneMin: max(best[0], apertureMin), LaneMax: min(best[1], apertureMax)}
 	point := line.point(selected, line.inner)
-	return point.X, point.Y, nil
+	return point.X, point.Y, &lanes, nil
 }
 
 type authoredEdgeLine struct {

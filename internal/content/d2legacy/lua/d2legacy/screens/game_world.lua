@@ -35,6 +35,7 @@ local state_tint_presentation = require("d2legacy.gameplay.state_tint_presentati
 local aura_overlay_cycle = require("d2legacy.gameplay.aura_overlay_cycle")
 local interaction_approach = require("d2legacy.gameplay.interaction_approach")
 local skill_data = require("d2legacy.data.skill")
+local seam_geometry = require("d2legacy.gameplay.seam_geometry")
 local chunked_map = require("d2legacy.presentation.chunked_map")
 local tooltip = require("d2legacy.ui.tooltip")
 local text = require("d2legacy.ui.text")
@@ -1207,7 +1208,19 @@ return {
                 end
             else
                 self.pending_interaction = nil
-                self.player.request_move(target_world_x, target_world_y)
+                local move_x, move_y = target_world_x, target_world_y
+                if self.world_dimensions then
+                    move_x, move_y = seam_geometry.pointer_target(
+                        self.world_level_id,
+                        hero_x,
+                        hero_y,
+                        target_world_x,
+                        target_world_y,
+                        self.world_dimensions.width_subtiles,
+                        self.world_dimensions.height_subtiles
+                    )
+                end
+                self.player.request_move(move_x, move_y)
             end
         end
         if self.pending_interaction then

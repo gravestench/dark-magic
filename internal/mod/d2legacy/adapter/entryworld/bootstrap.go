@@ -48,17 +48,23 @@ func TransitionData(seams []gametransition.Seam) map[string]any {
 // transitionEndpoint converts one directed seam into the stable Lua field contract. Destination dimensions accompany
 // arrival coordinates so player placement can be validated against the world being entered.
 func transitionEndpoint(source, destination gametransition.SeamEndpoint, radius float64) map[string]any {
-	return map[string]any{
+	directed := map[string]any{
 		"source_level":      float64(source.LevelID),
 		"destination_level": float64(destination.LevelID),
 		"source_x":          source.X,
 		"source_y":          source.Y,
+		"source_direction":  source.Direction,
 		"arrival_x":         destination.ArrivalX,
 		"arrival_y":         destination.ArrivalY,
 		"world_width":       destination.Width,
 		"world_height":      destination.Height,
 		"trigger_radius":    radius,
 	}
+	if source.TriggerStrip != nil {
+		directed["trigger_lane_min"] = float64(source.TriggerStrip.LaneMin)
+		directed["trigger_lane_max"] = float64(source.TriggerStrip.LaneMax)
+	}
+	return directed
 }
 
 // PopulationCommand encodes the generated wilderness topology as the first system-owned population command. Tick and
