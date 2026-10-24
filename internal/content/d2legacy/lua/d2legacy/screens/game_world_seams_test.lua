@@ -42,7 +42,9 @@ local function fixture()
             return 10, 10, -5, -5
         end
         function n:set_tint() end
-        function n:set_cof_animation() end
+        function n:set_cof_animation(cof)
+            self.animation = cof
+        end
         function n:set_scale() end
         f.nodes[#f.nodes + 1] = n
         return n
@@ -52,12 +54,12 @@ local function fixture()
         assets_available = function()
             return true
         end,
-        preload = function()
-            return {}
+        preload = function(requests)
+            return { hero = requests[1].kind == "hero" }
         end,
         preload_release = function() end,
-        preload_status = function()
-            return { done = true, failed = 0 }
+        preload_status = function(job)
+            return { done = not (job.hero and f.delay_hero), failed = 0 }
         end,
         world_tiles = function(map)
             return {
@@ -149,7 +151,7 @@ local function fixture()
     })
     test.mock_module("d2legacy.gameplay.player_composite", {
         resolve = function()
-            return { mode = "idle", key = "hero", components = {} }
+            return { mode = "idle", key = f.appearance or "hero", cof = f.appearance or "hero", components = {} }
         end,
         new_playback = function()
             return { mode = "idle", seconds = 0 }
@@ -158,7 +160,7 @@ local function fixture()
             return {}
         end,
         preload_request = function()
-            return {}
+            return { kind = "hero" }
         end,
     })
     test.mock_module("d2legacy.gameplay.aura_overlay_cycle", {
@@ -305,7 +307,7 @@ local function fixture()
                             )
                     end
                 end
-                test.expect(covered):is_true()
+                test.expect(covered, string.format("level %d coverage at %d,%d", side[1], side[2], y)):is_true()
             end
         end
         -- Merge actual admitted rectangles that cover the strip's entire
@@ -341,10 +343,59 @@ local function fixture()
     return f
 end
 
+-- Give each preload/route case its own harness VM so engine spies cannot leak.
+local function visible_hero_case(name, pending_appearance, crossing)
+    return test.case(name, function(t)
+        t:run(function()
+            local f = fixture()
+            f.level, f.hero.x = crossing[1], crossing[2]
+            f:frame()
+            f:frame()
+            local hero, root = f.scene.hero, f.scene.hero.parent
+            test.expect(hero:exists() and hero.visible):is_true()
+            test.expect(hero.animation):equals("hero")
+            f.delay_hero = true
+            if pending_appearance then
+                f.appearance = "new_hero"
+                f:frame()
+                test.expect(f.scene.hero_pending_job ~= nil):is_true()
+            end
+            local rx, ry = root.x, root.y
+            local hx, hy = hero.x + rx, hero.y + ry
+            f:cross(crossing[3], crossing[4], 500)
+            f:frame(1 / 60)
+            test.expect(f.scene.hero:exists() and f.scene.hero.visible):is_true()
+            test.expect(f.scene.hero.animation):equals("hero")
+            test.expect(f.scene.hero.x + root.x):equals(hx)
+            test.expect(f.scene.hero.y + root.y):equals(hy)
+            test.expect(root.x):equals(rx)
+            test.expect(root.y):equals(ry)
+            test.expect(hero:exists()):is_true()
+            f:assert_join(math.min(crossing[1], crossing[3]), math.max(crossing[1], crossing[3]))
+            f:frame(0.04)
+            test.expect(f.scene.hero:exists() and f.scene.hero.visible):is_true()
+            test.expect(f.scene.hero.animation):equals("hero")
+            f.delay_hero = false
+            f:frame()
+            test.expect(f.scene.hero.animation):equals(pending_appearance and "new_hero" or "hero")
+            f:close()
+            test.expect(hero:exists()):is_false()
+        end)
+    end)
+end
+
 return test.suite({
     profile = "module",
     tier = "fast",
     cases = {
+        visible_hero_case("visible_hero_1_to_2_with_delayed_preload", false, { 1, 997, 2, 0 }),
+        visible_hero_case("visible_hero_2_to_1_with_delayed_preload", false, { 2, 3, 1, 1000 }),
+        visible_hero_case("visible_hero_2_to_3_with_delayed_preload", false, { 2, 997, 3, 0 }),
+        visible_hero_case("visible_hero_3_to_2_with_delayed_preload", false, { 3, 3, 2, 1000 }),
+        visible_hero_case("visible_hero_1_to_2_with_pending_appearance", true, { 1, 997, 2, 0 }),
+        visible_hero_case("visible_hero_2_to_1_with_pending_appearance", true, { 2, 3, 1, 1000 }),
+        visible_hero_case("visible_hero_2_to_3_with_pending_appearance", true, { 2, 997, 3, 0 }),
+        visible_hero_case("visible_hero_3_to_2_with_pending_appearance", true, { 3, 3, 2, 1000 }),
         test.case("stale_seam_reason_cannot_ease_a_later_level_change", function(t)
             t:run(function()
                 local f = fixture()
@@ -509,10 +560,18 @@ return test.suite({
                 for _, n in ipairs(f.nodes) do
                     test.expect(n.level == 4 and n.alive):is_false()
                 end
-                local old_root = f.scene.hero.parent
-                f:cross(4, 500, 500)
+                local old_hero, old_root = f.scene.hero, f.scene.hero.parent
+                f.delay_hero = true
+                f:cross(4, 500, 500, "warp")
                 f:frame()
+                test.expect(old_hero:exists()):is_false()
+                test.expect(f.scene.hero:exists()):is_true()
+                test.expect(f.scene.hero.visible):is_false()
+                test.expect(f.scene.hero.animation):is_nil()
+                f.delay_hero = false
                 f:frame()
+                test.expect(f.scene.hero.visible):is_true()
+                test.expect(f.scene.hero.animation):equals("hero")
                 test.expect(old_root.alive):is_false()
                 test.expect(f.scene.hero.x + f.scene.hero.parent.x):equals(400)
                 f:close()

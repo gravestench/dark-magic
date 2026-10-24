@@ -211,7 +211,10 @@ local function install_current_world(self)
     if self.world_level_id == level_id and not changed then return false end
     local next_world, recipe = world_capability.current()
     assert(next_world and recipe, "session world is unavailable")
-    if self.hero and self.hero:exists() then
+    -- Terrain in the same prepared component keeps its camera root. Keep the
+    -- bound hero there too: even cached appearances preload asynchronously.
+    local retain_hero = self.layout and self.layout.levels[level_id] and self.hero and self.hero:exists()
+    if not retain_hero and self.hero and self.hero:exists() then
         self.hero:destroy()
     end
     destroy_monsters(self)
@@ -253,12 +256,12 @@ local function install_current_world(self)
         canvas_height = self.world_canvas_height,
     })
     self.ground_items = require("d2legacy.gameplay.ground_items").new(self.map.root, next_world, level_id, manifest.palettes.units, self.placement)
-    self.hero = render.create("world", self.map.root)
-    self.hero:set_visible(false)
-    -- The previous active entity handle was replaced. Force the
-    -- cached appearance to attach to this new handle while preserving the
-    -- playback clock, so crossing a seam does not rewind the animation.
-    self.hero_composite_key = nil
+    if not retain_hero then
+        self.hero = render.create("world", self.map.root)
+        self.hero:set_visible(false)
+        -- A different root needs a fresh binding; preserve the playback clock.
+        self.hero_composite_key = nil
+    end
     if self.gameplay then
         self.gameplay_world.set_collision(self.gameplay, next_world, level_id)
         self.gameplay_world.snap_camera(self.gameplay)

@@ -326,8 +326,9 @@ end
 function chunked_map.destroy(state)
     if not state then return end
     clear_nodes(state)
-    -- Active jobs cannot be forgotten by engine.render/v1. Their native
-    -- bookkeeping remains owned by the script scope until scene teardown.
+    -- Active jobs cannot be forgotten by engine.render/v1. The shared native
+    -- preloader retains their records; scene teardown does not release them.
+    -- Release completed jobs here; unfinished-job cleanup is tracked by #642.
     if state.job then
         local status = render.preload_status(state.job)
         if status and status.done then
