@@ -52,6 +52,11 @@ local function queue_tile(state, draw)
     }})
 end
 
+local function canvas_origin(state)
+    if state.shared_root then return state.offset_x, state.offset_y end
+    return -state.set.width / 2, -state.set.height / 2
+end
+
 local function admit_chunk(state, chunk, key)
     local node = render.create("world", state.root)
     local x, y, width, height
@@ -65,11 +70,15 @@ local function admit_chunk(state, chunk, key)
             chunk.index, state.chunk_size
         )
     end
-    node:set_position(
-        x - state.set.width / 2 + width / 2,
-        y - state.set.height / 2 + height / 2
-    )
-    node:set_z(chunk.depth)
+    local origin_x, origin_y = canvas_origin(state)
+    node:set_position(x + origin_x + width / 2, y + origin_y + height / 2)
+    local depth = chunk.depth
+    -- Floor/shadow and roof bands remain global passes. Upper walls share
+    -- the comparable entity band across all neighboring maps.
+    if state.shared_root and depth > -1000000 and depth < 1000000 then
+        depth = depth + state.depth_offset
+    end
+    node:set_z(depth)
     state.nodes[key] = node
     state.last_visible[key] = state.revision
 end
@@ -126,10 +135,11 @@ end
 local function nearby_entries(state, left, top, right, bottom)
     if not state.set.draws or not state.set.buckets then return state.set.chunks end
     local size = state.set.bucket_size
-    local map_left = left - state.margin - state.root_x + state.set.width / 2
-    local map_top = top - state.margin - state.root_y + state.set.height / 2
-    local map_right = right + state.margin - state.root_x + state.set.width / 2
-    local map_bottom = bottom + state.margin - state.root_y + state.set.height / 2
+    local origin_x, origin_y = canvas_origin(state)
+    local map_left = left - state.margin - state.root_x - origin_x
+    local map_top = top - state.margin - state.root_y - origin_y
+    local map_right = right + state.margin - state.root_x - origin_x
+    local map_bottom = bottom + state.margin - state.root_y - origin_y
     local first_column, last_column = math.floor(map_left / size), math.floor(map_right / size)
     local first_row, last_row = math.floor(map_top / size), math.floor(map_bottom / size)
     local result, seen = state.nearby_scratch, state.nearby_seen
@@ -155,14 +165,17 @@ local function refresh_nodes(state)
     if not state.set then return end
     state.revision = state.revision + 1
     local left, top, right, bottom = render_viewport(state.viewport_width, state.viewport_height)
-    local admitted, visible_keys = 0, state.visible_scratch
+    local admitted, pending_count, visible_keys = 0, 0, state.visible_scratch
+    for _ in pairs(state.pending) do pending_count = pending_count + 1 end
     for key in pairs(visible_keys) do visible_keys[key] = nil end
     local entries = nearby_entries(state, left, top, right, bottom)
     for _, chunk in ipairs(entries) do
         -- Chunk coordinates begin at the map's top-left. Render children are
-        -- centered around their parent, so translate once into centered space.
-        local local_left = chunk.x - state.set.width / 2
-        local local_top = chunk.y - state.set.height / 2
+        -- centered around their parent in default mode; shared mode instead
+        -- translates directly into the scene's common presentation pixels.
+        local origin_x, origin_y = canvas_origin(state)
+        local local_left = chunk.x + origin_x
+        local local_top = chunk.y + origin_y
         local screen_left = state.root_x + local_left
         local screen_top = state.root_y + local_top
         local visible = screen_left + chunk.width >= left - state.margin
@@ -193,11 +206,13 @@ local function refresh_nodes(state)
                 end
             end
         elseif visible and not state.nodes[key] and not state.pending[key] and not state.failed[key]
-            and admitted < state.admit_per_frame then
+            and admitted < state.admit_per_frame
+            and (not state.shared_root or pending_count < state.admit_per_frame) then
             if state.recipe.world then
                 -- Decode each unique visible DT1 graphic on a bounded worker;
                 -- repeated placements join the same cache flight.
                 queue_tile(state, chunk)
+                pending_count = pending_count + 1
             else
                 admit_chunk(state, chunk, key)
             end
@@ -231,7 +246,11 @@ function chunked_map.create(parent, recipe, options)
     options = options or {}
     local state = {
         recipe = assert(recipe, "chunked map recipe is required"),
-        root = render.create("world", parent),
+        root = options.shared_root or render.create("world", parent),
+        shared_root = options.shared_root,
+        offset_x = options.offset_x or 0,
+        offset_y = options.offset_y or 0,
+        depth_offset = options.depth_offset or 0,
         nodes = {},
         last_visible = {},
         pending = {},
@@ -254,7 +273,7 @@ function chunked_map.create(parent, recipe, options)
         root_x = 0,
         root_y = 0,
     }
-    state.root:set_z(options.z or 0)
+    if not state.shared_root then state.root:set_z(options.z or 0) end
     local request = {
         kind = recipe.world and "world_tiles" or "ds1_chunks",
         path = recipe.ds1,
@@ -272,6 +291,14 @@ end
 -- produces the same map placement, including after scene re-entry.
 function chunked_map.update(state, camera_x, camera_y, target_x, target_y, world_view)
     finish_preload(state)
+    if state.shared_root then
+        -- The scene owns the common camera transform. Every adapter culls
+        -- against that same transform, without clamping to its own canvas.
+        state.root_x, state.root_y = target_x - camera_x, target_y - camera_y
+        if not state.set then return false, state.error end
+        refresh_nodes(state)
+        return true, nil, target_x, target_y
+    end
     local width = state.set and state.set.width or state.canvas_width
     local height = state.set and state.set.height or state.canvas_height
     if not width or not height then return false, state.error end
@@ -296,7 +323,23 @@ end
 function chunked_map.destroy(state)
     if not state then return end
     clear_nodes(state)
-    if state.root:exists() then state.root:destroy() end
+    -- Active jobs cannot be forgotten by engine.render/v1. Their native
+    -- bookkeeping remains owned by the script scope until scene teardown.
+    if state.job then
+        local status = render.preload_status(state.job)
+        if status and status.done then
+            render.preload_release(state.job)
+            state.job = nil
+        end
+    end
+    for key, job in pairs(state.pending) do
+        local status = render.preload_status(job)
+        if status and status.done then
+            render.preload_release(job)
+            state.pending[key] = nil
+        end
+    end
+    if not state.shared_root and state.root:exists() then state.root:destroy() end
 end
 
 return chunked_map
