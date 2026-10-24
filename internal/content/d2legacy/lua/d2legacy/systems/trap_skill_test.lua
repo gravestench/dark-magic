@@ -62,7 +62,8 @@ local sentry_monstats2 = {
     { Id = "death-sentry-gfx", SizeX = "2", SizeY = "2", MeleeRng = "1" },
 }
 
-local function install_transaction()
+-- Health 202 gives ordered corpse bounds; health 20 collapses both percentage bounds to 10.
+local function install_transaction(corpse_max_health)
     local ecs = require("engine.ecs/v1")
     local player = ecs.query({ all = { "d2legacy.player.identity" } })[1]
     ecs.create({
@@ -82,7 +83,7 @@ local function install_transaction()
     })
     ecs.create({
         ["d2legacy.monster.identity"] = { spawn_id = "corpse", definition_id = "fallen", seed = "corpse" },
-        ["d2legacy.monster.stats"] = { level = 1, health = 0, max_health = 202 },
+        ["d2legacy.monster.stats"] = { level = 1, health = 0, max_health = corpse_max_health or 202 },
         ["d2legacy.monster.death"] = { tick = 1, active = false, corpse_usable = true },
         ["d2legacy.world.position"] = { x = 5, y = 0 },
         ["d2legacy.world.location"] = { act = 1, level_id = 1 },
@@ -287,7 +288,7 @@ return test.suite({
                 skill = "Corpse Explosion Fixture",
                 TargetCorpse = "1",
                 Param1 = "50",
-                Param2 = "50",
+                Param2 = "53",
                 Param3 = "12",
                 Param4 = "0",
                 calc3 = "50",
@@ -381,11 +382,39 @@ return test.suite({
                 test.expect(event:get("source_kind")):equals("trap_corpse")
                 test.expect(event:get("damage_channel")):equals("mixed")
                 local bundle = ecs.get(events[1], "d2legacy.combat.damage_bundle")
-                test.expect(bundle:get("physical_rolled_raw")):equals(50)
-                test.expect(bundle:get("fire_rolled_raw")):equals(50)
-                test.expect(event:get("rolled_damage_raw")):equals(100)
+                test.expect(event:get("rolled_damage_raw")):equals(104)
+                test.expect(bundle:get("physical_rolled_raw")):equals(52)
+                test.expect(bundle:get("fire_rolled_raw")):equals(52)
             end),
             test.expect_checkpoint_parity(1),
+        }),
+        test.case("death_sentry_equal_corpse_range_skips_random_draw", {
+            test.submit_system(fixtures.command("system.player.enter", fixtures.player_entry(), {
+                tick = 1,
+                sequence = 1,
+            })),
+            test.step(1),
+            test.run(function()
+                install_transaction(20)
+            end),
+            test.step(1),
+            test.run(function()
+                local ecs = require("engine.ecs/v1")
+                test.expect(#ecs.query({ all = { "d2legacy.monster.death" } })):equals(0)
+                local events = ecs.query({ all = { "d2legacy.combat.event" } })
+                test.expect(#events):equals(1)
+                local event = ecs.get(events[1], "d2legacy.combat.event")
+                local bundle = ecs.get(events[1], "d2legacy.combat.damage_bundle")
+                test.expect(bundle:get("physical_rolled_raw")):equals(5)
+                test.expect(bundle:get("fire_rolled_raw")):equals(5)
+                test.expect(event:get("rolled_damage_raw")):equals(10)
+            end),
+            test.expect_checkpoint_parity(1),
+            test.run(function()
+                local random = require("engine.authority_random/v1")
+                -- The collapsed corpse range consumes no draw, leaving 132 as the stream's first value.
+                test.expect(random.integer("d2legacy.combat.damage.roll", 1000)):equals(132)
+            end),
         }),
         test.case("blade_sentinel_patrols_to_the_target_and_returns_to_its_owner", {
             test.submit_system(fixtures.command("system.player.enter", fixtures.player_entry({ x = 0, y = 0 }), {
