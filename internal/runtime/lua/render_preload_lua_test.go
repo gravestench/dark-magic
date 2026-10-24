@@ -32,7 +32,9 @@ func TestChunkedMapDestroyReleasesBlockedNativePreload(t *testing.T) {
 	t.Cleanup(func() { _ = scope.Close() })
 	run := func(code string) {
 		t.Helper()
-		if err := runtime.RunScoped(context.Background(), scope, func(state *lua.LState) error { return state.DoString(code) }); err != nil {
+		if err := runtime.RunScoped(context.Background(), scope, func(state *lua.LState) error {
+			return state.DoString(code)
+		}); err != nil {
 			t.Fatal(err)
 		}
 	}
@@ -89,6 +91,7 @@ type chunkedMapPreloadGate struct {
 	once    sync.Once
 }
 
+// unblock lets workers finish and remains safe when both the test and cleanup release the gate.
 func (g *chunkedMapPreloadGate) unblock() { g.once.Do(func() { close(g.proceed) }) }
 
 type chunkedMapPreloadFS struct {
@@ -96,6 +99,7 @@ type chunkedMapPreloadFS struct {
 	gate *chunkedMapPreloadGate
 }
 
+// Open gates the synthetic map read so teardown runs while the real native worker still owns unfinished work.
 func (f *chunkedMapPreloadFS) Open(name string) (fs.File, error) {
 	if name != "map.ds1" {
 		return nil, fs.ErrNotExist

@@ -267,6 +267,7 @@ local function fixture()
     local function empty()
         return {}
     end
+    -- Share one actor snapshot across entity owners so preload lifecycle cases reuse the same scene fixture.
     local function actors()
         return f.actors
                 and {
@@ -312,6 +313,7 @@ local function fixture()
         destroy = function() end,
     }
     local scene = require("d2legacy.screens.game_world")
+    -- Rebuild scene-owned state while retaining fixture capabilities for repeated teardown cycles.
     local function new_scene()
         return {
             root = node(),
@@ -347,6 +349,7 @@ local function fixture()
         }
     end
     local s = new_scene()
+    -- Replace the retired scene so later cycles cannot inherit its released preload handles.
     function f:restart()
         s = new_scene()
         self.scene = s

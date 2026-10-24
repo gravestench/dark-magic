@@ -171,6 +171,7 @@ func TestPreloaderReleasePendingJobAfterWorkerCompletes(t *testing.T) {
 	assertPreloadJobCount(t, p, 0)
 }
 
+// TestPreloaderReleaseCompletedEmptyAndUnknownJobs verifies immediate cleanup needs no worker or retry ownership.
 func TestPreloaderReleaseCompletedEmptyAndUnknownJobs(t *testing.T) {
 	p := newAssetPreloader(nil, nil, nil)
 	if p.Forget(99) {
@@ -223,12 +224,14 @@ type preloadReleaseFS struct {
 	proceed chan struct{}
 }
 
+// Open holds each synthetic read until the test permits completion, exposing intermediate job ownership.
 func (f *preloadReleaseFS) Open(string) (fs.File, error) {
 	f.opened <- struct{}{}
 	<-f.proceed
 	return nil, fs.ErrNotExist
 }
 
+// waitPreloadOpen bounds the worker-entry wait so a missing asset read fails instead of hanging the suite.
 func waitPreloadOpen(t *testing.T, opened <-chan struct{}) {
 	t.Helper()
 	select {
@@ -238,6 +241,7 @@ func waitPreloadOpen(t *testing.T, opened <-chan struct{}) {
 	}
 }
 
+// waitPreloadPending bounds asynchronous completion waits while observing the public unfinished-work count.
 func waitPreloadPending(t *testing.T, p *assetPreloader, want int) {
 	t.Helper()
 	deadline := time.Now().Add(5 * time.Second)
@@ -249,6 +253,7 @@ func waitPreloadPending(t *testing.T, p *assetPreloader, want int) {
 	}
 }
 
+// assertPreloadJobCount observes retained records under their owning lock while workers may still complete.
 func assertPreloadJobCount(t *testing.T, p *assetPreloader, want int) {
 	t.Helper()
 	p.mu.Lock()
@@ -259,6 +264,7 @@ func assertPreloadJobCount(t *testing.T, p *assetPreloader, want int) {
 	}
 }
 
+// assertPreloadRelease verifies ownership transfers exactly once and immediately hides the released status.
 func assertPreloadRelease(t *testing.T, p *assetPreloader, id uint64) {
 	t.Helper()
 	if !p.Forget(id) {

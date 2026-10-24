@@ -58,6 +58,7 @@ local function network_connected()
     return network_ok and network.status().phase == "connected"
 end
 
+-- Release the entry-owned preload before clearing its handle, including unfinished work.
 local function release_pending(entry)
     if entry.pending_job then
         render.preload_release(entry.pending_job)
@@ -65,6 +66,7 @@ local function release_pending(entry)
     end
 end
 
+-- Retire an entity's preload ownership before removing its independently owned render node.
 local function destroy_preloaded_entry(entry)
     release_pending(entry)
     if entry.node and entry.node:exists() then
@@ -72,6 +74,7 @@ local function destroy_preloaded_entry(entry)
     end
 end
 
+-- Retire the scene-owned pending hero recipe after completion or when its art is no longer retained.
 local function release_hero_preload(self)
     if self.hero_pending_job then
         render.preload_release(self.hero_pending_job)
