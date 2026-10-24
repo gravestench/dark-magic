@@ -17,15 +17,24 @@ import (
 
 // MovementSource converts the latest native input snapshot into one replayable command per active gameplay tick.
 type MovementSource struct {
-	mu         sync.Mutex
-	engine     *gameecs.Engine
-	input      *inputstate.Store
-	player     string
-	focusID    string
-	control    *MovementController
-	navigation movementPathFinder
-	path       []gameworld.Point
-	pathTarget *MoveTarget
+	mu                    sync.Mutex
+	engine                *gameecs.Engine
+	input                 *inputstate.Store
+	player                string
+	focusID               string
+	control               *MovementController
+	navigation            movementPathFinder
+	path                  []gameworld.Point
+	pathTarget            *MoveTarget
+	authenticatedPosition routeProgressSample
+	hasAuthenticated      bool
+}
+
+// routeProgressSample is client input evidence from the authenticated HUD, not a second world authority.
+type routeProgressSample struct {
+	player   string
+	level    int
+	position gameworld.Point
 }
 
 // NewMovementSource binds local input and presentation state to one authoritative player identity.
@@ -66,7 +75,18 @@ func (source *MovementSource) SetPlayer(player string) {
 	}
 
 	source.mu.Lock()
+	if source.player != player {
+		source.hasAuthenticated = false
+	}
 	source.player = player
+	source.mu.Unlock()
+}
+
+// SetAuthenticatedPosition receives the connected local player's latest accepted movement position.
+func (source *MovementSource) SetAuthenticatedPosition(player string, level int, position gameworld.Point) {
+	source.mu.Lock()
+	source.authenticatedPosition = routeProgressSample{player: player, level: level, position: position}
+	source.hasAuthenticated = true
 	source.mu.Unlock()
 }
 
@@ -79,6 +99,7 @@ func (source *MovementSource) SetEngine(engine *gameecs.Engine) {
 
 	source.mu.Lock()
 	source.engine = engine
+	source.hasAuthenticated = false
 	source.resetAcceptedPath()
 	source.mu.Unlock()
 }
