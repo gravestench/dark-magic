@@ -26,6 +26,8 @@ func (controller *testPlayerController) SetMoveTargetWithRadius(x, y, radius flo
 // to callers.
 func (controller *testPlayerController) HasMoveTarget() bool { return controller.pending }
 
+func (controller *testPlayerController) ClearMoveTarget() { controller.pending = false }
+
 // TestPlayerControlModuleQueuesMovementIntent protects the player control module queues movement intent contract,
 // including its observable ordering and failure behavior.
 func TestPlayerControlModuleQueuesMovementIntent(t *testing.T) {

@@ -27,7 +27,7 @@ func (source *MovementSource) SetNavigation(world *gameworld.Map) {
 	source.hasAuthenticated = false
 	source.resetAcceptedPath()
 	// Pointer coordinates belong to the previous map. Retaining them could replan a town click in wilderness space.
-	source.control.clearMoveTarget()
+	source.control.ClearMoveTarget()
 }
 
 // resetAcceptedPath discards cached route geometry without changing the controller's pending pointer intent.
@@ -54,7 +54,7 @@ func (source *MovementSource) pathWaypoint(target *MoveTarget) *MoveTarget {
 	source.consumeReachedWaypoints(progress)
 
 	if len(source.path) <= 1 {
-		source.control.clearMoveTarget()
+		source.control.ClearMoveTarget()
 		source.resetAcceptedPath()
 
 		if authenticated {
@@ -190,7 +190,7 @@ func (source *MovementSource) retainRouteOrStop() {
 		return
 	}
 
-	source.control.clearMoveTarget()
+	source.control.ClearMoveTarget()
 	source.resetAcceptedPath()
 }
 
