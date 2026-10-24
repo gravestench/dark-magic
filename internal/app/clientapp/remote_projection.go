@@ -162,8 +162,11 @@ func remoteHeroComponents(
 			"seconds": float64(0),
 		},
 		"d2legacy.world.location": {
-			"act":      hud.Location.Act,
-			"level_id": hud.Location.LevelID,
+			"act":                 hud.Location.Act,
+			"level_id":            hud.Location.LevelID,
+			"transition_sequence": hud.Location.TransitionSequence,
+			"transition_source":   hud.Location.TransitionSource,
+			"transition_kind":     hud.Location.TransitionKind,
 		},
 		"d2legacy.world.velocity": {
 			"x": hud.Movement.Velocity.X,

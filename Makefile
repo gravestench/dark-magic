@@ -1,4 +1,4 @@
-.PHONY: test test-lua test-lua-hardening test-lua-format test-lua-syntax test-network-hardening test-network-soak test-network-fuzz architecture test-race fmt lint vet build-client-backends d2legacy ds1-editor-assets bik-view presentation-coverage skill-behavior-coverage skill-evidence profile profile-acceptance profile-render-backends profile-check realm-up realm-down realm-fresh-install realm-drain-game realm-mailpit-up realm-mailpit-down realm-test-production capture capture-all capture-game-world capture-game-world-movement capture-game-world-panels capture-blood-moor capture-act1-seam capture-monster-lab capture-missile-lab capture-combat-lab capture-spell-lab capture-warp-lab play-game-world play-monster-lab play-missile-lab play-combat-lab play-spell-lab play-warp-lab
+.PHONY: test test-lua test-lua-hardening test-lua-format test-lua-syntax test-network-hardening test-network-soak test-network-fuzz architecture test-race fmt lint vet build-client-backends d2legacy ds1-editor-assets bik-view presentation-coverage skill-behavior-coverage skill-evidence profile profile-acceptance profile-render-backends profile-check realm-up realm-down realm-fresh-install realm-drain-game realm-mailpit-up realm-mailpit-down realm-test-production capture capture-all capture-game-world capture-game-world-movement capture-game-world-panels capture-blood-moor capture-act1-seam capture-cold-plains-seam capture-monster-lab capture-missile-lab capture-combat-lab capture-spell-lab capture-warp-lab play-game-world play-monster-lab play-missile-lab play-combat-lab play-spell-lab play-warp-lab
 
 test:
 	go test ./...
@@ -173,6 +173,10 @@ capture-blood-moor:
 capture-act1-seam:
 	$(MAKE) --no-print-directory capture CAPTURE_DIR="$(CAPTURE_DIR)/town" CAPTURE_SCENES=game_world START_SCENE=game_world FIXTURE_CHARACTERS=1 FIXTURE_WORLD_LEVEL=1 FIXTURE_WORLD_SPAWN=seam CAPTURE_SETTLE=60
 	$(MAKE) --no-print-directory capture CAPTURE_DIR="$(CAPTURE_DIR)/blood-moor" CAPTURE_SCENES=game_world START_SCENE=game_world FIXTURE_CHARACTERS=1 FIXTURE_WORLD_LEVEL=2 FIXTURE_WORLD_SPAWN=seam CAPTURE_SETTLE=60
+
+capture-cold-plains-seam:
+	$(MAKE) --no-print-directory capture CAPTURE_DIR="$(CAPTURE_DIR)/blood-moor" CAPTURE_SCENES=game_world START_SCENE=game_world FIXTURE_CHARACTERS=1 FIXTURE_WORLD_LEVEL=2 FIXTURE_WORLD_SPAWN=cold_plains_seam CAPTURE_SETTLE=60
+	$(MAKE) --no-print-directory capture CAPTURE_DIR="$(CAPTURE_DIR)/cold-plains" CAPTURE_SCENES=game_world START_SCENE=game_world FIXTURE_CHARACTERS=1 FIXTURE_WORLD_LEVEL=3 FIXTURE_WORLD_SPAWN=cold_plains_seam CAPTURE_SETTLE=60
 
 # Capture the world beneath every spatial overlay arrangement that changes the
 # camera anchor. Artifacts stay local because original MPQ assets are required.

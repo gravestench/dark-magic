@@ -182,6 +182,24 @@ local suite = {
                 test.expect(y):equals(-1)
             end),
         }),
+        test.case("admission_without_relocation_fields_defaults_to_no_transition", {
+            test.submit_system({
+                tick = 1,
+                sequence = 1,
+                kind = "system.player.enter",
+                payload = fixtures.player_entry({ x = 6 }),
+            }),
+            test.step(1),
+            test.expect_checkpoint_parity(1),
+            test.run(function()
+                local ecs = require("engine.ecs/v1")
+                local player = ecs.query({ all = { "d2legacy.world.player_control" } })[1]
+                local location = ecs.get(player, "d2legacy.world.location")
+                test.expect(location:get("transition_sequence")):equals(0)
+                test.expect(location:get("transition_source")):equals(0)
+                test.expect(location:get("transition_kind")):equals("")
+            end),
+        }),
         test.case("entry_crosses_authored_seam", {
             test.submit_system({
                 tick = 1,
@@ -197,6 +215,10 @@ local suite = {
                     ecs.get(player, "d2legacy.world.location"):get("level_id") == 2,
                     [=[ecs.get(player, "d2legacy.world.location"):get("level_id") == 2]=]
                 )
+                local relocation = ecs.get(player, "d2legacy.world.location")
+                test.expect(relocation:get("transition_kind")):equals("seam")
+                test.expect(relocation:get("transition_source")):equals(1)
+                test.expect(relocation:get("transition_sequence")):equals(1)
                 local position = ecs.get(player, "d2legacy.world.position")
                 test.assert(
                     position:get("x") == 6 and position:get("y") == 40,
@@ -246,6 +268,10 @@ local suite = {
             test.run(function()
                 local ecs = require("engine.ecs/v1")
                 local player = ecs.query({ all = { "d2legacy.world.player_control" } })[1]
+                local relocation = ecs.get(player, "d2legacy.world.location")
+                test.expect(relocation:get("transition_kind")):equals("seam")
+                test.expect(relocation:get("transition_source")):equals(1)
+                test.expect(relocation:get("transition_sequence")):equals(1)
                 local position = ecs.get(player, "d2legacy.world.position")
                 test.expect(ecs.get(player, "d2legacy.world.location"):get("level_id")):equals(2)
                 test.expect(position:get("x")):equals(6)

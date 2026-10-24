@@ -5,6 +5,7 @@ import (
 
 	gameecs "github.com/gravestench/dark-magic/internal/game/ecs"
 	gameworld "github.com/gravestench/dark-magic/internal/game/world"
+	"github.com/gravestench/dark-magic/internal/game/worldgen"
 	"github.com/gravestench/dark-magic/internal/inputstate"
 	d2movement "github.com/gravestench/dark-magic/internal/mod/d2legacy/adapter/movement"
 	gametransition "github.com/gravestench/dark-magic/internal/mod/d2legacy/adapter/transition"
@@ -76,5 +77,52 @@ func TestActivateCurrentConnectedWorldKeepsClickRoute(t *testing.T) {
 
 	if !controller.HasMoveTarget() {
 		t.Fatal("same-level connected correction cleared the active click route")
+	}
+}
+
+func TestPresentationWorldIncludesOnlyPreparedLevels(t *testing.T) {
+	for _, count := range []int{2, 3} {
+		app := &application{
+			activeWorldLevel: 2,
+			gameWorlds:       map[int]*gameworld.Map{},
+			gameWorldZones:   map[int]*worldgen.Zone{},
+		}
+
+		for level := 1; level <= count; level++ {
+			zone, err := worldgen.NewZone(worldgen.Definition{
+				Request: worldgen.Request{Version: worldgen.ContractVersion, Act: 1, LevelID: level},
+				Kind:    worldgen.Kind("test"), Bounds: worldgen.Bounds{Width: 1, Height: 1},
+				Stamps: []worldgen.Stamp{{ID: 1, Width: 1, Height: 1, DS1Path: "test.ds1", TilePaths: []string{"test.dt1"}}},
+			})
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			app.gameWorlds[level] = &gameworld.Map{WidthTiles: level}
+			app.gameWorldZones[level] = zone
+		}
+
+		app.gameWorlds[99] = &gameworld.Map{}
+
+		snapshot := app.presentationWorld()
+		if snapshot.ActiveLevel != 2 || len(snapshot.Maps) != count {
+			t.Fatalf("snapshot = %#v", snapshot)
+		}
+
+		for index, value := range snapshot.Maps {
+			if value.LevelID != index+1 || value.Map != app.gameWorlds[index+1] ||
+				value.DS1 != "test.ds1" || value.DT1[0] != "test.dt1" {
+				t.Fatalf("map = %#v", value)
+			}
+		}
+
+		snapshot.Maps[0].DT1[0] = "changed"
+		if app.presentationWorld().Maps[0].DT1[0] != "test.dt1" {
+			t.Fatal("snapshot mutated recipe")
+		}
+	}
+
+	if snapshot := (&application{}).presentationWorld(); snapshot.ActiveLevel != 0 || len(snapshot.Maps) != 0 {
+		t.Fatalf("empty = %#v", snapshot)
 	}
 }

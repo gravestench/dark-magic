@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"io/fs"
+	"sort"
 
 	gameworld "github.com/gravestench/dark-magic/internal/game/world"
 	lua "github.com/yuin/gopher-lua"
@@ -97,11 +98,19 @@ type CurrentWorld struct {
 
 type CurrentWorldProvider func() CurrentWorld
 
+// PresentationWorld snapshots the prepared maps available to presentation.
+type PresentationWorld struct {
+	ActiveLevel int
+	Maps        []CurrentWorld
+}
+
+type PresentationWorldProvider func() PresentationWorld
+
 // WorldModule decodes immutable world facts from mounted DS1 and DT1 assets.
 // Rendering remains a separate capability so headless servers can use the same
 // authored collision and object data as clients.
 func WorldModule(source fs.FS, resolvers ...gameworld.ObjectResolver) Module {
-	return worldModule(source, nil, resolvers...)
+	return worldModule(source, nil, nil, resolvers...)
 }
 
 // SessionWorldModule adds read-only access to the current session-owned map.
@@ -111,7 +120,17 @@ func SessionWorldModule(
 	current CurrentWorldProvider,
 	resolvers ...gameworld.ObjectResolver,
 ) Module {
-	return worldModule(source, current, resolvers...)
+	return worldModule(source, current, nil, resolvers...)
+}
+
+// SessionWorldModuleWithPresentation adds read-only access to all prepared session maps.
+func SessionWorldModuleWithPresentation(
+	source fs.FS,
+	current CurrentWorldProvider,
+	presentation PresentationWorldProvider,
+	resolvers ...gameworld.ObjectResolver,
+) Module {
+	return worldModule(source, current, presentation, resolvers...)
 }
 
 // worldModule defines the world module Lua boundary in one place so scripts receive a stable command and error
@@ -119,6 +138,7 @@ func SessionWorldModule(
 func worldModule(
 	source fs.FS,
 	current CurrentWorldProvider,
+	presentation PresentationWorldProvider,
 	resolvers ...gameworld.ObjectResolver,
 ) Module {
 	return Module{
@@ -133,6 +153,10 @@ func worldModule(
 				"current": commandHelp(
 					"engine.world.current()",
 					"Return the current session-owned map and its copied presentation recipe.",
+				),
+				"presentation": commandHelp(
+					"engine.world.presentation()",
+					"Return prepared session maps in level-ID order with copied presentation recipes.",
 				),
 				"current_level": commandHelp(
 					"engine.world.current_level()",
@@ -214,6 +238,34 @@ func worldModule(
 		Loader: func(state *lua.LState) int {
 			registerWorldMapType(state)
 			module := state.SetFuncs(state.NewTable(), map[string]lua.LGFunction{
+				"presentation": func(state *lua.LState) int {
+					value := PresentationWorld{}
+					if presentation != nil {
+						value = presentation()
+					}
+					maps := append([]CurrentWorld(nil), value.Maps...)
+					sort.Slice(maps, func(i, j int) bool { return maps[i].LevelID < maps[j].LevelID })
+					result := state.NewTable()
+					setLuaInteger(result, "active_level", value.ActiveLevel)
+					entries := state.NewTable()
+					for _, world := range maps {
+						entry := state.NewTable()
+						setLuaInteger(entry, "level_id", world.LevelID)
+						pushWorldMap(state, world.Map)
+						entry.RawSetString("map", state.Get(-1))
+						state.Pop(1)
+						entry.RawSetString("ds1", lua.LString(world.DS1))
+						tiles := state.NewTable()
+						for _, path := range world.DT1 {
+							tiles.Append(lua.LString(path))
+						}
+						entry.RawSetString("dt1", tiles)
+						entries.Append(entry)
+					}
+					result.RawSetString("maps", entries)
+					state.Push(result)
+					return 1
+				},
 				"current_level": func(state *lua.LState) int {
 					if current == nil {
 						state.Push(lua.LNil)

@@ -12,7 +12,7 @@ import (
 	"github.com/gravestench/dark-magic/internal/game/simulation"
 )
 
-const HUDVersion uint32 = 8
+const HUDVersion uint32 = 9
 
 var ErrHUDPlayer = errors.New("player HUD: authenticated player is absent")
 
@@ -82,8 +82,11 @@ type HUDPosition struct {
 }
 
 type HUDLocation struct {
-	Act     int64 `json:"act"`
-	LevelID int64 `json:"level_id"`
+	TransitionSequence int64  `json:"transition_sequence,omitempty"`
+	TransitionSource   int64  `json:"transition_source,omitempty"`
+	TransitionKind     string `json:"transition_kind,omitempty"`
+	Act                int64  `json:"act"`
+	LevelID            int64  `json:"level_id"`
 }
 
 type HUDAnimation struct {
@@ -255,7 +258,12 @@ func fillRequiredHUD(reader hudComponentReader, view *HUD) error {
 		return err
 	}
 
-	view.Location = HUDLocation{Act: intField(location, "act"), LevelID: intField(location, "level_id")}
+	view.Location = HUDLocation{
+		Act: intField(location, "act"), LevelID: intField(location, "level_id"),
+		TransitionSequence: intField(location, "transition_sequence"),
+		TransitionSource:   intField(location, "transition_source"),
+		TransitionKind:     stringField(location, "transition_kind"),
+	}
 
 	return nil
 }
