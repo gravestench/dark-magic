@@ -78,6 +78,7 @@ local function admit_chunk(state, chunk, key)
     if state.shared_root and depth > -1000000 and depth < 1000000 then
         depth = depth + state.depth_offset
     end
+    if state.shared_root then depth = depth * state.depth_scale + state.depth_priority end
     node:set_z(depth)
     state.nodes[key] = node
     state.last_visible[key] = state.revision
@@ -251,6 +252,8 @@ function chunked_map.create(parent, recipe, options)
         offset_x = options.offset_x or 0,
         offset_y = options.offset_y or 0,
         depth_offset = options.depth_offset or 0,
+        depth_scale = options.depth_scale or 1,
+        depth_priority = options.depth_priority or 0,
         nodes = {},
         last_visible = {},
         pending = {},

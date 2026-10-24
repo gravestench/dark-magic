@@ -75,7 +75,7 @@ return test.suite({
                 root:set_position(-2900, 0)
                 root:set_z(99)
                 local entity = node(root)
-                entity:set_z(15)
+                entity:set_z(63)
                 local source_world, destination_world = {}, {}
                 local function adapter(world, offset, depth)
                     return chunks.create({}, { world = world, palette = "" }, {
@@ -83,6 +83,8 @@ return test.suite({
                         offset_x = offset,
                         offset_y = 0,
                         depth_offset = depth,
+                        depth_scale = 4,
+                        depth_priority = world == source_world and 3 or 2,
                         viewport_width = 100,
                         viewport_height = 100,
                         resident_limit = 1,
@@ -109,7 +111,7 @@ return test.suite({
                     a.x - 50 - 2900 == 0 and b.x - 50 - 2900 == 100,
                     "actual source and destination tile edges meet at viewport seam"
                 )
-                test.assert(a.z == 10 and entity.z == 15 and b.z == 20, "cross-map wall depths interleave with entity")
+                test.assert(a.z == 43 and entity.z == 63 and b.z == 82, "cross-map wall depths interleave with entity")
                 test.assert(root.x == -2900 and root.y == 0 and root.z == 99, "adapter preserves scene root transform")
                 root:set_position(-2950, 0)
                 chunks.update(source, 3000, 50, 50, 50)
@@ -137,12 +139,12 @@ return test.suite({
                 chunks.update(destination, 4950, 50, 50, 50)
                 chunks.update(destination, 4950, 50, 50, 50)
                 test.assert(
-                    not b.alive and destination.nodes[3].z == 2000000,
+                    not b.alive and destination.nodes[3].z == 8000002,
                     "residency bounded and roof band preserved"
                 )
                 chunks.update(destination, 3950, 50, 50, 50)
                 chunks.update(destination, 3950, 50, 50, 50)
-                test.assert(destination.nodes[2].z == -2000000, "floor band preserved")
+                test.assert(destination.nodes[2].z == -7999998, "floor band preserved")
                 chunks.update(destination, 4950, 50, 50, 50)
                 chunks.destroy(destination)
                 test.assert(root.alive and a.alive and entity.alive, "destroy leaves sibling adapter and root alive")
