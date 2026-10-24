@@ -1,9 +1,82 @@
 local test = require("d2legacy.tests/v1")
 
+-- Each fixture borrows the scene root and counts releases independently of
+-- completion, matching the native early-release contract.
+local function teardown_case(kind)
+    return test.case("destroy_releases_" .. kind, {
+        test.run(function()
+            local created, jobs, released = 0, {}, {}
+            local root = { alive = true }
+            function root:exists()
+                return self.alive
+            end
+            function root:destroy()
+                self.alive = false
+            end
+            test.mock_module("engine.render/v1", {
+                create = function()
+                    created = created + 1
+                    error("unexpected node admission")
+                end,
+                preload = function()
+                    local job = { done = false }
+                    jobs[#jobs + 1] = job
+                    return job
+                end,
+                preload_status = function(job)
+                    return { done = job.done, failed = 0 }
+                end,
+                preload_release = function(job)
+                    released[job] = (released[job] or 0) + 1
+                end,
+                world_tiles = function()
+                    return {
+                        width = 100,
+                        height = 100,
+                        chunks = { { index = 0, x = 0, y = 0, width = 100, height = 100, depth = 0 } },
+                    }
+                end,
+            }, { "create", "preload", "preload_status", "preload_release", "world_tiles" })
+            local chunks = require("d2legacy.presentation.chunked_map")
+            local state = chunks.create({}, { world = {}, palette = "" }, { shared_root = root })
+            if kind == "unfinished_tile" then
+                jobs[1].done = true
+                chunks.update(state, 0, 0, 50, 50)
+                test.assert(state.job == nil and state.pending[1] == jobs[2], "tile job queued")
+            elseif kind == "double_handle" then
+                -- Explicitly exercise both ownership slots at once, even though
+                -- normal admission finishes the initial job before tile work.
+                local tile = { done = false }
+                jobs[#jobs + 1] = tile
+                state.pending[1] = tile
+            end
+            chunks.destroy(state)
+            chunks.destroy(state)
+            for _, job in ipairs(jobs) do
+                test.assert(released[job] == 1, "each owned ID released exactly once")
+            end
+            test.assert(state.job == nil and next(state.pending) == nil, "ownership cleared")
+            test.assert(root.alive, "shared camera root survives")
+            -- Completed work must never become eligible for later admission.
+            for _, job in ipairs(jobs) do
+                job.done = true
+            end
+            chunks.update(state, 0, 0, 50, 50)
+            test.assert(
+                created == 0 and #jobs == (kind == "unfinished_initial" and 1 or 2),
+                "destroyed adapter cannot queue or admit"
+            )
+        end),
+    })
+end
+
 return test.suite({
     profile = "module",
     tier = "fast",
     cases = {
+        teardown_case("unfinished_initial"),
+        teardown_case("unfinished_tile"),
+        teardown_case("double_handle"),
         test.case("shared_tiles_cover_seam_and_interleave_with_entity", {
             test.run(function()
                 local alive, jobs, released = {}, {}, {}

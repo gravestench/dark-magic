@@ -293,6 +293,7 @@ end
 -- remembered "first camera" baseline: the same authoritative position always
 -- produces the same map placement, including after scene re-entry.
 function chunked_map.update(state, camera_x, camera_y, target_x, target_y, world_view)
+    if state.destroyed then return false, state.error end
     finish_preload(state)
     if state.shared_root then
         -- The scene owns the common camera transform. Every adapter culls
@@ -324,24 +325,18 @@ function chunked_map.update(state, camera_x, camera_y, target_x, target_y, world
 end
 
 function chunked_map.destroy(state)
-    if not state then return end
+    if not state or state.destroyed then return end
+    state.destroyed = true
     clear_nodes(state)
-    -- Active jobs cannot be forgotten by engine.render/v1. The shared native
-    -- preloader retains their records; scene teardown does not release them.
-    -- Release completed jobs here; unfinished-job cleanup is tracked by #642.
+    -- Release caller ownership even while CPU work is unfinished. The native
+    -- preloader accounts for that work until its final worker completes.
     if state.job then
-        local status = render.preload_status(state.job)
-        if status and status.done then
-            render.preload_release(state.job)
-            state.job = nil
-        end
+        render.preload_release(state.job)
+        state.job = nil
     end
     for key, job in pairs(state.pending) do
-        local status = render.preload_status(job)
-        if status and status.done then
-            render.preload_release(job)
-            state.pending[key] = nil
-        end
+        render.preload_release(job)
+        state.pending[key] = nil
     end
     if not state.shared_root and state.root:exists() then state.root:destroy() end
 end

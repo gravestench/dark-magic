@@ -7,6 +7,7 @@ local function fixture()
     local f = {
         level = 1,
         nodes = {},
+        jobs = {},
         hero = {
             x = 940,
             y = 500,
@@ -43,8 +44,14 @@ local function fixture()
         end
         function n:set_tint() end
         function n:set_cof_animation(cof)
+            test.expect(self.alive, "removed node must not draw"):is_true()
             self.animation = cof
         end
+        function n:set_dcc_animation(path)
+            test.expect(self.alive, "removed node must not draw"):is_true()
+            self.animation = path
+        end
+        function n:set_blend() end
         function n:set_scale() end
         f.nodes[#f.nodes + 1] = n
         return n
@@ -55,11 +62,20 @@ local function fixture()
             return true
         end,
         preload = function(requests)
-            return { hero = requests[1].kind == "hero" }
+            local job = { hero = requests[1].kind == "hero", kind = requests[1].kind, releases = 0 }
+            f.jobs[#f.jobs + 1] = job
+            return job
         end,
-        preload_release = function() end,
+        preload_release = function(job)
+            job.releases = job.releases + 1
+            test.expect(job.releases, "release each job once"):equals(1)
+        end,
         preload_status = function(job)
-            return { done = not (job.hero and f.delay_hero), failed = 0 }
+            return {
+                done = not (f.delay_all or (job.hero and f.delay_hero)),
+                failed = (job.kind == "hero" or job.kind == "monster" or job.kind == "dcc") and f.failed or 0,
+                errors = {},
+            }
         end,
         world_tiles = function(map)
             return {
@@ -89,9 +105,43 @@ local function fixture()
     }) do
         test.mock_module(name, {})
     end
+    local recipe = {
+        id = "overlay",
+        path = "synthetic",
+        palette = "units",
+        direction = 0,
+        directions = 1,
+        frames_per_second = 10,
+        loop = true,
+        blend = "alpha",
+        offset_x = 0,
+        offset_y = 0,
+    }
     test.mock_module("d2legacy.gameplay.state_overlay_presentation", {
         resolve = function()
-            return nil
+            return { active = { recipe } }
+        end,
+        height_offset = function()
+            return 0
+        end,
+    })
+    test.mock_module("d2legacy.gameplay.monster_composite", {
+        resolve = function()
+            return { key = "monster", mode = "NU", cof = "monster" }
+        end,
+        new_playback = function()
+            return { mode = "NU", seconds = 0 }
+        end,
+        advance = function()
+            return {}
+        end,
+        preload_request = function()
+            return { kind = "monster" }
+        end,
+    })
+    test.mock_module("d2legacy.gameplay.missile_presentation", {
+        resolve = function()
+            return recipe
         end,
     })
     local items = {}
@@ -164,8 +214,8 @@ local function fixture()
         end,
     })
     test.mock_module("d2legacy.gameplay.aura_overlay_cycle", {
-        select = function()
-            return {}, {}
+        select = function(snapshots)
+            return snapshots, {}
         end,
     })
     local seams = {
@@ -217,6 +267,23 @@ local function fixture()
     local function empty()
         return {}
     end
+    -- Share one actor snapshot across entity owners so preload lifecycle cases reuse the same scene fixture.
+    local function actors()
+        return f.actors
+                and {
+                    {
+                        entity_id = 9,
+                        level_id = f.level,
+                        x = 500,
+                        y = 500,
+                        state_id = 1,
+                        offset_x = 0,
+                        offset_y = 0,
+                        offset_z = 0,
+                    },
+                }
+            or {}
+    end
     local gw = {
         relocation = function()
             return f.relocation
@@ -233,11 +300,11 @@ local function fixture()
         end,
         refresh_camera_settings = function() end,
         player_snapshots = empty,
-        monster_snapshots = empty,
+        monster_snapshots = actors,
         npc_snapshots = empty,
         warp_snapshots = empty,
-        state_snapshots = empty,
-        missile_snapshots = empty,
+        state_snapshots = actors,
+        missile_snapshots = actors,
         semantic_cues = empty,
         composite_snapshot = empty,
         skill_action_active = function()
@@ -246,38 +313,47 @@ local function fixture()
         destroy = function() end,
     }
     local scene = require("d2legacy.screens.game_world")
-    local s = {
-        root = node(),
-        gameplay_world = gw,
-        gameplay = { player = "local-player", hero = f.hero, camera = f.camera },
-        world_capability = {
-            current_level = function()
-                return f.level
-            end,
-            current = function()
-                return maps[f.level], { level_id = f.level }
-            end,
-            presentation = function()
-                return {
-                    active_level = f.level,
-                    maps = {
-                        { level_id = 1, map = maps[1] },
-                        { level_id = 2, map = maps[2] },
-                        { level_id = 3, map = maps[3] },
-                        { level_id = 4, map = maps[4] },
-                    },
-                }
-            end,
-        },
-        player = {
-            request_move = function(x, y)
-                f.move = { x, y }
-            end,
-            movement_pending = function()
-                return false
-            end,
-        },
-    }
+    -- Rebuild scene-owned state while retaining fixture capabilities for repeated teardown cycles.
+    local function new_scene()
+        return {
+            root = node(),
+            gameplay_world = gw,
+            gameplay = { player = "local-player", hero = f.hero, camera = f.camera },
+            world_capability = {
+                current_level = function()
+                    return f.level
+                end,
+                current = function()
+                    return maps[f.level], { level_id = f.level }
+                end,
+                presentation = function()
+                    return {
+                        active_level = f.level,
+                        maps = {
+                            { level_id = 1, map = maps[1] },
+                            { level_id = 2, map = maps[2] },
+                            { level_id = 3, map = maps[3] },
+                            { level_id = 4, map = maps[4] },
+                        },
+                    }
+                end,
+            },
+            player = {
+                request_move = function(x, y)
+                    f.move = { x, y }
+                end,
+                movement_pending = function()
+                    return false
+                end,
+            },
+        }
+    end
+    local s = new_scene()
+    -- Replace the retired scene so later cycles cannot inherit its released preload handles.
+    function f:restart()
+        s = new_scene()
+        self.scene = s
+    end
     function f:frame(dt, view)
         scene.update(s, dt or 0, true, true, view)
     end
@@ -360,10 +436,15 @@ local function visible_hero_case(name, pending_appearance, crossing)
                 f:frame()
                 test.expect(f.scene.hero_pending_job ~= nil):is_true()
             end
+            local pending_job = f.scene.hero_pending_job
             local rx, ry = root.x, root.y
             local hx, hy = hero.x + rx, hero.y + ry
             f:cross(crossing[3], crossing[4], 500)
             f:frame(1 / 60)
+            if pending_job then
+                test.expect(f.scene.hero_pending_job == pending_job):is_true()
+                test.expect(pending_job.releases):equals(0)
+            end
             test.expect(f.scene.hero:exists() and f.scene.hero.visible):is_true()
             test.expect(f.scene.hero.animation):equals("hero")
             test.expect(f.scene.hero.x + root.x):equals(hx)
@@ -379,6 +460,9 @@ local function visible_hero_case(name, pending_appearance, crossing)
             f:frame()
             test.expect(f.scene.hero.animation):equals(pending_appearance and "new_hero" or "hero")
             f:close()
+            for _, job in ipairs(f.jobs) do
+                test.expect(job.releases):equals(1)
+            end
             test.expect(hero:exists()):is_false()
         end)
     end)
@@ -388,6 +472,78 @@ return test.suite({
     profile = "module",
     tier = "fast",
     cases = {
+        test.case("pending_actor_jobs_release_on_removal_level_change_and_close", function(t)
+            t:run(function()
+                local f = fixture()
+                for cycle = 1, 3 do
+                    if cycle > 1 then
+                        f:restart()
+                    end
+                    f.actors, f.delay_all = true, true
+                    f:frame()
+                    local entries =
+                        { f.scene.monsters["9"], f.scene.missiles["9"], f.scene.state_overlays["9:1:overlay"] }
+                    local jobs = {}
+                    for i, entry in ipairs(entries) do
+                        jobs[i] = entry.pending_job
+                        test.expect(jobs[i] ~= nil):is_true()
+                    end
+                    if cycle == 1 then
+                        f.actors = false
+                        f:frame()
+                    elseif cycle == 2 then
+                        f.actors = false
+                        f:cross(2, 0, 500)
+                        f:frame()
+                    else
+                        f:close()
+                    end
+                    for i, entry in ipairs(entries) do
+                        test.expect(jobs[i].releases):equals(1)
+                        test.expect(entry.pending_job):is_nil()
+                        test.expect(entry.node.alive):is_false()
+                    end
+                    if cycle < 3 then
+                        f:close()
+                    end
+                    for _, job in ipairs(f.jobs) do
+                        test.expect(job.releases):equals(1)
+                    end
+                end
+            end)
+        end),
+        test.case("completed_and_failed_scene_jobs_release_before_handles_are_cleared", function(t)
+            t:run(function()
+                local f = fixture()
+                for _, failed in ipairs({ 0, 1 }) do
+                    if failed == 1 then
+                        f:restart()
+                    end
+                    f.actors, f.delay_all, f.failed = true, true, failed
+                    f:frame()
+                    local entries =
+                        { f.scene.monsters["9"], f.scene.missiles["9"], f.scene.state_overlays["9:1:overlay"] }
+                    local jobs = { f.scene.hero_pending_job }
+                    for _, entry in ipairs(entries) do
+                        jobs[#jobs + 1] = entry.pending_job
+                    end
+                    test.expect(#jobs):equals(4)
+                    f.delay_all = false
+                    f:frame()
+                    for _, job in ipairs(jobs) do
+                        test.expect(job.releases):equals(1)
+                    end
+                    test.expect(f.scene.hero_pending_job):is_nil()
+                    for _, entry in ipairs(entries) do
+                        test.expect(entry.pending_job):is_nil()
+                    end
+                    f:close()
+                    for _, job in ipairs(f.jobs) do
+                        test.expect(job.releases):equals(1)
+                    end
+                end
+            end)
+        end),
         visible_hero_case("visible_hero_1_to_2_with_delayed_preload", false, { 1, 997, 2, 0 }),
         visible_hero_case("visible_hero_2_to_1_with_delayed_preload", false, { 2, 3, 1, 1000 }),
         visible_hero_case("visible_hero_2_to_3_with_delayed_preload", false, { 2, 997, 3, 0 }),
@@ -562,8 +718,14 @@ return test.suite({
                 end
                 local old_hero, old_root = f.scene.hero, f.scene.hero.parent
                 f.delay_hero = true
+                f.appearance = "changed_hero"
+                f:frame()
+                local old_job = f.scene.hero_pending_job
+                test.expect(old_job ~= nil):is_true()
                 f:cross(4, 500, 500, "warp")
                 f:frame()
+                test.expect(old_job.releases):equals(1)
+                test.expect(f.scene.hero_pending_job ~= old_job):is_true()
                 test.expect(old_hero:exists()):is_false()
                 test.expect(f.scene.hero:exists()):is_true()
                 test.expect(f.scene.hero.visible):is_false()
@@ -571,7 +733,7 @@ return test.suite({
                 f.delay_hero = false
                 f:frame()
                 test.expect(f.scene.hero.visible):is_true()
-                test.expect(f.scene.hero.animation):equals("hero")
+                test.expect(f.scene.hero.animation):equals("changed_hero")
                 test.expect(old_root.alive):is_false()
                 test.expect(f.scene.hero.x + f.scene.hero.parent.x):equals(400)
                 f:close()

@@ -1,7 +1,9 @@
 package modruntime
 
 import (
+	"io/fs"
 	"testing"
+	"time"
 
 	gameworld "github.com/gravestench/dark-magic/internal/game/world"
 	lua "github.com/yuin/gopher-lua"
@@ -137,24 +139,141 @@ func TestLuaPreloadRequestsPreservesChunkGeometry(t *testing.T) {
 	}
 }
 
-// TestPreloaderForgetsOnlyCompletedJobs protects the preloader forgets only completed jobs contract, including its
-// observable ordering and failure behavior.
-func TestPreloaderForgetsOnlyCompletedJobs(t *testing.T) {
-	preloader := newAssetPreloader(nil, nil, nil)
-	preloader.mu.Lock()
-	preloader.jobs[7] = &assetPreloadJob{total: 2, completed: 1}
-	preloader.jobs[8] = &assetPreloadJob{total: 1, completed: 1}
-	preloader.mu.Unlock()
-
-	if preloader.Forget(7) {
-		t.Fatal("forgot an active preload job")
+// TestPreloaderReleasePendingJobAfterWorkerCompletes forces release to win
+// the lock order before a worker can load or publish completion.
+func TestPreloaderReleasePendingJobAfterWorkerCompletes(t *testing.T) {
+	p := newAssetPreloader(nil, nil, nil)
+	for range cap(p.work) {
+		p.work <- struct{}{}
 	}
-
-	if !preloader.Forget(8) {
-		t.Fatal("did not forget completed preload job")
+	unblock := func() {
+		for range cap(p.work) {
+			<-p.work
+		}
 	}
+	defer func() {
+		if unblock != nil {
+			unblock()
+		}
+	}()
+	id := p.Start([]AssetPreloadRequest{{Kind: "unsupported"}})
+	if got := p.Pending(); got != 1 {
+		t.Fatalf("pending = %d, want 1", got)
+	}
+	assertPreloadRelease(t, p, id)
+	if got := p.Pending(); got != 1 {
+		t.Fatalf("released pending = %d, want 1", got)
+	}
+	assertPreloadJobCount(t, p, 1)
+	unblock()
+	unblock = nil
+	waitPreloadPending(t, p, 0)
+	assertPreloadJobCount(t, p, 0)
+}
 
-	if _, ok := preloader.Status(8); ok {
-		t.Fatal("forgotten preload job still has status")
+// TestPreloaderReleaseCompletedEmptyAndUnknownJobs verifies immediate cleanup needs no worker or retry ownership.
+func TestPreloaderReleaseCompletedEmptyAndUnknownJobs(t *testing.T) {
+	p := newAssetPreloader(nil, nil, nil)
+	if p.Forget(99) {
+		t.Fatal("released unknown job")
+	}
+	id := p.Start([]AssetPreloadRequest{{Kind: "unsupported"}})
+	waitPreloadPending(t, p, 0)
+	status, ok := p.Status(id)
+	if !ok || !status.Done || status.Completed != 1 || status.Failed != 1 {
+		t.Fatalf("completed status = %#v, present = %v", status, ok)
+	}
+	assertPreloadRelease(t, p, id)
+	assertPreloadJobCount(t, p, 0)
+	empty := p.Start(nil)
+	assertPreloadRelease(t, p, empty)
+	assertPreloadJobCount(t, p, 0)
+}
+
+// A single worker and gated asset reads keep the final request unfinished
+// after the first completion has been published.
+func TestPreloaderReleaseRetainsJobUntilFinalCompletion(t *testing.T) {
+	assets := &preloadReleaseFS{opened: make(chan struct{}, 2), proceed: make(chan struct{})}
+	defer close(assets.proceed)
+	p := NewRenderCapability(nil, nil, assets).preloads
+	p.work = make(chan struct{}, 1)
+	id := p.Start([]AssetPreloadRequest{
+		{Kind: "image", Path: "first.png"}, {Kind: "image", Path: "last.png"},
+	})
+	waitPreloadOpen(t, assets.opened)
+	assertPreloadRelease(t, p, id)
+	if got := p.Pending(); got != 2 {
+		t.Fatalf("pending = %d, want 2", got)
+	}
+	assets.proceed <- struct{}{}
+	waitPreloadOpen(t, assets.opened)
+	if got := p.Pending(); got != 1 {
+		t.Fatalf("pending after first completion = %d, want 1", got)
+	}
+	assertPreloadJobCount(t, p, 1)
+	if _, ok := p.Status(id); ok {
+		t.Fatal("released job regained status")
+	}
+	assets.proceed <- struct{}{}
+	waitPreloadPending(t, p, 0)
+	assertPreloadJobCount(t, p, 0)
+}
+
+type preloadReleaseFS struct {
+	opened  chan struct{}
+	proceed chan struct{}
+}
+
+// Open holds each synthetic read until the test permits completion, exposing intermediate job ownership.
+func (f *preloadReleaseFS) Open(string) (fs.File, error) {
+	f.opened <- struct{}{}
+	<-f.proceed
+	return nil, fs.ErrNotExist
+}
+
+// waitPreloadOpen bounds the worker-entry wait so a missing asset read fails instead of hanging the suite.
+func waitPreloadOpen(t *testing.T, opened <-chan struct{}) {
+	t.Helper()
+	select {
+	case <-opened:
+	case <-time.After(5 * time.Second):
+		t.Fatal("timed out waiting for asset read")
+	}
+}
+
+// waitPreloadPending bounds asynchronous completion waits while observing the public unfinished-work count.
+func waitPreloadPending(t *testing.T, p *assetPreloader, want int) {
+	t.Helper()
+	deadline := time.Now().Add(5 * time.Second)
+	for p.Pending() != want {
+		if time.Now().After(deadline) {
+			t.Fatalf("pending = %d, want %d", p.Pending(), want)
+		}
+		time.Sleep(time.Millisecond)
+	}
+}
+
+// assertPreloadJobCount observes retained records under their owning lock while workers may still complete.
+func assertPreloadJobCount(t *testing.T, p *assetPreloader, want int) {
+	t.Helper()
+	p.mu.Lock()
+	count := len(p.jobs)
+	p.mu.Unlock()
+	if count != want {
+		t.Fatalf("retained jobs = %d, want %d", count, want)
+	}
+}
+
+// assertPreloadRelease verifies ownership transfers exactly once and immediately hides the released status.
+func assertPreloadRelease(t *testing.T, p *assetPreloader, id uint64) {
+	t.Helper()
+	if !p.Forget(id) {
+		t.Fatal("first release rejected")
+	}
+	if p.Forget(id) {
+		t.Fatal("duplicate release accepted")
+	}
+	if _, ok := p.Status(id); ok {
+		t.Fatal("released job still has status")
 	}
 }
