@@ -139,7 +139,14 @@ function M.register()
     })
     component("d2legacy.presentation.animation_clock", { { name = "seconds", type = "f64" } })
     component("d2legacy.world.bounds", { { name = "width", type = "f64" }, { name = "height", type = "f64" } })
-    component("d2legacy.world.location", { { name = "act", type = "i64" }, { name = "level_id", type = "i64" } })
+    component("d2legacy.world.location", {
+        { name = "act", type = "i64" }, { name = "level_id", type = "i64" },
+        -- Last committed relocation, retained across ticks/checkpoints so render
+        -- sampling and network delivery cannot confuse a seam with a portal.
+        { name = "transition_sequence", type = "i64" },
+        { name = "transition_source", type = "i64" },
+        { name = "transition_kind", type = "string" },
+    })
     -- Generic request used when a world entity exists before the generated
     -- room plan. Population resolves it once from authoritative location and
     -- position, then replaces it with the ordinary room-resident component.

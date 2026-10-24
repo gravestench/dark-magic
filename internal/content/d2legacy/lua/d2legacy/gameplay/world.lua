@@ -51,6 +51,18 @@ local function overlay_height(entity)
     return 0
 end
 
+-- Controlled-player relocation evidence is checkpointed by authority and is
+-- also mirrored through the owner HUD on connected clients.
+function M.relocation(entity)
+    local location = optional_component(entity, "d2legacy.world.location")
+    if not location then return nil end
+    return {
+        sequence = location:get("transition_sequence"),
+        source_level = location:get("transition_source"),
+        kind = location:get("transition_kind"),
+    }
+end
+
 function M.create(width, height, collision, player)
     -- world.lua is the composition root: it chooses which data and behavior
     -- make up this playable world, while the imported modules explain details.

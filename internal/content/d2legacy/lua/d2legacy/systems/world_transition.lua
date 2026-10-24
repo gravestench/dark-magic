@@ -52,6 +52,7 @@ function M.register()
                     geometry.matching_seam(seams, location:get("level_id"), position:get("x"), position:get("y"))
                 if seam then
                     transition.apply(context, entity, {
+                        seam = true,
                         level_id = seam.destination_level,
                         x = seam.arrival_x,
                         y = seam.arrival_y,

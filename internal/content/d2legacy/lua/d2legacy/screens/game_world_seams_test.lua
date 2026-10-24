@@ -35,7 +35,7 @@ local function fixture()
         end
         function n:set_world_tile(map, _, index)
             self.level, self.width, self.height = map.id, 160, 160
-            return map.id == 1 and 900 or 0, 440, 160, 160
+            return index * 900, 440, 160, 160
         end
         function n:set_dc6(path)
             self.item = path
@@ -64,7 +64,8 @@ local function fixture()
                 width = 1000,
                 height = 1000,
                 chunks = {
-                    { index = 0, x = map.id == 1 and 900 or 0, y = 440, width = 160, height = 160, depth = 510 },
+                    { index = 0, x = 0, y = 440, width = 160, height = 160, depth = 510 },
+                    { index = 1, x = 900, y = 440, width = 160, height = 160, depth = 510 },
                 },
             }
         end,
@@ -173,25 +174,20 @@ local function fixture()
         { source_level = 2, destination_level = 3, source_x = 1000, source_y = 500, arrival_x = 0, arrival_y = 500 }
     seams[#seams + 1] =
         { source_level = 3, destination_level = 2, source_x = 0, source_y = 500, arrival_x = 1000, arrival_y = 500 }
-    test.mock_module("d2legacy.gameplay.seam_geometry", {
-        configured_seams = function()
-            return seams
-        end,
-        matching_seam = function(_, level, x, y)
-            for _, seam in ipairs(seams) do
-                if
-                    seam.source_level == level
-                    and math.abs(x - seam.source_x) <= 70
-                    and math.abs(y - seam.source_y) <= 70
-                then
-                    return seam
-                end
-            end
-        end,
-        pointer_target = function(_, _, _, x, y)
-            return x, y
+    for _, seam in ipairs(seams) do
+        seam.source_direction = seam.source_x == 0 and "west" or "east"
+        seam.trigger_radius, seam.world_width, seam.world_height = 2, 1100, 1000
+    end
+    test.mock_module("engine.initial_data/v1", {
+        get = function()
+            return { seams = seams }
         end,
     })
+    local geometry = require("d2legacy.gameplay.seam_geometry")
+    f.at_trigger = function()
+        return geometry.matching_seam(seams, f.level, f.hero.x, f.hero.y) ~= nil
+    end
+    f.relocation = { sequence = 0, source_level = 0, kind = "" }
     local maps = {}
     for id = 1, 4 do
         maps[id] = {
@@ -220,6 +216,9 @@ local function fixture()
         return {}
     end
     local gw = {
+        relocation = function()
+            return f.relocation
+        end,
         bind = function()
             return true
         end,
@@ -280,8 +279,60 @@ local function fixture()
     function f:frame(dt, view)
         scene.update(s, dt or 0, true, true, view)
     end
-    function f:cross(level, x, y)
+    function f:cross(level, x, y, kind)
+        self.relocation = { sequence = self.relocation.sequence + 1, source_level = self.level, kind = kind or "seam" }
         self.level, self.hero.x, self.hero.y = level, x, y
+    end
+    function f:assert_join(source, destination)
+        local root = s.hero.parent
+        local seam_x = source * 1000
+        -- Cover both sides and both vertical ends of the authored fixture strip;
+        -- the right samples are beyond the source tile's edge.
+        for _, side in ipairs({ { source, seam_x - 80 }, { destination, seam_x + 100 } }) do
+            for _, y in ipairs({ 460, 580 }) do
+                local sx, sy = side[2] + root.x, y + root.y
+                test.expect(sx >= 0 and sx < 800 and sy >= 0 and sy < 600):is_true()
+                local covered = false
+                for _, n in ipairs(self.nodes) do
+                    if n.level == side[1] and n.alive and n.visible and n.parent == root then
+                        local nx, ny = n.x + root.x, n.y + root.y
+                        covered = covered
+                            or (
+                                sx >= nx - n.width / 2
+                                and sx < nx + n.width / 2
+                                and sy >= ny - n.height / 2
+                                and sy < ny + n.height / 2
+                            )
+                    end
+                end
+                test.expect(covered):is_true()
+            end
+        end
+        -- Merge actual admitted rectangles that cover the strip's entire
+        -- height; checking both endpoints alone would miss a narrow black gap.
+        local intervals = {}
+        for _, n in ipairs(self.nodes) do
+            if
+                (n.level == source or n.level == destination)
+                and n.alive
+                and n.visible
+                and n.parent == root
+                and n.y - n.height / 2 <= 440
+                and n.y + n.height / 2 >= 600
+            then
+                intervals[#intervals + 1] = { n.x - n.width / 2, n.x + n.width / 2 }
+            end
+        end
+        table.sort(intervals, function(a, b)
+            return a[1] < b[1]
+        end)
+        local covered_to = seam_x - 80
+        for _, span in ipairs(intervals) do
+            if span[1] <= covered_to then
+                covered_to = math.max(covered_to, span[2])
+            end
+        end
+        test.expect(covered_to >= seam_x + 120):is_true()
     end
     function f:close()
         scene.destroy(s)
@@ -294,13 +345,55 @@ return test.suite({
     profile = "module",
     tier = "fast",
     cases = {
+        test.case("stale_seam_reason_cannot_ease_a_later_level_change", function(t)
+            t:run(function()
+                local f = fixture()
+                f:frame()
+                f:frame()
+                f:cross(2, 0, 500)
+                f:frame()
+                f:frame(1)
+                f.level, f.hero.x = 1, 500
+                f:frame()
+                test.expect(f.scene.visual_carry):is_nil()
+                test.expect(f.scene.hero.x + f.scene.hero.parent.x):equals(400)
+                f:close()
+            end)
+        end),
+        test.case("outside_trigger_samples_carry_both_directions_but_warps_do_not", function(t)
+            t:run(function()
+                for _, crossing in ipairs({ { 1, 997, 2, 0 }, { 2, 3, 1, 1000 } }) do
+                    local f = fixture()
+                    f.level, f.hero.x = crossing[1], crossing[2]
+                    f:frame()
+                    f:frame()
+                    test.expect(f.at_trigger()):is_false()
+                    local root = f.scene.hero.parent
+                    local rx, hx = root.x, root.x + f.scene.hero.x
+                    f:cross(crossing[3], crossing[4], 500)
+                    f:frame(0.1)
+                    test.expect(root.x):equals(rx)
+                    test.expect(root.x + f.scene.hero.x):equals(hx)
+                    -- A same-level warp during settle must clear carry and snap camera.
+                    f:cross(crossing[3], 500, 500, "warp")
+                    f:frame(0.01)
+                    test.expect(f.scene.hero.x + root.x):equals(400)
+                    test.expect(f.scene.visual_carry):is_nil()
+                    -- Retaining an old reason must not ease another level update.
+                    f.level, f.hero.x = crossing[1], 500
+                    f:frame(0.01)
+                    test.expect(f.scene.visual_carry):is_nil()
+                    f:close()
+                end
+            end)
+        end),
         test.case("warp_between_outdoor_levels_does_not_apply_seam_carry", function(t)
             t:run(function()
                 local f = fixture()
                 f.hero.x = 400
                 f:frame()
                 f:frame()
-                f:cross(2, 0, 500)
+                f:cross(2, 0, 500, "warp")
                 f:frame(1 / 60)
                 test.expect(f.scene.hero.x):equals(1000)
                 test.expect(f.scene.hero.parent.x):equals(-600)
@@ -322,6 +415,7 @@ return test.suite({
                 test.expect(neighbor ~= nil and neighbor.visible):is_true()
                 local left = neighbor.x + neighbor.parent.x - 80
                 test.expect(left >= 0 and left < 800):is_true()
+                f:assert_join(2, 3)
                 for _, crossing in ipairs({ { 3, 0, 500 }, { 2, 1000, 500 } }) do
                     local root = f.scene.hero.parent
                     local rx, hx = root.x, root.x + f.scene.hero.x
@@ -330,6 +424,7 @@ return test.suite({
                     test.expect(root.x):equals(rx)
                     test.expect(root.x + f.scene.hero.x):equals(hx)
                     test.expect(neighbor.alive):is_true()
+                    f:assert_join(2, 3)
                     f:frame(0.04)
                 end
                 f:close()
@@ -439,10 +534,12 @@ return test.suite({
                 local left = neighbor.x + neighbor.parent.x - neighbor.width / 2
                 test.expect(left >= 0 and left < 800):is_true()
                 test.expect(neighbor.parent == f.scene.hero.parent):is_true()
+                f:assert_join(1, 2)
                 test.expect(f.scene.hero.z < neighbor.z):is_true()
                 f:cross(2, 0, 500)
                 f:frame()
                 test.expect(neighbor.alive):is_true()
+                f:assert_join(1, 2)
                 f:close()
                 test.expect(neighbor.alive):is_false()
                 test.expect(neighbor.parent.alive):is_false()

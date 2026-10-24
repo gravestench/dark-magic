@@ -19,7 +19,7 @@
 
 ## Review Focus
 
-- Off-center legal trigger and rapid reverse crossing: visual hero and camera remain continuous, with authority unchanged (Task 4).
+- Off-center legal trigger and rapid reverse crossing: visual hero and camera remain continuous, with gameplay outcomes unchanged (Task 4).
 - Preview margins or absent tiles at the seam: viewport pixels beyond the source edge receive actual destination tile draws, not just canvas bounds (Tasks 3 and 4).
 - Equal-depth overlap and upper walls: stable source-side priority and interleaving with the active hero (Tasks 3 and 4).
 - Side-panel camera anchor changes during a crossing: pointer reverse projection follows the rendered floor (Task 4).
@@ -67,7 +67,9 @@
 
 **Files:** Modify `internal/content/d2legacy/lua/d2legacy/screens/game_world.lua`, `internal/content/d2legacy/lua/d2legacy/gameplay/ground_items.lua`, and `Makefile`; create focused scene tests in `internal/content/d2legacy/lua/d2legacy/screens/game_world_seams_test.lua`.
 
-**Interfaces:** Scene creation loads Task 1 snapshot and Task 2 layout, creates one shared camera root, and creates Task 3 adapters for prepared levels. Active entity nodes, including ground items, use the active level's global pixel/depth translation and remain siblings of tile nodes. On level change, retain all terrain adapters, replace only active entity nodes, and compute camera/hero visual carry offsets from last rendered positions; ease them to zero over a fixed short duration. Pointer inverse projection uses the effective rendered camera anchor. Scene exit releases all adapters and root.
+**Review-driven scope clarification:** Task 4 also updates the existing location schema, shared relocation transaction/seam caller, gameplay presentation reader, controlled-owner HUD projection (version 9), client mirror and validation, and their tests. Authority records sequence/source/reason metadata so scene rendering can distinguish a consumed seam trigger from a warp across frame/network gaps. This changes serialized presentation evidence, not transition admission or movement outcomes. Task 3's shared adapter gains integer depth scale/priority to make equal-depth overlap stable; default adapter mode remains unchanged.
+
+**Interfaces:** Scene creation loads Task 1 snapshot and Task 2 layout, creates one shared camera root, and creates Task 3 adapters for prepared levels. Active entity nodes, including ground items, use the active level's global pixel/depth translation and remain siblings of tile nodes. On a new authoritative seam relocation record, retain all terrain adapters, replace only active entity nodes, and compute camera/hero visual carry offsets from last rendered positions; ease them to zero over a fixed short duration. Pointer inverse projection uses the effective rendered camera anchor. Scene exit releases all adapters and root.
 
 - [ ] Write synthetic scene tests for visible neighboring tile before crossing, bidirectional centered/off-center crossing with no first-frame camera/hero jump, rapid reverse crossing, pointer under side-panel anchor during settling, active-only dynamic entities, depth interleaving, and cleanup. Use a shared-root render spy to assert admitted tile nodes and their visible rectangles, not just map canvas bounds.
 - [ ] Run focused Lua and Go tests; confirm the new assertions fail.

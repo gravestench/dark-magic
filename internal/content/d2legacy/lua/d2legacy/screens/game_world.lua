@@ -203,9 +203,12 @@ local function install_current_world(self)
         self.world_capability = world_capability
     end
     local level_id = world_capability.current_level()
-    if self.world_level_id == level_id then
-        return false
-    end
+    local relocation = self.gameplay and self.gameplay.hero and self.gameplay_world.relocation
+        and self.gameplay_world.relocation(self.gameplay.hero)
+    local previous_sequence = self.transition_sequence
+    local changed = relocation and previous_sequence ~= nil and relocation.sequence > previous_sequence
+    self.transition_sequence = relocation and relocation.sequence or previous_sequence
+    if self.world_level_id == level_id and not changed then return false end
     local next_world, recipe = world_capability.current()
     assert(next_world and recipe, "session world is unavailable")
     if self.hero and self.hero:exists() then
@@ -230,10 +233,10 @@ local function install_current_world(self)
     self.collision_node, self.collision_region_key = nil, nil
     self.tile_debug_node, self.tile_debug_region_key = nil, nil
     self.hero_origin = nil
-    local last = self.last_rendered
-    local seam = last and seam_geometry.matching_seam(
-        seam_geometry.configured_seams(), self.world_level_id, last.authority_x, last.authority_y)
-    self.crossing_pending = seam ~= nil and seam.destination_level == level_id
+    -- The collision tick consumes the source trigger before rendering. Use
+    -- the committed reason, not a sampled source position or arrival guess.
+    self.crossing_pending = changed and relocation.kind == "seam"
+        and relocation.source_level == self.world_level_id and self.world_level_id ~= level_id
     if not self.crossing_pending then self.visual_carry = nil end
     prepare_terrain(self, world_capability, level_id)
     self.world, self.world_recipe, self.world_level_id = next_world, recipe, recipe.level_id
@@ -1227,8 +1230,7 @@ return {
                 local _, map_error = chunked_map.update(adapter, 0, 0, rx, ry, world_view)
                 if map_error then error("updating world map: " .. tostring(map_error)) end
             end
-            self.last_rendered = { root_x = rx, root_y = ry, hero_x = hero_screen_x, hero_y = hero_screen_y,
-                authority_x = hero_x, authority_y = hero_y }
+            self.last_rendered = { root_x = rx, root_y = ry, hero_x = hero_screen_x, hero_y = hero_screen_y }
             -- The active map remains the input authority. Its effective anchor
             -- includes both the shared placement and the temporary visual carry.
             target_x, target_y = rx + cx, ry + cy
