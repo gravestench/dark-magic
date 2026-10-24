@@ -65,20 +65,21 @@
 
 ### Task 4: Compose the scene and carry visual continuity
 
-**Files:** Modify `internal/content/d2legacy/lua/d2legacy/screens/game_world.lua`, `internal/content/d2legacy/lua/d2legacy/gameplay/ground_items.lua`; create focused scene tests in `internal/content/d2legacy/lua/d2legacy/screens/game_world_seams_test.lua`; extend `internal/app/clientapp/cold_plains_transition_test.go` for owned-data production path.
+**Files:** Modify `internal/content/d2legacy/lua/d2legacy/screens/game_world.lua`, `internal/content/d2legacy/lua/d2legacy/gameplay/ground_items.lua`, and `Makefile`; create focused scene tests in `internal/content/d2legacy/lua/d2legacy/screens/game_world_seams_test.lua`.
 
 **Interfaces:** Scene creation loads Task 1 snapshot and Task 2 layout, creates one shared camera root, and creates Task 3 adapters for prepared levels. Active entity nodes, including ground items, use the active level's global pixel/depth translation and remain siblings of tile nodes. On level change, retain all terrain adapters, replace only active entity nodes, and compute camera/hero visual carry offsets from last rendered positions; ease them to zero over a fixed short duration. Pointer inverse projection uses the effective rendered camera anchor. Scene exit releases all adapters and root.
 
-- [ ] Write synthetic scene tests for visible neighboring tile before crossing, bidirectional centered/off-center crossing with no first-frame camera/hero jump, rapid reverse crossing, pointer under side-panel anchor during settling, active-only dynamic entities, depth interleaving, and cleanup. Extend an owned-data test to inspect actual admitted tile draws on the production scene before/after both seams.
+- [ ] Write synthetic scene tests for visible neighboring tile before crossing, bidirectional centered/off-center crossing with no first-frame camera/hero jump, rapid reverse crossing, pointer under side-panel anchor during settling, active-only dynamic entities, depth interleaving, and cleanup. Use a shared-root render spy to assert admitted tile nodes and their visible rectangles, not just map canvas bounds.
 - [ ] Run focused Lua and Go tests; confirm the new assertions fail.
 - [ ] Implement scene composition, global entity placement, visual carry, pointer anchor, and union-edge clamp.
-- [ ] Run focused tests with `MPQ_DIRECTORY=/Users/dylanknuth/d2_english_mpq` for the data-dependent test; confirm pass and record which cases ran.
+- [ ] Add `capture-cold-plains-seam` to `Makefile` using the existing production `capture` target with `FIXTURE_WORLD_LEVEL=2 FIXTURE_WORLD_SPAWN=cold_plains_seam` and `FIXTURE_WORLD_LEVEL=3 FIXTURE_WORLD_SPAWN=cold_plains_seam`, mirroring `capture-act1-seam`. These four static scene views across both targets are the owned-data visual check for both sides of each seam; synthetic scene tests prove first-frame crossing continuity.
+- [ ] Run focused scene tests and existing headless owned-data transition tests with `MPQ_DIRECTORY=/Users/dylanknuth/d2_english_mpq`; record which cases ran and passed.
 - [ ] Commit this task.
 
 ### Task 5: Verify and submit issue #641
 
 **Files:** Update only issue #641 design/plan if implementation evidence changes; fill `.github/PULL_REQUEST_TEMPLATE.md` in PR description.
 
-- [ ] Run on final commit: `make test`, `make architecture`, `make test-race`, `make test-lua-hardening`, `make build-client-backends`, focused owned-data tests, and the `capture-act1-seam` path if its local inputs are available. Record exact results and skipped data-dependent cases; keep captures local.
+- [ ] Run on final commit: `make test`, `make architecture`, `make test-race`, `make test-lua-hardening`, `make build-client-backends`, focused owned-data headless transition tests, `make capture-act1-seam`, and `make capture-cold-plains-seam` with local MPQs. Inspect all four scene images at both seam edges for actual neighbor terrain and compare before/after authority-side views. Record exact results and skipped data-dependent cases; keep captures local.
 - [ ] Have independent correctness/evidence and formatting/style reviewers inspect final diff; style reviewer uses `refactor-for-readability`. Fix blockers and rerun affected checks.
 - [ ] Write complete PR description before creating PR, push branch, attach PR, wait for CI, and merge when all required checks pass. Fast-forward the main checkout.
