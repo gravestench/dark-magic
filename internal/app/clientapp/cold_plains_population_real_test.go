@@ -553,7 +553,12 @@ func TestConnectedColdPlainsPopulationMatchesAuthority(t *testing.T) {
 		time.Sleep(40 * time.Millisecond)
 		f.advanceGame(t, 1)
 
-		hud, view := app.network.client.View()
+		presentation := app.network.client.PresentationSnapshot()
+		hud, view := presentation.HUD, presentation.World
+		// Events retain the reliable correction tick. A newer datagram cannot acknowledge monster lifecycle.
+		if presentation.Events.Tick != hud.Tick || view.Tick != hud.Tick {
+			continue
+		}
 
 		replay, err := app.network.host.Session.Replay()
 		if err != nil {
