@@ -30,7 +30,7 @@ type MovementSource struct {
 	hasAuthenticated      bool
 }
 
-// routeProgressSample is client input evidence from the authenticated HUD, not a second world authority.
+// routeProgressSample is server-authenticated movement evidence for client routing, not a second world authority.
 type routeProgressSample struct {
 	player   string
 	level    int

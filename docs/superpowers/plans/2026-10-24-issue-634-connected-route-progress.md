@@ -47,12 +47,13 @@
 
 **Files:**
 - Modify: `internal/app/clientapp/client_reconciliation.go`
-- Test: `internal/app/clientapp/town_bridge_pointer_real_test.go` only if the existing route assertion needs a deterministic observable check; do not weaken its crossing assertions.
+- Test: `internal/app/clientapp/client_route_progress_test.go` for a deterministic HUD-to-command wiring assertion.
+- Test: `internal/mod/d2legacy/adapter/movement/movement_test.go` for the offline no-HUD completion characterization.
 
 **Interfaces:**
 - Consumes: `(*MovementSource).SetAuthenticatedPosition(player string, level int, position gameworld.Point)` from Task 1, using the validated `hud` passed to `presentLocalPrediction`.
 
-- [ ] **Step 1: Confirm the existing RED evidence.** Record the earlier owned full-package failure at presented `(250.667,84)`, authenticated `(250.875,84)`, with accepted/pending waypoint `(251,84)` while clicking `(252,84)`. The existing `TestTownBridgePointerFromEntryConnected` reaches the production reconciliation and movement source; it failed in the baseline full-package order before this task.
+- [ ] **Step 1: Confirm the existing RED evidence and add wiring proof.** Record the earlier owned full-package failure at presented `(250.667,84)`, authenticated `(250.875,84)`, with accepted/pending waypoint `(251,84)` while clicking `(252,84)`. Add `TestConnectedReconciliationFeedsAuthenticatedRouteProgress` with a small open map and accepted route planned from `(10,10)` to `(13,10)`, then force displayed `(11.667,10)` and authenticated HUD `(11.875,10)` near waypoint `(12,10)`; it must emit target `(13,10)`. Temporarily remove the setter call and verify this test emits `(12,10)`; restore it before GREEN. Add a no-HUD completed-route case asserting the old stationary target.
 - [ ] **Step 2: Wire the authenticated HUD sample.** In `presentLocalPrediction`, supply owner, level, and position to `movementSource` before applying the smoothed `presented` position to the replica. Do not pass predicted or interpolated coordinates.
 - [ ] **Step 3: Verify the owned route.** With `MPQ_DIRECTORY` and `DARK_MAGIC_TEST_MPQ_DIRECTORY` pointing to owned 1.14d data, run `go test -count=5 ./internal/app/clientapp -run '^TestTownBridgePointerFromEntryConnected$'`, then `go test -count=3 ./internal/app/clientapp`. Both must pass, including the existing offline route and round-trip tests in package order. Report any unrelated failures by name.
 - [ ] **Step 4: Commit.** Commit the reconciliation wiring and any narrowly justified acceptance-test change as `fix: feed connected route progress from authenticated HUD`.

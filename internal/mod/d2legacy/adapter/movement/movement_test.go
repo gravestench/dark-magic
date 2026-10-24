@@ -45,6 +45,7 @@ func routeProgressSource(t *testing.T, displayedX float64) (*MovementSource, *Mo
 	return source, controller, navigation
 }
 
+// seedRouteProgress installs the same two-waypoint route after binding tests reset the source.
 func seedRouteProgress(t *testing.T, source *MovementSource, controller *MovementController) {
 	t.Helper()
 	if err := controller.SetMoveTarget(252, 84); err != nil {
@@ -54,6 +55,7 @@ func seedRouteProgress(t *testing.T, source *MovementSource, controller *Movemen
 	source.path = []gameworld.Point{{X: 250, Y: 84}, {X: 251, Y: 84}, {X: 252, Y: 84}}
 }
 
+// TestMovementSourceAdvancesConnectedWaypointFromAuthenticatedPosition pins the observed host/display threshold gap.
 func TestMovementSourceAdvancesConnectedWaypointFromAuthenticatedPosition(t *testing.T) {
 	source, _, _ := routeProgressSource(t, 250.667)
 	source.SetAuthenticatedPosition("alpha", 1, gameworld.Point{X: 250.875, Y: 84})
@@ -64,6 +66,7 @@ func TestMovementSourceAdvancesConnectedWaypointFromAuthenticatedPosition(t *tes
 	}
 }
 
+// TestMovementSourceStopsCompletedConnectedRouteWithoutReverseTarget prevents stale display position from pulling back.
 func TestMovementSourceStopsCompletedConnectedRouteWithoutReverseTarget(t *testing.T) {
 	source, controller, _ := routeProgressSource(t, 250.667)
 	if err := controller.SetMoveTarget(251, 84); err != nil {
@@ -83,27 +86,45 @@ func TestMovementSourceStopsCompletedConnectedRouteWithoutReverseTarget(t *testi
 	}
 }
 
+// TestMovementSourceKeepsOfflineStationaryCompletion preserves the existing no-HUD stop command.
+func TestMovementSourceKeepsOfflineStationaryCompletion(t *testing.T) {
+	source, controller, _ := routeProgressSource(t, 250.875)
+	if err := controller.SetMoveTarget(251, 84); err != nil {
+		t.Fatal(err)
+	}
+	source.pathTarget = &MoveTarget{X: 251, Y: 84}
+	source.path = []gameworld.Point{{X: 250, Y: 84}, {X: 251, Y: 84}}
+
+	payload := commandPayload(t, source, 1)
+	if payload.Target == nil || payload.Target.X != 250.875 || payload.Target.Y != 84 ||
+		payload.X != 0 || payload.Y != 0 || controller.HasMoveTarget() {
+		t.Fatalf("completed offline route changed its stationary command: %#v", payload)
+	}
+}
+
+// TestMovementSourceGuardsAuthenticatedPosition keeps samples within their owner and world binding.
 func TestMovementSourceGuardsAuthenticatedPosition(t *testing.T) {
 	for _, trial := range []struct {
-		name       string
-		displayedX float64
-		player     string
-		level      int
-		sample     bool
+		name           string
+		displayedX     float64
+		authenticatedX float64
+		player         string
+		level          int
+		sample         bool
 	}{
-		{name: "visual near authority far", displayedX: 250.875, player: "alpha", level: 1, sample: true},
-		{name: "wrong owner", displayedX: 250.667, player: "beta", level: 1, sample: true},
-		{name: "wrong level", displayedX: 250.667, player: "alpha", level: 2, sample: true},
+		{name: "visual near authority far", displayedX: 250.875, authenticatedX: 250.667,
+			player: "alpha", level: 1, sample: true},
+		{name: "wrong owner", displayedX: 250.667, authenticatedX: 250.875,
+			player: "beta", level: 1, sample: true},
+		{name: "wrong level", displayedX: 250.667, authenticatedX: 250.875,
+			player: "alpha", level: 2, sample: true},
 		{name: "no sample", displayedX: 250.667},
 	} {
 		t.Run(trial.name, func(t *testing.T) {
 			source, _, _ := routeProgressSource(t, trial.displayedX)
 			if trial.sample {
-				sampleX := 250.875
-				if trial.name == "visual near authority far" {
-					sampleX = 250.667
-				}
-				source.SetAuthenticatedPosition(trial.player, trial.level, gameworld.Point{X: sampleX, Y: 84})
+				source.SetAuthenticatedPosition(trial.player, trial.level,
+					gameworld.Point{X: trial.authenticatedX, Y: 84})
 			}
 			payload := commandPayload(t, source, 1)
 			if payload.Target == nil || payload.Target.X != 251 || payload.Target.Y != 84 {
