@@ -368,30 +368,38 @@ func TestTownBridgePointerBeyondEastLipConnected(t *testing.T) {
 // bridgeCameraPosition reads the camera used by the live scene, which can lag behind the hero.
 func bridgeCameraPosition(t *testing.T, app *application) gameworld.Point {
 	t.Helper()
+
 	world := app.presentationSimulation().World()
 	follows, found := akara.GetDynamicStore(world, "d2legacy.world.camera_follow")
+
 	positions, hasPositions := akara.GetDynamicStore(world, "d2legacy.world.position")
 	if !found || !hasPositions {
 		t.Fatalf("bridge camera stores unavailable: follows=%v positions=%v", found, hasPositions)
 	}
+
 	if follows.Len() != 1 {
 		t.Fatalf("bridge camera count = %d, want 1", follows.Len())
 	}
+
 	position, found := positions.Get(follows.Entities()[0])
 	if !found {
 		t.Fatal("bridge camera has no position")
 	}
+
 	x, errX := position.Get("x")
+
 	y, errY := position.Get("y")
 	if errX != nil || errY != nil {
 		t.Fatalf("read bridge camera position: x=%v y=%v", errX, errY)
 	}
+
 	return gameworld.Point{X: x.(float64), Y: y.(float64)}
 }
 
 // bridgeClickAnchor follows the rendered canvas clamp using the live camera position.
 func bridgeClickAnchor(t *testing.T, town *gameworld.Map, camera gameworld.Point) gameworld.Point {
 	t.Helper()
+
 	width := float64((town.WidthTiles+town.HeightTiles)*gameworld.TilePixelWidth/2 + gameworld.PreviewMargin*2)
 	height := float64((town.WidthTiles+town.HeightTiles)*gameworld.TilePixelHeight/2 + gameworld.PreviewMargin*2)
 	cameraPixel := town.Coordinates().SubtileToWorldPixel(camera)
@@ -399,20 +407,24 @@ func bridgeClickAnchor(t *testing.T, town *gameworld.Map, camera gameworld.Point
 		if size <= viewport {
 			return viewport / 2
 		}
+
 		return math.Max(viewport-size/2, math.Min(size/2, wanted))
 	}
 	rootX := clamp(400+width/2-cameraPixel.X, width, 800)
 	rootY := clamp(330+height/2-cameraPixel.Y, height, 600)
+
 	anchor := gameworld.Point{X: rootX - width/2 + cameraPixel.X, Y: rootY - height/2 + cameraPixel.Y}
 	if math.Abs(anchor.X-400) > 0.01 || math.Abs(anchor.Y-330) > 0.01 {
 		t.Fatalf("bridge shoulder camera unexpectedly clamped: camera=%v anchor=%v", camera, anchor)
 	}
+
 	return anchor
 }
 
 // testTownBridgeShoulderPointerCrosses reproduces a visible eastward click from the bridge shoulder.
 func testTownBridgeShoulderPointerCrosses(t *testing.T, hosted bool) {
 	t.Helper()
+
 	app, input := newBridgePointerClient(t, hosted)
 	for range 10 {
 		advanceBridgePointerFrame(t, app)
@@ -422,20 +434,25 @@ func testTownBridgeShoulderPointerCrosses(t *testing.T, hosted bool) {
 	if err := app.playerControl.SetMoveTarget(shoulder.X, shoulder.Y); err != nil {
 		t.Fatal(err)
 	}
+
 	for range 200 {
 		if hosted {
 			time.Sleep(40 * time.Millisecond)
 		}
+
 		advanceBridgePointerFrame(t, app)
+
 		x, y, present := app.controlledPlayerPosition()
 		if present && math.Hypot(x-shoulder.X, y-shoulder.Y) < 0.35 {
 			break
 		}
 	}
+
 	x, y, present := app.controlledPlayerPosition()
 	if !present || math.Hypot(x-shoulder.X, y-shoulder.Y) >= 0.35 || app.activeWorldLevel != 1 {
 		t.Fatalf("bridge shoulder setup stopped at (%.2f,%.2f), level %d", x, y, app.activeWorldLevel)
 	}
+
 	for range 10 {
 		advanceBridgePointerFrame(t, app)
 	}
@@ -446,14 +463,17 @@ func testTownBridgeShoulderPointerCrosses(t *testing.T, hosted bool) {
 	anchor := bridgeClickAnchor(t, town, camera)
 	outside := gameworld.Point{X: float64(town.WidthSubtiles + 1), Y: 80}
 	projected := town.Coordinates().SubtileToScreen(outside, camera, anchor)
+
 	cursor := gameworld.Point{X: math.Round(projected.X), Y: math.Round(projected.Y)}
 	if cursor.X < 0 || cursor.X >= 800 || cursor.Y < 0 || cursor.Y >= 480 {
 		t.Fatalf("bridge shoulder outside click is outside gameplay viewport: %v", cursor)
 	}
+
 	raw := town.Coordinates().ScreenToSubtile(cursor, camera, anchor)
 	if gameworld.CollisionCell(raw.X) < town.WidthSubtiles || gameworld.CollisionCell(raw.Y) != 80 {
 		t.Fatalf("bridge shoulder cursor %v reverse-projects to %v, want east edge at lane 80", cursor, raw)
 	}
+
 	start := gameworld.Point{X: x, Y: y}
 	_, rawPathErr := town.FindPath(gameworld.PathRequest{Start: start, Goal: raw, Radius: 1})
 	_, safePathErr := town.FindPath(gameworld.PathRequest{
@@ -462,17 +482,22 @@ func testTownBridgeShoulderPointerCrosses(t *testing.T, hosted bool) {
 	t.Logf("bridge shoulder camera=%v anchor=%v cursor=%v raw=%v start=%v raw route=%v safe route=%v strip=[%d,%d]",
 		camera, anchor, cursor, raw, start, rawPathErr, safePathErr,
 		seam.First.TriggerStrip.LaneMin, seam.First.TriggerStrip.LaneMax)
+
 	if rawPathErr == nil || safePathErr != nil {
 		t.Fatalf("bridge shoulder route preconditions changed: raw=%v safe=%v", rawPathErr, safePathErr)
 	}
 
 	input.frame = inputstate.Frame{CursorX: cursor.X, CursorY: cursor.Y,
 		Actions: map[string]inputstate.ActionState{"pointer_primary": {Pressed: true, Down: true}}}
+
 	advanceBridgePointerFrame(t, app)
+
 	input.frame = inputstate.Frame{CursorX: cursor.X, CursorY: cursor.Y}
+
 	if !app.playerControl.HasMoveTarget() {
 		t.Fatal("bridge shoulder click did not become a movement request")
 	}
+
 	awaitBridgeLevel(t, app, 2)
 	assertBridgePointerLevel(t, app, 2, seam.Second)
 	x, y, _ = app.controlledPlayerPosition()
