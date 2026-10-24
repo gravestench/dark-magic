@@ -18,6 +18,16 @@ owned data. The original game's density arithmetic, group construction, and
 random call order have not been verified; existing Dark Magic spawning policy
 remains explicitly provisional.
 
+Implementation evidence found that the three owned `MonStats.txt` candidates
+have positive Normal `minHP`/`maxHP` percentages but blank `(N)` and `(H)`
+life cells. The current text-record interpreter otherwise produces zero-health
+Nightmare and Hell residents. For scaled ordinary monsters, a blank higher-
+difficulty life cell now uses that row's Normal percentage; explicit numeric
+values, including zero, retain their meaning. This is a Dark Magic text-table
+policy. The verified 1.13c scaling code consumes difficulty-indexed values,
+but the conversion of blank 1.14d text cells into those values is not yet
+established.
+
 ## Boundary
 
 The existing `Prepared.PopulationCommand` remains the sole admission command,
@@ -49,7 +59,10 @@ the cave pair's level and dimensions, then appends exactly one level-8 zone.
 The zone contains the actual room bounds, stamp `Populate` decision, links,
 and deterministic open candidate points reachable on player-sized collision
 from the validated cave arrival. The level-8 search continues past open but
-disconnected center pockets instead of filling its four candidates from them.
+disconnected center pockets and endpoint-overlapping or blocked full-footprint
+centers instead of filling its four candidates from them. The provisional
+candidate bound uses the largest collider among the three owned Den families
+(1.5 subtiles); Lua still checks the selected monster's actual footprint.
 The cave pair supplies two protected
 locations in level 8: its arrival and return-warp source. Their coordinates
 and clearance radii are published as cave-only exclusion geometry. Missing or

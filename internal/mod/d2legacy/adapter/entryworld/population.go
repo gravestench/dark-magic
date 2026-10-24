@@ -2,6 +2,7 @@ package entryworld
 
 import (
 	"fmt"
+	"math"
 	"strconv"
 
 	gameworld "github.com/gravestench/dark-magic/internal/game/world"
@@ -83,8 +84,23 @@ func (world *Prepared) denPopulationData(outdoor map[int]bool) (map[string]any, 
 	populated := populatedStamps(denZone)
 	rooms := make([]any, 0, len(denZone.Rooms()))
 	for _, room := range denZone.Rooms() {
+		// The owned Den families have at most a 1.5-subtile collider. Filter
+		// candidate geometry before the four-point budget is consumed; Lua
+		// still makes the final monster and placement decision.
+		const radius = 1.5
+		minX, minY := float64(room.X*gameworld.SubtilesPerTile), float64(room.Y*gameworld.SubtilesPerTile)
+		maxX := minX + float64(room.Width*gameworld.SubtilesPerTile)
+		maxY := minY + float64(room.Height*gameworld.SubtilesPerTile)
 		points := roomPopulationPointsWhere(denMap, room, func(x, y int) bool {
-			return reachable[y*denMap.WidthSubtiles+x]
+			px, py := float64(x), float64(y)
+			if !reachable[y*denMap.WidthSubtiles+x] || px-radius < minX || py-radius < minY ||
+				px+radius >= maxX || py+radius >= maxY ||
+				math.Hypot(px-arrival.X, py-arrival.Y) < 1+radius ||
+				math.Hypot(px-pair.Second.X, py-pair.Second.Y) < 3.5+radius {
+				return false
+			}
+			point := gameworld.Point{X: px, Y: py}
+			return denMap.WalkableStep(point, point, radius)
 		})
 		rooms = append(rooms, populationRoom(room, populated[room.StampID], points))
 	}

@@ -79,6 +79,7 @@ func TestDenPopulationExplainsNoSafePoint(t *testing.T) {
 	}
 }
 
+// denPopulationRecords supplies a minimal level-8 row to isolate Lua admission and activation policy.
 func denPopulationRecords() fixtureRecords {
 	records := stonyPopulationRecords()
 	row := map[string]string{}
@@ -95,6 +96,7 @@ func denPopulationRecords() fixtureRecords {
 	return records
 }
 
+// denPopulationZone adds the required cave envelope to the ordinary zone fixture.
 func denPopulationZone(difficulty int) map[string]any {
 	zone := coldZone(8, difficulty)
 	zone["exclusions"] = []any{
@@ -138,7 +140,9 @@ func TestDenPopulationRejectsIncompleteCave(t *testing.T) {
 		make func() []map[string]any
 	}{
 		{"missing level 3", func() []map[string]any { return []map[string]any{coldZone(2, 0), denPopulationZone(0)} }},
-		{"missing level 4", func() []map[string]any { return []map[string]any{coldZone(2, 0), coldZone(3, 0), denPopulationZone(0)} }},
+		{"missing level 4", func() []map[string]any {
+			return []map[string]any{coldZone(2, 0), coldZone(3, 0), denPopulationZone(0)}
+		}},
 		{"duplicate level 8", func() []map[string]any {
 			return []map[string]any{coldZone(2, 0), coldZone(3, 0), coldZone(4, 0), denPopulationZone(0), denPopulationZone(0)}
 		}},

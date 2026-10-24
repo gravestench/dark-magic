@@ -68,6 +68,12 @@ npc.npc = "1"
 local ordinary = stats("ordinary", "1")
 ordinary.demon = "1"
 ordinary.hUndead = "1"
+local blank_scaled = stats("blank_scaled", "1")
+for _, suffix in ipairs({ "(N)", "(H)" }) do
+    for _, name in ipairs({ "minHP", "maxHP" }) do
+        blank_scaled[name .. suffix] = ""
+    end
+end
 local pet = stats("pet", "0")
 pet.lUndead = "1"
 local neutral = stats("neutral", "1")
@@ -77,11 +83,33 @@ return test.suite({
     profile = "module",
     tier = "fast",
     records = {
-        ["data/global/excel/monstats.txt"] = { ordinary, pet, neutral, npc },
+        ["data/global/excel/monstats.txt"] = { ordinary, blank_scaled, pet, neutral, npc },
         ["data/global/excel/monstats2.txt"] = { graphics },
         ["data/global/excel/monlvl.txt"] = levels,
     },
     cases = {
+        test.case("blank_nightmare_and_hell_scaled_percentages_use_normal_columns", function(t)
+            t:run(function()
+                local difficulty = 1
+                test.mock_module("d2legacy.policy.game_rules", {
+                    difficulty = function()
+                        return difficulty
+                    end,
+                }, { "difficulty" })
+                test.unload_module("d2legacy.data.monster")
+                local monster = require("d2legacy.data.monster")
+                local area = { MonLvl2Ex = "4", MonLvl3Ex = "5" }
+                local nightmare = monster.load("blank_scaled", area)
+                test.expect(nightmare.life_min):equals(44 * 256)
+                test.expect(nightmare.life_max):equals(48 * 256)
+                test.expect(nightmare.defense):equals(92)
+                difficulty = 2
+                local hell = monster.load("blank_scaled", area)
+                test.expect(hell.life_min):equals(55 * 256)
+                test.expect(hell.life_max):equals(60 * 256)
+                test.expect(hell.defense):equals(165)
+            end)
+        end),
         test.case("authored_type_flags_survive_population_summon_and_revive_definitions", function(t)
             t:run(function()
                 test.mock_module("d2legacy.policy.game_rules", {

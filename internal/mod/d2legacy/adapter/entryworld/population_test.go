@@ -1,6 +1,7 @@
 package entryworld
 
 import (
+	"math"
 	"reflect"
 	"testing"
 
@@ -48,6 +49,33 @@ func TestPopulationDataDenRequiresCompleteCave(t *testing.T) {
 	}
 }
 
+// Endpoint clearance must be applied while scanning, before the four-point
+// budget is exhausted by otherwise reachable centers next to the cave warp.
+func TestPopulationDataDenContinuesPastUnsafeCenter(t *testing.T) {
+	prepared := populationDenFixture(t)
+	prepared.CaveWarp.First.ArrivalX, prepared.CaveWarp.First.ArrivalY = 37, 37
+	data, err := prepared.PopulationData(0)
+	if err != nil {
+		t.Fatal(err)
+	}
+	room := data["zones"].([]any)[3].(map[string]any)["rooms"].([]any)[0].(map[string]any)
+	points := room["points"].([]any)
+	if len(points) != 4 {
+		t.Fatalf("Den published %d safe candidates, want four", len(points))
+	}
+	for _, raw := range points {
+		point := raw.(map[string]any)
+		x, y := point["x"].(float64), point["y"].(float64)
+		if math.Hypot(x-37, y-37) < 2.5 || math.Hypot(x-47, y-47) < 5 {
+			t.Fatalf("Den published endpoint-overlapping point %.1f,%.1f", x, y)
+		}
+		position := gameworld.Point{X: x, Y: y}
+		if !prepared.Worlds[8].WalkableStep(position, position, 1.5) {
+			t.Fatalf("Den published blocked maximum-family footprint %.1f,%.1f", x, y)
+		}
+	}
+}
+
 // Seed 42's owned chamber has the same important shape: its open nearest-center
 // pocket is disconnected from the arrival, so taking the first four open cells
 // would publish monsters a player cannot encounter.
@@ -91,6 +119,7 @@ func TestPopulationDataDenSkipsDisconnectedCenter(t *testing.T) {
 	}
 }
 
+// populationDenFixture pairs one open synthetic chamber with the three prepared outdoor seams.
 func populationDenFixture(t *testing.T) *Prepared {
 	t.Helper()
 	prepared := populationPreparedFixture(t)

@@ -32,8 +32,27 @@ func TestDenPopulationOwnedRowsReal(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	for _, id := range []string{"zombie1", "brute1", "fallenshaman1"} {
+	graphics, err := records.Load("data/global/excel/MonStats2.txt")
+	if err != nil {
+		t.Fatal(err)
+	}
+	for id, life := range map[string][2]string{
+		"zombie1": {"101", "181"}, "brute1": {"129", "215"}, "fallenshaman1": {"58", "101"},
+	} {
 		row := ownedDenRow(t, monsters, "Id", id)
+		image := ownedDenRow(t, graphics, "Id", row["MonStatsEx"])
+		wantSize := "2"
+		if id == "brute1" {
+			wantSize = "3"
+		}
+		if image["SizeX"] != wantSize || image["SizeY"] != wantSize {
+			t.Fatalf("MonStats2.txt %s collider size changed: %q/%q", id, image["SizeX"], image["SizeY"])
+		}
+		if row["minHP"] != life[0] || row["maxHP"] != life[1] || row["noRatio"] != "" ||
+			row["minHP(N)"] != "" || row["maxHP(N)"] != "" ||
+			row["minHP(H)"] != "" || row["maxHP(H)"] != "" {
+			t.Fatalf("MonStats.txt %s Den life percentages changed", id)
+		}
 		if row["enabled"] != "1" || row["isSpawn"] != "1" || row["npc"] != "" {
 			t.Fatalf("MonStats.txt %s is not an ordinary spawn: enabled=%q isSpawn=%q npc=%q",
 				id, row["enabled"], row["isSpawn"], row["npc"])
@@ -51,6 +70,7 @@ func TestDenPopulationOwnedRowsReal(t *testing.T) {
 	}
 }
 
+// ownedDenRow fails at the table boundary so missing source data cannot look like an empty field.
 func ownedDenRow(t *testing.T, rows []map[string]string, key, value string) map[string]string {
 	t.Helper()
 	for _, row := range rows {
