@@ -39,6 +39,33 @@ func TestTownMoorSeamUsesAuthoredTownExitAndGeneratedMoorEdge(t *testing.T) {
 	}
 }
 
+// The authored aperture bounds the exit when floor and collision continue under a neighboring fence.
+func TestAuthoredTownTriggerExcludesFloorBeyondAperture(t *testing.T) {
+	town, _ := gameworld.NewOpenMap(40, 40)
+	town.SpecialTiles = []gameworld.SpecialTile{{X: 3, Y: 4, Orientation: 10}}
+	for _, tileY := range []int{4, 5, 6} {
+		town.Tiles = append(town.Tiles, gameworld.TilePlacement{X: 7, Y: tileY,
+			Layer: gameworld.LayerFloor, Reference: gameworld.TileReference{Path: "floor.dt1"}})
+	}
+	town.Tiles = append(town.Tiles, gameworld.TilePlacement{X: 7, Y: 6,
+		Layer: gameworld.LayerLowerWall, Reference: gameworld.TileReference{Path: "fence.dt1"}})
+	moor, _ := gameworld.NewOpenMap(40, 40)
+	seam, err := gametransition.ResolveSeam(d2mapgen.SeamSpec{
+		FirstLevel: 1, FirstDirection: "east", SecondLevel: 2, SecondDirection: "west",
+		SecondTileX: 0, SecondTileY: 4, TriggerRadius: 2, ArrivalInset: 6,
+	}, town, moor)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if seam.First.Y != 23 || seam.First.TriggerStrip == nil ||
+		seam.First.TriggerStrip.LaneMin != 20 || seam.First.TriggerStrip.LaneMax != 28 {
+		t.Fatalf("floor beyond authored aperture admitted or strip missing: %#v", seam.First)
+	}
+	if seam.Second.TriggerStrip != nil {
+		t.Fatalf("generated reverse endpoint gained a town strip: %#v", seam.Second)
+	}
+}
+
 // A hidden exit guide may be well inside the stamp. The named, authored floor corridor must determine its trigger.
 func TestResolveAuthoredTownEdgeAllDirections(t *testing.T) {
 	for _, test := range []struct {

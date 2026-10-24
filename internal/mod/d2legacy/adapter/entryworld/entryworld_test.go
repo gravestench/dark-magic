@@ -185,6 +185,29 @@ func TestInitialDataUsesSharedInteractionAndTransitionContracts(t *testing.T) {
 	}
 }
 
+// TestTransitionDataPublishesTownStripOnlyForward keeps the authored aperture on the town source only.
+func TestTransitionDataPublishesTownStripOnlyForward(t *testing.T) {
+	seam := gametransition.Seam{
+		First: gametransition.SeamEndpoint{
+			LevelID: 1, Direction: "east", X: 35, Y: 22,
+			TriggerStrip: &gametransition.TriggerStrip{LaneMin: 20, LaneMax: 24},
+		},
+		Second:        gametransition.SeamEndpoint{LevelID: 2, Direction: "west", X: 5, Y: 22},
+		TriggerRadius: 2,
+	}
+	directed := TransitionData([]gametransition.Seam{seam})["seams"].([]any)
+	forward := directed[0].(map[string]any)
+	reverse := directed[1].(map[string]any)
+	if forward["source_direction"] != "east" || forward["trigger_lane_min"] != float64(20) ||
+		forward["trigger_lane_max"] != float64(24) {
+		t.Fatalf("town directed trigger = %#v", forward)
+	}
+	if reverse["source_direction"] != "west" || reverse["trigger_lane_min"] != nil ||
+		reverse["trigger_lane_max"] != nil || reverse["trigger_radius"] != float64(2) {
+		t.Fatalf("reverse directed trigger = %#v", reverse)
+	}
+}
+
 func TestInteractionDataPreservesAuthoredTownNPCPlacements(t *testing.T) {
 	town, err := gameworld.NewOpenMap(100, 100)
 	if err != nil {
