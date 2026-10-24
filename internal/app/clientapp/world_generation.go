@@ -2,8 +2,10 @@ package clientapp
 
 import (
 	"fmt"
+	"sort"
 
 	gameworld "github.com/gravestench/dark-magic/internal/game/world"
+	"github.com/gravestench/dark-magic/internal/game/worldgen"
 	entryworld "github.com/gravestench/dark-magic/internal/mod/d2legacy/adapter/entryworld"
 	gametransition "github.com/gravestench/dark-magic/internal/mod/d2legacy/adapter/transition"
 	modruntime "github.com/gravestench/dark-magic/internal/runtime/lua"
@@ -227,6 +229,40 @@ func (app *application) currentWorld() modruntime.CurrentWorld {
 		DT1:     stamp.TilePaths,
 		LevelID: app.activeWorldLevel,
 	}
+}
+
+// presentationWorld snapshots immutable prepared references under the world lock.
+// Recipe copying and sorting happen after the registry lock is released.
+func (app *application) presentationWorld() modruntime.PresentationWorld {
+	type preparedMap struct {
+		levelID int
+		world   *gameworld.Map
+		zone    *worldgen.Zone
+	}
+	app.worldMu.RLock()
+	result := modruntime.PresentationWorld{ActiveLevel: app.activeWorldLevel}
+	prepared := make([]preparedMap, 0, len(app.gameWorlds))
+	for levelID, worldMap := range app.gameWorlds {
+		zone := app.gameWorldZones[levelID]
+		if worldMap == nil || zone == nil {
+			continue
+		}
+		prepared = append(prepared, preparedMap{levelID: levelID, world: worldMap, zone: zone})
+	}
+	app.worldMu.RUnlock()
+	for _, value := range prepared {
+		stamps := value.zone.Stamps()
+		if len(stamps) == 0 {
+			continue
+		}
+		stamp := stamps[0]
+		result.Maps = append(result.Maps, modruntime.CurrentWorld{
+			LevelID: value.levelID, Map: value.world, DS1: stamp.DS1Path,
+			DT1: append([]string(nil), stamp.TilePaths...),
+		})
+	}
+	sort.Slice(result.Maps, func(i, j int) bool { return result.Maps[i].LevelID < result.Maps[j].LevelID })
+	return result
 }
 
 // activateWorld changes active level only when the map exists, then updates navigation outside the
