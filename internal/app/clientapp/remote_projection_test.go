@@ -1,6 +1,7 @@
 package clientapp
 
 import (
+	"encoding/json"
 	"testing"
 	"time"
 
@@ -443,5 +444,44 @@ func TestPrivateProjectionFingerprintChangesOnlyWithPrivateState(t *testing.T) {
 
 	if second == third {
 		t.Fatal("private content change was not fingerprinted")
+	}
+}
+
+func TestConnectedProjectionPreservesRelocationEvidence(t *testing.T) {
+	engine := gameecs.New()
+
+	t.Cleanup(func() { _ = engine.Close() })
+	registerRemoteViewSchemas(t, engine)
+
+	app := &application{clientSimulation: engine}
+	connected := connectedProjectionFixture()
+
+	locationJSON := []byte(`{"act":1,"level_id":2,` +
+		`"transition_sequence":7,"transition_source":1,"transition_kind":"seam"}`)
+	if err := json.Unmarshal(locationJSON, &connected.HUD.Location); err != nil {
+		t.Fatal(err)
+	}
+
+	if err := app.installRemoteView(connected, true); err != nil {
+		t.Fatal(err)
+	}
+
+	hero, err := authenticatedHero(engine.World(), connected.HUD.Player.PlayerID)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	locations, _ := akara.GetDynamicStore(engine.World(), "d2legacy.world.location")
+	location, _ := locations.Get(hero)
+
+	for key, want := range map[string]any{
+		"transition_sequence": int64(7),
+		"transition_source":   int64(1),
+		"transition_kind":     "seam",
+	} {
+		got, _ := location.Get(key)
+		if got != want {
+			t.Fatalf("%s = %v, want %v", key, got, want)
+		}
 	}
 }

@@ -9,6 +9,7 @@ import (
 
 	gameworld "github.com/gravestench/dark-magic/internal/game/world"
 	"github.com/gravestench/dark-magic/internal/game/worldgen"
+	d2mapgen "github.com/gravestench/dark-magic/internal/mod/d2legacy/adapter/mapgen"
 	playeradapter "github.com/gravestench/dark-magic/internal/mod/d2legacy/adapter/player"
 	gametransition "github.com/gravestench/dark-magic/internal/mod/d2legacy/adapter/transition"
 )
@@ -21,14 +22,17 @@ type Records interface {
 	Loaded(string) bool
 }
 
-// Prepared owns the generated zones, materialized maps, trusted spawns, and seam as one consistent entry-world result.
+// Prepared owns the generated zones, materialized maps, trusted spawns, seams, and topology identity as one result.
 // Consumers should not mix fields from different Prepared values because their geometry is seed-dependent.
 type Prepared struct {
-	Worlds     map[int]*gameworld.Map
-	Zones      map[int]*worldgen.Zone
-	Spawns     map[int][2]float64
-	Seam       gametransition.Seam
-	Difficulty int
+	CaveWarp         *CaveWarpPair
+	Worlds           map[int]*gameworld.Map
+	Zones            map[int]*worldgen.Zone
+	Spawns           map[int][2]float64
+	Seams            []gametransition.Seam
+	Topology         d2mapgen.EntryWorld
+	TopologyChecksum string
+	Difficulty       int
 }
 
 // Destination converts one prepared level into the player's admission contract. Both generated and materialized forms

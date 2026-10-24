@@ -7,6 +7,7 @@ import (
 	"io/fs"
 
 	"github.com/gravestench/dark-magic/internal/game/simulation"
+	gameworld "github.com/gravestench/dark-magic/internal/game/world"
 	loadcore "github.com/gravestench/dark-magic/internal/loading"
 	entryworld "github.com/gravestench/dark-magic/internal/mod/d2legacy/adapter/entryworld"
 )
@@ -15,7 +16,9 @@ import (
 // deterministic input hashed/consumed by the d2legacy authoritative runtime.
 func (app *application) sessionInitialData() map[string]any {
 	return map[string]any{
-		"engine.game_data_generation_id": app.gameDataGenerationID(),
+		"engine.world.velocity_movement_version": gameworld.VelocityMovementLevelMapVersion,
+		"engine.game_data_generation_id":         app.gameDataGenerationID(),
+		"d2legacy.entry_world_checksum":          app.entryWorldChecksum,
 		"d2legacy.game_rules": map[string]any{
 			"target":          "lod-1.14d",
 			"expansion":       true,
@@ -32,6 +35,7 @@ func (app *application) sessionInitialData() map[string]any {
 		"d2legacy.interactions":       app.interactionBootstrapData(),
 		"d2legacy.world_transitions":  app.transitionBootstrapData(),
 		"d2legacy.world_warps":        app.warpBootstrapData(),
+		"d2legacy.world_spawns":       app.worldSpawnBootstrapData(),
 	}
 }
 
@@ -68,10 +72,12 @@ func (app *application) interactionBootstrapData() map[string]any {
 // bootstrap helpers, avoiding a second generation or divergent spawn calculation.
 func (app *application) preparedEntryWorld() *entryworld.Prepared {
 	return &entryworld.Prepared{
-		Worlds: app.gameWorlds,
-		Zones:  app.gameWorldZones,
-		Spawns: app.gameWorldSpawns,
-		Seam:   app.transitionSeam,
+		Worlds:   app.gameWorlds,
+		Zones:    app.gameWorldZones,
+		Spawns:   app.gameWorldSpawns,
+		Seams:    app.transitionSeams,
+		CaveWarp: app.caveWarp,
+		Topology: app.entryWorldTopology,
 	}
 }
 

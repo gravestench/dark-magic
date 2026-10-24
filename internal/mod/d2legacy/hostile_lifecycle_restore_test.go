@@ -932,12 +932,17 @@ func readPopulationPlan(t *testing.T, authority *Authority) populationPlanFixtur
 		t.Fatal("population plan authority state is missing")
 	}
 
-	var plan populationPlanFixture
-	if err := json.Unmarshal(registered.Data, &plan); err != nil {
+	var envelope struct {
+		Zones []populationPlanFixture `json:"zones"`
+	}
+	if err := json.Unmarshal(registered.Data, &envelope); err != nil {
 		t.Fatalf("decode population plan %s: %v", registered.Data, err)
 	}
 
-	return plan
+	if len(envelope.Zones) == 0 {
+		t.Fatal("population plan has no zones")
+	}
+	return envelope.Zones[0]
 }
 
 // assertInactiveRoom verifies both room status and the exact serialized resident

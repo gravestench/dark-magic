@@ -43,7 +43,7 @@ func TestWarpLabUsesProductionMovementAndTransition(t *testing.T) {
 
 	scenario := newWarpLabScenario(t, fixture)
 
-	townID, townX, townY := scenario.portal(t, app.transitionSeam.Town.LevelID)
+	townID, townX, townY := scenario.portal(t, app.transitionSeam.First.LevelID)
 	if townID == "" {
 		t.Fatal("Warp Lab created no town-side warp endpoint")
 	}
@@ -53,7 +53,7 @@ func TestWarpLabUsesProductionMovementAndTransition(t *testing.T) {
 	scenario.openPortal(t, townX, townY)
 	scenario.assertWildernessEntry(t)
 
-	_, returnX, returnY := scenario.portal(t, app.transitionSeam.Wilderness.LevelID)
+	_, returnX, returnY := scenario.portal(t, app.transitionSeam.Second.LevelID)
 	if returnX == 0 && returnY == 0 {
 		t.Fatal("Warp Lab created no wilderness-side warp endpoint")
 	}
@@ -91,7 +91,7 @@ func newWarpLabScenario(t *testing.T, fixture *realD2LegacyFixture) *warpLabScen
 		t.Fatal("Warp Lab player has no authoritative location")
 	}
 
-	townLevel := int64(fixture.app.transitionSeam.Town.LevelID)
+	townLevel := int64(fixture.app.transitionSeam.First.LevelID)
 
 	level, _ := location.Get("level_id")
 	if level != townLevel {
@@ -198,7 +198,7 @@ func (scenario *warpLabScenario) rejectStaleInteraction(t *testing.T, x, y float
 		t.Fatalf("stale Warp Lab interaction terminated the session: %v", err)
 	}
 
-	want := int64(scenario.fixture.app.transitionSeam.Town.LevelID)
+	want := int64(scenario.fixture.app.transitionSeam.First.LevelID)
 	if level := scenario.currentLevel(); level != want {
 		t.Fatalf("out-of-range Warp Lab interaction changed level to %v", level)
 	}
@@ -247,7 +247,7 @@ func (scenario *warpLabScenario) openPortal(t *testing.T, x, y float64) {
 func (scenario *warpLabScenario) assertWildernessEntry(t *testing.T) {
 	t.Helper()
 
-	want := scenario.fixture.app.transitionSeam.Wilderness.LevelID
+	want := scenario.fixture.app.transitionSeam.Second.LevelID
 	if level := scenario.currentLevel(); level != int64(want) {
 		t.Fatalf("Warp Lab player did not operate paired warp; final level = %v", level)
 	}
@@ -277,7 +277,7 @@ func (scenario *warpLabScenario) returnToTown(t *testing.T, x, y float64) {
 
 	scenario.fixture.advanceGame(t, 5)
 
-	want := scenario.fixture.app.transitionSeam.Town.LevelID
+	want := scenario.fixture.app.transitionSeam.First.LevelID
 	if scenario.currentLevel() != int64(want) || scenario.fixture.app.activeWorldLevel != want {
 		t.Fatalf(
 			"Warp Lab return left authority/presentation at %v/%d",
@@ -298,7 +298,7 @@ func (scenario *warpLabScenario) assertLocomotionResumes(t *testing.T) {
 
 	playerPosition, _ := scenario.positions.Get(scenario.player)
 	startX, startY := dynamicPosition(scenario.positions, scenario.player)
-	town := scenario.fixture.app.gameWorlds[scenario.fixture.app.transitionSeam.Town.LevelID]
+	town := scenario.fixture.app.gameWorlds[scenario.fixture.app.transitionSeam.First.LevelID]
 
 	goalX, goalY, found := town.OpenPointNearSubtileForRadius(startX-6, startY, 1)
 	if !found {

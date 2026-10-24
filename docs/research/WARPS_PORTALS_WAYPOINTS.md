@@ -1,6 +1,15 @@
 # Warps, portals, waypoints, teleportation, and level-transition research
 
-Status: implementation-oriented research baseline. Dark Magic already has a trusted `internal/game/transition` authority for the Act I town/Blood Moor seam, semantic map seams/warps, fixed-tick commands, persistent player location, and generated world boundaries. Warp Lab materializes a paired authoritative interaction/transition entity set; both endpoints now acquire stable level/room residency from generated geometry and are pinned by the mounted-asset lab. This document generalizes that boundary to the full Diablo II transition vocabulary.
+Status: implementation-oriented research baseline. Dark Magic now prepares Rogue
+Encampment, Blood Moor, Cold Plains, and Stony Field together and crosses their
+three seam pairs through an authoritative Lua collision-phase system. The Den of
+Evil is a separate indoor map reached through an intentional reciprocal cave
+interaction. The generated topology and per-seam trigger policy are pinned by a
+runtime checksum; original
+1.13c/1.14d seam coordinates remain unverified. Warp Lab also materializes a
+paired authoritative interaction/transition entity set with stable level/room
+residency from generated geometry. This document generalizes those boundaries
+to the full Diablo II transition vocabulary.
 
 ## Executive conclusion
 
@@ -39,17 +48,78 @@ Stairs, level seams, doors, red/blue portals, town portals, waypoints, teleport 
 
 ## Current Dark Magic transition authority
 
-The existing package already establishes several correct principles:
+The generic `internal/game/transition` command path and the Lua collision-phase
+Act I seam path both keep final relocation in the authority:
 
-- command kind is system/admin-authority rather than presentation-authority;
-- destination is validated server-side;
-- player must be near the authored source endpoint;
+- the generic command path requires system/admin authority rather than
+  presentation authority; Act I seams run directly in the authoritative Lua
+  tick without submitting a transition command;
+- prepared Act I seam destinations are validated against materialized map
+  bounds and collision;
+- the player must be within the admitted seam's source radius;
 - level ID and world position update atomically in ECS;
 - velocity is reset;
 - presentation/cache observer fires only after authoritative commit and cannot veto;
-- the source generates a system transition when the player crosses the current Act I seam.
+- Lua's collision-phase system applies each prepared Act I seam after movement enters its source radius;
+- connected movement samples stamped with their source level are ignored after an authoritative seam crossing.
 
-Keep these properties while replacing the current hard-coded `1 <-> 2` endpoint limitation with data/instance-driven transitions.
+The `1↔2`, `2↔3`, and `3↔4` seamless joins use prepared endpoint data. The
+`2↔8` cave pair uses the existing interaction admission and world-warp operation,
+then commits through `d2legacy.gameplay.transition.apply` with kind `warp`.
+Other level links still need data/instance-driven transition coverage.
+
+## Den of Evil evidence and implementation boundary (#656)
+
+Owned Expansion 1.14d data supplies the following authored facts. These are data
+observations, not observations of the original executable's generation algorithm.
+No protected data or rendered captures are stored with the tests.
+
+| Evidence | Authored fact | Executable coverage |
+| --- | --- | --- |
+| `patch_d2.mpq` `Levels.txt`, levels 2 and 8 | Blood Moor `Vis3=8/Warp3=0`; Den `Vis0=2/Warp0=4`; Den is an indoor cave maze | `TestDenOfEvilPreparedReal` and the reciprocal resolver tests in `internal/mod/d2legacy/adapter/entryworld` |
+| `LvlMaze.txt` level 8 | One 24×24 room in Normal, Nightmare, and Hell | `TestDenOfEvilOneRoomReal` in `internal/mod/d2legacy/adapter/mapgen` |
+| `LvlPrest.txt` and decoded DS1 special tiles | Outdoor Cave Entrance definition 51; previous-level cave definitions 83–86. Full marker identities are orientation/MainIndex/SubIndex `10/6/24` outside and `10/0/21` inside | Owned map materialization and `cave_warp_test.go` reject missing, duplicate, wrong-identity, and blocked endpoints |
+| Base `d2exp.mpq` `LvlWarp.txt` IDs 0 and 4 | Wilderness-to-cave and cave-up relationships, offset and exit-walk fields | Prepared endpoints require bounded radius-1 source/arrival routes and a reachable cave interior |
+
+Lua's v4 entry recipe selects the authored chamber and Blood Moor stamp with
+separate named random streams. It retains levels 1/2/3/4 and their three seams,
+adds level 8, and records one reciprocal cave relationship. Go validates the
+materialized marker identities and collision before publishing either endpoint.
+Current-binary v4 restore validates those same facts; v1/v2/v3 restoration retains
+its original map set. The static endpoints have selectable identities but no
+portal appearance token: cave art comes from the authored map.
+
+`internal/app/clientapp/den_of_evil_transition_real_test.go` exercises owned-data
+production clients at all three difficulties. The round-trip test walks onto
+both cave endpoints without relocation, uses the ordinary `game_world` pointer
+and selectable path for entry and return, and checks authoritative/public levels,
+safe arrival, `warp` relocation facts, no movement target on arrival, and camera position. It
+observes the live Lua scene's separate `{8}` indoor and `{1,2,3,4}` outdoor
+components, and retained renderer handles confirm old terrain is destroyed on
+each cave warp. Both offline and listen-server journeys retain map and resident
+identities and all three scene seam alignments; the offline journey additionally
+walks all three joins in both directions after return, verifies `seam` facts,
+keeps the outdoor terrain root, and requires terrain nodes from both sides.
+The connected journey stops its old correction stream before credential recovery,
+then checks the unchanged Den authority and completes the clicked return.
+
+The checkpoint test closes the transient scene through its normal lifecycle
+while gameplay remains in level 8, captures that authority, and requires an exact
+recovery checksum before opening a fresh scene. It then checks the saved Den
+arrival and ordinary clicked return, including outdoor resident IDs. Capturing
+and rebinding a *live* presentation camera is not covered: the initial experiment
+restored the saved camera and created a second one on scene entry. That generic
+scene/checkpoint ownership issue is tracked in
+[#657](https://github.com/gravestench/dark-magic/issues/657).
+
+Original-game cave placement, chamber/variant RNG call order, authored selection
+rectangle transforms, exact arrival/automatic-walk behavior, and 1.13c equivalence
+remain unresolved. The deterministic layout, radius-3.5 selectable, bounded
+radius-1 arrival adjustment, and reachable central-half interior are Dark Magic
+policy. They establish a usable cave journey, not retail seed parity. Native GPU
+pixels and cave/bridge visual fidelity remain unverified by the headless scene
+assertions. Den population, quests, rewards, music, other caves, and general
+waypoint/portal behavior remain outside #656.
 
 ## Transition source kinds
 
@@ -347,15 +417,18 @@ See [GAMEPLAY_AUDIO_BEHAVIOR.md](GAMEPLAY_AUDIO_BEHAVIOR.md). Audio/load complet
 
 ### T1 — generalize transition endpoints
 
-Replace the hard-coded Act I seam endpoint switch with immutable endpoint/link definitions while preserving current town/Blood Moor behavior/tests.
+The three prepared Act I seams establish this boundary for Rogue Encampment,
+Blood Moor, Cold Plains, and Stony Field. Extend endpoint/link definitions to other
+levels while preserving the existing seam tests.
 
 ### T2 — authored stair/warp
 
 Materialize one preset stair/exit object and route it through generic transition authority.
 
-Current foundation: synthetic paired Warp Lab endpoints already use that
-production path and the generic room-resident component. Room inactivation does
-not need a warp-specific archive or recreated entity identity.
+The authored Blood Moor/Den pair now uses that production path through
+ordinary pointer interaction. Synthetic Warp Lab endpoints retain portal
+appearance and generic room residency. Other stairs, trap doors, and pads still
+need authored evidence and acceptance of their own operation rules.
 
 ### T3 — waypoint unlock/travel
 

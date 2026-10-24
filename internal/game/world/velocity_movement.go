@@ -33,11 +33,22 @@ type velocityStores struct {
 	position *akara.DynamicStore
 	velocity *akara.DynamicStore
 	collider *akara.DynamicStore
+	location *akara.DynamicStore
 }
 
 // RegisterVelocityMovement registers the opt-in marker and fixed-tick movement system against mod-owned spatial
 // schemas. Component names remain configurable so the engine does not impose a namespace on game content.
 func RegisterVelocityMovement(engine *gameecs.Engine, paths VelocityPathFinder, components VelocityComponents) error {
+	return registerVelocityMovement(engine, paths, components, nil)
+}
+
+// Register both APIs through one movement definition so level selection cannot introduce a second integrator.
+func registerVelocityMovement(
+	engine *gameecs.Engine,
+	paths VelocityPathFinder,
+	components VelocityComponents,
+	levels *velocityLevelSelection,
+) error {
 	if engine == nil {
 		return fmt.Errorf("world: velocity movement requires an engine")
 	}
@@ -70,14 +81,25 @@ func RegisterVelocityMovement(engine *gameecs.Engine, paths VelocityPathFinder, 
 	}
 
 	stores := velocityStores{position: position, velocity: velocity, collider: collider}
+	read := []akara.ComponentType{velocity, collider}
+
+	if levels != nil {
+		store, found := akara.GetDynamicStore(engine.World(), levels.location.Component)
+		if !found {
+			return fmt.Errorf("world: velocity movement missing location store %q", levels.location.Component)
+		}
+
+		stores.location = store
+		read = append(read, store)
+	}
 
 	return engine.Register(gameecs.Definition{
 		ID:     VelocityMovementSystemID,
 		Phase:  gameecs.PhaseMovement,
 		All:    []akara.ComponentType{marker, position, velocity, collider},
-		Read:   []akara.ComponentType{velocity, collider},
+		Read:   read,
 		Write:  []akara.ComponentType{position, velocity},
-		Update: velocityMovementUpdate(paths, stores),
+		Update: velocityMovementUpdate(engine, paths, components, stores, levels),
 	})
 }
 
@@ -106,16 +128,67 @@ func registerVelocityCollider(engine *gameecs.Engine, name string) (*akara.Dynam
 
 // velocityMovementUpdate adapts the ECS batch callback to one-entity movement. A non-positive delta performs no reads
 // or writes, preserving fixed-tick behavior when the engine intentionally executes a zero-duration update.
-func velocityMovementUpdate(paths VelocityPathFinder, stores velocityStores) gameecs.UpdateFunc {
-	// The closure captures immutable schema stores once, avoiding name-based lookup during every fixed-tick batch.
+func velocityMovementUpdate(
+	engine *gameecs.Engine,
+	paths VelocityPathFinder,
+	components VelocityComponents,
+	stores velocityStores,
+	levels *velocityLevelSelection,
+) gameecs.UpdateFunc {
+	boundWorld := engine.World()
+
 	return func(context gameecs.Context, entities []akara.Entity, _ *gameecs.StructuralCommands) error {
 		seconds := context.Delta.Seconds()
 		if seconds <= 0 {
 			return nil
 		}
 
+		// Restore replaces the world but retains system callbacks. Refresh handles only when the world changes.
+		if currentWorld := engine.World(); currentWorld != boundWorld {
+			position, found := akara.GetDynamicStore(currentWorld, components.Position)
+			if !found {
+				return fmt.Errorf("world: velocity movement missing restored position store %q", components.Position)
+			}
+
+			velocity, found := akara.GetDynamicStore(currentWorld, components.Velocity)
+			if !found {
+				return fmt.Errorf("world: velocity movement missing restored velocity store %q", components.Velocity)
+			}
+
+			collider, found := akara.GetDynamicStore(currentWorld, components.Collider)
+			if !found {
+				return fmt.Errorf("world: velocity movement missing restored collider store %q", components.Collider)
+			}
+
+			stores = velocityStores{position: position, velocity: velocity, collider: collider}
+
+			if levels != nil {
+				store, found := akara.GetDynamicStore(currentWorld, levels.location.Component)
+				if !found {
+					return fmt.Errorf(
+						"world: velocity movement missing restored location store %q",
+						levels.location.Component,
+					)
+				}
+
+				stores.location = store
+			}
+			boundWorld = currentWorld
+		}
+
 		for _, entity := range entities {
-			if err := moveVelocityEntity(paths, stores, entity, seconds); err != nil {
+			selectedPaths := paths
+
+			if levels != nil {
+				var err error
+
+				selectedPaths, err = levels.pathsFor(stores.location, entity)
+				if err != nil {
+					return err
+				}
+			}
+
+			if err := moveVelocityEntity(selectedPaths, stores, entity, seconds); err != nil {
 				return err
 			}
 		}
@@ -127,9 +200,21 @@ func velocityMovementUpdate(paths VelocityPathFinder, stores velocityStores) gam
 // moveVelocityEntity integrates one fixed-tick destination, validates collision only when crossing a collision-cell
 // boundary, and writes x before y to preserve the component mutation/error order used by existing simulation.
 func moveVelocityEntity(paths VelocityPathFinder, stores velocityStores, entity akara.Entity, seconds float64) error {
-	position, _ := stores.position.Get(entity)
-	velocity, _ := stores.velocity.Get(entity)
-	collider, _ := stores.collider.Get(entity)
+	position, found := stores.position.Get(entity)
+	if !found {
+		return fmt.Errorf("world: velocity movement entity %d missing position component", entity)
+	}
+
+	velocity, found := stores.velocity.Get(entity)
+	if !found {
+		return fmt.Errorf("world: velocity movement entity %d missing velocity component", entity)
+	}
+
+	collider, found := stores.collider.Get(entity)
+	if !found {
+		return fmt.Errorf("world: velocity movement entity %d missing collider component", entity)
+	}
+
 	xValue, _ := position.Get("x")
 	yValue, _ := position.Get("y")
 	velocityX, _ := velocity.Get("x")

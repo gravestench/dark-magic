@@ -1,54 +1,89 @@
 package entryworld
 
 import (
+	"fmt"
 	"strconv"
 
 	gameworld "github.com/gravestench/dark-magic/internal/game/world"
 	"github.com/gravestench/dark-magic/internal/game/worldgen"
 )
 
-// PopulationData converts the prepared wilderness into deterministic room, point, and adjacency facts. Nil results
-// signal that no complete wilderness exists, allowing composition roots to reject bootstrap before command admission.
-func (world *Prepared) PopulationData(nearby int) map[string]any {
-	zone, gameMap, found := world.wilderness()
-	if !found {
-		return nil
+// PopulationData publishes geometry from each admitted wilderness in seam order.
+// A missing keyed map or mismatched request aborts the entire bootstrap.
+func (world *Prepared) PopulationData(nearby int) (map[string]any, error) {
+	if world == nil || len(world.Seams) == 0 {
+		return nil, fmt.Errorf("population requires prepared seams")
 	}
-
-	request := zone.Request()
-	player := world.Spawns[world.Seam.Wilderness.LevelID]
-	populated := populatedStamps(zone)
-
-	rooms := make([]any, 0, len(zone.Rooms()))
-	for _, room := range zone.Rooms() {
-		anchors := populationAnchors(room, player, nearby)
-		points := openPopulationPoints(gameMap, anchors)
-
-		rooms = append(rooms, populationRoom(room, populated[room.StampID], points))
+	zones := make([]any, 0, len(world.Seams))
+	seen := map[int]bool{}
+	for _, seam := range world.Seams {
+		levelID := seam.Second.LevelID
+		zone, gameMap := world.Zones[levelID], world.Worlds[levelID]
+		if seen[levelID] || zone == nil || gameMap == nil {
+			return nil, fmt.Errorf("population level %d is duplicate or incomplete", levelID)
+		}
+		seen[levelID] = true
+		request := zone.Request()
+		if request.LevelID != levelID {
+			return nil, fmt.Errorf("population keyed level %d differs from zone request %d", levelID, request.LevelID)
+		}
+		populated := populatedStamps(zone)
+		rooms := make([]any, 0, len(zone.Rooms()))
+		for _, room := range zone.Rooms() {
+			var points []any
+			if levelID == 3 || levelID == 4 {
+				points = roomPopulationPoints(gameMap, room)
+			} else {
+				points = openPopulationPoints(gameMap, populationAnchors(room, world.Spawns[levelID], nearby))
+			}
+			rooms = append(rooms, populationRoom(room, populated[room.StampID], points))
+		}
+		zones = append(zones, map[string]any{
+			"seed":       float64(request.Seed),
+			"act":        float64(request.Act),
+			"level_id":   float64(levelID),
+			"difficulty": float64(request.Difficulty),
+			"rooms":      rooms,
+			"links":      populationLinks(zone.Links()),
+		})
 	}
-
-	return map[string]any{
-		"seed":       float64(request.Seed),
-		"act":        float64(request.Act),
-		"level_id":   float64(request.LevelID),
-		"difficulty": float64(request.Difficulty),
-		"rooms":      rooms,
-		"links":      populationLinks(zone.Links()),
-	}
+	return map[string]any{"zones": zones}, nil
 }
 
-// wilderness returns the paired generated and materialized wilderness chosen by the resolved seam. Looking up both by
-// the same level ID prevents topology facts from being combined with collision from another level.
-func (world *Prepared) wilderness() (*worldgen.Zone, *gameworld.Map, bool) {
-	if world == nil {
-		return nil, nil, false
+// roomPopulationPoints searches only this room, retaining distinct center cells
+// in deterministic rings around its center. Lua checks the selected footprint.
+func roomPopulationPoints(gameMap *gameworld.Map, room worldgen.Room) []any {
+	points := make([]any, 0, 4)
+	minX, minY := room.X*gameworld.SubtilesPerTile, room.Y*gameworld.SubtilesPerTile
+	maxX, maxY := minX+room.Width*gameworld.SubtilesPerTile, minY+room.Height*gameworld.SubtilesPerTile
+	centerX, centerY := (minX+maxX)/2, (minY+maxY)/2
+	appendPoint := func(x, y int) {
+		if len(points) >= 4 || x < minX || x >= maxX || y < minY || y >= maxY {
+			return
+		}
+		if flags, ok := gameMap.FlagsAt(x, y); ok && !flags.Blocked() {
+			points = append(points, map[string]any{"x": float64(x), "y": float64(y)})
+		}
 	}
-
-	levelID := world.Seam.Wilderness.LevelID
-	zone := world.Zones[levelID]
-	gameMap := world.Worlds[levelID]
-
-	return zone, gameMap, zone != nil && gameMap != nil
+	// Visit each ring's perimeter once, even when the whole room is blocked.
+	limit := max(maxX-minX, maxY-minY)
+	for radius := 0; radius <= limit && len(points) < 4; radius++ {
+		left, right := centerX-radius, centerX+radius
+		top, bottom := centerY-radius, centerY+radius
+		for y := max(minY, top); y < min(maxY, bottom+1) && len(points) < 4; y++ {
+			if y == top || y == bottom {
+				for x := max(minX, left); x < min(maxX, right+1) && len(points) < 4; x++ {
+					appendPoint(x, y)
+				}
+			} else {
+				appendPoint(left, y)
+				if right != left {
+					appendPoint(right, y)
+				}
+			}
+		}
+	}
+	return points
 }
 
 // populatedStamps indexes recipe population policy once so each room can inherit its stamp's admitted decision.

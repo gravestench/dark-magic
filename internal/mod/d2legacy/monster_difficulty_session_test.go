@@ -162,10 +162,7 @@ func TestPopulationRejectsDifferentSessionDifficulty(t *testing.T) {
 	if err := session.Submit(simulation.Command{
 		Tick: 1, Player: "population", Authority: simulation.AuthoritySystem, Sequence: 1,
 		Kind: "system.population.bootstrap", Payload: difficultyPopulationPayload(t, 1),
-	}); err != nil {
-		t.Fatal(err)
-	}
-	if err := session.Step(); err == nil || !strings.Contains(err.Error(), "population difficulty differs from immutable game rules") {
+	}); err == nil || !strings.Contains(err.Error(), "population difficulty differs from immutable game rules") {
 		t.Fatalf("mismatched bootstrap error = %v", err)
 	}
 	afterRules, _ := authority.State.Read("d2legacy.game_rules")

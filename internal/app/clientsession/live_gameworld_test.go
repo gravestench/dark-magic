@@ -46,7 +46,7 @@ func TestConnectSelfHostedEntersLiveGeneratedGameworld(t *testing.T) {
 	assertSecondLiveIdentity(t, second)
 	joinLiveParty(t, ctx, fixture.host.Authority.State, connected, second)
 	assertLivePeerProjections(t, ctx, connected, second)
-	assertIndependentLiveMovement(t, ctx, fixture.host, connected, second)
+	assertIndependentLiveMovement(t, ctx, fixture.host, fixture.server, connected, second)
 
 	if err := connected.Close(ctx); err != nil {
 		t.Fatal(err)
@@ -63,6 +63,7 @@ func TestConnectSelfHostedEntersLiveGeneratedGameworld(t *testing.T) {
 type liveGameworldFixture struct {
 	host        *gameserver.Host
 	tickets     *gameserver.TicketAuthority
+	server      *sessionquic.Server
 	endpoint    realm.GameEndpoint
 	clientTLS   *tls.Config
 	stopRun     context.CancelFunc
@@ -165,6 +166,7 @@ func serveLiveGameworld(t *testing.T,
 	return liveGameworldFixture{
 		host:        host,
 		tickets:     tickets,
+		server:      server,
 		endpoint:    realm.GameEndpoint{Address: server.Addr(), TLSFingerprint: fingerprint},
 		clientTLS:   clientTLS,
 		stopRun:     stopRun,
@@ -336,11 +338,13 @@ func assertLivePeerProjections(t *testing.T, ctx context.Context, connected, sec
 }
 
 // assertIndependentLiveMovement proves each membership advances through its own command clock and correction stream.
-// It also confirms low-latency transform datagrams update presentation without desynchronizing HUD and world ticks.
+// After reliable correction it checks HUD/world tick consistency, then waits for a later decoded datagram
+// while the hosting watch remains active.
 func assertIndependentLiveMovement(
 	t *testing.T,
 	ctx context.Context,
 	host *gameserver.Host,
+	server *sessionquic.Server,
 	connected *Session,
 	second *Session,
 ) {
@@ -357,7 +361,7 @@ func assertIndependentLiveMovement(
 	assertLiveMovement(t, ctx, host, second, gameserver.CommandIntent{
 		TargetTick: secondCommandTick, Sequence: 2,
 		Kind: movement.MoveCommand, Payload: secondMovePayload,
-	}, "second client")
+	}, "second client", nil)
 	// The second membership's movement may advance authority well beyond the
 	// first client's last correction. Refresh that independent connection before
 	// deriving a tick from its synchronized network clock.
@@ -375,17 +379,17 @@ func assertIndependentLiveMovement(
 		ObservedServerTick: commandTick - 2, TargetTick: commandTick, Sequence: 2,
 		Kind: movement.MoveCommand, Payload: firstMovePayload,
 	}
-	assertLiveMovement(t, ctx, host, connected, moveIntent, "hosting client")
+	assertLiveMovement(t, ctx, host, connected, moveIntent, "hosting client", func(correctionTick uint64) {
+		currentHUD, currentWorld := connected.View()
+		if currentHUD.Tick != currentWorld.Tick {
+			t.Fatalf("correction HUD/world ticks differ: %d/%d", currentHUD.Tick, currentWorld.Tick)
+		}
 
-	currentHUD, currentWorld := connected.View()
-	if currentHUD.Tick != currentWorld.Tick {
-		t.Fatalf("correction HUD/world ticks differ: %d/%d", currentHUD.Tick, currentWorld.Tick)
-	}
-
-	waitForTransformDatagram(t, ctx, connected)
+		waitForTransformDatagram(t, ctx, host, server, connected, correctionTick)
+	})
 }
 
-// assertLiveMovement submits one movement intent and waits until both time and position advance.
+// assertLiveMovement waits for reliable time and position to advance, then runs the assertion before canceling.
 // Diagnostics include the authority replay because transport symptoms are often caused by command ordering.
 func assertLiveMovement(
 	t *testing.T,
@@ -394,6 +398,7 @@ func assertLiveMovement(
 	session *Session,
 	intent gameserver.CommandIntent,
 	name string,
+	afterCorrection func(uint64),
 ) {
 	t.Helper()
 
@@ -405,7 +410,7 @@ func assertLiveMovement(
 	}
 	defer stopWatch()
 
-	hud, world := session.View()
+	hud, world := liveReliableView(session)
 	initialTick, initialX := world.Tick, world.Origin.X
 
 	if err := session.Submit(ctx, intent); err != nil {
@@ -419,7 +424,7 @@ func assertLiveMovement(
 				t.Fatalf("%s correction stream closed before movement", name)
 			}
 
-			hud, world = session.View()
+			hud, world = liveReliableView(session)
 		case err := <-watchErrors:
 			t.Fatalf("%s correction stream error = %v", name, err)
 		case <-ctx.Done():
@@ -428,6 +433,18 @@ func assertLiveMovement(
 				name, ctx.Err(), hud, world, replay.Commands)
 		}
 	}
+
+	if afterCorrection != nil {
+		afterCorrection(world.Tick)
+	}
+}
+
+// liveReliableView excludes transform-only revisions from the movement correction assertion.
+func liveReliableView(session *Session) (playeradapter.HUD, playeradapter.WorldView) {
+	session.mu.Lock()
+	defer session.mu.Unlock()
+
+	return clonePresentationView(session.reliableHUD, session.reliableWorld)
 }
 
 // livePartyState snapshots authoritative membership needed by asynchronous wait helpers.
@@ -525,23 +542,80 @@ func waitForPartyMembership(
 	}
 }
 
-// waitForTransformDatagram proves the lossy stream advances beyond the latest reliable world tick.
-func waitForTransformDatagram(t *testing.T, ctx context.Context, session *Session) {
+// transformWatchSample preserves the last active samples when deadline teardown removes the server entry.
+type transformWatchSample struct {
+	server       sessionquic.TransformWatchStats
+	client       sessionquic.NetworkStats
+	serverActive bool
+	clientActive bool
+}
+
+// refresh records current liveness without replacing the evidence with inactive accessor defaults.
+func (sample *transformWatchSample) refresh(server *sessionquic.Server, session *Session) {
+	serverStats, serverActive := server.TransformWatchStats(session.credential)
+	clientStats := session.transport.NetworkStats()
+
+	sample.serverActive, sample.clientActive = serverActive, clientStats.TransformWatchActive
+	if serverActive {
+		sample.server = serverStats
+	}
+
+	if clientStats.TransformWatchActive {
+		sample.client = clientStats
+	}
+}
+
+// waitForTransformDatagram proves a new datagram decodes after the reliable movement correction.
+// It does not require that lossy frame to carry the movement position.
+func waitForTransformDatagram(
+	t *testing.T,
+	ctx context.Context,
+	host *gameserver.Host,
+	server *sessionquic.Server,
+	session *Session,
+	correctionTick uint64,
+) {
 	t.Helper()
+
+	phaseStart := time.Now()
+	deadline, _ := ctx.Deadline()
+	remainingAtStart := deadline.Sub(phaseStart)
+
+	if err := ctx.Err(); err != nil {
+		t.Fatalf("transform phase began after shared deadline: %v; correction_tick=%d remaining_at_start=%s",
+			err, correctionTick, remainingAtStart)
+	}
+
+	var baseline transformWatchSample
+	baseline.refresh(server, session)
+	latest := baseline
 
 	ticker := time.NewTicker(time.Millisecond)
 	defer ticker.Stop()
 
 	for {
-		stats := session.transport.NetworkStats()
-		if stats.TransformsReceived > 0 {
+		latest.refresh(server, session)
+
+		if latest.clientActive && latest.client.TransformsReceived > baseline.client.TransformsReceived {
 			return
 		}
 
 		select {
 		case <-ticker.C:
 		case <-ctx.Done():
-			t.Fatalf("movement used no compact transform datagrams: %v; stats=%#v", ctx.Err(), stats)
+			replay, replayErr := host.Session.Replay()
+			replayTick := replay.Initial.Tick
+
+			if len(replay.Checkpoints) > 0 {
+				replayTick = replay.Checkpoints[len(replay.Checkpoints)-1].Tick
+			}
+
+			_, reliableWorld := liveReliableView(session)
+			t.Fatalf("post-correction transform timed out: %v; baseline=%#v last_active=%#v; "+
+				"correction_tick=%d latest_reliable_tick=%d replay_tick=%d replay_error=%v; "+
+				"elapsed=%s remaining_at_start=%s",
+				ctx.Err(), baseline, latest, correctionTick, reliableWorld.Tick, replayTick, replayErr,
+				time.Since(phaseStart), remainingAtStart)
 		}
 	}
 }
@@ -651,5 +725,70 @@ func (liveGameworldRecords) Load(path string) ([]map[string]string, error) {
 			"CollideKill": "1", "Vel": "20", "Range": "40", "Size": "2", "CelFile": "firebolt"}}, nil
 	default:
 		return nil, nil
+	}
+}
+
+// TestTransformWatchSampleSurvivesCancellation catches timeout diagnostics being reset by teardown.
+func TestTransformWatchSampleSurvivesCancellation(t *testing.T) {
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	fixture := newLiveGameworldFixture(t, ctx)
+	connected := connectLiveCharacter(t, ctx, fixture, d2save.Character{
+		ID: "diagnostics", Name: "Diagnostics", Class: "Amazon", Level: 1, Expansion: true,
+		Stats: &d2save.Stats{
+			Dexterity: 20, Vitality: 20, Health: 50, MaxHealth: 50, Mana: 20, MaxMana: 20,
+		},
+	})
+
+	watchContext, stopWatch := context.WithCancel(ctx)
+	defer stopWatch()
+
+	if _, _, err := connected.Watch(watchContext); err != nil {
+		t.Fatal(err)
+	}
+
+	ticker := time.NewTicker(time.Millisecond)
+	defer ticker.Stop()
+
+	var sample transformWatchSample
+	for sample.server.DatagramsSent == 0 || sample.client.TransformsReceived == 0 {
+		sample.refresh(fixture.server, connected)
+
+		select {
+		case <-ticker.C:
+		case <-ctx.Done():
+			t.Fatalf("watch made no diagnostic progress: %v; sample=%#v", ctx.Err(), sample)
+		}
+	}
+
+	wantServer, wantClient := sample.server, sample.client
+
+	stopWatch()
+
+	for {
+		_, serverActive := fixture.server.TransformWatchStats(connected.credential)
+		clientActive := connected.transport.NetworkStats().TransformWatchActive
+
+		if !serverActive && !clientActive {
+			break
+		}
+
+		select {
+		case <-ticker.C:
+		case <-ctx.Done():
+			t.Fatal("watch did not finish before diagnostic retention check")
+		}
+	}
+
+	sample.refresh(fixture.server, connected)
+
+	if sample.serverActive || sample.clientActive {
+		t.Fatalf("sample still reports an active watch after teardown: %#v", sample)
+	}
+
+	if sample.server != wantServer || sample.client != wantClient {
+		t.Fatalf("teardown erased last active sample: server=%#v client=%#v; want server=%#v client=%#v",
+			sample.server, sample.client, wantServer, wantClient)
 	}
 }

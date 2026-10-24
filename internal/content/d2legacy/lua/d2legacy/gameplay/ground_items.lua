@@ -11,8 +11,11 @@ local function destroy(entry)
     entry.node:destroy()
 end
 
-function M.new(parent, world, level_id, palette)
+function M.new(parent, world, level_id, palette, placement)
     local width, height = world:canvas()
+    local origin_x = placement and placement.offset_x or -width / 2
+    local origin_y = placement and placement.offset_y or -height / 2
+    local depth_offset = placement and placement.depth_offset or 0
     local view = { entries = {} }
 
     function view:update()
@@ -72,8 +75,9 @@ function M.new(parent, world, level_id, palette)
                 local position = ecs.get(entity, "d2legacy.world.position")
                 local sx, sy = position:get("x"), position:get("y")
                 local x, y = world:subtile_to_pixel(sx, sy)
-                entry.node:set_position(x - width / 2 + (entry.offset_x or 0), y - height / 2 + (entry.offset_y or 0))
-                entry.node:set_z(world:entity_depth(sx, sy))
+                entry.node:set_position(x + origin_x + (entry.offset_x or 0), y + origin_y + (entry.offset_y or 0))
+                local depth = world:entity_depth(sx, sy) + depth_offset
+                entry.node:set_z(placement and (depth * 4 + placement.priority) or depth)
             end
         end
         for key, entry in pairs(self.entries) do

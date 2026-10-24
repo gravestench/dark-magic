@@ -1,9 +1,12 @@
 package clientapp
 
 import (
+	"fmt"
+
 	"github.com/gravestench/akara"
 	gameworld "github.com/gravestench/dark-magic/internal/game/world"
 	entryworld "github.com/gravestench/dark-magic/internal/mod/d2legacy/adapter/entryworld"
+	gametransition "github.com/gravestench/dark-magic/internal/mod/d2legacy/adapter/transition"
 )
 
 // syncActiveWorldFromPlayer observes the controlled player's committed location and updates map
@@ -77,21 +80,25 @@ func controlledPlayerLevel(world *akara.World, playerID string) (int, bool) {
 // reinterpret coordinates, preserving the generator as the single geometry authority.
 func (app *application) transitionBootstrapData() map[string]any {
 	app.worldMu.RLock()
-	seam := app.transitionSeam
+	seams := append([]gametransition.Seam(nil), app.transitionSeams...)
 	app.worldMu.RUnlock()
 
-	return entryworld.TransitionData(seam)
+	return entryworld.TransitionData(seams)
 }
 
-// warpBootstrapData creates paired portals solely for the named acceptance scene. Production scenes
-// receive the same empty schema shape and cannot accidentally enable fixture traversal.
+// warpBootstrapData publishes the prepared cave pair in production. The named
+// acceptance scene retains its generated portal fixture instead.
 func (app *application) warpBootstrapData() map[string]any {
 	if app.options.StartScene != "warp_lab" {
-		return emptyWarpBootstrap()
+		app.worldMu.RLock()
+		data := (&entryworld.Prepared{CaveWarp: app.caveWarp}).WarpData()
+		app.worldMu.RUnlock()
+
+		return data
 	}
 
-	townLevel := app.transitionSeam.Town.LevelID
-	wildernessLevel := app.transitionSeam.Wilderness.LevelID
+	townLevel := app.transitionSeam.First.LevelID
+	wildernessLevel := app.transitionSeam.Second.LevelID
 	town := app.gameWorlds[townLevel]
 
 	wilderness := app.gameWorlds[wildernessLevel]
@@ -197,6 +204,25 @@ func (app *application) warpEndpointData(
 	if found {
 		result["resident_id"] = id
 		result["room_id"] = roomID
+	}
+
+	return result
+}
+
+// worldSpawnBootstrapData publishes generated geometry without choosing gameplay destinations.
+func (app *application) worldSpawnBootstrapData() map[string]any {
+	result := map[string]any{}
+
+	for level, point := range app.gameWorldSpawns {
+		worldMap := app.gameWorlds[level]
+		if worldMap == nil {
+			continue
+		}
+
+		result[fmt.Sprint(level)] = map[string]any{
+			"x": point[0], "y": point[1],
+			"width": float64(worldMap.WidthSubtiles), "height": float64(worldMap.HeightSubtiles),
+		}
 	}
 
 	return result

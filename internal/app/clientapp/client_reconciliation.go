@@ -150,7 +150,15 @@ func (world *clientWorld) presentLocalPrediction(
 		collision,
 		corrected,
 	)
+
 	presented := world.local.Project(hud.Player.PlayerID, predicted, correction, corrected, elapsed)
+	if app.movementSource != nil {
+		app.movementSource.SetAuthenticatedPosition(
+			hud.Player.PlayerID,
+			int(hud.Location.LevelID),
+			gameworld.Point{X: hud.Position.X, Y: hud.Position.Y},
+		)
+	}
 
 	if err := app.applyLocalPredictedPosition(hud.Player.PlayerID, presented); err != nil {
 		return err

@@ -14,6 +14,7 @@ import (
 // transitions from this Prepared value keeps initial Lua state aligned with the maps admitted by the authority.
 func (world *Prepared) InitialData(owner string, developmentItems bool) map[string]any {
 	return map[string]any{
+		"d2legacy.entry_world_checksum": world.TopologyChecksum,
 		"d2legacy.game_rules": map[string]any{
 			"target":          "lod-1.14d",
 			"expansion":       true,
@@ -27,40 +28,79 @@ func (world *Prepared) InitialData(owner string, developmentItems bool) map[stri
 			"create_empty_containers": !developmentItems,
 		},
 		"d2legacy.interactions":      InteractionData(world.Worlds, world.Zones, owner, ""),
-		"d2legacy.world_transitions": TransitionData(world.Seam),
+		"d2legacy.world_transitions": TransitionData(world.Seams),
+		"d2legacy.world_warps":       world.WarpData(),
 	}
 }
 
-// TransitionData serializes both directions of the prepared seam. Explicit reverse data lets Lua perform transitions
-// without inferring that every topology is symmetric.
-func TransitionData(seam gametransition.Seam) map[string]any {
-	return map[string]any{
-		"seams": []any{
-			transitionEndpoint(seam.Town, seam.Wilderness),
-			transitionEndpoint(seam.Wilderness, seam.Town),
-		},
+// WarpData publishes the two directed, materialization-validated cave ends.
+// The authored DS1 supplies their appearance, so no portal token is sent.
+func (world *Prepared) WarpData() map[string]any {
+	endpoints := []any{}
+	if world != nil && world.CaveWarp != nil {
+		endpoints = append(endpoints,
+			caveWarpData(world.CaveWarp.First, "DEN OF EVIL"),
+			caveWarpData(world.CaveWarp.Second, "BLOOD MOOR"),
+		)
 	}
+	return map[string]any{"endpoints": endpoints}
+}
+
+// caveWarpData publishes validated authored cave geometry without a portal appearance token.
+func caveWarpData(endpoint CaveWarpEndpoint, label string) map[string]any {
+	return map[string]any{
+		"id": endpoint.ID, "pair_id": endpoint.PairedID, "static": true,
+		"label": label, "level_id": endpoint.LevelID,
+		"x": endpoint.X, "y": endpoint.Y, "radius": float64(3.5),
+		"destination_level": endpoint.TargetLevel,
+		"destination_x":     endpoint.ArrivalX, "destination_y": endpoint.ArrivalY,
+		"destination_width": endpoint.Width, "destination_height": endpoint.Height,
+	}
+}
+
+// TransitionData serializes both directions of each prepared seam. Explicit reverse data lets Lua perform transitions
+// without inferring that every topology is symmetric.
+func TransitionData(seams []gametransition.Seam) map[string]any {
+	directed := make([]any, 0, len(seams)*2)
+	for _, seam := range seams {
+		directed = append(directed,
+			transitionEndpoint(seam.First, seam.Second, seam.TriggerRadius),
+			transitionEndpoint(seam.Second, seam.First, seam.TriggerRadius),
+		)
+	}
+	return map[string]any{"seams": directed}
 }
 
 // transitionEndpoint converts one directed seam into the stable Lua field contract. Destination dimensions accompany
 // arrival coordinates so player placement can be validated against the world being entered.
-func transitionEndpoint(source, destination gametransition.SeamEndpoint) map[string]any {
-	return map[string]any{
+func transitionEndpoint(source, destination gametransition.SeamEndpoint, radius float64) map[string]any {
+	directed := map[string]any{
 		"source_level":      float64(source.LevelID),
 		"destination_level": float64(destination.LevelID),
 		"source_x":          source.X,
 		"source_y":          source.Y,
+		"source_direction":  source.Direction,
 		"arrival_x":         destination.ArrivalX,
 		"arrival_y":         destination.ArrivalY,
 		"world_width":       destination.Width,
 		"world_height":      destination.Height,
+		"trigger_radius":    radius,
 	}
+	if source.TriggerStrip != nil {
+		directed["trigger_lane_min"] = float64(source.TriggerStrip.LaneMin)
+		directed["trigger_lane_max"] = float64(source.TriggerStrip.LaneMax)
+	}
+	return directed
 }
 
 // PopulationCommand encodes the generated wilderness topology as the first system-owned population command. Tick and
 // sequence remain fixed because this bootstrap must precede player-authored simulation input deterministically.
 func (world *Prepared) PopulationCommand(nearby int) (simulation.Command, error) {
-	payload, err := json.Marshal(world.PopulationData(nearby))
+	data, err := world.PopulationData(nearby)
+	if err != nil {
+		return simulation.Command{}, err
+	}
+	payload, err := json.Marshal(data)
 	if err != nil {
 		return simulation.Command{}, err
 	}

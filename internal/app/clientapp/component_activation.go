@@ -81,6 +81,11 @@ func (app *application) bootstrapAuthoritativeComponents(desired map[string]bool
 		return nil
 	}
 
+	// Lua owns the location schema; install its native consumer after component startup.
+	if err := app.registerOfflineMovementSystem(); err != nil {
+		return err
+	}
+
 	for levelID, worldMap := range app.gameWorlds {
 		err := modruntime.SetWorldMapForLevel(
 			context.Background(),
@@ -93,6 +98,16 @@ func (app *application) bootstrapAuthoritativeComponents(desired map[string]bool
 		if err != nil {
 			return wrap("install authoritative collision map", err)
 		}
+	}
+
+	if app.pendingEntryRecovery != nil {
+		if err := app.restoreOfflineEntryWorldRecovery(*app.pendingEntryRecovery); err != nil {
+			return wrap("restore d2legacy entry world recovery", err)
+		}
+
+		app.pendingEntryRecovery = nil
+
+		return nil
 	}
 
 	return app.queueEntryPopulation()

@@ -31,6 +31,157 @@ type countingPaths struct {
 	path  []gameworld.Point
 }
 
+// routeProgressSource recreates the captured connected mismatch without a network or MPQ dependency.
+func routeProgressSource(t *testing.T, displayedX float64) (*MovementSource, *MovementController, *gameworld.Map) {
+	t.Helper()
+	fixture := newMovementFixture(t)
+	fixture.addPosition(displayedX, 84)
+	fixture.addLocation(1)
+	controller := &MovementController{}
+	source := fixture.source(controller)
+	navigation := &gameworld.Map{}
+	source.navigation = navigation
+	seedRouteProgress(t, source, controller)
+	return source, controller, navigation
+}
+
+// seedRouteProgress installs the same two-waypoint route after binding tests reset the source.
+func seedRouteProgress(t *testing.T, source *MovementSource, controller *MovementController) {
+	t.Helper()
+	if err := controller.SetMoveTarget(252, 84); err != nil {
+		t.Fatal(err)
+	}
+	source.pathTarget = &MoveTarget{X: 252, Y: 84}
+	source.path = []gameworld.Point{{X: 250, Y: 84}, {X: 251, Y: 84}, {X: 252, Y: 84}}
+}
+
+// TestMovementSourceAdvancesConnectedWaypointFromAuthenticatedPosition pins the observed host/display threshold gap.
+func TestMovementSourceAdvancesConnectedWaypointFromAuthenticatedPosition(t *testing.T) {
+	source, _, _ := routeProgressSource(t, 250.667)
+	source.SetAuthenticatedPosition("alpha", 1, gameworld.Point{X: 250.875, Y: 84})
+
+	payload := commandPayload(t, source, 1)
+	if payload.Target == nil || payload.Target.X != 252 || payload.Target.Y != 84 {
+		t.Fatalf("connected next waypoint = %#v, want (252,84)", payload.Target)
+	}
+}
+
+// TestMovementSourceStopsCompletedConnectedRouteWithoutReverseTarget prevents stale display position from pulling back.
+func TestMovementSourceStopsCompletedConnectedRouteWithoutReverseTarget(t *testing.T) {
+	source, controller, _ := routeProgressSource(t, 250.667)
+	if err := controller.SetMoveTarget(251, 84); err != nil {
+		t.Fatal(err)
+	}
+	source.pathTarget = &MoveTarget{X: 251, Y: 84}
+	source.path = []gameworld.Point{{X: 250, Y: 84}, {X: 251, Y: 84}}
+	source.SetAuthenticatedPosition("alpha", 1, gameworld.Point{X: 250.875, Y: 84})
+
+	payload := commandPayload(t, source, 1)
+	if payload.Target != nil || payload.X != 0 || payload.Y != 0 || controller.HasMoveTarget() {
+		t.Fatalf("completed connected route pulled toward display position: %#v", payload)
+	}
+	resolved := Resolve(gameworld.Point{X: 250.875, Y: 84}, payload, ClassRates{Walk: 4}, 0.025)
+	if resolved.Moving || resolved.Velocity != (gameworld.Point{}) {
+		t.Fatalf("completed connected route still moves authority: %#v", resolved)
+	}
+}
+
+// TestMovementSourceKeepsOfflineStationaryCompletion preserves the existing no-HUD stop command.
+func TestMovementSourceKeepsOfflineStationaryCompletion(t *testing.T) {
+	source, controller, _ := routeProgressSource(t, 250.875)
+	if err := controller.SetMoveTarget(251, 84); err != nil {
+		t.Fatal(err)
+	}
+	source.pathTarget = &MoveTarget{X: 251, Y: 84}
+	source.path = []gameworld.Point{{X: 250, Y: 84}, {X: 251, Y: 84}}
+
+	payload := commandPayload(t, source, 1)
+	if payload.Target == nil || payload.Target.X != 250.875 || payload.Target.Y != 84 ||
+		payload.X != 0 || payload.Y != 0 || controller.HasMoveTarget() {
+		t.Fatalf("completed offline route changed its stationary command: %#v", payload)
+	}
+}
+
+// TestMovementSourceGuardsAuthenticatedPosition keeps samples within their owner and world binding.
+func TestMovementSourceGuardsAuthenticatedPosition(t *testing.T) {
+	for _, trial := range []struct {
+		name           string
+		displayedX     float64
+		authenticatedX float64
+		player         string
+		level          int
+		sample         bool
+	}{
+		{name: "visual near authority far", displayedX: 250.875, authenticatedX: 250.667,
+			player: "alpha", level: 1, sample: true},
+		{name: "wrong owner", displayedX: 250.667, authenticatedX: 250.875,
+			player: "beta", level: 1, sample: true},
+		{name: "wrong level", displayedX: 250.667, authenticatedX: 250.875,
+			player: "alpha", level: 2, sample: true},
+		{name: "no sample", displayedX: 250.667},
+	} {
+		t.Run(trial.name, func(t *testing.T) {
+			source, _, _ := routeProgressSource(t, trial.displayedX)
+			if trial.sample {
+				source.SetAuthenticatedPosition(trial.player, trial.level,
+					gameworld.Point{X: trial.authenticatedX, Y: 84})
+			}
+			payload := commandPayload(t, source, 1)
+			if payload.Target == nil || payload.Target.X != 251 || payload.Target.Y != 84 {
+				t.Fatalf("guarded next waypoint = %#v, want (251,84)", payload.Target)
+			}
+		})
+	}
+
+	t.Run("unchanged owner retains sample", func(t *testing.T) {
+		source, _, _ := routeProgressSource(t, 250.667)
+		source.SetAuthenticatedPosition("alpha", 1, gameworld.Point{X: 250.875, Y: 84})
+		source.SetPlayer("alpha")
+		if payload := commandPayload(t, source, 1); payload.Target == nil || payload.Target.X != 252 {
+			t.Fatalf("unchanged-owner waypoint = %#v, want x=252", payload.Target)
+		}
+	})
+
+	t.Run("changed owner invalidates sample", func(t *testing.T) {
+		source, _, _ := routeProgressSource(t, 250.667)
+		source.SetAuthenticatedPosition("alpha", 1, gameworld.Point{X: 250.875, Y: 84})
+		source.SetPlayer("beta")
+		source.SetPlayer("alpha")
+		if payload := commandPayload(t, source, 1); payload.Target == nil || payload.Target.X != 251 {
+			t.Fatalf("rebound-owner waypoint = %#v, want x=251", payload.Target)
+		}
+	})
+
+	t.Run("engine rebind invalidates sample", func(t *testing.T) {
+		source, controller, _ := routeProgressSource(t, 250.667)
+		source.SetAuthenticatedPosition("alpha", 1, gameworld.Point{X: 250.875, Y: 84})
+		source.SetEngine(source.engine)
+		seedRouteProgress(t, source, controller)
+		if payload := commandPayload(t, source, 1); payload.Target == nil || payload.Target.X != 251 {
+			t.Fatalf("rebound-engine waypoint = %#v, want x=251", payload.Target)
+		}
+	})
+
+	t.Run("same map retains sample", func(t *testing.T) {
+		source, _, navigation := routeProgressSource(t, 250.667)
+		source.SetAuthenticatedPosition("alpha", 1, gameworld.Point{X: 250.875, Y: 84})
+		source.SetNavigation(navigation)
+		if payload := commandPayload(t, source, 1); payload.Target == nil || payload.Target.X != 252 {
+			t.Fatalf("same-map waypoint = %#v, want x=252", payload.Target)
+		}
+	})
+
+	t.Run("map rebind invalidates sample", func(t *testing.T) {
+		source, controller, _ := routeProgressSource(t, 250.667)
+		source.SetAuthenticatedPosition("alpha", 1, gameworld.Point{X: 250.875, Y: 84})
+		source.SetNavigation(&gameworld.Map{})
+		seedRouteProgress(t, source, controller)
+		if payload := commandPayload(t, source, 1); payload.Target == nil || payload.Target.X != 251 {
+			t.Fatalf("rebound-map waypoint = %#v, want x=251", payload.Target)
+		}
+	})
+}
+
 // FindPath records each search and returns a direct route whose endpoint remains easy to assert.
 func (paths *countingPaths) FindPath(request gameworld.PathRequest) ([]gameworld.Point, error) {
 	paths.calls++
@@ -125,6 +276,31 @@ func (fixture movementFixture) addPosition(x, y float64) {
 
 	if _, err := positions.Set(fixture.entity, map[string]any{"x": x, "y": y}); err != nil {
 		fixture.t.Fatal(err)
+	}
+}
+
+// addLocation lets movement command tests verify the world observed by the presentation source.
+func (fixture movementFixture) addLocation(level int64) {
+	fixture.t.Helper()
+	locations, err := akara.RegisterSchema(fixture.engine.World(), akara.Schema{
+		Name:   "d2legacy.world.location",
+		Fields: []akara.Field{{Name: "level_id", Kind: akara.FieldInt64}},
+	})
+	if err != nil {
+		fixture.t.Fatal(err)
+	}
+	if _, err := locations.Set(fixture.entity, map[string]any{"level_id": level}); err != nil {
+		fixture.t.Fatal(err)
+	}
+}
+
+// TestMovementSourceStampsObservedLevel keeps delayed connected samples tied to the world where they originated.
+func TestMovementSourceStampsObservedLevel(t *testing.T) {
+	fixture := newMovementFixture(t)
+	fixture.addLocation(2)
+	source := fixture.source(nil)
+	if payload := commandPayload(t, source, 1); payload.SourceLevel != 2 {
+		t.Fatalf("movement source level = %d, want 2", payload.SourceLevel)
 	}
 }
 
