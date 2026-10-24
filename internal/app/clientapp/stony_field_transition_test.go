@@ -346,7 +346,8 @@ func TestStonyFieldRecoveryRejectsCorruptTopology(t *testing.T) {
 			}
 
 			if !reflect.DeepEqual(before, after) || f.app.currentWorld().Map != beforeMap ||
-				f.app.entryWorldChecksum != beforeChecksum || f.app.activeWorldLevel != 3 || f.app.pendingEntryRecovery != nil {
+				f.app.entryWorldChecksum != beforeChecksum || f.app.activeWorldLevel != 3 ||
+				f.app.pendingEntryRecovery != nil {
 				t.Fatal("rejected topology mutated session or composition")
 			}
 		})

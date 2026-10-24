@@ -24,7 +24,8 @@ func TestStonyFieldPreparedSeamReal(t *testing.T) {
 				t.Fatal(err)
 			}
 			if len(prepared.Worlds) != 4 || len(prepared.Zones) != 4 || len(prepared.Seams) != 3 {
-				t.Fatalf("prepared maps/zones/seams=%d/%d/%d", len(prepared.Worlds), len(prepared.Zones), len(prepared.Seams))
+				t.Fatalf("prepared maps/zones/seams=%d/%d/%d",
+					len(prepared.Worlds), len(prepared.Zones), len(prepared.Seams))
 			}
 			for index, seam := range prepared.Seams {
 				if seam.First.LevelID != index+1 || seam.Second.LevelID != index+2 {
@@ -94,7 +95,7 @@ func TestStonyFieldPreparedSeamReal(t *testing.T) {
 				}
 			}
 
-			t.Logf("owned seed 17 difficulty %d: four maps, three seams, safe 3/4 routes and reciprocal alignment executed",
+			t.Logf("owned seed 17 difficulty %d: four maps, three seams, safe aligned 3/4 routes",
 				difficulty)
 		})
 	}
@@ -121,11 +122,16 @@ func assertOwnedSeamAlignment(t *testing.T, prepared *Prepared) {
 	for index, seam := range prepared.Seams {
 		forward := directed[index*2].(map[string]any)
 		reverse := directed[index*2+1].(map[string]any)
-		for side, endpoints := range [][2]gametransition.SeamEndpoint{{seam.First, seam.Second}, {seam.Second, seam.First}} {
+		pairs := [][2]gametransition.SeamEndpoint{
+			{seam.First, seam.Second}, {seam.Second, seam.First},
+		}
+		for side, endpoints := range pairs {
 			data := directed[index*2+side].(map[string]any)
 			source, destination := endpoints[0], endpoints[1]
-			if data["source_level"] != float64(source.LevelID) || data["destination_level"] != float64(destination.LevelID) ||
-				data["source_x"] != source.X || data["source_y"] != source.Y || data["source_direction"] != source.Direction ||
+			if data["source_level"] != float64(source.LevelID) ||
+				data["destination_level"] != float64(destination.LevelID) ||
+				data["source_x"] != source.X || data["source_y"] != source.Y ||
+				data["source_direction"] != source.Direction ||
 				data["arrival_x"] != destination.ArrivalX || data["arrival_y"] != destination.ArrivalY ||
 				data["world_width"] != destination.Width || data["world_height"] != destination.Height {
 				t.Fatalf("seam %d directed endpoint %d differs from prepared collision: %#v", index, side, data)

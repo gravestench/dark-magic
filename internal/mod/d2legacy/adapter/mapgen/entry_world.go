@@ -217,7 +217,8 @@ func validateEntryWorldV2(world EntryWorld) error {
 // validateEntryWorldTopology checks shared identities and binds every generated side to one admitted warp.
 func validateEntryWorldTopology(world EntryWorld, levelCount int) error {
 	if len(world.Zones) != levelCount || len(world.Seams) != levelCount-1 {
-		return fmt.Errorf("d2legacy entry world: v%d requires %d zones and %d seams", world.Version, levelCount, levelCount-1)
+		return fmt.Errorf("d2legacy entry world: v%d requires %d zones and %d seams",
+			world.Version, levelCount, levelCount-1)
 	}
 	var seed uint64
 	var difficulty int

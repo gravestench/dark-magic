@@ -51,13 +51,15 @@ func TestEntryWorldV3PolicyPlacesReciprocalOutdoorSeam(t *testing.T) {
 				if err != nil {
 					t.Fatal(err)
 				}
-				direct, err := runtime.generateFrom(t.Context(), "d2legacy.mapgen.cold_plains", "generate_with_stony_exit",
+				direct, err := runtime.generateFrom(t.Context(),
+					"d2legacy.mapgen.cold_plains", "generate_with_stony_exit",
 					float64(3), float64(42), facing.source, float64(mode.difficulty))
 				if err != nil || !reflect.DeepEqual(direct.Definition(), plains.Definition()) {
 					t.Fatalf("v3 policy changed the explicit generator recipe: %v", err)
 				}
 				if !reflect.DeepEqual(plains.Stamps(), legacy.Stamps()) ||
-					!reflect.DeepEqual(plains.Rooms(), legacy.Rooms()) || !reflect.DeepEqual(plains.Links(), legacy.Links()) {
+					!reflect.DeepEqual(plains.Rooms(), legacy.Rooms()) ||
+					!reflect.DeepEqual(plains.Links(), legacy.Links()) {
 					t.Fatal("v3 changed Cold Plains fill, variants, or room topology")
 				}
 				oldWarps, warps := legacy.Warps(), plains.Warps()
@@ -105,7 +107,8 @@ func TestEntryWorldV3PolicyPlacesReciprocalOutdoorSeam(t *testing.T) {
 				if err != nil {
 					t.Fatal(err)
 				}
-				value, err := modruntime.Call(t.Context(), runtime.lua, "d2legacy.mapgen.entry_world", "stony_field_seam",
+				value, err := modruntime.Call(t.Context(), runtime.lua,
+					"d2legacy.mapgen.entry_world", "stony_field_seam",
 					plainsFacts, stonyFacts)
 				if err != nil {
 					t.Fatal(err)
@@ -175,7 +178,8 @@ func TestEntryWorldV3PolicyRejectsMalformedExit(t *testing.T) {
 				{"stony_field", []any{float64(42), float64(0), plains}},
 				{"stony_field_seam", []any{plains, stony}},
 			} {
-				_, err := modruntime.Call(t.Context(), runtime.lua, "d2legacy.mapgen.entry_world", call.function, call.args...)
+				_, err := modruntime.Call(t.Context(), runtime.lua,
+					"d2legacy.mapgen.entry_world", call.function, call.args...)
 				if err == nil || !strings.Contains(err.Error(), test.message) {
 					t.Fatalf("%s error = %v, want %q", call.function, err, test.message)
 				}
@@ -205,7 +209,8 @@ func TestEntryWorldV3PolicyRejectsMalformedReciprocalEntry(t *testing.T) {
 		t.Run(test.name, func(t *testing.T) {
 			warps := make([]any, test.count)
 			for i := range warps {
-				warps[i] = map[string]any{"id": float64(i + 1), "role": "cold-plains-entry", "direction": test.direction,
+				warps[i] = map[string]any{
+					"id": float64(i + 1), "role": "cold-plains-entry", "direction": test.direction,
 					"x": float64(0), "y": float64(40), "destination_level": float64(test.target)}
 			}
 			stony := map[string]any{"request": map[string]any{"level_id": float64(4)}, "warps": warps}

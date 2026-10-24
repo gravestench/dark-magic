@@ -898,7 +898,8 @@ func TestStonyFieldPopulationItemLifecycleWithoutRandomDraws(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			if !reflect.DeepEqual(value, map[string]any{"id": "later-item", "level_id": float64(4), "room_id": "same"}) {
+			want := map[string]any{"id": "later-item", "level_id": float64(4), "room_id": "same"}
+			if !reflect.DeepEqual(value, want) {
 				t.Fatalf("resident_at=%#v", value)
 			}
 			positions, _ := akara.GetDynamicStore(e.World(), "d2legacy.world.position")

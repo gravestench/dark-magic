@@ -128,7 +128,10 @@ func TestEntryWorldV3RejectsTopologyDrift(t *testing.T) {
 		{"second ID", func(s *SeamSpec) { s.SecondWarpID = 999 }},
 		{"first direction", func(s *SeamSpec) { s.FirstDirection = "north" }},
 		{"second direction", func(s *SeamSpec) { s.SecondDirection = "north" }},
-		{"opposite but wrong directions", func(s *SeamSpec) { s.FirstDirection = "north"; s.SecondDirection = "south" }},
+		{"opposite but wrong directions", func(s *SeamSpec) {
+			s.FirstDirection = "north"
+			s.SecondDirection = "south"
+		}},
 		{"out of bounds first", func(s *SeamSpec) { s.FirstTileX = 9999 }},
 		{"out of bounds second", func(s *SeamSpec) { s.SecondTileY = -1 }},
 		{"mismatched first tile", func(s *SeamSpec) { s.FirstTileY++ }},
