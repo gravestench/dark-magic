@@ -3,7 +3,6 @@ package clientapp
 import (
 	"context"
 	"math"
-	"strings"
 	"testing"
 	"time"
 
@@ -123,15 +122,9 @@ func newBridgePointerClient(t *testing.T, hosted bool, spawn ...string) (*applic
 	input := &bridgeTestInput{}
 
 	t.Cleanup(func() {
-		// #627 tracks camera-follow cleanup after connected replica rebinding.
 		if app.scenes != nil {
 			if err := app.scenes.Close(context.Background()); err != nil {
-				if hosted && strings.Contains(err.Error(), `unregister "d2legacy.world.camera_follow"`) &&
-					!strings.Contains(err.Error(), "\n") {
-					t.Logf("known #627 scene cleanup failure: %v", err)
-				} else {
-					t.Errorf("close bridge scene: %v", err)
-				}
+				t.Errorf("close bridge scene: %v", err)
 			}
 		}
 		// #626 tracks root cancellation stopping a host before its final refresh.
