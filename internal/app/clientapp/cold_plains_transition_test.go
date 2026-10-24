@@ -62,6 +62,63 @@ func TestLiveColdPlainsRoundTrip(t *testing.T) {
 	}
 }
 
+// The selected town bridge seam must admit a listen-host player from an ordinary new-character spawn and return.
+func TestConnectedTownBridgeRoundTrip(t *testing.T) {
+	fixture := newRealD2LegacyFixture(t, realD2LegacyFixtureConfig{
+		startScene: "game_world", fixtureCharacters: 1, applySceneDefaults: true,
+	})
+	app := fixture.app
+	app.ctx = t.Context()
+
+	app.components = host.NewManager()
+	if err := app.components.Register(host.ManagedDefinition{
+		ID:  "d2legacy.boot",
+		New: func(context.Context) (host.Component, error) { return headlessClientBoot{}, nil },
+	}); err != nil {
+		t.Fatal(err)
+	}
+
+	var err error
+
+	app.networkTrust, err = networktrust.New(t.TempDir())
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	t.Cleanup(func() { _ = app.network.Close() })
+
+	if err := app.network.Host(); err != nil {
+		t.Fatal(err)
+	}
+
+	if err := app.network.StartSelected(); err != nil {
+		t.Fatal(err)
+	}
+
+	deadline := time.Now().Add(30 * time.Second)
+	for !app.network.Connected() && time.Now().Before(deadline) {
+		if status := app.network.Status(); status["phase"] == "failed" {
+			t.Fatalf("listen connection failed: %v", status["error"])
+		}
+
+		time.Sleep(10 * time.Millisecond)
+	}
+
+	if !app.network.Connected() {
+		t.Fatalf("listen connection timed out: %#v", app.network.Status())
+	}
+
+	fixture.advanceGame(t, 10)
+
+	seam := app.transitionSeams[0]
+	if seam.First.LevelID != 1 || seam.Second.LevelID != 2 || seam.First.X < 250 {
+		t.Fatalf("listen host did not prepare the visible east bridge seam: %#v", seam)
+	}
+
+	moveConnectedAcrossColdPlains(t, fixture, 2, seam.First, seam.Second)
+	moveConnectedAcrossColdPlains(t, fixture, 1, seam.Second, seam.First)
+}
+
 // A valid but different level recipe must fail the real QUIC join after a matching control joins successfully.
 func TestConnectedColdPlainsRejectsDifferentTopologyAtHandshake(t *testing.T) {
 	fixture := newRealD2LegacyFixture(t, realD2LegacyFixtureConfig{
