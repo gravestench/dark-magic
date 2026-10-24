@@ -58,11 +58,31 @@ local function network_connected()
     return network_ok and network.status().phase == "connected"
 end
 
+local function release_pending(entry)
+    if entry.pending_job then
+        render.preload_release(entry.pending_job)
+        entry.pending_job = nil
+    end
+end
+
+local function destroy_preloaded_entry(entry)
+    release_pending(entry)
+    if entry.node and entry.node:exists() then
+        entry.node:destroy()
+    end
+end
+
+local function release_hero_preload(self)
+    if self.hero_pending_job then
+        render.preload_release(self.hero_pending_job)
+        self.hero_pending_job = nil
+    end
+    self.hero_pending_key, self.hero_pending_composite = nil, nil
+end
+
 local function destroy_monsters(self)
     for _, monster in pairs(self.monsters or {}) do
-        if monster.node and monster.node:exists() then
-            monster.node:destroy()
-        end
+        destroy_preloaded_entry(monster)
     end
     self.monsters = {}
 end
@@ -79,28 +99,17 @@ end
 local function destroy_missiles(self)
     missile_audio.close(self.missile_sounds)
     for _, missile in pairs(self.missiles or {}) do
-        if missile.node and missile.node:exists() then
-            missile.node:destroy()
-        end
+        destroy_preloaded_entry(missile)
     end
     self.missiles = {}
 end
 
-local function destroy_overlay_entry(entry)
-    if entry.pending_job then
-        render.preload_release(entry.pending_job)
-    end
-    if entry.node and entry.node:exists() then
-        entry.node:destroy()
-    end
-end
-
 local function destroy_state_overlays(self)
     for _, overlay in pairs(self.state_overlays or {}) do
-        destroy_overlay_entry(overlay)
+        destroy_preloaded_entry(overlay)
     end
     for _, overlay in pairs(self.state_overlay_effects or {}) do
-        destroy_overlay_entry(overlay)
+        destroy_preloaded_entry(overlay)
     end
     self.state_overlays = {}
     self.state_overlay_effects = {}
@@ -214,8 +223,9 @@ local function install_current_world(self)
     -- Terrain in the same prepared component keeps its camera root. Keep the
     -- bound hero there too: even cached appearances preload asynchronously.
     local retain_hero = self.layout and self.layout.levels[level_id] and self.hero and self.hero:exists()
-    if not retain_hero and self.hero and self.hero:exists() then
-        self.hero:destroy()
+    if not retain_hero then
+        release_hero_preload(self)
+        if self.hero and self.hero:exists() then self.hero:destroy() end
     end
     destroy_monsters(self)
     destroy_players(self)
@@ -548,7 +558,8 @@ local function finish_monster_preload(monster, composite)
         -- renderer's global busy flag can then settle and captures can complete.
         monster.failed_composite_key = pending.key
     end
-    monster.pending_job, monster.pending_composite = nil, nil
+    release_pending(monster)
+    monster.pending_composite = nil
 end
 
 local function update_monster(self, monster, snapshot, elapsed)
@@ -597,7 +608,7 @@ local function update_monsters(self, elapsed)
     end
     for key, monster in pairs(self.monsters) do
         if not seen[key] then
-            monster.node:destroy()
+            destroy_preloaded_entry(monster)
             self.monsters[key] = nil
         end
     end
@@ -647,7 +658,7 @@ local function update_overlay_node(self, overlay, snapshot)
             else
                 overlay.failed = true
             end
-            overlay.pending_job = nil
+            release_pending(overlay)
         end
     end
     local x, y = entity_pixel(self, snapshot.x, snapshot.y)
@@ -752,7 +763,7 @@ local function update_state_overlays(self, elapsed)
     end
     for key, overlay in pairs(self.state_overlays) do
         if not seen[key] then
-            destroy_overlay_entry(overlay)
+            destroy_preloaded_entry(overlay)
             self.state_overlays[key] = nil
         end
     end
@@ -762,7 +773,7 @@ local function update_state_overlays(self, elapsed)
             overlay.remaining_seconds = overlay.remaining_seconds - elapsed
         end
         if overlay.failed or overlay.remaining_seconds <= 0 then
-            destroy_overlay_entry(overlay)
+            destroy_preloaded_entry(overlay)
             self.state_overlay_effects[key] = nil
         end
     end
@@ -870,7 +881,7 @@ local function update_missiles(self, snapshots)
                         -- the background residency queue every frame.
                         missile.failed = true
                     end
-                    missile.pending_job = nil
+                    release_pending(missile)
                 end
             end
             local x, y = entity_pixel(self, snapshot.x, snapshot.y)
@@ -883,7 +894,7 @@ local function update_missiles(self, snapshots)
     end
     for key, missile in pairs(self.missiles) do
         if not seen[key] then
-            missile.node:destroy()
+            destroy_preloaded_entry(missile)
             self.missiles[key] = nil
         end
     end
@@ -1095,9 +1106,7 @@ return {
                         -- changes. Retrying every frame keeps the whole client "busy".
                         self.hero_failed_composite_key = pending.key
                     end
-                    self.hero_pending_job = nil
-                    self.hero_pending_key = nil
-                    self.hero_pending_composite = nil
+                    release_hero_preload(self)
                 end
             end
             if authority.animation_seconds ~= nil and self.hero_composite_key == composite.key then
@@ -1396,6 +1405,7 @@ return {
         destroy_state_overlays(self)
         destroy_warps(self)
         if self.ground_items then self.ground_items:destroy(); self.ground_items = nil end
+        release_hero_preload(self)
         destroy_terrain(self)
         if self.hero and self.hero:exists() then self.hero:destroy() end
     end,
