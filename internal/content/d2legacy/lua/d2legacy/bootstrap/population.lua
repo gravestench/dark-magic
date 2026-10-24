@@ -265,9 +265,10 @@ local function validate_zone(zone)
             "Den population requires arrival and return exclusions"
         )
         local room = zone.rooms[1]
+        local exclusion_fields = { "x", "y", "radius" }
         for index, exclusion in ipairs(zone.exclusions) do
             assert(type(exclusion) == "table", "Den population exclusion is invalid")
-            for _, field in ipairs({ "x", "y", "radius" }) do
+            for _, field in ipairs(exclusion_fields) do
                 local value = exclusion[field]
                 assert(
                     type(value) == "number" and value == value and math.abs(value) < math.huge,
