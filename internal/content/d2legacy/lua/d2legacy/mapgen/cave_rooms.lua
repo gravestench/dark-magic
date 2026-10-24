@@ -1,6 +1,7 @@
 -- Act I cave room selection from authored W/E/S/N connection masks.
 
 local M = {}
+local draw = require("engine.deterministic/v1").integer
 
 local WEST, EAST, SOUTH, NORTH = 1, 2, 4, 8
 
@@ -55,6 +56,14 @@ function M.preset_definition(role, mask)
     if role == "previous-level" then return 83 + ordinal end
     if role == "next-level" then return 87 + ordinal end
     error("d2legacy mapgen: unknown special cave role " .. tostring(role))
+end
+
+-- The Den has no graph door. Choose an authored previous-level orientation
+-- explicitly instead of pretending its one room connects to a second room.
+-- This is deterministic Dark Magic policy, not original-game seed parity.
+function M.den_definition(seed)
+    local ordinal = draw(seed, "d2legacy.mapgen.den.orientation", 4)
+    return 83 + ordinal, ({"west", "east", "south", "north"})[ordinal + 1]
 end
 
 return M
