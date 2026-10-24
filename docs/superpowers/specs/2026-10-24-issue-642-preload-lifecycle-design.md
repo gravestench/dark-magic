@@ -16,7 +16,7 @@ The outdoor game scene can close while its map tiles, monsters, missiles, overla
 
 - No worker cancellation, cache eviction, native texture disposal, new scene-wide job registry, changes to other screens' long-lived preload policy, or change to a live adapter's draw/admission behavior.
 - Keep decoding on bounded workers and native texture uploads on the renderer thread. Retained render nodes remain owned by the Lua scene and are destroyed separately from job bookkeeping.
-- The issue covers the outdoor `game_world` scene and its sparse adapters. Other screens that intentionally retain preload handles are outside this acceptance slice.
+- The issue covers the outdoor `game_world` scene and its sparse adapters. Other screens' preload lifetimes are outside this outdoor-scene acceptance slice.
 
 ## Approaches
 
@@ -33,7 +33,7 @@ In Lua, `chunked_map.destroy` releases every retained ID without a status check,
 ## Verification
 
 - Native tests use controlled blocked workers to prove release before and after completion, exactly one successful release, unavailable status, `Pending()` transition, and zero retained records after completion; repeat the cycle and run a race-instrumented ordering test.
-- One synthetic Go/Lua integration test registers the real `engine.render/v1` capability and the first-party `chunked_map` module. It starts an unfinished initial preload through the adapter, destroys that adapter through Lua, lets the native worker complete, and checks the real preloader's job map is empty. Repeating the cycle proves bounded records. A missing synthetic DS1 may fail decoding; the lifecycle result is the assertion.
+- One synthetic Go/Lua integration test registers the real `engine.render/v1` capability and the first-party `chunked_map` module. A synthetic `fs.FS.Open` gate blocks the initial DS1 decode, and the test waits until the worker reaches that gate. It then destroys the adapter through Lua while work is unfinished, confirms the released ID has no status while `Pending()` still counts it, unblocks the worker, and checks the real preloader job map is empty. It repeats this sequence and checks the map after every cycle. The synthetic DS1 may fail decoding after the gate opens; the lifecycle result is the assertion.
 - Lua scene tests use tracked synthetic jobs for monster, missile, overlay, and hero completion/removal/teardown, including a retained hero across a seamless crossing and release across a discrete warp. Adapter tests assert both initial and tile releases, idempotent destruction, shared-root preservation, and no post-destroy admission.
 - Existing sparse-residency, seam presentation, Go render, and Lua hardening suites must pass on the submitted commit.
 
