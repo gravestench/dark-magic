@@ -232,6 +232,11 @@ func (controller *networkController) installListenWorlds(
 	ctx context.Context,
 	host *gameserver.Host,
 ) error {
+	paths, err := preparedVelocityPaths(controller.app.gameWorlds)
+	if err != nil {
+		return err
+	}
+
 	for levelID, collision := range controller.app.gameWorlds {
 		if err := modruntime.SetWorldMapForLevel(
 			ctx,
@@ -246,11 +251,11 @@ func (controller *networkController) installListenWorlds(
 	}
 
 	// Match offline authority: Lua supplies velocity; the native system integrates opted-in residents.
-	if err := gameworld.RegisterVelocityMovement(host.Engine, controller.app.gameWorlds[2], gameworld.VelocityComponents{
+	if err := gameworld.RegisterVelocityMovementByLevel(host.Engine, paths, gameworld.VelocityComponents{
 		Position: "d2legacy.world.position",
 		Velocity: "d2legacy.world.velocity",
 		Collider: "d2legacy.world.collider",
-	}); err != nil {
+	}, gameworld.VelocityLevelLocation{Component: "d2legacy.world.location", Field: "level_id"}); err != nil {
 		return wrap("register listen hostile movement", err)
 	}
 

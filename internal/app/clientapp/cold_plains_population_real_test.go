@@ -304,6 +304,8 @@ func TestColdPlainsPopulationRecoveryMatchesContinuation(t *testing.T) {
 		t.Fatal(err)
 	}
 
+	assertColdRecoveryRejectsOldMovement(t, target)
+
 	for _, crossing := range []struct {
 		to   int
 		x, y float64

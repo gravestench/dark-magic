@@ -12,10 +12,6 @@ import (
 // registerOfflineCommands assembles one deterministic command stream for the
 // local authority. Entry precedes movement and generic intents so a player exists first.
 func (app *application) registerOfflineCommands() error {
-	if err := app.registerOfflineMovementSystem(); err != nil {
-		return err
-	}
-
 	movementSource, movement, err := app.createOfflineMovementSource()
 	if err != nil {
 		return err
@@ -35,9 +31,9 @@ func (app *application) registerOfflineCommands() error {
 // registerOfflineMovementSystem installs production fixed-step movement against
 // the authoritative ECS and pinned movement catalog, not a presentation shortcut.
 func (app *application) registerOfflineMovementSystem() error {
-	bloodMoor := app.gameWorlds[2]
-	if bloodMoor == nil {
-		return errors.New("register hostile simulation: Blood Moor world is unavailable")
+	paths, err := preparedVelocityPaths(app.gameWorlds)
+	if err != nil {
+		return err
 	}
 
 	components := gameworld.VelocityComponents{
@@ -45,7 +41,8 @@ func (app *application) registerOfflineMovementSystem() error {
 		Velocity: "d2legacy.world.velocity",
 		Collider: "d2legacy.world.collider",
 	}
-	err := gameworld.RegisterVelocityMovement(app.entitySimulation, bloodMoor, components)
+	err = gameworld.RegisterVelocityMovementByLevel(app.entitySimulation, paths, components,
+		gameworld.VelocityLevelLocation{Component: "d2legacy.world.location", Field: "level_id"})
 
 	return wrap("register generic velocity movement", err)
 }

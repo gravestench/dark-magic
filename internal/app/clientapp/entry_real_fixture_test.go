@@ -147,6 +147,10 @@ func startTestD2LegacyAuthority(t *testing.T, app *application, queuePopulation 
 		t.Fatal(err)
 	}
 
+	if err := app.registerOfflineMovementSystem(); err != nil {
+		t.Fatal(err)
+	}
+
 	// Match production bootstrap: population validates full footprints against these maps.
 	for levelID, worldMap := range app.gameWorlds {
 		if err := modruntime.SetWorldMapForLevel(t.Context(), app.scripts,
