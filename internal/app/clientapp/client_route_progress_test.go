@@ -19,6 +19,7 @@ import (
 func TestConnectedReconciliationFeedsAuthenticatedRouteProgress(t *testing.T) {
 	engine := newRemotePresentationTestEngine(t)
 	hero := engine.World().MustCreateEntity()
+
 	for _, component := range []struct {
 		name   string
 		fields map[string]any
@@ -31,21 +32,26 @@ func TestConnectedReconciliationFeedsAuthenticatedRouteProgress(t *testing.T) {
 		if !found {
 			t.Fatalf("replica component %s is missing", component.name)
 		}
+
 		if _, err := store.Set(hero, component.fields); err != nil {
 			t.Fatal(err)
 		}
 	}
 
 	controller := &movement.MovementController{}
+
 	source, err := movement.NewMovementSource(engine, &inputstate.Store{}, "alpha", "game_world", controller)
 	if err != nil {
 		t.Fatal(err)
 	}
+
 	openMap, err := gameworld.NewOpenMap(20, 20)
 	if err != nil {
 		t.Fatal(err)
 	}
+
 	source.SetNavigation(openMap)
+
 	if err := controller.SetMoveTarget(13, 10); err != nil {
 		t.Fatal(err)
 	}
@@ -54,14 +60,18 @@ func TestConnectedReconciliationFeedsAuthenticatedRouteProgress(t *testing.T) {
 	if len(initial) != 1 {
 		t.Fatalf("initial movement commands = %d, want one", len(initial))
 	}
+
 	var first movement.MovePayload
 	if err := json.Unmarshal(initial[0].Payload, &first); err != nil {
 		t.Fatal(err)
 	}
+
 	if first.Target == nil || first.Target.X != 12 {
 		t.Fatalf("initial route waypoint = %#v, want x=12", first.Target)
 	}
+
 	positions, _ := akara.GetDynamicStore(engine.World(), "d2legacy.world.position")
+
 	position, _ := positions.Get(hero)
 	if err := position.Set("x", 11.667); err != nil {
 		t.Fatal(err)
@@ -82,6 +92,7 @@ func TestConnectedReconciliationFeedsAuthenticatedRouteProgress(t *testing.T) {
 		playerID:    "alpha",
 		error:       playeradapter.HUDPosition{X: -0.208},
 	}
+
 	app := &application{
 		clientSimulation: engine,
 		movementSource:   source,
@@ -96,14 +107,17 @@ func TestConnectedReconciliationFeedsAuthenticatedRouteProgress(t *testing.T) {
 	if math.Abs(x.(float64)-11.667) > 1e-6 {
 		t.Fatalf("replica position = %.3f, want lagging display 11.667", x)
 	}
+
 	commands := source.Commands(2)
 	if len(commands) != 1 {
 		t.Fatalf("movement commands = %d, want one", len(commands))
 	}
+
 	var payload movement.MovePayload
 	if err := json.Unmarshal(commands[0].Payload, &payload); err != nil {
 		t.Fatal(err)
 	}
+
 	if payload.Target == nil || payload.Target.X != 13 || payload.Target.Y != 10 {
 		t.Fatalf("next connected waypoint = %#v, want (13,10)", payload.Target)
 	}
