@@ -22,7 +22,7 @@ import (
 )
 
 // A fourth map must participate in ordinary movement and survive a checkpoint before the return trip.
-func TestStonyFieldOfflineRecoveryRoundTrip(t *testing.T) {
+func TestStonyFieldOfflinePopulationRecoveryRoundTrip(t *testing.T) {
 	config := realD2LegacyFixtureConfig{startScene: "game_world", fixtureCharacters: 1,
 		fixtureWorldLevel: 3, applySceneDefaults: true}
 
@@ -32,9 +32,21 @@ func TestStonyFieldOfflineRecoveryRoundTrip(t *testing.T) {
 	}
 
 	source.advanceGame(t, 10)
+	// Production seed 1 has eligible Stony Field rooms; pin that fixture evidence.
+	if seed := source.app.entryWorldTopology.Zones[4].Request().Seed; seed != 1 {
+		t.Fatalf("population fixture seed = %d, want 1", seed)
+	}
+
 	seam := source.app.transitionSeams[2]
 	moveAcrossColdPlainsSeam(t, source, 3, 4, seam.First, seam.Second)
 	assertStonyFieldIdle(t, source, 4, 1, seam.Second.ArrivalX, seam.Second.ArrivalY)
+
+	ids := populationResidentIDs(t, source, 4, false)
+	if len(ids) == 0 {
+		t.Fatal("Stony Field created no ordinary residents")
+	}
+
+	assertStonyPopulationProjection(t, source)
 
 	bundle, err := source.app.entryWorldRecoveryCheckpoint()
 	if err != nil {
@@ -58,10 +70,47 @@ func TestStonyFieldOfflineRecoveryRoundTrip(t *testing.T) {
 		t.Fatalf("recovery checksum differs: %v", err)
 	}
 
-	for _, f := range []*realD2LegacyFixture{source, restored} {
-		moveAcrossColdPlainsSeam(t, f, 4, 3, seam.Second, seam.First)
-		assertStonyFieldIdle(t, f, 3, 2, seam.First.ArrivalX, seam.First.ArrivalY)
+	for _, crossing := range []struct {
+		to    int
+		point gametransition.SeamEndpoint
+	}{
+		{3, seam.Second}, {4, seam.First},
+	} {
+		if err := source.app.playerControl.SetMoveTargetWithRadius(
+			crossing.point.X, crossing.point.Y, 0.5,
+		); err != nil {
+			t.Fatal(err)
+		}
+
+		crossed := false
+
+		for range 1500 {
+			advancePopulationRecoveryTick(t, source, restored)
+
+			if int(recoveryPlayerHUD(t, source).Location.LevelID) == crossing.to {
+				crossed = true
+				break
+			}
+		}
+
+		if !crossed {
+			t.Fatalf("continuation never crossed to %d", crossing.to)
+		}
+
+		advancePopulationRecoveryTick(t, source, restored)
+
+		if crossing.to == 3 {
+			assertPopulationInactive(t, source, ids, true)
+		}
 	}
+
+	if !reflect.DeepEqual(ids, populationResidentIDs(t, source, 4, false)) ||
+		!reflect.DeepEqual(ids, populationResidentIDs(t, restored, 4, false)) {
+		t.Fatal("leave/return recreated Stony Field residents")
+	}
+
+	assertStonyPopulationProjection(t, source)
+	assertStonyPopulationProjection(t, restored)
 
 	a, err := source.app.offlineSession.CanonicalCheckpoint()
 	if err != nil {
@@ -94,7 +143,7 @@ func assertStonyFieldIdle(t *testing.T, f *realD2LegacyFixture, level int, seque
 }
 
 // Reconnect and an admitted late level-3 input must preserve the level-4 authority before ordinary return movement.
-func TestStonyFieldConnectedReconnectRoundTrip(t *testing.T) {
+func TestStonyFieldConnectedPopulationReconnectRoundTrip(t *testing.T) {
 	f := newRealD2LegacyFixture(t, realD2LegacyFixtureConfig{startScene: "game_world", fixtureCharacters: 1,
 		fixtureWorldLevel: 3, applySceneDefaults: true})
 	app := f.app
@@ -172,6 +221,7 @@ func TestStonyFieldConnectedReconnectRoundTrip(t *testing.T) {
 
 	seam := app.transitionSeams[2]
 	moveConnectedAcrossStonyField(t, f, 4, seam.First, seam.Second)
+	initialPopulation := assertConnectedStonyPopulation(t, f)
 
 	targetTick := app.network.client.NextInputTick(time.Now())
 
@@ -243,6 +293,8 @@ func TestStonyFieldConnectedReconnectRoundTrip(t *testing.T) {
 		t.Fatal("3-to-4 crossing committed more than once")
 	}
 
+	assertConnectedStonyPopulation(t, f)
+
 	moveConnectedAcrossStonyField(t, f, 3, seam.Second, seam.First)
 
 	for range 12 {
@@ -253,6 +305,13 @@ func TestStonyFieldConnectedReconnectRoundTrip(t *testing.T) {
 		if app.clientWorld.lastHUD.Location.TransitionSequence != 2 {
 			t.Fatal("4-to-3 return committed more than once")
 		}
+	}
+
+	moveConnectedAcrossStonyField(t, f, 4, seam.First, seam.Second)
+
+	finalPopulation := assertConnectedStonyPopulation(t, f)
+	if !reflect.DeepEqual(initialPopulation, finalPopulation) {
+		t.Fatal("connected return recreated residents")
 	}
 }
 
@@ -354,8 +413,19 @@ func TestStonyFieldRecoveryRejectsCorruptTopology(t *testing.T) {
 	}
 }
 
-// Record a checkpoint using the preserved v2 policy, then restore its saved recipes without adding Stony Field.
+// Legacy topology versions keep their original population set under the current binary.
+func TestStonyFieldLegacyV1PopulationRecovery(t *testing.T) {
+	assertStonyLegacyPopulationRecovery(t, 1)
+}
+
+// Version 2 recovery retains its three-map topology without introducing level-4 population.
 func TestStonyFieldLegacyV2RecoveryKeepsThreeMaps(t *testing.T) {
+	assertStonyLegacyPopulationRecovery(t, 2)
+}
+
+// Restore a full session checkpoint composed from the preserved topology policy.
+func assertStonyLegacyPopulationRecovery(t *testing.T, version int) {
+	t.Helper()
 	seed := newRealD2LegacyFixture(t, realD2LegacyFixtureConfig{})
 	generated := seed.app.entryWorldTopology
 
@@ -377,13 +447,19 @@ func TestStonyFieldLegacyV2RecoveryKeepsThreeMaps(t *testing.T) {
 	legacy := d2mapgen.EntryWorld{Version: 2, Zones: map[int]*worldgen.Zone{
 		1: generated.Zones[1], 2: generated.Zones[2], 3: plains}, Seams: generated.Seams[:2]}
 
+	if version == 1 {
+		legacy.Version = 1
+		delete(legacy.Zones, 3)
+		legacy.Seams = legacy.Seams[:1]
+	}
+
 	snapshot, err := legacy.Snapshot()
 	if err != nil {
 		t.Fatal(err)
 	}
 
 	config := realD2LegacyFixtureConfig{startScene: "game_world", fixtureCharacters: 1,
-		fixtureWorldLevel: 3, applySceneDefaults: true, topologySnapshot: snapshot}
+		fixtureWorldLevel: version + 1, applySceneDefaults: true, topologySnapshot: snapshot}
 
 	source := newRealD2LegacyFixture(t, config)
 	if err := source.app.network.StartSelected(); err != nil {
@@ -404,19 +480,31 @@ func TestStonyFieldLegacyV2RecoveryKeepsThreeMaps(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if restored.app.entryWorldTopology.Version != 2 || len(restored.app.gameWorlds) != 3 ||
-		len(restored.app.transitionSeams) != 2 || restored.app.gameWorlds[4] != nil ||
+	if restored.app.entryWorldTopology.Version != version || len(restored.app.gameWorlds) != version+1 ||
+		len(restored.app.transitionSeams) != version || restored.app.gameWorlds[4] != nil ||
 		restored.app.entryWorldChecksum != bundle.TopologyChecksum {
-		t.Fatal("v2 recovery gained a Stony Field map or seam")
+		t.Fatal("legacy recovery gained a Stony Field map or seam")
 	}
 
 	got, err := restored.app.offlineSession.RecoveryCheckpoint()
 	if err != nil || got.Checksum != bundle.Session.Checksum {
-		t.Fatalf("v2 checkpoint changed: %v", err)
+		t.Fatalf("legacy checkpoint changed: %v", err)
 	}
 
-	seam := restored.app.transitionSeams[1]
-	moveAcrossColdPlainsSeam(t, restored, 3, 2, seam.Second, seam.First)
+	for _, zone := range populationPlan(t, restored).Zones {
+		if zone.Level == 4 {
+			t.Fatal("legacy recovery added level-4 population plan")
+		}
+	}
+
+	if len(populationResidentIDs(t, restored, 4, false)) != 0 {
+		t.Fatal("legacy recovery added level-4 residents")
+	}
+
+	if version == 2 {
+		seam := restored.app.transitionSeams[1]
+		moveAcrossColdPlainsSeam(t, restored, 3, 2, seam.Second, seam.First)
+	}
 }
 
 // The level-3 entry is across the full map from its level-4 exit, so allow a full minute of real server ticks.

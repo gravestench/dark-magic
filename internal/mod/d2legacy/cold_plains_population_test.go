@@ -46,6 +46,19 @@ func coldPopulationRecords() fixtureRecords {
 	return r
 }
 
+// stonyPopulationRecords gives Normal and higher difficulties distinct ordinary families.
+func stonyPopulationRecords() fixtureRecords {
+	r := coldPopulationRecords()
+	area := map[string]string{}
+	for k, v := range r["data/global/excel/levels.txt"][0] {
+		area[k] = v
+	}
+	area["Id"], area["mon1"], area["nmon1"] = "4", "cold", "fallen"
+	area["NumMon"] = "1"
+	r["data/global/excel/levels.txt"] = append(r["data/global/excel/levels.txt"], area)
+	return r
+}
+
 // coldPopulationSession constructs or restores authority with shared collision geometry and owned cleanup.
 func coldPopulationSession(
 	t *testing.T,
@@ -89,7 +102,7 @@ func coldPopulationSession(
 	if err != nil {
 		t.Fatal(err)
 	}
-	for _, level := range []int{2, 3} {
+	for _, level := range []int{2, 3, 4} {
 		if err := modruntime.SetWorldMapForLevel(
 			t.Context(),
 			authority.Runtime,
@@ -834,23 +847,12 @@ func TestStonyFieldPopulationAdmission(t *testing.T) {
 	}
 }
 
-// Level 4 retains residents without loading monster definitions or advancing any random stream.
-func TestStonyFieldPopulationItemLifecycleWithoutRandomDraws(t *testing.T) {
-	for _, definition := range []string{"missing-level", "invalid-monster", "valid-monster"} {
-		t.Run(definition, func(t *testing.T) {
-			records := coldPopulationRecords()
-			if definition != "missing-level" {
-				area := map[string]string{}
-				for key, value := range records["data/global/excel/levels.txt"][0] {
-					area[key] = value
-				}
-				area["Id"] = "4"
-				if definition == "invalid-monster" {
-					area["mon1"] = "missing"
-				}
-				records["data/global/excel/levels.txt"] = append(records["data/global/excel/levels.txt"], area)
-			}
-			a, e, s := coldPopulationSession(t, 0, records, nil)
+// Items and monsters retain their identities and health across room activation and restore.
+func TestStonyFieldPopulationItemAndMonsterLifecycle(t *testing.T) {
+	for difficulty := 0; difficulty < 3; difficulty++ {
+		t.Run(fmt.Sprint(difficulty), func(t *testing.T) {
+			records := stonyPopulationRecords()
+			a, e, s := coldPopulationSession(t, difficulty, records, nil)
 			item := e.World().MustCreateEntity()
 			for name, values := range map[string]map[string]any{
 				"d2legacy.world.position":    {"x": 10.0, "y": 10.0},
@@ -863,18 +865,24 @@ func TestStonyFieldPopulationItemLifecycleWithoutRandomDraws(t *testing.T) {
 					t.Fatal(err)
 				}
 			}
-			zone := coldZone(4, 0)
+			zone := coldZone(4, difficulty)
 			zone["rooms"] = append(zone["rooms"].([]any), map[string]any{
-				"id": "away", "populate": true, "x": 60, "y": 0, "width": 30, "height": 50,
+				"id": "away", "populate": false, "x": 60, "y": 0, "width": 30, "height": 50,
 				"points": []any{map[string]any{"x": 70, "y": 10}},
 			})
-			beforeRandom, err := a.Random.SnapshotState()
+			coldBootstrap(t, s, 1, coldZone(2, difficulty), coldZone(3, difficulty), zone)
+			coldEnter(t, s, 4, "alice", 1)
+			stepPartySession(t, s)
+			monster := monsterEntity(t, e, "level:4:room:same:monster:1")
+			stats, _ := akara.GetDynamicStore(e.World(), "d2legacy.monster.stats")
+			health, _ := stats.Get(monster)
+			if err := health.Set("health", int64(256)); err != nil {
+				t.Fatal(err)
+			}
+			beforeHealth, err := health.Snapshot()
 			if err != nil {
 				t.Fatal(err)
 			}
-			coldBootstrap(t, s, 1, coldZone(2, 0), coldZone(3, 0), zone)
-			coldEnter(t, s, 4, "alice", 1)
-			stepPartySession(t, s)
 			residents, _ := akara.GetDynamicStore(e.World(), "d2legacy.world.room_resident")
 			resident, found := residents.Get(item)
 			if !found {
@@ -918,15 +926,16 @@ func TestStonyFieldPopulationItemLifecycleWithoutRandomDraws(t *testing.T) {
 				if room["active"] != visit.active || room["activated"] != true {
 					t.Fatalf("room lifecycle=%#v", room)
 				}
-				if got := monsterCount(e); got != 0 {
-					t.Fatalf("level 4 created %d monsters", got)
+				if got := monsterEntity(t, e, "level:4:room:same:monster:1"); got != monster {
+					t.Fatal("monster recreated")
 				}
-				afterRandom, err := a.Random.SnapshotState()
-				if err != nil {
-					t.Fatal(err)
+				if _, found := inactive.Get(monster); found == visit.active {
+					t.Fatal("monster activation differs")
 				}
-				if !reflect.DeepEqual(beforeRandom, afterRandom) {
-					t.Fatalf("level 4 advanced random streams: before=%s after=%s", beforeRandom, afterRandom)
+				currentHealth, _ := stats.Get(monster)
+				gotHealth, _ := currentHealth.Snapshot()
+				if !reflect.DeepEqual(beforeHealth, gotHealth) {
+					t.Fatal("monster health changed")
 				}
 				current, found := residents.Get(item)
 				if !found {
@@ -937,18 +946,50 @@ func TestStonyFieldPopulationItemLifecycleWithoutRandomDraws(t *testing.T) {
 					t.Fatalf("item residency changed: %#v, %v", currentResident, err)
 				}
 			}
+			replay, err := s.Replay()
+			if err != nil {
+				t.Fatal(err)
+			}
+			checkpoint := replay.Checkpoints[len(replay.Checkpoints)-1]
+			_, restoredEngine, restoredSession := coldPopulationSession(t, difficulty, records, &checkpoint)
+			restoredMonster := monsterEntity(t, restoredEngine, "level:4:room:same:monster:1")
+			restoredStats, _ := akara.GetDynamicStore(restoredEngine.World(), "d2legacy.monster.stats")
+			restoredHealth, _ := restoredStats.Get(restoredMonster)
+			restoredValues, _ := restoredHealth.Snapshot()
+			if !reflect.DeepEqual(beforeHealth, restoredValues) {
+				t.Fatal("restore changed health")
+			}
+			restoredPositions, _ := akara.GetDynamicStore(restoredEngine.World(), "d2legacy.world.position")
+			restoredPlayer := playerEntity(t, restoredEngine, "alice")
+			for _, x := range []float64{61, 1} {
+				setEntityPosition(t, positions, player, x, 1)
+				setEntityPosition(t, restoredPositions, restoredPlayer, x, 1)
+				stepPartySession(t, s)
+				stepPartySession(t, restoredSession)
+				current, _ := restoredStats.Get(restoredMonster)
+				values, _ := current.Snapshot()
+				if !reflect.DeepEqual(beforeHealth, values) {
+					t.Fatal("restored leave/return changed health")
+				}
+			}
+			original, _ := s.Replay()
+			restored, _ := restoredSession.Replay()
+			originalChecksum := original.Checkpoints[len(original.Checkpoints)-1].Checksum
+			if originalChecksum != restored.Checkpoints[len(restored.Checkpoints)-1].Checksum {
+				t.Fatal("restore continuation differs")
+			}
 		})
 	}
 }
 
-// Level 4 must preserve legacy monster outcomes and the entire random continuation state.
+// Visiting level 4 preserves earlier-area residents and their relevant random streams.
 func TestStonyFieldPopulationPreservesLevelTwoAndThree(t *testing.T) {
 	for difficulty := 0; difficulty < 3; difficulty++ {
 		t.Run(fmt.Sprint(difficulty), func(t *testing.T) {
 			var previous map[string]map[string]map[string]any
-			var previousRandom []byte
+			var previousRandom map[string]uint64
 			for _, stony := range []bool{false, true} {
-				a, e, s := coldPopulationSession(t, difficulty, coldPopulationRecords(), nil)
+				a, e, s := coldPopulationSession(t, difficulty, stonyPopulationRecords(), nil)
 				zones := []map[string]any{coldZone(2, difficulty), coldZone(3, difficulty)}
 				if stony {
 					zones = append(zones, coldZone(4, difficulty))
@@ -956,6 +997,12 @@ func TestStonyFieldPopulationPreservesLevelTwoAndThree(t *testing.T) {
 				coldBootstrap(t, s, 1, zones...)
 				coldEnter(t, s, 2, "alice", 1)
 				coldEnter(t, s, 3, "bob", 2)
+				stepPartySession(t, s)
+				locations, _ := akara.GetDynamicStore(e.World(), "d2legacy.world.location")
+				location, _ := locations.Get(playerEntity(t, e, "bob"))
+				if err := location.Set("level_id", int64(4)); err != nil {
+					t.Fatal(err)
+				}
 				stepPartySession(t, s)
 				got := map[string]map[string]map[string]any{}
 				for _, entry := range []struct{ level, members int }{{2, 1}, {3, 3}} {
@@ -978,17 +1025,356 @@ func TestStonyFieldPopulationPreservesLevelTwoAndThree(t *testing.T) {
 						}
 					}
 				}
-				if monsterCount(e) != 4 {
-					t.Fatalf("monsters=%d, want 4", monsterCount(e))
-				}
-				random, err := a.Random.SnapshotState()
+
+				// Compare exact sequence states without consuming another draw.
+				snapshot, err := a.Random.SnapshotState()
 				if err != nil {
 					t.Fatal(err)
 				}
+				var archive struct {
+					Streams map[string]uint64 `json:"streams"`
+				}
+				if err := json.Unmarshal(snapshot, &archive); err != nil {
+					t.Fatal(err)
+				}
+
+				random := map[string]uint64{}
+				for _, name := range []string{
+					"d2legacy.population.density", "d2legacy.population.family",
+					"d2legacy.population.group", "d2legacy.population.seed", "d2legacy.monster.spawn.life",
+					"d2legacy.population.level3.density", "d2legacy.population.level3.family",
+					"d2legacy.population.level3.group", "d2legacy.population.level3.seed",
+					"d2legacy.population.level3.life",
+				} {
+					state, found := archive.Streams[name]
+					if !found {
+						t.Fatalf("missing earlier-area random stream %q", name)
+					}
+					random[name] = state
+				}
+
 				if stony && (!reflect.DeepEqual(previous, got) || !reflect.DeepEqual(previousRandom, random)) {
 					t.Fatal("level 4 changed legacy monsters or random continuation")
 				}
 				previous, previousRandom = got, random
+			}
+		})
+	}
+}
+
+// Placement rejects blocked and occupied footprints, including entities queued in the same activation.
+func TestStonyFieldPopulationSkipsBlockedOrOccupiedFootprints(t *testing.T) {
+	for _, scenario := range []string{
+		"blocked-footprint",
+		"empty-points",
+		"room-edge",
+		"occupied",
+		"unattached-collider",
+		"queued",
+		"mixed",
+	} {
+		t.Run(scenario, func(t *testing.T) {
+			a, e, s := coldPopulationSession(t, 0, stonyPopulationRecords(), nil)
+			zone := coldZone(4, 0)
+			room := zone["rooms"].([]any)[0].(map[string]any)
+
+			// Arrange candidate points and obstacles for this placement contract.
+			switch scenario {
+			case "empty-points":
+				room["points"] = []any{}
+			case "blocked-footprint":
+				blocked, err := gameworld.NewOpenMap(100, 100)
+				if err != nil {
+					t.Fatal(err)
+				}
+				reference := gameworld.TileReference{Path: "synthetic"}
+				for i := range reference.SubTileFlags {
+					if i != 20 {
+						reference.SubTileFlags[i].BlockWalk = true
+					}
+				}
+				blocked.ReplaceFloor(2, 2, gameworld.TileIdentity{}, reference)
+				blocked.RebuildFlags()
+				room["points"] = []any{map[string]any{"x": 10, "y": 10}}
+				if err := modruntime.SetWorldMapForLevel(
+					t.Context(),
+					a.Runtime,
+					"d2legacy.gameplay.systems.init",
+					"set_collision",
+					4,
+					blocked,
+				); err != nil {
+					t.Fatal(err)
+				}
+			case "unattached-collider":
+				entity := e.World().MustCreateEntity()
+				for name, values := range map[string]map[string]any{
+					"d2legacy.world.position": {"x": 10.0, "y": 10.0},
+					"d2legacy.world.location": {"act": int64(1), "level_id": int64(4)},
+					"d2legacy.world.collider": {"radius": 1.0},
+				} {
+					store, _ := akara.GetDynamicStore(e.World(), name)
+					if _, err := store.Set(entity, values); err != nil {
+						t.Fatal(err)
+					}
+				}
+				room["points"] = []any{map[string]any{"x": 10, "y": 10}}
+			case "mixed":
+				room["points"] = []any{
+					map[string]any{"x": 0, "y": 0},
+					map[string]any{"x": 10, "y": 10},
+					map[string]any{"x": 10.1, "y": 10},
+					map[string]any{"x": 15, "y": 10},
+					map[string]any{"x": 20, "y": 10},
+				}
+			case "room-edge":
+				room["points"] = []any{map[string]any{"x": 0, "y": 0}}
+			case "occupied":
+				room["points"] = []any{map[string]any{"x": 1, "y": 1}}
+			case "queued":
+				room["points"] = []any{
+					map[string]any{"x": 10, "y": 10},
+					map[string]any{"x": 10.1, "y": 10},
+					map[string]any{"x": 10.2, "y": 10},
+				}
+			}
+
+			// Activate the room through the ordinary population lifecycle.
+			coldBootstrap(t, s, 1, coldZone(2, 0), coldZone(3, 0), zone)
+			coldEnter(t, s, 4, "bob", 1)
+			stepPartySession(t, s)
+
+			// Verify both the accepted count and the exact surviving mixed points.
+			want := 0
+			if scenario == "queued" {
+				want = 1
+			}
+			if scenario == "mixed" {
+				want = 3
+				positions, _ := akara.GetDynamicStore(e.World(), "d2legacy.world.position")
+				for member, x := range []float64{10, 15, 20} {
+					entity := monsterEntity(t, e, fmt.Sprintf("level:4:room:same:monster:%d", member+1))
+					point, _ := positions.Get(entity)
+					gotX, _ := point.Get("x")
+					gotY, _ := point.Get("y")
+					if gotX != x || gotY != float64(10) {
+						t.Fatalf("member %d point=(%v,%v)", member+1, gotX, gotY)
+					}
+				}
+			}
+			if got := monsterCount(e); got != want {
+				t.Fatalf("monsters=%d want=%d", got, want)
+			}
+		})
+	}
+}
+
+// Returning residents reserve their footprints before fresh spawns regardless of room order.
+func TestStonyFieldPopulationReturningRoomReservesFootprintsBeforeFreshRoom(t *testing.T) {
+	for _, freshFirst := range []bool{false, true} {
+		t.Run(fmt.Sprintf("fresh_first=%v", freshFirst), func(t *testing.T) {
+			_, engine, session := coldPopulationSession(t, 0, stonyPopulationRecords(), nil)
+			returning := map[string]any{
+				"id": "returning", "populate": true, "x": 0, "y": 0, "width": 20, "height": 20,
+				"points": []any{map[string]any{"x": 19.4, "y": 10}},
+			}
+			fresh := map[string]any{
+				"id": "fresh", "populate": true, "x": 20, "y": 0, "width": 20, "height": 20,
+				"points": []any{map[string]any{"x": 20.5, "y": 10}, map[string]any{"x": 25, "y": 10}},
+			}
+			rooms := []any{returning, fresh}
+			if freshFirst {
+				rooms = []any{fresh, returning}
+			}
+			rooms = append(rooms,
+				map[string]any{
+					"id": "bridge", "populate": false, "x": 0, "y": 20,
+					"width": 40, "height": 20, "points": []any{},
+				},
+				map[string]any{
+					"id": "away", "populate": false, "x": 60, "y": 0,
+					"width": 20, "height": 20, "points": []any{},
+				},
+			)
+			zone := coldZone(4, 0)
+			zone["rooms"] = rooms
+			zone["links"] = []any{
+				map[string]any{"from": "returning", "to": "bridge"},
+				map[string]any{"from": "fresh", "to": "bridge"},
+			}
+			coldBootstrap(t, session, 1, coldZone(2, 0), coldZone(3, 0), zone)
+			coldEnter(t, session, 4, "bob", 1)
+			stepPartySession(t, session)
+			const returningID = "level:4:room:returning:monster:1"
+			original := monsterEntity(t, engine, returningID)
+			positions, _ := akara.GetDynamicStore(engine.World(), "d2legacy.world.position")
+			// Ordinary movement may leave a resident close enough to the shared edge
+			// that its footprint reaches into its neighbor while its center stays here.
+			setEntityPosition(t, positions, original, 19.9, 10)
+			player := playerEntity(t, engine, "bob")
+			setEntityPosition(t, positions, player, 61, 1)
+			stepPartySession(t, session)
+			inactive, _ := akara.GetDynamicStore(engine.World(), "d2legacy.world.inactive")
+			if _, found := inactive.Get(original); !found {
+				t.Fatal("returning resident did not deactivate")
+			}
+			if got := monsterCount(engine); got != 1 {
+				t.Fatalf("fresh room populated before visit: monsters=%d", got)
+			}
+			setEntityPosition(t, positions, player, 1, 21)
+			stepPartySession(t, session)
+			if _, found := inactive.Get(original); found {
+				t.Fatal("returning resident remained inactive")
+			}
+			if got := monsterCount(engine); got != 2 {
+				t.Fatalf("returning footprint did not suppress overlapping candidate: monsters=%d want=2", got)
+			}
+			if got := monsterEntity(t, engine, returningID); got != original {
+				t.Fatal("returning resident was recreated")
+			}
+			created := monsterEntity(t, engine, "level:4:room:fresh:monster:1")
+			position, _ := positions.Get(created)
+			x, _ := position.Get("x")
+			y, _ := position.Get("y")
+			if x != float64(25) || y != float64(10) {
+				t.Fatalf("fresh resident point=(%v,%v), want (25,10)", x, y)
+			}
+		})
+	}
+}
+
+// Distinct columns expose wrong difficulty selection, NumMon overflow, and special-row admission.
+func TestStonyFieldPopulationCandidatesAndDensity(t *testing.T) {
+	for difficulty := 0; difficulty < 3; difficulty++ {
+		for _, scenario := range []string{
+			"density-normal", "density-nightmare", "density-hell", "empty", "sparse",
+			"truncated", "disabled", "unspawnable", "npc", "invalid",
+		} {
+			t.Run(fmt.Sprintf("%d/%s", difficulty, scenario), func(t *testing.T) {
+				records := stonyPopulationRecords()
+				area := records["data/global/excel/levels.txt"][2]
+				area["MonDen"], area["MonDen(N)"], area["MonDen(H)"] = "0", "0", "0"
+				switch scenario {
+				case "density-normal":
+					area["MonDen"] = "100000"
+				case "density-nightmare":
+					area["MonDen(N)"] = "100000"
+				case "density-hell":
+					area["MonDen(H)"] = "100000"
+				case "empty":
+					area["NumMon"] = "0"
+				case "sparse":
+					area["NumMon"] = "3"
+					area["mon3"], area["nmon3"] = area["mon1"], area["nmon1"]
+					delete(area, "mon1")
+					delete(area, "nmon1")
+				case "truncated":
+					area["mon2"], area["nmon2"] = "missing", "missing"
+				case "invalid":
+					area["mon1"], area["nmon1"] = "missing", "missing"
+				case "disabled", "unspawnable", "npc":
+					area["NumMon"] = "2"
+					area["mon2"], area["nmon2"] = "cold", "cold"
+					area["mon1"], area["nmon1"] = "fallen", "fallen"
+					stats := records["data/global/excel/monstats.txt"][0]
+					if scenario == "disabled" {
+						stats["enabled"] = "0"
+					}
+					if scenario == "unspawnable" {
+						stats["isSpawn"] = "0"
+					}
+					if scenario == "npc" {
+						stats["npc"] = "1"
+					}
+				}
+				a, e, s := coldPopulationSession(t, difficulty, records, nil)
+				zone := coldZone(4, difficulty)
+				zone["rooms"] = append(zone["rooms"].([]any), map[string]any{
+					"id": "later", "populate": true, "x": 50, "y": 0, "width": 40, "height": 50,
+					"points": []any{
+						map[string]any{"x": 60, "y": 10},
+						map[string]any{"x": 65, "y": 10},
+						map[string]any{"x": 70, "y": 10},
+					},
+				})
+				zone["links"] = []any{map[string]any{"from": "same", "to": "later"}}
+				coldBootstrap(t, s, 1, coldZone(2, difficulty), coldZone(3, difficulty), zone)
+				coldEnter(t, s, 4, "alice", 1)
+				if scenario == "invalid" {
+					if err := s.Step(); err == nil {
+						t.Fatal("invalid candidates admitted")
+					}
+					if monsterCount(e) != 0 {
+						t.Fatal("invalid candidate created monster")
+					}
+					return
+				}
+				stepPartySession(t, s)
+				if scenario == "empty" {
+					if monsterCount(e) != 0 {
+						t.Fatal("empty candidates spawned")
+					}
+					return
+				}
+				first := monsterEntity(t, e, "level:4:room:same:monster:1")
+				if coldPlan(t, a)[2]["created"].(float64) == 0 {
+					t.Fatal("first room did not create resident before density evaluation")
+				}
+				identities, _ := akara.GetDynamicStore(e.World(), "d2legacy.monster.identity")
+				identity, _ := identities.Get(first)
+				family, _ := identity.Get("definition_id")
+				wantFamily := "cold"
+				if difficulty > 0 {
+					wantFamily = "fallen"
+				}
+				if scenario == "disabled" || scenario == "unspawnable" || scenario == "npc" {
+					wantFamily = "cold"
+				}
+				if family != wantFamily {
+					t.Fatalf("family=%v want=%s", family, wantFamily)
+				}
+				members := 3
+				if wantFamily == "fallen" {
+					members = 1
+				}
+				populatedLater := (scenario == "density-normal" && difficulty == 0) ||
+					(scenario == "density-nightmare" && difficulty == 1) ||
+					(scenario == "density-hell" && difficulty == 2)
+				want := members
+				if populatedLater {
+					want *= 2
+					monsterEntity(t, e, "level:4:room:later:monster:1")
+				}
+				if got := monsterCount(e); got != want {
+					t.Fatalf("monsters=%d want=%d", got, want)
+				}
+			})
+		}
+	}
+}
+
+// Malformed level-4 points must fail admission without mutating authority.
+func TestStonyFieldPopulationRejectsMalformedPoints(t *testing.T) {
+	for _, duplicate := range []bool{false, true} {
+		t.Run(fmt.Sprint(duplicate), func(t *testing.T) {
+			a, e, s := coldPopulationSession(t, 0, stonyPopulationRecords(), nil)
+			zone := coldZone(4, 0)
+			room := zone["rooms"].([]any)[0].(map[string]any)
+			room["points"] = []any{map[string]any{"x": 100, "y": 10}}
+			if duplicate {
+				room["points"] = []any{map[string]any{"x": 10, "y": 10}, map[string]any{"x": 10, "y": 10}}
+			}
+			before, _ := a.State.Read("d2legacy.population.plan")
+			payload, _ := json.Marshal(map[string]any{"zones": []any{coldZone(2, 0), coldZone(3, 0), zone}})
+			if err := s.Submit(simulation.Command{
+				Tick: 1, Player: "population", Authority: simulation.AuthoritySystem, Sequence: 1,
+				Kind: "system.population.bootstrap", Payload: payload,
+			}); err == nil {
+				t.Fatal("malformed points admitted")
+			}
+			after, _ := a.State.Read("d2legacy.population.plan")
+			if !reflect.DeepEqual(before, after) || monsterCount(e) != 0 {
+				t.Fatal("invalid points mutated authority")
 			}
 		})
 	}

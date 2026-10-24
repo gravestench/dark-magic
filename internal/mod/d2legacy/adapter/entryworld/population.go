@@ -31,7 +31,7 @@ func (world *Prepared) PopulationData(nearby int) (map[string]any, error) {
 		rooms := make([]any, 0, len(zone.Rooms()))
 		for _, room := range zone.Rooms() {
 			var points []any
-			if levelID == 3 {
+			if levelID == 3 || levelID == 4 {
 				points = roomPopulationPoints(gameMap, room)
 			} else {
 				points = openPopulationPoints(gameMap, populationAnchors(room, world.Spawns[levelID], nearby))

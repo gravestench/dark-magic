@@ -83,8 +83,11 @@ local function total_rarity(values)
     return total
 end
 
--- Keep Cold Plains draws isolated so visiting it cannot advance Blood Moor random outcomes.
+-- Keep later-area draws isolated from earlier-area random outcomes.
 local function stream(zone, purpose)
+    if zone.level_id == 4 then
+        return "d2legacy.population.level4." .. purpose
+    end
     if zone.level_id == 3 then
         return "d2legacy.population.level3." .. purpose
     end
@@ -144,7 +147,7 @@ local function materialize_group(context, zone, room, definition, game_player_co
         if created >= count then
             break
         end
-        if zone.level_id ~= 3 or safe_point(zone, room, point, definition.collider_radius, occupied) then
+        if zone.level_id < 3 or safe_point(zone, room, point, definition.collider_radius, occupied) then
             created = created + 1
             local command = {
                 tick = context.tick,
@@ -158,7 +161,7 @@ local function materialize_group(context, zone, room, definition, game_player_co
                     definition = definition,
                 },
             }
-            local life_stream = zone.level_id == 3 and stream(zone, "life") or nil
+            local life_stream = zone.level_id >= 3 and stream(zone, "life") or nil
             local components = spawn.components(command, game_player_count, life_stream)
             components["d2legacy.world.room_resident"] = {
                 id = command.payload.spawn_id,
@@ -166,7 +169,7 @@ local function materialize_group(context, zone, room, definition, game_player_co
                 room_id = room.id,
             }
             structural:create(components)
-            if zone.level_id == 3 then
+            if zone.level_id >= 3 then
                 occupied[#occupied + 1] = {
                     level_id = zone.level_id,
                     x = point.x,
@@ -220,7 +223,7 @@ local function validate_zone(zone)
                     and math.abs(point.y) < math.huge,
                 "population point is invalid"
             )
-            if zone.level_id == 3 then
+            if zone.level_id >= 3 then
                 assert(
                     point.x >= room.x
                         and point.x < room.x + room.width
@@ -474,7 +477,7 @@ end
 
 -- Reserve returning residents before fresh spawns because structural restoration publishes later.
 local function include_returning_footprints(plan, active, entities, occupied)
-    if plan.level_id ~= 3 then
+    if plan.level_id < 3 then
         return
     end
     local returning = {}
@@ -517,10 +520,6 @@ local function activate_zone(context, plan, entities, structural, occupied)
         elseif wanted and not room.active then
             if #(room.inactive_residents or {}) > 0 then
                 restore_room(room, entities, structural)
-            elseif not room.activated and plan.level_id == 4 then
-                -- Stony Field has room residency, but monster policy is deferred.
-                -- Skip candidate loading and every population draw on first visit.
-                room.activated = true
             elseif not room.activated then
                 if not level then
                     level = assert(
