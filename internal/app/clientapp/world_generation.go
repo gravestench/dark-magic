@@ -239,29 +239,37 @@ func (app *application) presentationWorld() modruntime.PresentationWorld {
 		world   *gameworld.Map
 		zone    *worldgen.Zone
 	}
+
 	app.worldMu.RLock()
 	result := modruntime.PresentationWorld{ActiveLevel: app.activeWorldLevel}
 	prepared := make([]preparedMap, 0, len(app.gameWorlds))
+
 	for levelID, worldMap := range app.gameWorlds {
 		zone := app.gameWorldZones[levelID]
 		if worldMap == nil || zone == nil {
 			continue
 		}
+
 		prepared = append(prepared, preparedMap{levelID: levelID, world: worldMap, zone: zone})
 	}
+
 	app.worldMu.RUnlock()
+
 	for _, value := range prepared {
 		stamps := value.zone.Stamps()
 		if len(stamps) == 0 {
 			continue
 		}
+
 		stamp := stamps[0]
 		result.Maps = append(result.Maps, modruntime.CurrentWorld{
 			LevelID: value.levelID, Map: value.world, DS1: stamp.DS1Path,
 			DT1: append([]string(nil), stamp.TilePaths...),
 		})
 	}
+
 	sort.Slice(result.Maps, func(i, j int) bool { return result.Maps[i].LevelID < result.Maps[j].LevelID })
+
 	return result
 }
 

@@ -82,7 +82,12 @@ func TestActivateCurrentConnectedWorldKeepsClickRoute(t *testing.T) {
 
 func TestPresentationWorldIncludesOnlyPreparedLevels(t *testing.T) {
 	for _, count := range []int{2, 3} {
-		app := &application{activeWorldLevel: 2, gameWorlds: map[int]*gameworld.Map{}, gameWorldZones: map[int]*worldgen.Zone{}}
+		app := &application{
+			activeWorldLevel: 2,
+			gameWorlds:       map[int]*gameworld.Map{},
+			gameWorldZones:   map[int]*worldgen.Zone{},
+		}
+
 		for level := 1; level <= count; level++ {
 			zone, err := worldgen.NewZone(worldgen.Definition{
 				Request: worldgen.Request{Version: worldgen.ContractVersion, Act: 1, LevelID: level},
@@ -92,24 +97,31 @@ func TestPresentationWorldIncludesOnlyPreparedLevels(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
+
 			app.gameWorlds[level] = &gameworld.Map{WidthTiles: level}
 			app.gameWorldZones[level] = zone
 		}
+
 		app.gameWorlds[99] = &gameworld.Map{}
+
 		snapshot := app.presentationWorld()
 		if snapshot.ActiveLevel != 2 || len(snapshot.Maps) != count {
 			t.Fatalf("snapshot = %#v", snapshot)
 		}
+
 		for index, value := range snapshot.Maps {
-			if value.LevelID != index+1 || value.Map != app.gameWorlds[index+1] || value.DS1 != "test.ds1" || value.DT1[0] != "test.dt1" {
+			if value.LevelID != index+1 || value.Map != app.gameWorlds[index+1] ||
+				value.DS1 != "test.ds1" || value.DT1[0] != "test.dt1" {
 				t.Fatalf("map = %#v", value)
 			}
 		}
+
 		snapshot.Maps[0].DT1[0] = "changed"
 		if app.presentationWorld().Maps[0].DT1[0] != "test.dt1" {
 			t.Fatal("snapshot mutated recipe")
 		}
 	}
+
 	if snapshot := (&application{}).presentationWorld(); snapshot.ActiveLevel != 0 || len(snapshot.Maps) != 0 {
 		t.Fatalf("empty = %#v", snapshot)
 	}
