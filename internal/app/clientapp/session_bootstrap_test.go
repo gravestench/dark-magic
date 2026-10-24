@@ -68,60 +68,77 @@ func TestSessionInitialDataVelocityRuntimeIdentityRecovery(t *testing.T) {
 	if data["engine.world.velocity_movement_version"] != "level-aware-v1" {
 		t.Fatal("native movement policy is absent from session configuration")
 	}
+
 	current, err := d2legacy.Identity(content.D2Legacy(), data)
 	if err != nil {
 		t.Fatal(err)
 	}
+
 	delete(data, "engine.world.velocity_movement_version")
+
 	old, err := d2legacy.Identity(content.D2Legacy(), data)
 	if err != nil {
 		t.Fatal(err)
 	}
+
 	if old.Recipe.ConfigurationHash == current.Recipe.ConfigurationHash {
 		t.Fatal("old movement policy retained configuration identity")
 	}
+
 	build := func(identity simulation.RuntimeIdentity) *gamesession.Session {
 		s, err := gamesession.New(gameecs.New(), gamesession.Config{})
 		if err != nil {
 			t.Fatal(err)
 		}
+
 		t.Cleanup(func() {
 			if err := s.Close(); err != nil {
 				t.Error(err)
 			}
 		})
+
 		if err := s.RegisterAuthoritativeRuntime(identity, simulation.NewStateStore()); err != nil {
 			t.Fatal(err)
 		}
+
 		return s
 	}
+
 	source, target := build(current), build(current)
 	if err := source.Step(); err != nil {
 		t.Fatal(err)
 	}
+
 	recovery, err := source.RecoveryCheckpoint()
 	if err != nil {
 		t.Fatal(err)
 	}
+
 	if err := target.RestoreRecoveryCheckpoint(recovery); err != nil {
 		t.Fatalf("current identity rejected: %v", err)
 	}
+
 	oldSource := build(old)
+
 	oldRecovery, err := oldSource.RecoveryCheckpoint()
 	if err != nil {
 		t.Fatal(err)
 	}
+
 	before, err := target.RecoveryCheckpoint()
 	if err != nil {
 		t.Fatal(err)
 	}
+
 	if err := target.RestoreRecoveryCheckpoint(oldRecovery); !errors.Is(err, simulation.ErrAuthoritativeState) {
 		t.Fatalf("old identity recovery = %v", err)
 	}
+
 	after, err := target.RecoveryCheckpoint()
 	if err != nil {
 		t.Fatal(err)
 	}
+
 	if !reflect.DeepEqual(before, after) {
 		t.Fatal("rejected old identity mutated target")
 	}

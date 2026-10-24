@@ -7,10 +7,12 @@ import "testing"
 func TestOfflineVelocityStartupWaitsForAuthoritativeSchemas(t *testing.T) {
 	fixture := newRealD2LegacyFixture(t, realD2LegacyFixtureConfig{})
 	fixture.advanceOffline(t, 1)
+
 	checkpoint, err := fixture.app.offlineSession.CanonicalCheckpoint()
 	if err != nil {
 		t.Fatal(err)
 	}
+
 	if checkpoint.Tick == 0 {
 		t.Fatal("offline authority did not complete its first tick")
 	}

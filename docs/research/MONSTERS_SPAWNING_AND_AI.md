@@ -384,13 +384,17 @@ same-tick queued footprints. The production tests in
 `internal/app/clientapp/cold_plains_population_real_test.go` exercise owned-data
 movement, public visibility, QUIC authority projection, and checkpoint/replay
 continuation. These tests require local owned MPQs and skip without them.
-Both offline and listen composition register the existing native velocity
-integrator. That integrator currently binds Blood Moor navigation even for
-level-3 velocity movers; this slice verifies initial level-3 placement and
-visibility, and does not establish level-aware hostile movement collision.
-Current-runtime v1 two-zone topology recovery admits level 2 alone; migration
-of a pre-v6 full session checkpoint is not supported by the exact runtime
-identity gate.
+Both offline and listen composition register one level-aware native velocity
+integrator. It selects the prepared map from each mover's authoritative level.
+Owned 1.14d integration tests in
+`internal/app/clientapp/cold_plains_movement_real_test.go` exercise real resident
+chase movement against opposing level-2/level-3 collision and compare offline,
+listen, and acknowledged connected views. These tests establish Dark Magic
+behavior; retail path types, collision masks, speed, and tick cadence remain
+unverified. The `level-aware-v1` native configuration hash makes old single-map
+checkpoints incompatible; no migration is provided. Current-runtime v1 two-zone
+topology recovery admits level 2 alone; migration of a pre-v6 full session
+checkpoint is also unsupported by the exact runtime identity gate.
 
 Reproduce the table inspection locally with
 `go run ./internal/dev/tools/mpq2file -source "$MPQ_DIRECTORY/patch_d2.mpq" -asset data/global/excel/Levels.txt`

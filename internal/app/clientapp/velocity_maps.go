@@ -14,8 +14,10 @@ func preparedVelocityPaths(worlds map[int]*gameworld.Map) (map[int64]gameworld.V
 			paths[int64(level)] = world
 		}
 	}
+
 	if len(paths) == 0 {
 		return nil, errors.New("register velocity movement: no prepared collision maps")
 	}
+
 	return paths, nil
 }

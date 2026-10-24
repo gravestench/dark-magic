@@ -14,28 +14,36 @@ func TestPreparedVelocityPathsIncludesOnlyPreparedMaps(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
+
 		count := 0
+
 		for level, world := range worlds {
 			if world == nil {
 				if _, ok := paths[int64(level)]; ok {
 					t.Fatalf("nil level %d was published", level)
 				}
+
 				continue
 			}
+
 			count++
+
 			if paths[int64(level)] != world {
 				t.Fatalf("level %d did not retain its prepared map", level)
 			}
 		}
+
 		if len(paths) != count {
 			t.Fatalf("published %d maps, want %d", len(paths), count)
 		}
+
 		if worlds[3] == nil && paths[3] != nil {
 			t.Fatal("two-zone topology gained a Cold Plains fallback")
 		}
 	}
 }
 
+// Unavailable geometry must fail registration rather than silently enable collision-free movement.
 func TestPreparedVelocityPathsRejectsUnavailableGeometry(t *testing.T) {
 	for _, worlds := range []map[int]*gameworld.Map{nil, {}, {1: nil}} {
 		if _, err := preparedVelocityPaths(worlds); err == nil {

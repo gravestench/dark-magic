@@ -42,7 +42,13 @@ func RegisterVelocityMovement(engine *gameecs.Engine, paths VelocityPathFinder, 
 	return registerVelocityMovement(engine, paths, components, nil)
 }
 
-func registerVelocityMovement(engine *gameecs.Engine, paths VelocityPathFinder, components VelocityComponents, levels *velocityLevelSelection) error {
+// Register both APIs through one movement definition so level selection cannot introduce a second integrator.
+func registerVelocityMovement(
+	engine *gameecs.Engine,
+	paths VelocityPathFinder,
+	components VelocityComponents,
+	levels *velocityLevelSelection,
+) error {
 	if engine == nil {
 		return fmt.Errorf("world: velocity movement requires an engine")
 	}
@@ -76,11 +82,13 @@ func registerVelocityMovement(engine *gameecs.Engine, paths VelocityPathFinder, 
 
 	stores := velocityStores{position: position, velocity: velocity, collider: collider}
 	read := []akara.ComponentType{velocity, collider}
+
 	if levels != nil {
 		store, found := akara.GetDynamicStore(engine.World(), levels.location.Component)
 		if !found {
 			return fmt.Errorf("world: velocity movement missing location store %q", levels.location.Component)
 		}
+
 		stores.location = store
 		read = append(read, store)
 	}
@@ -153,11 +161,16 @@ func velocityMovementUpdate(
 			}
 
 			stores = velocityStores{position: position, velocity: velocity, collider: collider}
+
 			if levels != nil {
 				store, found := akara.GetDynamicStore(currentWorld, levels.location.Component)
 				if !found {
-					return fmt.Errorf("world: velocity movement missing restored location store %q", levels.location.Component)
+					return fmt.Errorf(
+						"world: velocity movement missing restored location store %q",
+						levels.location.Component,
+					)
 				}
+
 				stores.location = store
 			}
 			boundWorld = currentWorld
@@ -165,13 +178,16 @@ func velocityMovementUpdate(
 
 		for _, entity := range entities {
 			selectedPaths := paths
+
 			if levels != nil {
 				var err error
+
 				selectedPaths, err = levels.pathsFor(stores.location, entity)
 				if err != nil {
 					return err
 				}
 			}
+
 			if err := moveVelocityEntity(selectedPaths, stores, entity, seconds); err != nil {
 				return err
 			}
