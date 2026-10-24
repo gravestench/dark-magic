@@ -38,10 +38,11 @@
 
 - [ ] **Step 1: Check RED/current value.** Run `rg -n -C 3 'name: Go test and race|timeout-minutes:' .github/workflows/ci.yml`; record that this job has `timeout-minutes: 30`.
 - [ ] **Step 2: Edit one value.** Change that job's `timeout-minutes` from 30 to 45; change no other workflow or Makefile line.
-- [ ] **Step 3: Verify.** Parse the YAML with an available local parser, inspect `git diff -- .github/workflows/ci.yml` and `git diff --check`; confirm only that numeric value changed.
-- [ ] **Step 4: Commit** the workflow edit. Obtain independent correctness/scope and formatting/readability reviews; run any specific follow-up check they require.
+- [ ] **Step 3: Verify before commit.** Run `ruby -ryaml -e 'YAML.parse_file(ARGV.fetch(0))' .github/workflows/ci.yml` and expect exit 0. Inspect `git diff -- .github/workflows/ci.yml` and `git diff --check`; confirm only that numeric value changed.
+- [ ] **Step 4: Commit** the workflow edit, then repeat the Ruby parser and run `git diff --check HEAD^ HEAD` on the submitted commit. Obtain independent correctness/scope and formatting/readability reviews; run any specific follow-up check they require.
 
 ## Delivery
 
 - [ ] Complete every PR-template section with the Actions evidence and exact checks run on the commit, push and attach a PR that closes #649. Wait for the macOS race job to finish with a result; merge after required CI passes.
-- [ ] Rebase #647 on the merged workflow change, rerun its CI, and merge when green. Keep its #612 feature diff separate from #649.
+
+After #649 merges, resume the separately authorized #612 PR #647 delivery: rebase it on main, rerun CI, and merge when green. That work is outside this issue's completion rule.
