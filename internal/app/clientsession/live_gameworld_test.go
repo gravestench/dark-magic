@@ -327,7 +327,8 @@ func assertLivePeerProjections(t *testing.T, ctx context.Context, connected, sec
 }
 
 // assertIndependentLiveMovement proves each membership advances through its own command clock and correction stream.
-// It also confirms low-latency transform datagrams update presentation without desynchronizing HUD and world ticks.
+// After reliable correction it checks HUD/world tick consistency, then waits for a later decoded datagram
+// while the hosting watch remains active.
 func assertIndependentLiveMovement(
 	t *testing.T,
 	ctx context.Context,
