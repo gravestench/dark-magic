@@ -3,6 +3,7 @@ package entryworld
 import (
 	"fmt"
 	"math"
+	"reflect"
 	"testing"
 
 	"github.com/gravestench/dark-magic/internal/content"
@@ -93,6 +94,26 @@ func TestStonyFieldPreparedSeamReal(t *testing.T) {
 				if len(rooms) == 0 || len(rooms) != len(prepared.Zones[index+2].Rooms()) {
 					t.Fatalf("level %d missing population geometry", index+2)
 				}
+			}
+
+			repeated, err := prepared.PopulationData(0)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if !reflect.DeepEqual(population, repeated) {
+				t.Fatal("owned population geometry changed between calls")
+			}
+			stonyRooms := zones[2].(map[string]any)["rooms"].([]any)
+			populatedRooms := 0
+			for _, raw := range stonyRooms {
+				room := raw.(map[string]any)
+				assertPopulationRoomPoints(t, prepared.Worlds[4], room)
+				if room["populate"].(bool) && len(room["points"].([]any)) > 0 {
+					populatedRooms++
+				}
+			}
+			if populatedRooms == 0 {
+				t.Fatal("Stony Field has no eligible rooms with open candidate points")
 			}
 
 			t.Logf("owned seed 17 difficulty %d: four maps, three seams, safe aligned 3/4 routes",
