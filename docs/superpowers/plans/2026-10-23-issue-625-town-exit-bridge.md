@@ -23,7 +23,7 @@
 - A transparent edge without an authored floor placement: preparation fails; Task 1 tests it.
 - A floor corridor blocked by walls, disconnected from the guide, or ending short of the border: preparation fails or selects a continuous corridor; Task 1 tests it.
 - Return arrival exists but cannot route to the trigger: preparation fails; Task 1 tests it.
-- A normal click on the visible east bridge may aim outside collision bounds: Task 3 tests a screen-space click from inside the bridge to the seam and checks committed Blood Moor.
+- A normal click on the visible east bridge may aim outside collision bounds: Task 3 tests screen-space clicks from inside the bridge to the seam in offline and connected play and checks committed Blood Moor and return.
 
 ---
 
@@ -65,12 +65,13 @@
 
 **Interfaces:**
 - Consumes: prepared first seam endpoint and existing `FixtureWorldSpawn="seam"`, `FixturePointerMove`, `pointerMovementAcceptance.Frame`.
-- Produces: one screen-space click through normal Lua input from near the visible exit and an uncommitted capture showing Blood Moor.
+- Produces: screen-space clicks through normal Lua input from near the visible exit in offline and connected play, with an uncommitted capture showing Blood Moor.
 
 - [ ] Run the existing offline and connected town/Blood Moor round trips against owned data after Task 2. Record any failure before changing fixture support.
 - [ ] Add a seam-target fixture mode only if the existing acceptance click cannot target the visible bridge; test that its cursor maps to the resolved seam without bypassing normal input.
 - [ ] Run native `make capture` with the near-exit fixture and one injected pointer click; inspect the capture and authority level. Keep generated captures outside Git.
-- [ ] Run the focused owned client tests; confirm offline and connected return trips.
+- [ ] Exercise the same ordinary pointer-click path in an owned offline and connected client regression, asserting committed Blood Moor and return in both modes; direct controller movement does not satisfy this step.
+- [ ] Run the focused owned client tests; confirm offline and connected pointer-click round trips.
 - [ ] Commit only required fixture code/tests, if any.
 
 ### Task 4: Final verification and PR

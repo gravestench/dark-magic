@@ -33,7 +33,7 @@ The first-seam endpoint moves for newly generated topologies. Existing checkpoin
 
 1. Write a red synthetic resolver test with an interior orientation-10 guide and a narrow edge floor corridor. It must assert the edge endpoint, all four cardinal directions, a blocked/no-floor failure, and a reachable inset arrival. Existing tests that modeled a whole open map without floor placements will be updated to represent an authored corridor.
 2. Add an owned-data test for all four selected town variants. Assert each seam is on authored walkable floor at the named edge, has a straight collision-safe authored-floor continuation to the outermost footprint-safe border, and that the ordinary spawn can route to it. For seed 1, assert the resolved east endpoint sits on the `Bridge.dt1` corridor and that the route to the visible bridge crosses the seam radius; the old `(173,103)` endpoint must fail this test.
-3. Exercise one ordinary screen-space click through the production capture/input path from a near-exit fixture. The resulting capture must show committed Blood Moor after the click. Retain the local capture only as uncommitted evidence; game assets and captures must not enter Git.
+3. Exercise ordinary screen-space clicks through the production input path in offline and connected play. Each path must commit the town-to-Blood-Moor crossing and return; at least one local near-exit capture must show Blood Moor after the click. Retain captures only as uncommitted evidence; game assets and captures must not enter Git.
 4. Rerun offline and connected seam round trips, recovery, full Go/Lua/architecture/race/build/lint gates on the final commit. State precisely which owned-data checks ran locally and which skip in CI.
 
 ## Limits
