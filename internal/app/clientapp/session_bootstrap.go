@@ -7,6 +7,7 @@ import (
 	"io/fs"
 
 	"github.com/gravestench/dark-magic/internal/game/simulation"
+	gameworld "github.com/gravestench/dark-magic/internal/game/world"
 	loadcore "github.com/gravestench/dark-magic/internal/loading"
 	entryworld "github.com/gravestench/dark-magic/internal/mod/d2legacy/adapter/entryworld"
 )
@@ -15,8 +16,9 @@ import (
 // deterministic input hashed/consumed by the d2legacy authoritative runtime.
 func (app *application) sessionInitialData() map[string]any {
 	return map[string]any{
-		"engine.game_data_generation_id": app.gameDataGenerationID(),
-		"d2legacy.entry_world_checksum":  app.entryWorldChecksum,
+		"engine.world.velocity_movement_version": gameworld.VelocityMovementLevelMapVersion,
+		"engine.game_data_generation_id":         app.gameDataGenerationID(),
+		"d2legacy.entry_world_checksum":          app.entryWorldChecksum,
 		"d2legacy.game_rules": map[string]any{
 			"target":          "lod-1.14d",
 			"expansion":       true,

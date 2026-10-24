@@ -8,6 +8,9 @@ import (
 	gameecs "github.com/gravestench/dark-magic/internal/game/ecs"
 )
 
+// VelocityMovementLevelMapVersion pins native collision selection in session identity.
+const VelocityMovementLevelMapVersion = "level-aware-v1"
+
 // VelocityLevelLocation names the authoritative integer level field on a mover.
 type VelocityLevelLocation struct{ Component, Field string }
 
