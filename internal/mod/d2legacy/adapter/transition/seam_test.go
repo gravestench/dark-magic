@@ -12,7 +12,9 @@ import (
 // TestTownMoorSeamUsesAuthoredTownExitAndGeneratedMoorEdge protects asymmetric endpoint source policy.
 func TestTownMoorSeamUsesAuthoredTownExitAndGeneratedMoorEdge(t *testing.T) {
 	town, _ := gameworld.NewOpenMap(40, 40)
-	town.SpecialTiles = []gameworld.SpecialTile{{X: 7, Y: 4, Orientation: 10}}
+	town.SpecialTiles = []gameworld.SpecialTile{{X: 3, Y: 4, Orientation: 10}}
+	town.Tiles = []gameworld.TilePlacement{{X: 7, Y: 4, Layer: gameworld.LayerFloor,
+		Reference: gameworld.TileReference{Path: "floor.dt1"}}}
 	moor, _ := gameworld.NewOpenMap(40, 40)
 
 	seam, err := gametransition.ResolveSeam(d2mapgen.SeamSpec{
@@ -30,6 +32,112 @@ func TestTownMoorSeamUsesAuthoredTownExitAndGeneratedMoorEdge(t *testing.T) {
 	if seam.First.LevelID != 1 || seam.Second.LevelID != 2 ||
 		seam.First.Direction != "east" || seam.Second.Direction != "west" {
 		t.Fatalf("seam = %#v", seam)
+	}
+	if seam.First.X != 35 || seam.First.Y != 23 {
+		t.Fatalf("town endpoint = (%v,%v), want visible edge (35,23)", seam.First.X, seam.First.Y)
+	}
+}
+
+// A hidden exit guide may be well inside the stamp. The named, authored floor corridor must determine its trigger.
+func TestResolveAuthoredTownEdgeAllDirections(t *testing.T) {
+	for _, test := range []struct {
+		name, opposite string
+		guide, floor   gameworld.SpecialTile
+		extraFloor     []gameworld.TilePlacement
+		wantX, wantY   float64
+	}{
+		{"east", "west", gameworld.SpecialTile{X: 3, Y: 4, Orientation: 10},
+			gameworld.SpecialTile{X: 7, Y: 4}, nil, 35, 23},
+		{"south", "north", gameworld.SpecialTile{X: 4, Y: 3, Orientation: 10},
+			gameworld.SpecialTile{X: 4, Y: 7}, nil, 23, 35},
+		{"west", "east", gameworld.SpecialTile{X: 4, Y: 4, Orientation: 10},
+			gameworld.SpecialTile{X: 1, Y: 4}, []gameworld.TilePlacement{{X: 0, Y: 4, Layer: gameworld.LayerFloor,
+				Reference: gameworld.TileReference{Path: "floor.dt1"}}}, 5, 23},
+		{"north", "south", gameworld.SpecialTile{X: 4, Y: 4, Orientation: 10},
+			gameworld.SpecialTile{X: 4, Y: 1}, []gameworld.TilePlacement{{X: 4, Y: 0, Layer: gameworld.LayerFloor,
+				Reference: gameworld.TileReference{Path: "floor.dt1"}}}, 23, 5},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			town, _ := gameworld.NewOpenMap(40, 40)
+			town.SpecialTiles = []gameworld.SpecialTile{test.guide}
+			town.Tiles = append(test.extraFloor, gameworld.TilePlacement{
+				X: test.floor.X, Y: test.floor.Y, Layer: gameworld.LayerFloor,
+				Reference: gameworld.TileReference{Path: "floor.dt1"},
+			})
+			moor, _ := gameworld.NewOpenMap(40, 40)
+			seam, err := gametransition.ResolveSeam(d2mapgen.SeamSpec{
+				FirstLevel: 1, FirstDirection: test.name, SecondLevel: 2, SecondDirection: test.opposite,
+				SecondTileX: 4, SecondTileY: 4, TriggerRadius: 2, ArrivalInset: 6,
+			}, town, moor)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if seam.First.X != test.wantX || seam.First.Y != test.wantY {
+				t.Fatalf("endpoint = (%v,%v), want (%v,%v)", seam.First.X, seam.First.Y, test.wantX, test.wantY)
+			}
+		})
+	}
+}
+
+// An open collision edge does not become an exit without authored floor across the outward lane.
+func TestResolveAuthoredTownEdgeRequiresFloorToBorder(t *testing.T) {
+	for _, withInnerFloor := range []bool{false, true} {
+		town, _ := gameworld.NewOpenMap(40, 40)
+		town.SpecialTiles = []gameworld.SpecialTile{{X: 4, Y: 4, Orientation: 10}}
+		if withInnerFloor {
+			town.Tiles = append(town.Tiles, gameworld.TilePlacement{X: 1, Y: 4,
+				Layer: gameworld.LayerFloor, Reference: gameworld.TileReference{Path: "floor.dt1"}})
+		}
+		moor, _ := gameworld.NewOpenMap(40, 40)
+		if _, err := gametransition.ResolveSeam(d2mapgen.SeamSpec{
+			FirstDirection: "west", SecondDirection: "east", SecondTileX: 4, SecondTileY: 4,
+		}, town, moor); err == nil {
+			t.Fatalf("west edge without continuous authored floor accepted (inner floor %v)", withInnerFloor)
+		}
+	}
+}
+
+// A closer interior floor strip is a blind alley when collision blocks its continuation toward the map boundary.
+func TestResolveAuthoredTownEdgeSkipsBlindAlley(t *testing.T) {
+	town, _ := gameworld.NewOpenMap(40, 40)
+	town.SpecialTiles = []gameworld.SpecialTile{{X: 3, Y: 2, Orientation: 10}}
+	for _, y := range []int{2, 5} {
+		town.Tiles = append(town.Tiles, gameworld.TilePlacement{X: 7, Y: y,
+			Layer: gameworld.LayerFloor, Reference: gameworld.TileReference{Path: "floor.dt1"}})
+	}
+	var flags [25]dt1.SubTileFlags
+	for index := range flags {
+		if index%gameworld.SubtilesPerTile == 3 {
+			flags[index].BlockWalk = true
+		}
+	}
+	town.Tiles = append(town.Tiles, gameworld.TilePlacement{X: 7, Y: 2,
+		Layer: gameworld.LayerLowerWall, Reference: gameworld.TileReference{Path: "wall.dt1", SubTileFlags: flags}})
+	town.RebuildFlags()
+	moor, _ := gameworld.NewOpenMap(40, 40)
+	seam, err := gametransition.ResolveSeam(d2mapgen.SeamSpec{
+		FirstDirection: "east", SecondDirection: "west", SecondTileX: 4, SecondTileY: 4,
+	}, town, moor)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if seam.First.X != 35 || seam.First.Y < 25 || seam.First.Y > 29 {
+		t.Fatalf("selected blind alley rather than outward corridor: %#v", seam.First)
+	}
+}
+
+// A town arrival stranded behind collision cannot advertise a reversible transition.
+func TestResolveAuthoredTownEdgeRequiresReturnRoute(t *testing.T) {
+	town, _ := gameworld.NewOpenMap(40, 40)
+	town.SpecialTiles = []gameworld.SpecialTile{{X: 3, Y: 4, Orientation: 10}}
+	town.Tiles = []gameworld.TilePlacement{{X: 7, Y: 4, Layer: gameworld.LayerFloor,
+		Reference: gameworld.TileReference{Path: "floor.dt1"}}}
+	blockSubtileColumn(town, 30)
+	moor, _ := gameworld.NewOpenMap(40, 40)
+	if _, err := gametransition.ResolveSeam(d2mapgen.SeamSpec{
+		FirstDirection: "east", SecondDirection: "west", SecondTileX: 4, SecondTileY: 4,
+	}, town, moor); err == nil {
+		t.Fatal("town seam with unreachable return trigger was accepted")
 	}
 }
 
