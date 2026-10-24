@@ -248,12 +248,20 @@ func TestPopulationDataOrdersAdmittedLevelsAndRejectsMissingMap(t *testing.T) {
 		t.Fatal(err)
 	}
 	zones := data["zones"].([]any)
-	if len(zones) != 2 ||
+	if len(zones) != 3 ||
 		zones[0].(map[string]any)["level_id"] != float64(2) ||
-		zones[1].(map[string]any)["level_id"] != float64(3) {
+		zones[1].(map[string]any)["level_id"] != float64(3) ||
+		zones[2].(map[string]any)["level_id"] != float64(4) {
 		t.Fatalf("zones=%#v", zones)
 	}
-	for _, bad := range []string{"map", "zone", "duplicate", "identity"} {
+	for _, raw := range zones {
+		room := raw.(map[string]any)["rooms"].([]any)[0].(map[string]any)
+		if room["id"] != "1" || room["x"] != float64(25) || room["y"] != float64(25) ||
+			room["width"] != float64(25) || room["height"] != float64(25) {
+			t.Fatalf("admitted population geometry=%#v", room)
+		}
+	}
+	for _, bad := range []string{"map", "zone", "duplicate", "identity", "level-four-map", "level-four-zone", "level-four-identity"} {
 		t.Run(bad, func(t *testing.T) {
 			p := populationPreparedFixture(t)
 			switch bad {
@@ -265,6 +273,12 @@ func TestPopulationDataOrdersAdmittedLevelsAndRejectsMissingMap(t *testing.T) {
 				p.Seams = append(p.Seams, p.Seams[1])
 			case "identity":
 				p.Zones[3] = p.Zones[2]
+			case "level-four-map":
+				delete(p.Worlds, 4)
+			case "level-four-zone":
+				delete(p.Zones, 4)
+			case "level-four-identity":
+				p.Zones[4] = p.Zones[3]
 			}
 			if data, err := p.PopulationData(0); err == nil || data != nil {
 				t.Fatalf("data=%#v err=%v", data, err)
@@ -282,6 +296,8 @@ func TestPopulationDataV1KeepsOnlyLevelTwo(t *testing.T) {
 	p.Seams = p.Seams[:1]
 	delete(p.Zones, 3)
 	delete(p.Worlds, 3)
+	delete(p.Zones, 4)
+	delete(p.Worlds, 4)
 	data, err := p.PopulationData(1)
 	if err != nil {
 		t.Fatal(err)
@@ -330,7 +346,7 @@ func TestPopulationDataLevelThreePointsStayDistinctAndInRoom(t *testing.T) {
 	}
 }
 
-// populationPreparedFixture builds two keyed wilderness maps with matching generated geometry.
+// populationPreparedFixture builds three keyed wilderness maps with matching generated geometry.
 func populationPreparedFixture(t *testing.T) *Prepared {
 	t.Helper()
 	p := &Prepared{
@@ -338,7 +354,7 @@ func populationPreparedFixture(t *testing.T) *Prepared {
 		Zones:  map[int]*worldgen.Zone{},
 		Spawns: map[int][2]float64{2: {10, 10}},
 	}
-	for _, id := range []int{2, 3} {
+	for _, id := range []int{2, 3, 4} {
 		zone, err := worldgen.NewZone(worldgen.Definition{
 			Request: worldgen.Request{Version: worldgen.ContractVersion, Seed: 41, Act: 1, LevelID: id},
 			Kind:    "test",
