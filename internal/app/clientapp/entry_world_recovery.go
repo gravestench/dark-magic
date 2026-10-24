@@ -5,7 +5,6 @@ import (
 
 	gamesession "github.com/gravestench/dark-magic/internal/game/session"
 	"github.com/gravestench/dark-magic/internal/game/simulation"
-	gameworld "github.com/gravestench/dark-magic/internal/game/world"
 	d2mapgen "github.com/gravestench/dark-magic/internal/mod/d2legacy/adapter/mapgen"
 )
 
@@ -125,7 +124,6 @@ func (app *application) preflightOfflineEntryWorldRecovery(bundle entryWorldReco
 }
 
 // restoreOfflineEntryWorldRecovery applies a validated checkpoint after the saved topology has composed this runtime.
-// It rebinds native movement because ECS restore replaces the component stores captured by that callback.
 func (app *application) restoreOfflineEntryWorldRecovery(bundle entryWorldRecovery) error {
 	if err := app.preflightOfflineEntryWorldRecovery(bundle); err != nil {
 		return err
@@ -133,15 +131,6 @@ func (app *application) restoreOfflineEntryWorldRecovery(bundle entryWorldRecove
 
 	if err := app.offlineSession.RestoreRecoveryCheckpoint(bundle.Session); err != nil {
 		return err
-	}
-	// ECS restore replaces component stores. The native movement callback captures store handles, so bind it again
-	// before the first resumed tick; Lua systems resolve stores through the ECS capability at call time.
-	if !app.entitySimulation.Unregister(gameworld.VelocityMovementSystemID) {
-		return fmt.Errorf("entry-world recovery: cannot rebind native movement")
-	}
-
-	if err := app.registerOfflineMovementSystem(); err != nil {
-		return fmt.Errorf("entry-world recovery: rebind native movement: %w", err)
 	}
 
 	app.syncActiveWorldFromPlayer()
