@@ -401,6 +401,54 @@ Reproduce the table inspection locally with
 (and the corresponding `MonStats.txt` and `LvlPrest.txt` paths). Protected game
 data and captures are not checked in.
 
+### Ordinary Stony Field population (#654)
+
+Owned Expansion 1.14d `patch_d2.mpq` inspection gives `Levels.txt` row
+`Id=4`, `Name=Act 1 - Wilderness 3`, `NumMon=3`, with all three `MonDen`
+columns equal to `520`. Both `mon1`–`mon5` and `nmon1`–`nmon5` contain,
+in order, `skeleton1`, `zombie2`, `crownest1`, `goatman1`, and `cr_archer1`.
+All five `MonStats.txt` rows have `enabled=1`, `isSpawn=1`, and blank `npc`.
+Their rarity and group bounds are:
+
+| Row | Rarity | MinGrp | MaxGrp |
+| --- | --- | --- | --- |
+| `skeleton1` | 2 | 1 | 3 |
+| `zombie2` | 2 | 1 | 3 |
+| `crownest1` | 2 | 1 | 1 |
+| `goatman1` | 1 | 1 | 2 |
+| `cr_archer1` | 1 | 1 | 2 |
+
+The existing interpreter selects the first `NumMon` slots, so ordinary
+Stony Field population currently uses the first three families. This does
+not establish that retail excludes the remaining two. Density scaling,
+rarity weighting, group bounds, first-group fallback, room eligibility and
+occupied-room-plus-neighbors activation remain Dark Magic policy. Exact
+1.13c/1.14d density, family frequency, party construction and random-call
+order require original-code corroboration or controlled retail observations.
+Named packs, champions, uniques, quest monsters and Rakanishu are outside
+this ordinary-population slice.
+
+The same v6 population envelope now admits level 4 for four-map topologies.
+Dedicated `d2legacy.population.level4.*` density, family, group, seed and life
+streams preserve the previous level-2/3 streams. Room-local geometry,
+full collider terrain checks and queued/returning footprint reservations
+apply to both levels 3 and 4. Synthetic tests in
+`internal/mod/d2legacy/cold_plains_population_test.go` cover distinct
+difficulty columns, candidate eligibility, empty/blocked rooms, prior-area
+random isolation, damaged monster and item residency, and restore continuity.
+
+Owned-data tests in `internal/app/clientapp/stony_field_transition_test.go`
+and `stony_field_population_real_test.go` use production seed 1, walk from
+Cold Plains, compare public level-qualified identities and positions with
+immutable authority snapshots, reconnect, and leave/return without recreating
+residents. Offline recovery compares complete checkpoints and semantic events
+every continuation tick, including checkpointed random participants. Legacy
+v1/v2 topology recovery retains its original zone set without level-4 residents.
+These tests explicitly skip without owned MPQs. They establish current engine
+behavior, not retail parity or graphical correctness. Registering the new
+streams changes the strict runtime checkpoint identity: these current-binary
+legacy-topology checks do not promise cross-binary checkpoint migration.
+
 ## Death, corpses, resurrection
 
 Monster death flows into [COMBAT_DAMAGE_AND_DEATH.md](COMBAT_DAMAGE_AND_DEATH.md).
