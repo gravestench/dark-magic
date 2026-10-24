@@ -464,7 +464,7 @@ func (capability *ECSCapability) destroyEntity(state *lua.LState) int {
 	return 1
 }
 
-// registerSystem registers register system before use so Lua cannot observe a partially configured capability.
+// registerSystem keeps registration and scoped release on the same engine, even after SetEngine rebinds the capability.
 func (capability *ECSCapability) registerSystem(state *lua.LState) int {
 	scope, err := capability.runtime.requireActiveScope()
 	if err != nil {
