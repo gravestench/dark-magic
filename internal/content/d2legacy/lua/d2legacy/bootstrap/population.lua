@@ -83,6 +83,7 @@ local function total_rarity(values)
     return total
 end
 
+-- Keep Cold Plains draws isolated so visiting it cannot advance Blood Moor random outcomes.
 local function stream(zone, purpose)
     if zone.level_id == 3 then
         return "d2legacy.population.level3." .. purpose
@@ -115,6 +116,7 @@ local function overlaps(point, radius, other)
     return dx * dx + dy * dy < (radius + other.radius) ^ 2
 end
 
+-- Require the full footprint to fit terrain and room bounds before reserving a queued spawn.
 local function safe_point(zone, room, point, radius, occupied)
     if
         point.x - radius < room.x
@@ -242,6 +244,7 @@ local function validate_zone(zone)
     end
 end
 
+-- Retain flat single-zone command compatibility while storing one canonical zone envelope.
 local function normalized_zones(payload)
     assert(type(payload) == "table", "population payload is required")
     if payload.zones ~= nil then
@@ -454,6 +457,7 @@ local function restore_room(room, entities, structural)
     room.inactive_residents = {}
 end
 
+-- Record collider facts even for entities without room residency; occupancy is level-scoped.
 local function include_footprint(entity, occupied)
     local point = ecs.get(entity, "d2legacy.world.position")
     local location = ecs.get(entity, "d2legacy.world.location")
@@ -468,6 +472,7 @@ local function include_footprint(entity, occupied)
     end
 end
 
+-- Reserve returning residents before fresh spawns because structural restoration publishes later.
 local function include_returning_footprints(plan, active, entities, occupied)
     if plan.level_id ~= 3 then
         return

@@ -87,7 +87,10 @@ func TestBuildColdPlainsReal(t *testing.T) {
 			x, y := point["x"].(float64), point["y"].(float64)
 			key := [2]float64{x, y}
 			flags, ok := prepared.Worlds[3].FlagsAt(int(x), int(y))
-			if seen[key] || !ok || flags.Blocked() || x < room["x"].(float64) || y < room["y"].(float64) || x >= room["x"].(float64)+room["width"].(float64) || y >= room["y"].(float64)+room["height"].(float64) {
+			if seen[key] || !ok || flags.Blocked() ||
+				x < room["x"].(float64) || y < room["y"].(float64) ||
+				x >= room["x"].(float64)+room["width"].(float64) ||
+				y >= room["y"].(float64)+room["height"].(float64) {
 				t.Fatalf("invalid owned level-3 point=%v", key)
 			}
 			seen[key] = true

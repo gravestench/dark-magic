@@ -225,7 +225,9 @@ func TestPopulationDataOrdersAdmittedLevelsAndRejectsMissingMap(t *testing.T) {
 		t.Fatal(err)
 	}
 	zones := data["zones"].([]any)
-	if len(zones) != 2 || zones[0].(map[string]any)["level_id"] != float64(2) || zones[1].(map[string]any)["level_id"] != float64(3) {
+	if len(zones) != 2 ||
+		zones[0].(map[string]any)["level_id"] != float64(2) ||
+		zones[1].(map[string]any)["level_id"] != float64(3) {
 		t.Fatalf("zones=%#v", zones)
 	}
 	for _, bad := range []string{"map", "zone", "duplicate", "identity"} {
@@ -251,6 +253,7 @@ func TestPopulationDataOrdersAdmittedLevelsAndRejectsMissingMap(t *testing.T) {
 	}
 }
 
+// TestPopulationDataV1KeepsOnlyLevelTwo preserves the historical two-zone topology and Blood Moor point order.
 func TestPopulationDataV1KeepsOnlyLevelTwo(t *testing.T) {
 	p := populationPreparedFixture(t)
 	p.Seams = p.Seams[:1]
@@ -273,6 +276,7 @@ func TestPopulationDataV1KeepsOnlyLevelTwo(t *testing.T) {
 	}
 }
 
+// TestPopulationDataLevelThreePointsStayDistinctAndInRoom checks room-local candidates and blocked-room omission.
 func TestPopulationDataLevelThreePointsStayDistinctAndInRoom(t *testing.T) {
 	p := populationPreparedFixture(t)
 	for _, blocked := range []bool{false, true} {
@@ -303,11 +307,21 @@ func TestPopulationDataLevelThreePointsStayDistinctAndInRoom(t *testing.T) {
 	}
 }
 
+// populationPreparedFixture builds two keyed wilderness maps with matching generated geometry.
 func populationPreparedFixture(t *testing.T) *Prepared {
 	t.Helper()
-	p := &Prepared{Worlds: map[int]*gameworld.Map{}, Zones: map[int]*worldgen.Zone{}, Spawns: map[int][2]float64{2: {10, 10}}}
+	p := &Prepared{
+		Worlds: map[int]*gameworld.Map{},
+		Zones:  map[int]*worldgen.Zone{},
+		Spawns: map[int][2]float64{2: {10, 10}},
+	}
 	for _, id := range []int{2, 3} {
-		zone, err := worldgen.NewZone(worldgen.Definition{Request: worldgen.Request{Version: worldgen.ContractVersion, Seed: 41, Act: 1, LevelID: id}, Kind: "test", Bounds: worldgen.Bounds{Width: 20, Height: 20}, Rooms: []worldgen.Room{{ID: 1, X: 5, Y: 5, Width: 5, Height: 5}}})
+		zone, err := worldgen.NewZone(worldgen.Definition{
+			Request: worldgen.Request{Version: worldgen.ContractVersion, Seed: 41, Act: 1, LevelID: id},
+			Kind:    "test",
+			Bounds:  worldgen.Bounds{Width: 20, Height: 20},
+			Rooms:   []worldgen.Room{{ID: 1, X: 5, Y: 5, Width: 5, Height: 5}},
+		})
 		if err != nil {
 			t.Fatal(err)
 		}

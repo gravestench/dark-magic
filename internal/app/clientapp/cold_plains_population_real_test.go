@@ -33,6 +33,7 @@ type coldPopulationZone struct {
 	} `json:"rooms"`
 }
 
+// populationPlan decodes the production plan so activation assertions inspect authoritative state.
 func populationPlan(t *testing.T, fixture *realD2LegacyFixture) coldPopulationPlan {
 	t.Helper()
 
@@ -53,6 +54,7 @@ func populationPlan(t *testing.T, fixture *realD2LegacyFixture) coldPopulationPl
 	return plan
 }
 
+// newColdPopulationFixture starts the owned-data fixture with the population-specific initial rules.
 func newColdPopulationFixture(t *testing.T) *realD2LegacyFixture {
 	t.Helper()
 	return newRealD2LegacyFixture(t, coldPopulationConfig())
@@ -221,6 +223,7 @@ func assertPopulationActiveLevel(t *testing.T, plan coldPopulationPlan, level in
 	}
 }
 
+// assertPopulationInactive checks that retained resident entities carry the expected activation tag.
 func assertPopulationInactive(t *testing.T, f *realD2LegacyFixture, ids map[string]akara.Entity, want bool) {
 	t.Helper()
 
@@ -233,6 +236,7 @@ func assertPopulationInactive(t *testing.T, f *realD2LegacyFixture, ids map[stri
 	}
 }
 
+// assertColdPopulationVisible requires the public view to expose ordinary Cold Plains monsters.
 func assertColdPopulationVisible(t *testing.T, view playeradapter.WorldView) {
 	t.Helper()
 
@@ -253,6 +257,7 @@ func assertColdPopulationVisible(t *testing.T, view playeradapter.WorldView) {
 	}
 }
 
+// coldPopulationWorldView projects a checkpoint through the public player adapter for visibility assertions.
 func coldPopulationWorldView(t *testing.T, player string, checkpoint simulation.Checkpoint) playeradapter.WorldView {
 	t.Helper()
 
@@ -540,6 +545,7 @@ type coldPopulationPublicMonster struct {
 	LevelID               int64
 }
 
+// publicColdPopulation extracts stable public monster facts for authority and client comparisons.
 func publicColdPopulation(view playeradapter.WorldView) map[string]coldPopulationPublicMonster {
 	result := make(map[string]coldPopulationPublicMonster)
 
