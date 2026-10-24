@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"io/fs"
+	"sort"
 
 	gameworld "github.com/gravestench/dark-magic/internal/game/world"
 	"github.com/gravestench/dark-magic/internal/game/worldgen"
@@ -76,7 +77,12 @@ func prepareTopology(
 		return nil, fmt.Errorf("d2legacy entry world: checksum topology: %w", err)
 	}
 	worlds := make(map[int]*gameworld.Map, len(generated.Zones))
-	for level := 1; level <= len(generated.Zones); level++ {
+	levels := make([]int, 0, len(generated.Zones))
+	for level := range generated.Zones {
+		levels = append(levels, level)
+	}
+	sort.Ints(levels)
+	for _, level := range levels {
 		zone := generated.Zones[level]
 		if zone == nil {
 			return nil, fmt.Errorf("d2legacy entry world: missing zone %d", level)
@@ -106,8 +112,24 @@ func prepareTopology(
 	for _, seam := range seams {
 		spawns[seam.Second.LevelID] = [2]float64{seam.Second.ArrivalX, seam.Second.ArrivalY}
 	}
+	var cave *CaveWarpPair
+	if generated.CaveWarp != nil {
+		pair, err := resolveCaveWarp(records, generated.Zones, worlds, *generated.CaveWarp)
+		if err != nil {
+			return nil, err
+		}
+		outdoorSpawn := spawns[pair.First.LevelID]
+		if err := validateCaveApproach(worlds[pair.First.LevelID],
+			gameworld.Point{X: pair.First.X, Y: pair.First.Y},
+			gameworld.Point{X: outdoorSpawn[0], Y: outdoorSpawn[1]},
+		); err != nil {
+			return nil, err
+		}
+		cave = &pair
+		spawns[pair.First.TargetLevel] = [2]float64{pair.First.ArrivalX, pair.First.ArrivalY}
+	}
 	return &Prepared{
-		Worlds: worlds, Zones: generated.Zones, Spawns: spawns,
+		CaveWarp: cave, Worlds: worlds, Zones: generated.Zones, Spawns: spawns,
 		Seams: seams, Topology: generated, TopologyChecksum: checksum,
 		Difficulty: int(generated.Zones[1].Request().Difficulty),
 	}, nil

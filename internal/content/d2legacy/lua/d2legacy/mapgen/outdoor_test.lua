@@ -135,17 +135,28 @@ local function verify_den()
                     end
                 end
                 test.assert(
-                    count == 1 and cave.width == 8 and cave.height == 8 and cave.overlay,
-                    "one authored 8x8 cave overlay"
+                    count == 1 and cave.width == 8 and cave.height == 8 and not cave.overlay,
+                    "one authored 8x8 cave replaces its reserved fill cell"
                 )
                 test.assert(
                     cave.ds1_path:match("%.ds1$") and #cave.tile_paths == 1,
                     "cave joins declared DS1 and DT1 resources"
                 )
-                test.assert(#zone.stamps == #legacy.stamps + 1, "one additional stamp only")
+                test.assert(#zone.stamps == #legacy.stamps, "replacement preserves stamp count")
+                test.assert(cave.variant == 1, "only owned File2 carries the 10/6/24 Den marker")
+                local replacements = 0
                 for index, stamp in ipairs(legacy.stamps) do
-                    test.assert(equal(stamp, zone.stamps[index]), "earlier fill and structural draw streams unchanged")
+                    if stamp.id == cave.id then
+                        replacements = replacements + 1
+                        test.assert(
+                            stamp.x == cave.x and stamp.y == cave.y and not stamp.overlay,
+                            "cave keeps the reserved fill cell identity and geometry"
+                        )
+                    else
+                        test.assert(equal(stamp, zone.stamps[index]), "all other cells and draw streams unchanged")
+                    end
                 end
+                test.assert(replacements == 1, "exactly one fill stamp is replaced")
                 test.assert(
                     equal(zone.rooms, legacy.rooms) and equal(zone.links, legacy.links),
                     "outdoor topology unchanged"

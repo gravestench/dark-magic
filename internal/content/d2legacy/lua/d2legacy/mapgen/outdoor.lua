@@ -164,7 +164,7 @@ function M.generate_with_den(level_id, seed, town_exit, difficulty)
         "d2legacy mapgen: cave entrance must be 8x8")
     local variants = assets.preset_files(preset)
     local count = data.integer(preset.Files, 0)
-    assert(count > 0 and count <= 6 and #variants == count,
+    assert(count >= 2 and count <= 6 and #variants == count,
         "d2legacy mapgen: cave entrance variant is absent")
     local level_type = assert(data.level_type(2))
     local tiles = assets.masked_tiles(level_type, data.integer(preset.Dt1Mask, 0))
@@ -172,12 +172,20 @@ function M.generate_with_den(level_id, seed, town_exit, difficulty)
     local candidates = den_candidates(zone)
     assert(#candidates > 0, "d2legacy mapgen: no reserved player-sized Den approach")
     local selected = candidates[draw(seed, "d2legacy.mapgen.den.entrance_placement", #candidates) + 1]
-    local variant = draw(seed, "d2legacy.mapgen.den.entrance_variant", #variants)
-    zone.stamps[#zone.stamps + 1] = {
-        id = zone.stamps[#zone.stamps].id + 1, preset_def = 51, role = "den-entrance",
+    -- Owned 1.14d File2 carries 10/6/24 for Vis3; File1 carries 10/5/21
+    -- for another relationship. Materialization must verify the full identity.
+    local eligible = {2}
+    local variant = eligible[draw(seed, "d2legacy.mapgen.den.entrance_variant", #eligible) + 1] - 1
+    local reserved = selected.y / CELL * (zone.bounds.width / CELL) + selected.x / CELL + 1
+    assert(zone.stamps[reserved].id == reserved and not zone.stamps[reserved].overlay,
+        "d2legacy mapgen: Den must replace its reserved fill cell")
+    -- A separate overlay retains base fill fences on absent authored layers,
+    -- splitting the cave's walkable interior. Replace this one fill instead.
+    zone.stamps[reserved] = {
+        id = reserved, preset_def = 51, role = "den-entrance",
         x = selected.x, y = selected.y, width = CELL, height = CELL,
         ds1_path = assets.path(variants[variant + 1]), tile_paths = tiles,
-        variant = variant, populate = preset.Populate == "1", logical_walls = preset.Logicals == "1", overlay = true,
+        variant = variant, populate = preset.Populate == "1", logical_walls = preset.Logicals == "1",
     }
     zone.warps[#zone.warps + 1] = {
         id = 3, role = "den-entrance", direction = "south", destination_level = 8,

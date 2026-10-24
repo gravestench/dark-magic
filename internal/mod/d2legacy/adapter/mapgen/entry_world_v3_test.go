@@ -24,7 +24,7 @@ func entryWorldV3Records() entryRecords {
 // New worlds must publish every reciprocal seam and a deterministic durable recipe at every difficulty.
 func TestEntryWorldV3Generation(t *testing.T) {
 	for difficulty := 0; difficulty <= 2; difficulty++ {
-		world, err := GenerateEntryWorld(t.Context(), content.D2Legacy(), entryWorldV3Records(), 42, difficulty)
+		world, err := generateLegacyEntryWorldV3(t.Context(), content.D2Legacy(), entryWorldV3Records(), 42, difficulty)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -60,13 +60,18 @@ func TestEntryWorldV3Generation(t *testing.T) {
 		if err != nil || !bytes.Equal(snapshot, got) {
 			t.Fatalf("restore changed bytes: %v", err)
 		}
-		repeated, err := GenerateEntryWorld(t.Context(), content.D2Legacy(), entryWorldV3Records(), 42, difficulty)
+		repeated, err := generateLegacyEntryWorldV3(t.Context(), content.D2Legacy(), entryWorldV3Records(), 42, difficulty)
 		if err != nil {
 			t.Fatal(err)
 		}
 		want, err := world.Checksum()
 		if err != nil {
 			t.Fatal(err)
+		}
+		// Frozen before v4 using only entryWorldV3Records: catches shared
+		// future recipe drift that old/new comparisons alone cannot detect.
+		if difficulty == 0 && want != legacyEntryWorldChecksums[3] {
+			t.Fatalf("legacy v3 generation checksum changed: %s", want)
 		}
 		checksum, err := repeated.Checksum()
 		if err != nil || checksum != want {
@@ -77,7 +82,7 @@ func TestEntryWorldV3Generation(t *testing.T) {
 
 // Durable topology must reject drift before publishing any admitted zones to recovery.
 func TestEntryWorldV3RejectsTopologyDrift(t *testing.T) {
-	world, err := GenerateEntryWorld(t.Context(), content.D2Legacy(), entryWorldV3Records(), 42, 0)
+	world, err := generateLegacyEntryWorldV3(t.Context(), content.D2Legacy(), entryWorldV3Records(), 42, 0)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -181,7 +186,7 @@ func TestEntryWorldV3RejectsTopologyDrift(t *testing.T) {
 
 // Different numeric IDs must not make an ambiguous generated seam role restorable.
 func TestEntryWorldV3RejectsDuplicateEndpointRoles(t *testing.T) {
-	world, err := GenerateEntryWorld(t.Context(), content.D2Legacy(), entryWorldV3Records(), 42, 0)
+	world, err := generateLegacyEntryWorldV3(t.Context(), content.D2Legacy(), entryWorldV3Records(), 42, 0)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -288,7 +293,7 @@ func TestEntryWorldLegacyRetainsDuplicateEndpointRoles(t *testing.T) {
 
 // Restore must keep saved policy decisions even after the installed Lua generator changes.
 func TestEntryWorldV3RestoreDoesNotRegenerate(t *testing.T) {
-	world, err := GenerateEntryWorld(t.Context(), content.D2Legacy(), entryWorldV3Records(), 42, 0)
+	world, err := generateLegacyEntryWorldV3(t.Context(), content.D2Legacy(), entryWorldV3Records(), 42, 0)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -326,7 +331,7 @@ func TestEntryWorldV3RestoreDoesNotRegenerate(t *testing.T) {
 		t.Fatal("entry policy missing")
 	}
 	policy.Data = bytes.Replace(policy.Data, []byte("arrival_inset = 6"), []byte("arrival_inset = 7"), 1)
-	next, err := GenerateEntryWorld(t.Context(), changed, entryWorldV3Records(), 42, 0)
+	next, err := generateLegacyEntryWorldV3(t.Context(), changed, entryWorldV3Records(), 42, 0)
 	if err != nil {
 		t.Fatal(err)
 	}
