@@ -150,15 +150,20 @@ function M.pointer_target(level, hero_x, hero_y, target_x, target_y, width, heig
         if seam.source_level == level and seam.source_direction == exit_direction then
             local _, seam_tangent = normal_and_tangent(exit_direction, seam.source_x, seam.source_y)
             if seam.trigger_lane_min ~= nil then
+                -- A click just beyond the bridge shoulder still aims through the prepared opening.
+                local margin = 2
+                local minimum = seam.trigger_lane_min - margin
+                local maximum = seam.trigger_lane_max + margin
                 local exit_lane = math.floor(exit_tangent + 0.5)
-                if exit_lane >= seam.trigger_lane_min and exit_lane <= seam.trigger_lane_max then
+                if exit_lane >= minimum and exit_lane <= maximum then
                     local hero_normal, hero_tangent = normal_and_tangent(exit_direction, hero_x, hero_y)
                     local target_normal, target_tangent = normal_and_tangent(exit_direction, target_x, target_y)
                     local source_normal = normal_and_tangent(exit_direction, seam.source_x, seam.source_y)
                     local plane = (source_normal - hero_normal) / (target_normal - hero_normal)
                     if plane > 0 and plane < 1 then
                         local lane = math.floor(hero_tangent + plane * (target_tangent - hero_tangent) + 0.5)
-                        if lane >= seam.trigger_lane_min and lane <= seam.trigger_lane_max then
+                        if lane >= minimum and lane <= maximum then
+                            lane = math.max(seam.trigger_lane_min, math.min(seam.trigger_lane_max, lane))
                             return point_from_axes(exit_direction, source_normal, lane)
                         end
                     end

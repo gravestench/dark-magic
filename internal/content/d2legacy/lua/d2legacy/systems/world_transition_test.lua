@@ -22,6 +22,20 @@ local suite = {
                     trigger_lane_max = 14,
                 },
                 {
+                    source_level = 1,
+                    destination_level = 2,
+                    source_x = 275,
+                    source_y = 84,
+                    source_direction = "east",
+                    arrival_x = 6,
+                    arrival_y = 40,
+                    world_width = 280,
+                    world_height = 200,
+                    trigger_radius = 2,
+                    trigger_lane_min = 82,
+                    trigger_lane_max = 86,
+                },
+                {
                     source_level = 2,
                     destination_level = 1,
                     source_x = 20,
@@ -136,6 +150,36 @@ local suite = {
                     test.expect(x):equals(facing.seam[1])
                     test.expect(y):equals(facing.seam[2])
                 end
+            end),
+        }),
+        test.case("town_bridge_shoulder_pointer_targets_safe_strip", {
+            test.run(function()
+                local geometry = require("d2legacy.gameplay.seam_geometry")
+                for _, case in ipairs({
+                    { hero_y = 79, target_y = 79, want_x = 281, want_y = 79 },
+                    { hero_y = 80, target_y = 80, want_x = 275, want_y = 82 },
+                    { hero_y = 81, target_y = 81, want_x = 275, want_y = 82 },
+                    { hero_y = 84, target_y = 84, want_x = 275, want_y = 84 },
+                    { hero_y = 88, target_y = 88, want_x = 275, want_y = 86 },
+                    { hero_y = 89, target_y = 89, want_x = 281, want_y = 89 },
+                    -- The ray reaches the east edge beside the strip, but misses at the trigger plane.
+                    { hero_y = 70, target_y = 85, want_x = 281, want_y = 85 },
+                    { hero_y = 80, target_y = 100, want_x = 281, want_y = 100 },
+                }) do
+                    local x, y = geometry.pointer_target(1, 269, case.hero_y, 281, case.target_y, 280, 200)
+                    test.expect(x):equals(case.want_x)
+                    test.expect(y):equals(case.want_y)
+                end
+
+                local x, y = geometry.pointer_target(1, 269, 80, 279, 80, 280, 200)
+                test.expect(x):equals(279)
+                test.expect(y):equals(80)
+                x, y = geometry.pointer_target(2, 269, 80, 281, 80, 280, 200)
+                test.expect(x):equals(281)
+                test.expect(y):equals(80)
+                x, y = geometry.pointer_target(1, 269, 80, 269, -1, 280, 200)
+                test.expect(x):equals(269)
+                test.expect(y):equals(-1)
             end),
         }),
         test.case("entry_crosses_authored_seam", {
