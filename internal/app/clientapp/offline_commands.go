@@ -12,10 +12,6 @@ import (
 // registerOfflineCommands assembles one deterministic command stream for the
 // local authority. Entry precedes movement and generic intents so a player exists first.
 func (app *application) registerOfflineCommands() error {
-	if err := app.registerOfflineMovementSystem(); err != nil {
-		return err
-	}
-
 	movementSource, movement, err := app.createOfflineMovementSource()
 	if err != nil {
 		return err

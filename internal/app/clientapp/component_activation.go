@@ -81,6 +81,11 @@ func (app *application) bootstrapAuthoritativeComponents(desired map[string]bool
 		return nil
 	}
 
+	// Lua owns the location schema; install its native consumer after component startup.
+	if err := app.registerOfflineMovementSystem(); err != nil {
+		return err
+	}
+
 	for levelID, worldMap := range app.gameWorlds {
 		err := modruntime.SetWorldMapForLevel(
 			context.Background(),
