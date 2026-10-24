@@ -15,7 +15,7 @@
 - Issue #646 alone owns this change. The future Cold Plains exit, live seam, snapshots, monsters, and quest set pieces remain separate.
 - Stony Field is Act I level 4, outdoor DRLG type 3, level type 2, 80×80 tiles in all three difficulties in inspected owned Expansion 1.14d and recovered 1.13 tables.
 - Generic 8×8 outdoor `LvlPrest` definitions 29 and 30 have three DS1 variants each in the inspected owned 1.14d table. Their selection and arrangement are provisional Dark Magic policy, not exact original placement.
-- Exactly one semantic `cold-plains-entry` targets level 3 on the edge opposite the explicitly supplied source direction. Do not infer that direction from an unplaced Cold Plains exit.
+- Exactly one semantic `cold-plains-entry` targets level 3 on the edge opposite the explicitly supplied source direction. Its `worldgen.Zone.warps` storage is an outdoor border endpoint, not a discrete cave or portal transition. Do not infer that direction from an unplaced Cold Plains exit.
 - Use the existing Go transport and generic world materializer. Do not add Diablo policy to Go, change dependencies, or commit game data, extracts, captures, or saves.
 
 ## Review Focus
