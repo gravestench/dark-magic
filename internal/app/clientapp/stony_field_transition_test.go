@@ -75,7 +75,9 @@ func TestStonyFieldOfflinePopulationRecoveryRoundTrip(t *testing.T) {
 	}{
 		{3, seam.Second}, {4, seam.First},
 	} {
-		if err := source.app.playerControl.SetMoveTargetWithRadius(crossing.point.X, crossing.point.Y, 0.5); err != nil {
+		if err := source.app.playerControl.SetMoveTargetWithRadius(
+			crossing.point.X, crossing.point.Y, 0.5,
+		); err != nil {
 			t.Fatal(err)
 		}
 
@@ -411,6 +413,7 @@ func TestStonyFieldLegacyV1PopulationRecovery(t *testing.T) {
 	assertStonyLegacyPopulationRecovery(t, 1)
 }
 
+// Version 2 recovery retains its three-map topology without introducing level-4 population.
 func TestStonyFieldLegacyV2RecoveryKeepsThreeMaps(t *testing.T) {
 	assertStonyLegacyPopulationRecovery(t, 2)
 }

@@ -42,7 +42,8 @@ func assertStonyPopulationView(t *testing.T, checkpoint simulation.Checkpoint, v
 		if !strings.HasPrefix(visible.SpawnID, "level:4:room:") {
 			t.Fatalf("unqualified identity %q", visible.SpawnID)
 		}
-		if visible.DefinitionID != "skeleton1" && visible.DefinitionID != "zombie2" && visible.DefinitionID != "crownest1" {
+		if visible.DefinitionID != "skeleton1" && visible.DefinitionID != "zombie2" &&
+			visible.DefinitionID != "crownest1" {
 			t.Fatalf("unexpected family %s", visible.DefinitionID)
 		}
 

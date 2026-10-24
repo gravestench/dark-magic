@@ -58,6 +58,7 @@ func TestPopulationDataLevelFourRoomLocalPoints(t *testing.T) {
 	}
 }
 
+// Candidate points remain distinct, room-local, and open so geometry cannot admit an unsafe center.
 func assertPopulationRoomPoints(t *testing.T, gameMap *gameworld.Map, room map[string]any) {
 	t.Helper()
 	points := room["points"].([]any)
@@ -69,7 +70,8 @@ func assertPopulationRoomPoints(t *testing.T, gameMap *gameworld.Map, room map[s
 		point := raw.(map[string]any)
 		xy := [2]float64{point["x"].(float64), point["y"].(float64)}
 		x, y := room["x"].(float64), room["y"].(float64)
-		if seen[xy] || xy[0] < x || xy[0] >= x+room["width"].(float64) || xy[1] < y || xy[1] >= y+room["height"].(float64) {
+		if seen[xy] || xy[0] < x || xy[0] >= x+room["width"].(float64) ||
+			xy[1] < y || xy[1] >= y+room["height"].(float64) {
 			t.Fatalf("room %v has duplicate or nonlocal point %v", room["id"], xy)
 		}
 		flags, ok := gameMap.FlagsAt(gameworld.CollisionCell(xy[0]), gameworld.CollisionCell(xy[1]))

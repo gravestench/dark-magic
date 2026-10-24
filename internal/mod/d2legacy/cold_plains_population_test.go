@@ -974,7 +974,8 @@ func TestStonyFieldPopulationItemAndMonsterLifecycle(t *testing.T) {
 			}
 			original, _ := s.Replay()
 			restored, _ := restoredSession.Replay()
-			if original.Checkpoints[len(original.Checkpoints)-1].Checksum != restored.Checkpoints[len(restored.Checkpoints)-1].Checksum {
+			originalChecksum := original.Checkpoints[len(original.Checkpoints)-1].Checksum
+			if originalChecksum != restored.Checkpoints[len(restored.Checkpoints)-1].Checksum {
 				t.Fatal("restore continuation differs")
 			}
 		})
@@ -986,7 +987,7 @@ func TestStonyFieldPopulationPreservesLevelTwoAndThree(t *testing.T) {
 	for difficulty := 0; difficulty < 3; difficulty++ {
 		t.Run(fmt.Sprint(difficulty), func(t *testing.T) {
 			var previous map[string]map[string]map[string]any
-			var previousRandom []uint64
+			var previousRandom map[string]uint64
 			for _, stony := range []bool{false, true} {
 				a, e, s := coldPopulationSession(t, difficulty, stonyPopulationRecords(), nil)
 				zones := []map[string]any{coldZone(2, difficulty), coldZone(3, difficulty)}
@@ -1024,14 +1025,34 @@ func TestStonyFieldPopulationPreservesLevelTwoAndThree(t *testing.T) {
 						}
 					}
 				}
-				var random []uint64
-				for _, name := range []string{"d2legacy.population.density", "d2legacy.population.family", "d2legacy.population.group", "d2legacy.population.seed", "d2legacy.monster.spawn.life", "d2legacy.population.level3.density", "d2legacy.population.level3.family", "d2legacy.population.level3.group", "d2legacy.population.level3.seed", "d2legacy.population.level3.life"} {
-					draw, err := a.Random.Uint64n(name, 1000000)
-					if err != nil {
-						t.Fatal(err)
-					}
-					random = append(random, draw)
+
+				// Compare exact sequence states without consuming another draw.
+				snapshot, err := a.Random.SnapshotState()
+				if err != nil {
+					t.Fatal(err)
 				}
+				var archive struct {
+					Streams map[string]uint64 `json:"streams"`
+				}
+				if err := json.Unmarshal(snapshot, &archive); err != nil {
+					t.Fatal(err)
+				}
+
+				random := map[string]uint64{}
+				for _, name := range []string{
+					"d2legacy.population.density", "d2legacy.population.family",
+					"d2legacy.population.group", "d2legacy.population.seed", "d2legacy.monster.spawn.life",
+					"d2legacy.population.level3.density", "d2legacy.population.level3.family",
+					"d2legacy.population.level3.group", "d2legacy.population.level3.seed",
+					"d2legacy.population.level3.life",
+				} {
+					state, found := archive.Streams[name]
+					if !found {
+						t.Fatalf("missing earlier-area random stream %q", name)
+					}
+					random[name] = state
+				}
+
 				if stony && (!reflect.DeepEqual(previous, got) || !reflect.DeepEqual(previousRandom, random)) {
 					t.Fatal("level 4 changed legacy monsters or random continuation")
 				}
@@ -1041,6 +1062,7 @@ func TestStonyFieldPopulationPreservesLevelTwoAndThree(t *testing.T) {
 	}
 }
 
+// Placement rejects blocked and occupied footprints, including entities queued in the same activation.
 func TestStonyFieldPopulationSkipsBlockedOrOccupiedFootprints(t *testing.T) {
 	for _, scenario := range []string{
 		"blocked-footprint",
@@ -1147,6 +1169,7 @@ func TestStonyFieldPopulationSkipsBlockedOrOccupiedFootprints(t *testing.T) {
 	}
 }
 
+// Returning residents reserve their footprints before fresh spawns regardless of room order.
 func TestStonyFieldPopulationReturningRoomReservesFootprintsBeforeFreshRoom(t *testing.T) {
 	for _, freshFirst := range []bool{false, true} {
 		t.Run(fmt.Sprintf("fresh_first=%v", freshFirst), func(t *testing.T) {
@@ -1164,8 +1187,14 @@ func TestStonyFieldPopulationReturningRoomReservesFootprintsBeforeFreshRoom(t *t
 				rooms = []any{fresh, returning}
 			}
 			rooms = append(rooms,
-				map[string]any{"id": "bridge", "populate": false, "x": 0, "y": 20, "width": 40, "height": 20, "points": []any{}},
-				map[string]any{"id": "away", "populate": false, "x": 60, "y": 0, "width": 20, "height": 20, "points": []any{}},
+				map[string]any{
+					"id": "bridge", "populate": false, "x": 0, "y": 20,
+					"width": 40, "height": 20, "points": []any{},
+				},
+				map[string]any{
+					"id": "away", "populate": false, "x": 60, "y": 0,
+					"width": 20, "height": 20, "points": []any{},
+				},
 			)
 			zone := coldZone(4, 0)
 			zone["rooms"] = rooms
@@ -1217,7 +1246,10 @@ func TestStonyFieldPopulationReturningRoomReservesFootprintsBeforeFreshRoom(t *t
 // Distinct columns expose wrong difficulty selection, NumMon overflow, and special-row admission.
 func TestStonyFieldPopulationCandidatesAndDensity(t *testing.T) {
 	for difficulty := 0; difficulty < 3; difficulty++ {
-		for _, scenario := range []string{"density-normal", "density-nightmare", "density-hell", "empty", "sparse", "truncated", "disabled", "unspawnable", "npc", "invalid"} {
+		for _, scenario := range []string{
+			"density-normal", "density-nightmare", "density-hell", "empty", "sparse",
+			"truncated", "disabled", "unspawnable", "npc", "invalid",
+		} {
 			t.Run(fmt.Sprintf("%d/%s", difficulty, scenario), func(t *testing.T) {
 				records := stonyPopulationRecords()
 				area := records["data/global/excel/levels.txt"][2]
@@ -1257,7 +1289,14 @@ func TestStonyFieldPopulationCandidatesAndDensity(t *testing.T) {
 				}
 				a, e, s := coldPopulationSession(t, difficulty, records, nil)
 				zone := coldZone(4, difficulty)
-				zone["rooms"] = append(zone["rooms"].([]any), map[string]any{"id": "later", "populate": true, "x": 50, "y": 0, "width": 40, "height": 50, "points": []any{map[string]any{"x": 60, "y": 10}, map[string]any{"x": 65, "y": 10}, map[string]any{"x": 70, "y": 10}}})
+				zone["rooms"] = append(zone["rooms"].([]any), map[string]any{
+					"id": "later", "populate": true, "x": 50, "y": 0, "width": 40, "height": 50,
+					"points": []any{
+						map[string]any{"x": 60, "y": 10},
+						map[string]any{"x": 65, "y": 10},
+						map[string]any{"x": 70, "y": 10},
+					},
+				})
 				zone["links"] = []any{map[string]any{"from": "same", "to": "later"}}
 				coldBootstrap(t, s, 1, coldZone(2, difficulty), coldZone(3, difficulty), zone)
 				coldEnter(t, s, 4, "alice", 1)
@@ -1298,7 +1337,9 @@ func TestStonyFieldPopulationCandidatesAndDensity(t *testing.T) {
 				if wantFamily == "fallen" {
 					members = 1
 				}
-				populatedLater := (scenario == "density-normal" && difficulty == 0) || (scenario == "density-nightmare" && difficulty == 1) || (scenario == "density-hell" && difficulty == 2)
+				populatedLater := (scenario == "density-normal" && difficulty == 0) ||
+					(scenario == "density-nightmare" && difficulty == 1) ||
+					(scenario == "density-hell" && difficulty == 2)
 				want := members
 				if populatedLater {
 					want *= 2
@@ -1325,7 +1366,10 @@ func TestStonyFieldPopulationRejectsMalformedPoints(t *testing.T) {
 			}
 			before, _ := a.State.Read("d2legacy.population.plan")
 			payload, _ := json.Marshal(map[string]any{"zones": []any{coldZone(2, 0), coldZone(3, 0), zone}})
-			if err := s.Submit(simulation.Command{Tick: 1, Player: "population", Authority: simulation.AuthoritySystem, Sequence: 1, Kind: "system.population.bootstrap", Payload: payload}); err == nil {
+			if err := s.Submit(simulation.Command{
+				Tick: 1, Player: "population", Authority: simulation.AuthoritySystem, Sequence: 1,
+				Kind: "system.population.bootstrap", Payload: payload,
+			}); err == nil {
 				t.Fatal("malformed points admitted")
 			}
 			after, _ := a.State.Read("d2legacy.population.plan")
