@@ -541,3 +541,69 @@ func TestColdPlainsPopulationRejectsMalformedSecondZoneAtomically(t *testing.T) 
 		})
 	}
 }
+
+// Returning residents must reserve their footprints before any fresh room is
+// materialized, regardless of which room appears first in the admitted plan.
+func TestColdPlainsPopulationReturningRoomReservesFootprintsBeforeFreshRoom(t *testing.T) {
+	for _, freshFirst := range []bool{false, true} {
+		t.Run(fmt.Sprintf("fresh_first=%v", freshFirst), func(t *testing.T) {
+			_, engine, session := coldPopulationSession(t, 0, coldPopulationRecords(), nil)
+			returning := map[string]any{
+				"id": "returning", "populate": true, "x": 0, "y": 0, "width": 20, "height": 20,
+				"points": []any{map[string]any{"x": 19.4, "y": 10}},
+			}
+			fresh := map[string]any{
+				"id": "fresh", "populate": true, "x": 20, "y": 0, "width": 20, "height": 20,
+				"points": []any{map[string]any{"x": 20.5, "y": 10}, map[string]any{"x": 25, "y": 10}},
+			}
+			rooms := []any{returning, fresh}
+			if freshFirst {
+				rooms = []any{fresh, returning}
+			}
+			rooms = append(rooms,
+				map[string]any{"id": "bridge", "populate": false, "x": 0, "y": 20, "width": 40, "height": 20, "points": []any{}},
+				map[string]any{"id": "away", "populate": false, "x": 60, "y": 0, "width": 20, "height": 20, "points": []any{}},
+			)
+			zone := coldZone(3, 0)
+			zone["rooms"] = rooms
+			zone["links"] = []any{map[string]any{"from": "returning", "to": "bridge"}, map[string]any{"from": "fresh", "to": "bridge"}}
+			coldBootstrap(t, session, 1, coldZone(2, 0), zone)
+			coldEnter(t, session, 3, "bob", 1)
+			stepPartySession(t, session)
+			const returningID = "level:3:room:returning:monster:1"
+			original := monsterEntity(t, engine, returningID)
+			positions, _ := akara.GetDynamicStore(engine.World(), "d2legacy.world.position")
+			// Ordinary movement may leave a resident close enough to the shared edge
+			// that its footprint reaches into its neighbor while its center stays here.
+			setEntityPosition(t, positions, original, 19.9, 10)
+			player := playerEntity(t, engine, "bob")
+			setEntityPosition(t, positions, player, 61, 1)
+			stepPartySession(t, session)
+			inactive, _ := akara.GetDynamicStore(engine.World(), "d2legacy.world.inactive")
+			if _, found := inactive.Get(original); !found {
+				t.Fatal("returning resident did not deactivate")
+			}
+			if got := monsterCount(engine); got != 1 {
+				t.Fatalf("fresh room populated before visit: monsters=%d", got)
+			}
+			setEntityPosition(t, positions, player, 1, 21)
+			stepPartySession(t, session)
+			if _, found := inactive.Get(original); found {
+				t.Fatal("returning resident remained inactive")
+			}
+			if got := monsterCount(engine); got != 2 {
+				t.Fatalf("returning footprint did not suppress overlapping candidate: monsters=%d want=2", got)
+			}
+			if got := monsterEntity(t, engine, returningID); got != original {
+				t.Fatal("returning resident was recreated")
+			}
+			created := monsterEntity(t, engine, "level:3:room:fresh:monster:1")
+			position, _ := positions.Get(created)
+			x, _ := position.Get("x")
+			y, _ := position.Get("y")
+			if x != float64(25) || y != float64(10) {
+				t.Fatalf("fresh resident point=(%v,%v), want (25,10)", x, y)
+			}
+		})
+	}
+}

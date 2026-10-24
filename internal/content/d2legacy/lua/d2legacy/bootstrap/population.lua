@@ -454,11 +454,53 @@ local function restore_room(room, entities, structural)
     room.inactive_residents = {}
 end
 
+local function include_footprint(entity, occupied)
+    local point = ecs.get(entity, "d2legacy.world.position")
+    local location = ecs.get(entity, "d2legacy.world.location")
+    local collider = ecs.get(entity, "d2legacy.world.collider")
+    if point and location and collider then
+        occupied[#occupied + 1] = {
+            x = point:get("x"),
+            y = point:get("y"),
+            level_id = location:get("level_id"),
+            radius = collider:get("radius"),
+        }
+    end
+end
+
+local function include_returning_footprints(plan, active, entities, occupied)
+    if plan.level_id ~= 3 then
+        return
+    end
+    local returning = {}
+    for _, room in ipairs(plan.rooms) do
+        if active[room.id] and not room.active then
+            local residents = {}
+            for _, resident in ipairs(room.inactive_residents or {}) do
+                residents[resident.id] = true
+            end
+            returning[room.id] = residents
+        end
+    end
+    for _, entity in ipairs(entities) do
+        local resident = ecs.get(entity, "d2legacy.world.room_resident")
+        if resident and resident:get("level_id") == plan.level_id and ecs.get(entity, "d2legacy.world.inactive") then
+            local residents = returning[resident:get("room_id")]
+            if residents and residents[resident:get("id")] then
+                include_footprint(entity, occupied)
+            end
+        end
+    end
+end
+
 local function activate_zone(context, plan, entities, structural, occupied)
     -- Movement runs after this phase, so synchronize the result of the prior
     -- fixed tick before deciding which rooms leave the active window.
     sync_resident_rooms(plan, entities)
     local active = include_neighbors(containing_rooms(plan, entities), plan.links)
+    -- Structural restoration publishes after this update. Reserve every
+    -- returning footprint before the first fresh room, regardless of room order.
+    include_returning_footprints(plan, active, entities, occupied)
     local difficulty = game_rules.difficulty()
     local level, candidates, rarity
     local changed = false
@@ -508,20 +550,12 @@ local function activate(context, entities, structural)
     if not plan or not plan.installed then
         return
     end
-    -- Query all active colliders, including entities without room residency.
-    -- This list also receives creates queued before structural publication.
+    -- Include active colliders without room residency as well as population
+    -- residents. The list also receives returning residents and queued creates.
     local occupied = {}
     for _, entity in ipairs(entities) do
-        local point = ecs.get(entity, "d2legacy.world.position")
-        local location = ecs.get(entity, "d2legacy.world.location")
-        local collider = ecs.get(entity, "d2legacy.world.collider")
-        if point and location and collider and not ecs.get(entity, "d2legacy.world.inactive") then
-            occupied[#occupied + 1] = {
-                x = point:get("x"),
-                y = point:get("y"),
-                level_id = location:get("level_id"),
-                radius = collider:get("radius"),
-            }
+        if not ecs.get(entity, "d2legacy.world.inactive") then
+            include_footprint(entity, occupied)
         end
     end
     local changed = false
