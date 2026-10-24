@@ -212,6 +212,7 @@ func TestLegacyEntryWorldSnapshotComposesWithoutColdPlains(t *testing.T) {
 	if len(plan.Zones) != 1 || plan.Zones[0].Level != 2 {
 		t.Fatalf("v1 topology population = %#v, want level 2 alone", plan.Zones)
 	}
+
 	if len(populationResidentIDs(t, restored, 8, false)) != 0 {
 		t.Fatal("v1 topology created Den residents")
 	}

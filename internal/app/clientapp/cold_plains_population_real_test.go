@@ -81,6 +81,7 @@ func TestLiveColdPlainsOrdinaryPopulation(t *testing.T) {
 	if len(before.Zones) != 4 {
 		t.Fatalf("initial population zones=%d, want 4", len(before.Zones))
 	}
+
 	if before.Zones[0].Created == 0 ||
 		before.Zones[1].Created != 0 || before.Zones[2].Created != 0 || before.Zones[3].Created != 0 {
 		t.Fatalf("initial population created counts=%v",

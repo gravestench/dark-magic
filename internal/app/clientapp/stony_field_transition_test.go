@@ -452,11 +452,12 @@ func assertStonyLegacyPopulationRecovery(t *testing.T, version int) {
 	legacy := d2mapgen.EntryWorld{Version: 2, Zones: map[int]*worldgen.Zone{
 		1: generated.Zones[1], 2: generated.Zones[2], 3: plains}, Seams: generated.Seams[:2]}
 
-	if version == 1 {
+	switch version {
+	case 1:
 		legacy.Version = 1
 		delete(legacy.Zones, 3)
 		legacy.Seams = legacy.Seams[:1]
-	} else if version == 3 {
+	case 3:
 		legacy.Version = 3
 		legacy.Zones[3] = generated.Zones[3]
 		legacy.Zones[4] = generated.Zones[4]
@@ -496,6 +497,7 @@ func assertStonyLegacyPopulationRecovery(t *testing.T, version int) {
 		restored.app.entryWorldChecksum != bundle.TopologyChecksum {
 		t.Fatal("legacy recovery changed its outdoor topology or gained a Den cave")
 	}
+
 	if version < 3 && restored.app.gameWorlds[4] != nil {
 		t.Fatal("legacy recovery added Stony Field")
 	}
@@ -509,6 +511,7 @@ func assertStonyLegacyPopulationRecovery(t *testing.T, version int) {
 	if len(plan.Zones) != version {
 		t.Fatalf("legacy v%d plan has %d zones, want %d", version, len(plan.Zones), version)
 	}
+
 	for index, zone := range plan.Zones {
 		if zone.Level != index+2 {
 			t.Fatalf("legacy v%d plan zone %d has level %d, want %d", version, index, zone.Level, index+2)
@@ -518,6 +521,7 @@ func assertStonyLegacyPopulationRecovery(t *testing.T, version int) {
 	if len(populationResidentIDs(t, restored, 8, false)) != 0 {
 		t.Fatal("legacy recovery added Den residents")
 	}
+
 	if version < 3 && len(populationResidentIDs(t, restored, 4, false)) != 0 {
 		t.Fatal("legacy recovery added level-4 residents")
 	}
