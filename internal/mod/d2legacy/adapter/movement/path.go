@@ -24,6 +24,7 @@ func (source *MovementSource) SetNavigation(world *gameworld.Map) {
 	}
 
 	source.navigation = world
+	source.hasAuthenticated = false
 	source.resetAcceptedPath()
 	// Pointer coordinates belong to the previous map. Retaining them could replan a town click in wilderness space.
 	source.control.clearMoveTarget()
@@ -49,16 +50,31 @@ func (source *MovementSource) pathWaypoint(target *MoveTarget) *MoveTarget {
 		source.updateRouteEndpoint(target)
 	}
 
-	source.consumeReachedWaypoints(current)
+	progress, authenticated := source.routeProgress(current)
+	source.consumeReachedWaypoints(progress)
 
 	if len(source.path) <= 1 {
 		source.control.clearMoveTarget()
 		source.resetAcceptedPath()
 
+		if authenticated {
+			return nil
+		}
+
 		return stationaryTarget(current)
 	}
 
 	return &MoveTarget{X: source.path[1].X, Y: source.path[1].Y}
+}
+
+// routeProgress uses the authenticated local position only when it describes this controlled player and world.
+func (source *MovementSource) routeProgress(presented gameworld.Point) (gameworld.Point, bool) {
+	if source.hasAuthenticated && source.authenticatedPosition.player == source.player &&
+		source.authenticatedPosition.level > 0 && source.authenticatedPosition.level == source.controlledLevel() {
+		return source.authenticatedPosition.position, true
+	}
+
+	return presented, false
 }
 
 // playerPathOrigin locates the controlled entity and includes its collision radius in every path request.
