@@ -64,6 +64,51 @@ return test.suite({
                 equal(layout.levels[2].recipe.world, snapshot.maps[2].map)
             end),
         }),
+        test.case("fourth_zone_aligns_and_interleaves_translated_art_in_either_active_map", {
+            test.run(function()
+                local helper = require("d2legacy.presentation.outdoor_seams")
+                local snapshot, seams = fixture()
+                snapshot.maps[4] = entry(4, 800, 1920, 1120)
+                seams[#seams + 1] = {
+                    source_level = 3,
+                    destination_level = 4,
+                    source_x = 40,
+                    source_y = 30,
+                    arrival_x = 0,
+                    arrival_y = 0,
+                }
+                seams[#seams + 1] = {
+                    source_level = 4,
+                    destination_level = 3,
+                    source_x = 0,
+                    source_y = 0,
+                    arrival_x = 40,
+                    arrival_y = 30,
+                }
+                for _, active in ipairs({ 3, 4 }) do
+                    snapshot.active_level = active
+                    local layout = helper.layout(snapshot, seams)
+                    local x, y = helper.pixel(4, 800, 168, layout)
+                    equal(x, 960)
+                    equal(y, 1288)
+                    x, y = helper.pixel(3, 800, 728, layout)
+                    equal(x, 960)
+                    equal(y, 1288)
+                    equal(layout.bounds.max_x, 2080)
+                    equal(layout.bounds.max_y, 2240)
+                    -- A Plains wall at 1900 and Stony wall at 500 share
+                    -- world depth 3300; a Stony entity at 505 is between
+                    -- those walls and a Plains wall at 1910.
+                    equal(helper.depth(3, 1900, layout), 3300)
+                    equal(helper.depth(4, 500, layout), 3300)
+                    equal(helper.depth(4, 505, layout), 3305)
+                    equal(helper.depth(3, 1910, layout), 3310)
+                    for _, depth in ipairs({ -1000002, -1000001, -1000000, 1000000 }) do
+                        equal(helper.depth(4, depth, layout), depth)
+                    end
+                end
+            end),
+        }),
         test.case("placement_is_stable_across_map_order_and_active_level", {
             test.run(function()
                 local helper = require("d2legacy.presentation.outdoor_seams")
