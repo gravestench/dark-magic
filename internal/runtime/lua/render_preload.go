@@ -45,6 +45,7 @@ type AssetPreloadStatus struct {
 type assetPreloadJob struct {
 	total, completed, failed int
 	errors                   []string
+	released                 bool
 }
 
 type assetPreloader struct {
@@ -144,6 +145,9 @@ func (p *assetPreloader) Start(requests []AssetPreloadRequest) uint64 {
 						fmt.Sprintf("%s %q: %v", request.Kind, request.Path, err),
 					)
 				}
+				if job.released && job.completed == job.total {
+					delete(p.jobs, id)
+				}
 				p.mu.Unlock()
 			}
 		}()
@@ -166,7 +170,7 @@ func (p *assetPreloader) Status(id uint64) (AssetPreloadStatus, bool) {
 	defer p.mu.Unlock()
 
 	job, ok := p.jobs[id]
-	if !ok {
+	if !ok || job.released {
 		return AssetPreloadStatus{}, false
 	}
 
@@ -189,17 +193,21 @@ func (p *assetPreloader) Pending() int {
 	return pending
 }
 
-// Forget owns the forget step at this boundary, keeping its side effects and failure point explicit to callers.
+// Forget releases caller ownership immediately. Unfinished jobs remain internal
+// until their final worker completes so Pending still accounts for their work.
 func (p *assetPreloader) Forget(id uint64) bool {
 	p.mu.Lock()
 	defer p.mu.Unlock()
 
 	job, ok := p.jobs[id]
-	if !ok || job.completed != job.total {
+	if !ok || job.released {
 		return false
 	}
 
-	delete(p.jobs, id)
+	job.released = true
+	if job.completed == job.total {
+		delete(p.jobs, id)
+	}
 
 	return true
 }

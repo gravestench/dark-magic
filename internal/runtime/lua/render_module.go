@@ -2297,7 +2297,7 @@ func (r *RenderCapability) Module() Module {
 				),
 				"preload_release": commandHelp(
 					"engine.render.preload_release(job)",
-					"Release bookkeeping for a completed preload job.",
+					"Release a pending or completed preload job; unfinished work continues.",
 				),
 				"ds1_dependencies": commandHelp(
 					"engine.render.ds1_dependencies(map)",
