@@ -136,7 +136,9 @@ func TestRestorePreparedV1KeepsTwoZonesReal(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(prepared.Worlds) != 2 || len(prepared.Zones) != 2 || len(prepared.Seams) != 1 || prepared.Worlds[3] != nil || prepared.Worlds[4] != nil {
+
+	if len(prepared.Worlds) != 2 || len(prepared.Zones) != 2 || len(prepared.Seams) != 1 ||
+		prepared.Worlds[3] != nil || prepared.Worlds[4] != nil {
 		t.Fatalf("v1 restore gained a wilderness: maps=%d zones=%d seams=%d",
 			len(prepared.Worlds), len(prepared.Zones), len(prepared.Seams))
 	}

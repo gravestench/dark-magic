@@ -93,15 +93,19 @@ func TestStonyFieldPreparedSeamReal(t *testing.T) {
 					t.Fatalf("level %d missing population geometry", index+2)
 				}
 			}
-			t.Logf("owned seed 17 difficulty %d: four maps, three seams, safe 3/4 routes and reciprocal alignment executed", difficulty)
+
+			t.Logf("owned seed 17 difficulty %d: four maps, three seams, safe 3/4 routes and reciprocal alignment executed",
+				difficulty)
 		})
 	}
 }
 
+// assertOwnedSeamPoint checks that a trigger or arrival lies on walkable materialized collision.
 func assertOwnedSeamPoint(t *testing.T, world *gameworld.Map, x, y float64) {
 	t.Helper()
 	flags, found := world.FlagsAt(gameworld.CollisionCell(x), gameworld.CollisionCell(y))
-	if !found || flags.Blocked() || x < 0 || y < 0 || x >= float64(world.WidthSubtiles) || y >= float64(world.HeightSubtiles) {
+	if !found || flags.Blocked() || x < 0 || y < 0 ||
+		x >= float64(world.WidthSubtiles) || y >= float64(world.HeightSubtiles) {
 		t.Fatalf("seam point (%v,%v) is blocked or outside materialized map", x, y)
 	}
 }

@@ -132,6 +132,7 @@ function M.generated_seam(blood_moor, plains)
     return generated_seam(blood_moor, plains, exit, entry)
 end
 
+-- Bind the unique Cold Plains exit and Stony Field entry into the reciprocal outdoor seam.
 function M.stony_field_seam(plains, stony)
     assert(plains.request and plains.request.level_id == 3,
         "d2legacy entry world requires level 3 first")

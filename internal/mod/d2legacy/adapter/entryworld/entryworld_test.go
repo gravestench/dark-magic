@@ -261,7 +261,10 @@ func TestPopulationDataOrdersAdmittedLevelsAndRejectsMissingMap(t *testing.T) {
 			t.Fatalf("admitted population geometry=%#v", room)
 		}
 	}
-	for _, bad := range []string{"map", "zone", "duplicate", "identity", "level-four-map", "level-four-zone", "level-four-identity"} {
+
+	for _, bad := range []string{
+		"map", "zone", "duplicate", "identity", "level-four-map", "level-four-zone", "level-four-identity",
+	} {
 		t.Run(bad, func(t *testing.T) {
 			p := populationPreparedFixture(t)
 			switch bad {

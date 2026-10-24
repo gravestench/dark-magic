@@ -248,6 +248,14 @@ func validateEntryWorldTopology(world EntryWorld, levelCount int) error {
 		if !seamTileInside(world.Zones[seam.SecondLevel], seam.SecondTileX, seam.SecondTileY) {
 			return fmt.Errorf("d2legacy entry world: second seam tile is outside zone %d", seam.SecondLevel)
 		}
+		// V3 preserves Lua's unique-role binding even when duplicate endpoints use different IDs.
+		// Older envelopes retain their original ID-based acceptance contract.
+		if world.Version == 3 {
+			if !seamRoleIsUnique(world.Zones[seam.SecondLevel], seam.SecondWarpRole) ||
+				(seam.FirstGenerated && !seamRoleIsUnique(world.Zones[seam.FirstLevel], seam.FirstWarpRole)) {
+				return fmt.Errorf("d2legacy entry world: seam %d has an ambiguous endpoint role", index)
+			}
+		}
 		if !seamMatchesWarp(world.Zones[seam.SecondLevel], seam.SecondWarpID, seam.SecondWarpRole,
 			seam.FirstLevel, seam.SecondDirection, seam.SecondTileX, seam.SecondTileY) {
 			return fmt.Errorf("d2legacy entry world: seam %d does not match admitted second-zone warp", index)
@@ -258,6 +266,19 @@ func validateEntryWorldTopology(world EntryWorld, levelCount int) error {
 		}
 	}
 	return nil
+}
+
+// seamRoleIsUnique binds a semantic endpoint independently of its numeric ID, destination, or coordinates.
+func seamRoleIsUnique(zone *worldgen.Zone, role string) bool {
+	matches := 0
+
+	for _, warp := range zone.Warps() {
+		if warp.Role == role {
+			matches++
+		}
+	}
+
+	return matches == 1
 }
 
 // seamMatchesWarp rejects stale or ambiguous warp claims after a snapshot has been restored.

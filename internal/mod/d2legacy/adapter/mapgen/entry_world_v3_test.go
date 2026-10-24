@@ -33,12 +33,14 @@ func TestEntryWorldV3Generation(t *testing.T) {
 		}
 		for level := 1; level <= 4; level++ {
 			zone := world.Zones[level]
-			if zone == nil || zone.Request().LevelID != level || zone.Request().Seed != 42 || int(zone.Request().Difficulty) != difficulty {
+			if zone == nil || zone.Request().LevelID != level || zone.Request().Seed != 42 ||
+				int(zone.Request().Difficulty) != difficulty {
 				t.Fatalf("invalid level %d: %#v", level, zone)
 			}
 		}
 		for index, seam := range world.Seams {
-			if seam.FirstLevel != index+1 || seam.SecondLevel != index+2 || seam.FirstGenerated != (index > 0) || seam.FirstDirection != "east" || seam.SecondDirection != "west" {
+			if seam.FirstLevel != index+1 || seam.SecondLevel != index+2 || seam.FirstGenerated != (index > 0) ||
+				seam.FirstDirection != "east" || seam.SecondDirection != "west" {
 				t.Fatalf("invalid seam %d: %#v", index, seam)
 			}
 		}
@@ -110,7 +112,8 @@ func TestEntryWorldV3RejectsTopologyDrift(t *testing.T) {
 		{"generated town", func(s *envelope) { s.Seams[0].FirstGenerated = true }},
 	}
 	for index := 0; index < 3; index++ {
-		tests = append(tests, mutation{fmt.Sprintf("invalid second role seam %d", index), func(s *envelope) { s.Seams[index].SecondWarpRole = "wrong" }})
+		tests = append(tests, mutation{fmt.Sprintf("invalid second role seam %d", index),
+			func(s *envelope) { s.Seams[index].SecondWarpRole = "wrong" }})
 	}
 	for _, test := range []struct {
 		name string
@@ -137,7 +140,8 @@ func TestEntryWorldV3RejectsTopologyDrift(t *testing.T) {
 		{"overlapping reverse trigger", func(s *SeamSpec) { s.ArrivalInset = s.TriggerRadius }},
 	} {
 		for index := 1; index < 3; index++ {
-			tests = append(tests, mutation{fmt.Sprintf("%s seam %d", test.name, index), func(s *envelope) { test.edit(&s.Seams[index]) }})
+			tests = append(tests, mutation{fmt.Sprintf("%s seam %d", test.name, index),
+				func(s *envelope) { test.edit(&s.Seams[index]) }})
 		}
 	}
 	for _, test := range []struct {
@@ -167,6 +171,113 @@ func TestEntryWorldV3RejectsTopologyDrift(t *testing.T) {
 			restored, err := RestoreEntryWorld(bad)
 			if err == nil || len(restored.Zones) != 0 || len(restored.Seams) != 0 {
 				t.Fatalf("corrupt topology published: world=%#v err=%v", restored, err)
+			}
+		})
+	}
+}
+
+// Different numeric IDs must not make an ambiguous generated seam role restorable.
+func TestEntryWorldV3RejectsDuplicateEndpointRoles(t *testing.T) {
+	world, err := GenerateEntryWorld(t.Context(), content.D2Legacy(), entryWorldV3Records(), 42, 0)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	encoded, err := world.Snapshot()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	for _, endpoint := range []struct {
+		level int
+		role  string
+	}{
+		{2, "town-entry"}, {2, "next-level-exit"}, {3, "blood-moor-entry"},
+		{3, "stony-field-exit"}, {4, "cold-plains-entry"},
+	} {
+		for _, drift := range []string{"same facts", "different coordinates", "different destination"} {
+			t.Run(fmt.Sprintf("level %d %s/%s", endpoint.level, endpoint.role, drift), func(t *testing.T) {
+				var snapshot entryWorldSnapshotV3
+				if err := json.Unmarshal(encoded, &snapshot); err != nil {
+					t.Fatal(err)
+				}
+
+				zone := &snapshot.Zones[endpoint.level-1]
+				found := false
+
+				for _, warp := range zone.Warps {
+					if warp.Role != endpoint.role {
+						continue
+					}
+
+					found = true
+
+					warp.ID = 99
+
+					switch drift {
+					case "different coordinates":
+						warp.Y++
+					case "different destination":
+						warp.DestinationLevel = 99
+					}
+
+					zone.Warps = append(zone.Warps, warp)
+
+					break
+				}
+
+				if !found {
+					t.Fatal("fixture lacks bound endpoint")
+				}
+
+				bad, err := json.Marshal(snapshot)
+				if err != nil {
+					t.Fatal(err)
+				}
+
+				restored, err := RestoreEntryWorld(bad)
+				if err == nil || len(restored.Zones) != 0 || len(restored.Seams) != 0 {
+					t.Fatalf("ambiguous endpoint published: version=%d err=%v", restored.Version, err)
+				}
+			})
+		}
+	}
+}
+
+// Role uniqueness is a v3 contract; older saved definitions retain their prior acceptance behavior.
+func TestEntryWorldLegacyRetainsDuplicateEndpointRoles(t *testing.T) {
+	for _, version := range []int{1, 2} {
+		t.Run(fmt.Sprintf("v%d", version), func(t *testing.T) {
+			world, err := RestoreEntryWorld(legacyEntryWorldBytes(t, version))
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			definition := world.Zones[2].Definition()
+			duplicate := definition.Warps[0]
+			duplicate.ID = 99
+			duplicate.Y++
+			duplicate.DestinationLevel = 99
+			definition.Warps = append(definition.Warps, duplicate)
+
+			world.Zones[2], err = worldgen.NewZone(definition)
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			encoded, err := world.Snapshot()
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			restored, err := RestoreEntryWorld(encoded)
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			again, err := restored.Snapshot()
+			if err != nil || !bytes.Equal(encoded, again) {
+				t.Fatalf("legacy duplicate role changed bytes: %v", err)
 			}
 		})
 	}

@@ -121,7 +121,7 @@ func TestEntryWorldV2UsesOppositeColdPlainsEdge(t *testing.T) {
 }
 
 // The pinned v2 topology retains its original three levels and reciprocal second seam.
-func TestEntryWorldV2SelectsUniqueBloodMoorExit(t *testing.T) {
+func TestEntryWorldV2RestoresPinnedThreeZoneTopology(t *testing.T) {
 	difficulty := 0
 	world, err := RestoreEntryWorld(legacyEntryWorldBytes(t, 2))
 	if err != nil {

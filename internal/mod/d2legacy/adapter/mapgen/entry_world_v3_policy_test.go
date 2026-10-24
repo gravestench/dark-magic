@@ -231,7 +231,9 @@ func TestEntryWorldV3PolicyBindsAdmittedEndpoints(t *testing.T) {
 		"warps": []any{map[string]any{"id": float64(42), "role": "cold-plains-entry", "direction": "north",
 			"x": float64(17), "y": float64(0), "destination_level": float64(3)}},
 	}
-	value, err := modruntime.Call(t.Context(), runtime.lua, "d2legacy.mapgen.entry_world", "stony_field_seam", plains, stony)
+
+	value, err := modruntime.Call(t.Context(), runtime.lua,
+		"d2legacy.mapgen.entry_world", "stony_field_seam", plains, stony)
 	if err != nil {
 		t.Fatal(err)
 	}

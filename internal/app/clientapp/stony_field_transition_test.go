@@ -6,6 +6,7 @@ import (
 	"errors"
 	"math"
 	"reflect"
+	"strings"
 	"testing"
 	"time"
 
@@ -277,7 +278,9 @@ func TestStonyFieldRecoveryRejectsCorruptTopology(t *testing.T) {
 
 	beforeMap, beforeChecksum := f.app.currentWorld().Map, f.app.entryWorldChecksum
 
-	for _, field := range []string{"seam", "zone"} {
+	for _, field := range []string{"seam", "zone", "duplicate plains", "duplicate stony",
+		"duplicate plains coordinates", "duplicate stony coordinates",
+		"duplicate plains destination", "duplicate stony destination"} {
 		t.Run(field, func(t *testing.T) {
 			var snapshot struct {
 				Version int                   `json:"version"`
@@ -290,8 +293,38 @@ func TestStonyFieldRecoveryRejectsCorruptTopology(t *testing.T) {
 
 			if field == "seam" {
 				snapshot.Seams[2].SecondWarpRole = "blood-moor-entry"
-			} else {
+			} else if field == "zone" {
 				snapshot.Zones[2], snapshot.Zones[3] = snapshot.Zones[3], snapshot.Zones[2]
+			} else {
+				zone, role := &snapshot.Zones[2], "stony-field-exit"
+				if strings.Contains(field, "stony") {
+					zone, role = &snapshot.Zones[3], "cold-plains-entry"
+				}
+
+				found := false
+
+				for _, warp := range zone.Warps {
+					if warp.Role != role {
+						continue
+					}
+
+					found = true
+
+					warp.ID = 99
+					if strings.Contains(field, "coordinates") {
+						warp.Y++
+					} else if strings.Contains(field, "destination") {
+						warp.DestinationLevel = 99
+					}
+
+					zone.Warps = append(zone.Warps, warp)
+
+					break
+				}
+
+				if !found {
+					t.Fatal("fixture lacks bound endpoint")
+				}
 			}
 
 			corrupt := bundle
@@ -301,8 +334,9 @@ func TestStonyFieldRecoveryRejectsCorruptTopology(t *testing.T) {
 				t.Fatal(err)
 			}
 
-			if err := f.app.restoreOfflineEntryWorldRecovery(corrupt); err == nil {
-				t.Fatal("corrupt v3 topology restored")
+			if err := f.app.restoreOfflineEntryWorldRecovery(corrupt); err == nil ||
+				!strings.Contains(err.Error(), "invalid topology") {
+				t.Fatalf("corrupt v3 topology must reject before checksum or session recovery: %v", err)
 			}
 
 			after, err := f.app.offlineSession.CanonicalCheckpoint()

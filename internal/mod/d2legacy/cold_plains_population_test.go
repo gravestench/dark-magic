@@ -892,7 +892,9 @@ func TestStonyFieldPopulationItemLifecycleWithoutRandomDraws(t *testing.T) {
 			if _, found := requests.Get(item); found {
 				t.Fatal("resolved attachment request remains")
 			}
-			value, err := modruntime.Call(t.Context(), a.Runtime, "d2legacy.bootstrap.population", "resident_at", "later-item", 4, 10, 10)
+
+			value, err := modruntime.Call(t.Context(), a.Runtime,
+				"d2legacy.bootstrap.population", "resident_at", "later-item", 4, 10, 10)
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -960,7 +962,11 @@ func TestStonyFieldPopulationPreservesLevelTwoAndThree(t *testing.T) {
 						id := fmt.Sprintf("level:%d:room:same:monster:%d", entry.level, member)
 						entity := monsterEntity(t, e, id)
 						got[id] = map[string]map[string]any{}
-						for _, name := range []string{"d2legacy.monster.identity", "d2legacy.monster.stats", "d2legacy.world.position", "d2legacy.world.location"} {
+
+						for _, name := range []string{
+							"d2legacy.monster.identity", "d2legacy.monster.stats",
+							"d2legacy.world.position", "d2legacy.world.location",
+						} {
 							store, _ := akara.GetDynamicStore(e.World(), name)
 							component, _ := store.Get(entity)
 							snapshot, err := component.Snapshot()

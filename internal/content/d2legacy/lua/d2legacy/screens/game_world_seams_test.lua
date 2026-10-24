@@ -498,6 +498,7 @@ local function stony_approach_case(name, level, x)
             test.expect(f.at_trigger()):is_false()
             test.expect(f.scene.world_level_id):equals(level)
             local admitted = {}
+            -- Check visible border coverage, retained terrain, and depth ordering under the shared camera.
             local function assert_border()
                 f:assert_join(3, 4)
                 local by_level, resident = { [3] = {}, [4] = {} }, 0
