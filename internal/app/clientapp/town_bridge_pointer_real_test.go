@@ -114,9 +114,11 @@ func newBridgePointerClient(t *testing.T, hosted bool, spawn ...string) (*applic
 	options.StartScene = "game_world"
 	options.FixtureCharacters = 1
 	options.FixtureWorldSpawn = "seam"
+
 	if len(spawn) > 0 {
 		options.FixtureWorldSpawn = spawn[0]
 	}
+
 	app := newApplication(options)
 	input := &bridgeTestInput{}
 
@@ -320,6 +322,7 @@ func TestTownBridgePointerRoundTripConnected(t *testing.T) {
 // testTownBridgePointerBeyondEastLip checks a normal outside-map click and its return trip.
 func testTownBridgePointerBeyondEastLip(t *testing.T, hosted bool) {
 	t.Helper()
+
 	app, input := newBridgePointerClient(t, hosted)
 	for range 10 {
 		advanceBridgePointerFrame(t, app)
@@ -328,13 +331,16 @@ func testTownBridgePointerBeyondEastLip(t *testing.T, hosted bool) {
 	seam := app.transitionSeams[0]
 	town := app.currentWorld().Map
 	target := gameworld.Point{X: float64(town.WidthSubtiles + 1), Y: seam.First.Y}
+
 	x, y, present := app.controlledPlayerPosition()
 	if !present {
 		t.Fatal("bridge player was not admitted")
 	}
+
 	if math.Hypot(x-seam.First.X, y-seam.First.Y) <= seam.TriggerRadius {
 		t.Fatal("bridge fixture began inside the transition trigger")
 	}
+
 	cursor := town.Coordinates().SubtileToScreen(target, gameworld.Point{X: x, Y: y},
 		gameworld.Point{X: 400, Y: 330})
 	if target.X < float64(town.WidthSubtiles) || cursor.X < 0 || cursor.X >= 800 ||
@@ -349,6 +355,7 @@ func testTownBridgePointerBeyondEastLip(t *testing.T, hosted bool) {
 	for range 10 {
 		advanceBridgePointerFrame(t, app)
 	}
+
 	clickBridgeEndpoint(t, app, input, gameworld.Point{X: seam.Second.X, Y: seam.Second.Y})
 	awaitBridgeLevel(t, app, 1)
 	assertBridgePointerLevel(t, app, 1, seam.First)
@@ -369,16 +376,20 @@ func clickAndAwaitBridgePosition(t *testing.T, app *application, input *bridgeTe
 	target gameworld.Point, frames int) {
 	t.Helper()
 	clickBridgeEndpoint(t, app, input, target)
+
 	for range frames {
 		if app.network.Connected() {
 			time.Sleep(40 * time.Millisecond)
 		}
+
 		advanceBridgePointerFrame(t, app)
+
 		x, y, present := app.controlledPlayerPosition()
 		if present && math.Hypot(x-target.X, y-target.Y) < 0.5 {
 			return
 		}
 	}
+
 	x, y, _ := app.controlledPlayerPosition()
 	t.Fatalf("normal pointer route stopped at (%.2f,%.2f), target %v", x, y, target)
 }
@@ -386,6 +397,7 @@ func clickAndAwaitBridgePosition(t *testing.T, app *application, input *bridgeTe
 // testTownBridgePointerFromEntry walks from normal admission with ordinary scene clicks.
 func testTownBridgePointerFromEntry(t *testing.T, hosted bool) {
 	t.Helper()
+
 	app, input := newBridgePointerClient(t, hosted, "entry")
 	for range 10 {
 		advanceBridgePointerFrame(t, app)
@@ -393,17 +405,21 @@ func testTownBridgePointerFromEntry(t *testing.T, hosted bool) {
 
 	seam := app.transitionSeams[0]
 	town := app.currentWorld().Map
+
 	x, y, present := app.controlledPlayerPosition()
 	if !present {
 		t.Fatal("normal character was not admitted")
 	}
+
 	approach := gameworld.Point{X: seam.First.X - 6, Y: seam.First.Y}
+
 	path, err := town.FindPath(gameworld.PathRequest{
 		Start: gameworld.Point{X: x, Y: y}, Goal: approach, Radius: 1,
 	})
 	if err != nil {
 		t.Fatalf("normal town spawn cannot route to bridge: %v", err)
 	}
+
 	if len(path) <= 96 {
 		t.Fatalf("normal town route is unexpectedly short: %d", len(path))
 	}
@@ -411,6 +427,7 @@ func testTownBridgePointerFromEntry(t *testing.T, hosted bool) {
 	// The final direct approach avoids a selectable beside the bridge.
 	for _, next := range []int{12, 24, 36, 48, 60, 72, 80, 88, 96} {
 		clickAndAwaitBridgePosition(t, app, input, path[next], 200)
+
 		for range 10 {
 			advanceBridgePointerFrame(t, app)
 		}
@@ -422,9 +439,11 @@ func testTownBridgePointerFromEntry(t *testing.T, hosted bool) {
 	clickBridgeEndpoint(t, app, input, gameworld.Point{X: float64(town.WidthSubtiles + 1), Y: seam.First.Y})
 	awaitBridgeLevel(t, app, 2)
 	assertBridgePointerLevel(t, app, 2, seam.Second)
+
 	for range 10 {
 		advanceBridgePointerFrame(t, app)
 	}
+
 	clickBridgeEndpoint(t, app, input, gameworld.Point{X: seam.Second.X, Y: seam.Second.Y})
 	awaitBridgeLevel(t, app, 1)
 	assertBridgePointerLevel(t, app, 1, seam.First)
@@ -446,24 +465,33 @@ func TestTownBridgePointerUnrelatedBorderStaysInTown(t *testing.T) {
 	for range 10 {
 		advanceBridgePointerFrame(t, app)
 	}
+
 	town := app.currentWorld().Map
+
 	x, y, present := app.controlledPlayerPosition()
 	if !present {
 		t.Fatal("bridge player was not admitted")
 	}
+
 	target := gameworld.Point{X: float64(town.WidthSubtiles + 1), Y: y - 12}
+
 	cursor := town.Coordinates().SubtileToScreen(target, gameworld.Point{X: x, Y: y},
 		gameworld.Point{X: 400, Y: 330})
 	if cursor.X < 0 || cursor.X >= 800 || cursor.Y < 0 || cursor.Y >= 480 {
 		t.Fatalf("unrelated border target is outside gameplay viewport: %v", cursor)
 	}
+
 	input.frame = inputstate.Frame{CursorX: cursor.X, CursorY: cursor.Y,
 		Actions: map[string]inputstate.ActionState{"pointer_primary": {Pressed: true, Down: true}}}
+
 	advanceBridgePointerFrame(t, app)
+
 	input.frame = inputstate.Frame{CursorX: cursor.X, CursorY: cursor.Y}
+
 	for range 100 {
 		advanceBridgePointerFrame(t, app)
 	}
+
 	if app.activeWorldLevel != 1 || app.playerControl.HasMoveTarget() {
 		t.Fatalf("non-exit border click changed level to %d or retained impossible route", app.activeWorldLevel)
 	}
@@ -475,31 +503,42 @@ func TestTownBridgeHeldPointerBeyondEastLip(t *testing.T) {
 	for range 10 {
 		advanceBridgePointerFrame(t, app)
 	}
+
 	seam := app.transitionSeams[0]
 	town := app.currentWorld().Map
+
 	x, y, present := app.controlledPlayerPosition()
 	if !present {
 		t.Fatal("bridge player was not admitted")
 	}
+
 	cursor := town.Coordinates().SubtileToScreen(
 		gameworld.Point{X: float64(town.WidthSubtiles + 1), Y: seam.First.Y},
 		gameworld.Point{X: x, Y: y}, gameworld.Point{X: 400, Y: 330})
 	if cursor.X < 0 || cursor.X >= 800 || cursor.Y < 0 || cursor.Y >= 480 {
 		t.Fatalf("beyond-lip held cursor is outside gameplay viewport: %v", cursor)
 	}
+
 	input.frame = inputstate.Frame{CursorX: cursor.X, CursorY: cursor.Y,
 		Actions: map[string]inputstate.ActionState{"pointer_primary": {Pressed: true, Down: true}}}
+
 	advanceBridgePointerFrame(t, app)
+
 	input.frame = inputstate.Frame{CursorX: cursor.X, CursorY: cursor.Y,
 		Actions: map[string]inputstate.ActionState{"pointer_primary": {Down: true}}}
+
 	for range 200 {
 		advanceBridgePointerFrame(t, app)
+
 		if app.activeWorldLevel == 2 {
 			input.frame = inputstate.Frame{}
+
 			assertBridgePointerLevel(t, app, 2, seam.Second)
+
 			return
 		}
 	}
+
 	x, y, _ = app.controlledPlayerPosition()
 	t.Fatalf("held beyond-lip click stopped in town at (%.2f,%.2f)", x, y)
 }
@@ -515,48 +554,61 @@ func TestTownBridgeNorthLaneCrossesOffline(t *testing.T) {
 	town := app.currentWorld().Map
 	start := gameworld.Point{X: 269, Y: 82}
 	outer := gameworld.Point{X: float64(town.WidthSubtiles - 2), Y: 82}
+
 	path, err := town.FindPath(gameworld.PathRequest{Start: start, Goal: outer, Radius: 1})
 	if err != nil {
 		t.Fatalf("north bridge lane is not walkable: %v", err)
 	}
+
 	for _, point := range path {
 		if point.Y != 82 {
 			t.Fatalf("north bridge route left its lane at %v", point)
 		}
 	}
+
 	if math.Hypot(start.X-seam.First.X, start.Y-seam.First.Y) <= seam.TriggerRadius {
 		t.Fatal("north bridge lane begins inside the transition trigger")
 	}
+
 	if err := app.playerControl.SetMoveTarget(start.X, start.Y); err != nil {
 		t.Fatal(err)
 	}
+
 	for range 200 {
 		advanceBridgePointerFrame(t, app)
+
 		x, y, present := app.controlledPlayerPosition()
 		if present && math.Hypot(x-start.X, y-start.Y) < 0.35 {
 			break
 		}
 	}
+
 	x, y, present := app.controlledPlayerPosition()
 	if !present || math.Hypot(x-start.X, y-start.Y) >= 0.35 || app.activeWorldLevel != 1 {
 		t.Fatalf("north lane setup stopped at (%.2f,%.2f), level %d", x, y, app.activeWorldLevel)
 	}
 
 	clickBridgeEndpoint(t, app, input, outer)
+
 	maxX, minDistance := x, math.Hypot(x-seam.First.X, y-seam.First.Y)
+
 	for range 200 {
 		advanceBridgePointerFrame(t, app)
+
 		if app.activeWorldLevel == 2 {
 			assertBridgePointerLevel(t, app, 2, seam.Second)
 			return
 		}
+
 		x, y, _ = app.controlledPlayerPosition()
 		maxX = math.Max(maxX, x)
+
 		minDistance = math.Min(minDistance, math.Hypot(x-seam.First.X, y-seam.First.Y))
 		if math.Abs(y-82) > 0.5 {
 			t.Fatalf("north bridge movement left lane at (%.2f,%.2f)", x, y)
 		}
 	}
+
 	t.Fatalf("north bridge lane stayed in town through X %.2f; closest trigger distance %.2f, radius %.2f",
 		maxX, minDistance, seam.TriggerRadius)
 }
