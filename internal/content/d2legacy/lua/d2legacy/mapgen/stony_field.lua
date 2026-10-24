@@ -13,12 +13,20 @@ local CELL = 8
 local opposite = {north = "south", east = "west", south = "north", west = "east"}
 local fill_definitions = {29, 30}
 
+-- Reject fractional identities before shared parsers can round them.
+local function integer(value)
+    local parsed = tonumber(value)
+    assert(parsed and parsed > -math.huge and parsed < math.huge and parsed == math.floor(parsed),
+        "d2legacy mapgen: Stony Field numeric fields must be finite integers")
+    return parsed
+end
+
 -- Keep each difficulty's dimensions aligned to the fixed-size DS1 fill grid.
 local function selected_size(level, difficulty)
     local suffix = ({[0] = "", [1] = "(N)", [2] = "(H)"})[difficulty]
     assert(suffix, "d2legacy mapgen: Stony Field difficulty must be 0, 1, or 2")
-    local width = data.integer(level["SizeX" .. suffix], 0)
-    local height = data.integer(level["SizeY" .. suffix], 0)
+    local width = integer(level["SizeX" .. suffix])
+    local height = integer(level["SizeY" .. suffix])
     assert(width > 0 and height > 0 and width % CELL == 0 and height % CELL == 0,
         "d2legacy mapgen: Stony Field dimensions must use an 8-tile grid")
     return width, height
@@ -70,8 +78,8 @@ local function fill_candidates(level_type)
     for _, definition in ipairs(fill_definitions) do
         local row = assert(data.preset_by_definition(definition),
             "d2legacy mapgen: Stony Field stone-fill preset is absent")
-        assert(data.integer(row.LevelId, -1) == 0 and data.integer(row.Outdoors, -1) == 1
-            and data.integer(row.SizeX, 0) == CELL and data.integer(row.SizeY, 0) == CELL,
+        assert(integer(row.Def) == definition and integer(row.LevelId) == 0 and integer(row.Outdoors) == 1
+            and integer(row.SizeX) == CELL and integer(row.SizeY) == CELL,
             "d2legacy mapgen: Stony Field stone-fill preset is not a generic 8x8 outdoor piece")
         local mask = validate_fill_references(row, level_type)
         local variants = assets.preset_files(row)
@@ -112,14 +120,14 @@ end
 
 -- Admit a canonical structural recipe using named, Stony Field-only streams.
 function M.generate(level_id, seed, source_direction, difficulty)
-    level_id, seed = math.floor(assert(tonumber(level_id))), math.floor(assert(tonumber(seed)))
-    difficulty = math.floor(tonumber(difficulty) or 0)
+    level_id, seed = integer(level_id), integer(seed)
+    difficulty = integer(difficulty == nil and 0 or difficulty)
     assert(level_id == 4, "d2legacy mapgen: Stony Field strategy requires level 4")
     local direction = assert(opposite[source_direction],
         "d2legacy mapgen: Cold Plains exit direction must be cardinal")
     local level = assert(data.level(level_id), "d2legacy mapgen: Stony Field is absent from Levels")
-    assert(data.integer(level.Act, -1) == 0 and data.integer(level.DrlgType, -1) == 3
-        and data.integer(level.LevelType, -1) == 2,
+    assert(integer(level.Act) == 0 and integer(level.DrlgType) == 3
+        and integer(level.LevelType) == 2,
         "d2legacy mapgen: Stony Field level rules do not match")
     local width, height = selected_size(level, difficulty)
     local level_type = assert(data.level_type(2), "d2legacy mapgen: Act I outdoor LvlTypes row is absent")
@@ -134,7 +142,7 @@ function M.generate(level_id, seed, source_direction, difficulty)
             local variant = draw(seed, "d2legacy.mapgen.stony_field.fill_variant", #choice.variants, id)
             local tile_x, tile_y = x * CELL, y * CELL
             stamps[#stamps + 1] = {
-                id = id, preset_def = data.integer(choice.row.Def, 0), role = "stony-field-fill",
+                id = id, preset_def = integer(choice.row.Def), role = "stony-field-fill",
                 x = tile_x, y = tile_y, width = CELL, height = CELL,
                 ds1_path = assets.path(choice.variants[variant + 1]), tile_paths = choice.tile_paths,
                 variant = variant, populate = choice.row.Populate == "1",
@@ -155,10 +163,13 @@ function M.generate(level_id, seed, source_direction, difficulty)
         trace = {
             "Policy evidence: inspected 1.14d Levels level 4 is Act I outdoor DRLG 3, type 2, 80x80 in all modes",
             "Policy evidence: inspected 1.14d LvlTypes row 2 names Act I wilderness DT1 libraries",
-            "Policy evidence: inspected 1.14d LvlPrest defs 29 and 30 qualify as generic 8x8 outdoor stone fill with three DS1 variants each",
+            "Policy evidence: inspected 1.14d LvlPrest defs 29 and 30 qualify as generic 8x8 outdoor stone "
+                .. "fill with three DS1 variants each",
             "Runtime records are supplied independently; the inspected evidence does not establish their version",
-            string.format("Cold Plains %s source joins the Stony Field %s semantic outdoor border endpoint", source_direction, direction),
-            "fill arrangement, entry placement, and interior route are provisional deterministic Dark Magic structural policy",
+            string.format("Cold Plains %s source joins the Stony Field %s semantic outdoor border endpoint",
+                source_direction, direction),
+            "fill arrangement, entry placement, and interior route are provisional deterministic Dark Magic "
+                .. "structural policy",
             "original layout and seed call order remain unverified",
         },
     }))

@@ -25,7 +25,8 @@ func TestGeneratedStonyFieldMaterializesAConnectedEntry(t *testing.T) {
 		t.Fatalf("Stony Field dimensions/tiles = %dx%d/%d", worldMap.WidthTiles, worldMap.HeightTiles, len(worldMap.Tiles))
 	}
 	warps := zone.Warps()
-	if len(warps) != 1 || warps[0].Role != "cold-plains-entry" || warps[0].DestinationLevel != 3 || warps[0].Direction != "west" {
+	if len(warps) != 1 || warps[0].Role != "cold-plains-entry" ||
+		warps[0].DestinationLevel != 3 || warps[0].Direction != "west" {
 		t.Fatalf("Stony Field entry warps = %#v", warps)
 	}
 	warp := warps[0]

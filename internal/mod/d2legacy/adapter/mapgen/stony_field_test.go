@@ -24,9 +24,11 @@ func stonyFieldRecords() entryRecords {
 		},
 		presetsPath: {
 			{"Def": "29", "LevelId": "0", "Outdoors": "1", "SizeX": "8", "SizeY": "8",
-				"Files": "3", "File1": `Act1\Outdoors\Circle.ds1`, "File2": `Act1\Outdoors\Circle2.ds1`, "File3": `Act1\Outdoors\Circle3.ds1`, "Dt1Mask": "1"},
+				"Files": "3", "File1": `Act1\Outdoors\Circle.ds1`, "File2": `Act1\Outdoors\Circle2.ds1`,
+				"File3": `Act1\Outdoors\Circle3.ds1`, "Dt1Mask": "1"},
 			{"Def": "30", "LevelId": "0", "Outdoors": "1", "SizeX": "8", "SizeY": "8",
-				"Files": "3", "File1": `Act1\Outdoors\Clover.ds1`, "File2": `Act1\Outdoors\Clover2.ds1`, "File3": `Act1\Outdoors\Clover3.ds1`, "Dt1Mask": "1"},
+				"Files": "3", "File1": `Act1\Outdoors\Clover.ds1`, "File2": `Act1\Outdoors\Clover2.ds1`,
+				"File3": `Act1\Outdoors\Clover3.ds1`, "Dt1Mask": "1"},
 		},
 	}
 }
@@ -88,7 +90,10 @@ func TestStonyFieldProducesConnectedZone(t *testing.T) {
 				}
 			}
 			trace := strings.Join(zone.Trace(), "\n")
-			for _, evidence := range []string{"inspected 1.14d", "Levels", "LvlTypes", "LvlPrest", "29", "30", "generic 8x8", "three DS1 variants", "Dark Magic", "border endpoint", "does not establish their version"} {
+			for _, evidence := range []string{
+				"inspected 1.14d", "Levels", "LvlTypes", "LvlPrest", "29", "30", "generic 8x8",
+				"three DS1 variants", "Dark Magic", "border endpoint", "does not establish their version",
+			} {
 				if !strings.Contains(trace, evidence) {
 					t.Fatalf("trace lacks %q: %s", evidence, trace)
 				}
@@ -161,16 +166,44 @@ func TestStonyFieldChecksumSurvivesRestore(t *testing.T) {
 func TestStonyFieldRejectsInvalidInputsAndRecords(t *testing.T) {
 	cases := []struct {
 		name       string
-		level      int
+		level      float64
 		direction  string
-		difficulty int
+		difficulty float64
 		mutate     func(entryRecords)
 	}{
 		{name: "wrong level", level: 3, direction: "east"},
+		{name: "fractional level", level: 4.5, direction: "east"},
+		{name: "fractional difficulty", level: 4, direction: "east", difficulty: 2.5},
 		{name: "empty direction", level: 4},
 		{name: "diagonal direction", level: 4, direction: "northeast"},
 		{name: "negative difficulty", level: 4, direction: "east", difficulty: -1},
 		{name: "excess difficulty", level: 4, direction: "east", difficulty: 3},
+		{name: "fractional levelsPath Act", level: 4, direction: "east", difficulty: 0,
+			mutate: func(rows entryRecords) { rows[levelsPath][0]["Act"] = "0.5" }},
+		{name: "fractional levelsPath DrlgType", level: 4, direction: "east", difficulty: 0,
+			mutate: func(rows entryRecords) { rows[levelsPath][0]["DrlgType"] = "3.5" }},
+		{name: "fractional levelsPath LevelType", level: 4, direction: "east", difficulty: 0,
+			mutate: func(rows entryRecords) { rows[levelsPath][0]["LevelType"] = "2.5" }},
+		{name: "fractional levelsPath SizeX", level: 4, direction: "east", difficulty: 0,
+			mutate: func(rows entryRecords) { rows[levelsPath][0]["SizeX"] = "80.5" }},
+		{name: "fractional levelsPath SizeY", level: 4, direction: "east", difficulty: 0,
+			mutate: func(rows entryRecords) { rows[levelsPath][0]["SizeY"] = "80.5" }},
+		{name: "fractional levelsPath SizeX(N)", level: 4, direction: "east", difficulty: 1,
+			mutate: func(rows entryRecords) { rows[levelsPath][0]["SizeX(N)"] = "80.5" }},
+		{name: "fractional levelsPath SizeY(H)", level: 4, direction: "east", difficulty: 2,
+			mutate: func(rows entryRecords) { rows[levelsPath][0]["SizeY(H)"] = "80.5" }},
+		{name: "fractional presetsPath Def", level: 4, direction: "east", difficulty: 0,
+			mutate: func(rows entryRecords) { rows[presetsPath][0]["Def"] = "29.5" }},
+		{name: "fractional presetsPath LevelId", level: 4, direction: "east", difficulty: 0,
+			mutate: func(rows entryRecords) { rows[presetsPath][0]["LevelId"] = "0.5" }},
+		{name: "fractional presetsPath Outdoors", level: 4, direction: "east", difficulty: 0,
+			mutate: func(rows entryRecords) { rows[presetsPath][0]["Outdoors"] = "1.5" }},
+		{name: "fractional presetsPath SizeX", level: 4, direction: "east", difficulty: 0,
+			mutate: func(rows entryRecords) { rows[presetsPath][0]["SizeX"] = "8.5" }},
+		{name: "fractional presetsPath SizeY", level: 4, direction: "east", difficulty: 0,
+			mutate: func(rows entryRecords) { rows[presetsPath][0]["SizeY"] = "8.5" }},
+		{name: "absolute selected dt1", level: 4, direction: "east",
+			mutate: func(rows entryRecords) { rows[typesPath][2]["File 1"] = "/Act1/Outdoors/Outdoor1.dt1" }},
 		{name: "wrong act", level: 4, direction: "east",
 			mutate: func(rows entryRecords) { rows[levelsPath][0]["Act"] = "1" }},
 		{name: "wrong drlg", level: 4, direction: "east",
