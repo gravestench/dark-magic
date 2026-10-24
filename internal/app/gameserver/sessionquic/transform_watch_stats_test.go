@@ -12,6 +12,7 @@ import (
 // TestTransformWatchStatsObserveAndSend catches missing transform-loop progress or retained credential entries.
 func TestTransformWatchStatsObserveAndSend(t *testing.T) {
 	fixture := newTransformWatchStatsFixture(t)
+
 	joined := joinTransformStatsClient(t, fixture)
 	if _, active := fixture.server.TransformWatchStats(joined.Credential); active {
 		t.Fatal("transform stats exist before a watch")
@@ -58,6 +59,7 @@ func TestTransformWatchStatsObserveAndSend(t *testing.T) {
 		stats, active := fixture.server.TransformWatchStats(joined.Credential)
 		return active && stats.DatagramsSent == 1
 	})
+
 	stats, active := fixture.server.TransformWatchStats(joined.Credential)
 	if !active || stats.ObserveAttempts == 0 || stats.ObserveErrors != 0 ||
 		stats.LatestObservedTick != 1 || stats.EncodeAttempts != 1 || stats.EncodeErrors != 0 ||
@@ -66,6 +68,7 @@ func TestTransformWatchStatsObserveAndSend(t *testing.T) {
 	}
 
 	cancelWatch()
+
 	for range snapshots {
 	}
 
@@ -79,6 +82,7 @@ func TestTransformWatchStatsObserveAndSend(t *testing.T) {
 func TestTransformWatchStatsEncodeFailure(t *testing.T) {
 	fixture := newQUICProtocolFixture(t)
 	joined := joinTransformStatsClient(t, fixture)
+
 	watchContext, cancelWatch := context.WithCancel(fixture.ctx)
 	defer cancelWatch()
 
@@ -101,6 +105,7 @@ func TestTransformWatchStatsEncodeFailure(t *testing.T) {
 		stats, active := fixture.server.TransformWatchStats(joined.Credential)
 		return active && stats.EncodeErrors == 1
 	})
+
 	stats, _ := fixture.server.TransformWatchStats(joined.Credential)
 	if stats.ObserveAttempts == 0 || stats.ObserveErrors != 0 || stats.LatestObservedTick != 1 ||
 		stats.EncodeAttempts != 1 || stats.EncodeErrors != 1 || stats.SendAttempts != 0 ||
@@ -113,6 +118,7 @@ func TestTransformWatchStatsEncodeFailure(t *testing.T) {
 func TestTransformReceiveStats(t *testing.T) {
 	ctx, client, peer := newTransformReceiveStatsPair(t)
 	credential := gameserver.SessionCredential("transform-stats")
+
 	if client.NetworkStats().TransformWatchActive {
 		t.Fatal("transform receiver active before watch")
 	}
@@ -134,6 +140,7 @@ func TestTransformReceiveStats(t *testing.T) {
 	}
 
 	waitForTransformStats(t, ctx, func() bool { return client.NetworkStats().TransformDecodeErrors == 1 })
+
 	stats := client.NetworkStats()
 	if stats.DatagramsRead != 1 || stats.TransformDecodeErrors != 1 || stats.TransformsReceived != 0 {
 		t.Fatalf("malformed datagram stats = %+v", stats)
@@ -164,6 +171,7 @@ func TestTransformReceiveStats(t *testing.T) {
 	}
 
 	cancelWatch()
+
 	for range frames {
 	}
 
@@ -185,6 +193,7 @@ func TestTransformReceiveStats(t *testing.T) {
 	}
 
 	cancelNext()
+
 	for range nextFrames {
 	}
 
@@ -200,12 +209,14 @@ func newTransformWatchStatsFixture(t *testing.T) quicProtocolFixture {
 	identity := testRuntimeIdentity()
 	session, endpoint := newImpairedRecoveryEndpoint(t, identity)
 	serverTLS, clientTLS := testTLS(t)
+
 	server, err := Listen("127.0.0.1:0", serverTLS, endpoint)
 	if err != nil {
 		t.Fatal(err)
 	}
 
 	t.Cleanup(func() { _ = server.Close() })
+
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	t.Cleanup(cancel)
 
@@ -240,12 +251,14 @@ func newTransformReceiveStatsPair(t *testing.T) (context.Context, *Client, *quic
 	t.Helper()
 
 	serverTLS, clientTLS := testTLS(t)
+
 	listener, err := quic.ListenAddr("127.0.0.1:0", sessionTLS(serverTLS), quicConfig())
 	if err != nil {
 		t.Fatal(err)
 	}
 
 	t.Cleanup(func() { _ = listener.Close() })
+
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	t.Cleanup(cancel)
 

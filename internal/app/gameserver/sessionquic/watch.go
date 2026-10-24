@@ -69,16 +69,20 @@ func (server *Server) watch(
 	server.transformWatchMu.Lock()
 	if err := server.endpoint.BeginWatch(credential); err != nil {
 		server.transformWatchMu.Unlock()
+
 		_ = writeFrame(stream, response{Error: err.Error()})
 
 		return
 	}
 
 	counters := &transformWatchCounters{}
+
 	if server.transformWatches == nil {
 		server.transformWatches = make(map[gameserver.SessionCredential]*transformWatchCounters)
 	}
+
 	server.transformWatches[credential] = counters
+
 	server.transformWatchMu.Unlock()
 	defer func() {
 		server.transformWatchMu.Lock()
@@ -137,6 +141,7 @@ func (server *Server) sendTransforms(
 
 	for {
 		counters.observeAttempts.Add(1)
+
 		snapshot, err := server.endpoint.Observe(credential)
 		if err != nil {
 			counters.observeErrors.Add(1)
@@ -145,8 +150,10 @@ func (server *Server) sendTransforms(
 		}
 
 		counters.latestObservedTick.Store(snapshot.Tick)
+
 		if snapshot.Tick > lastTick {
 			counters.encodeAttempts.Add(1)
+
 			payload, encodeErr := encodeTransformFrame(credential, snapshot)
 			if encodeErr != nil {
 				counters.encodeErrors.Add(1)
@@ -155,6 +162,7 @@ func (server *Server) sendTransforms(
 			}
 
 			counters.sendAttempts.Add(1)
+
 			if connection.SendDatagram(payload) != nil {
 				counters.sendErrors.Add(1)
 
@@ -163,6 +171,7 @@ func (server *Server) sendTransforms(
 
 			counters.latestSentTick.Store(snapshot.Tick)
 			counters.datagramsSent.Add(1)
+
 			lastTick = snapshot.Tick
 		}
 
