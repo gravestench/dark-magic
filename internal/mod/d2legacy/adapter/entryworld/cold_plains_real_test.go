@@ -72,10 +72,11 @@ func TestBuildColdPlainsReal(t *testing.T) {
 		t.Fatal(err)
 	}
 	zones := population["zones"].([]any)
-	if len(zones) != 3 || zones[0].(map[string]any)["level_id"] != float64(2) ||
+	if len(zones) != 4 || zones[0].(map[string]any)["level_id"] != float64(2) ||
 		zones[1].(map[string]any)["level_id"] != float64(3) ||
-		zones[2].(map[string]any)["level_id"] != float64(4) {
-		t.Fatalf("owned population zones=%#v", zones)
+		zones[2].(map[string]any)["level_id"] != float64(4) ||
+		zones[3].(map[string]any)["level_id"] != float64(8) {
+		t.Fatalf("owned population has %d zones; want levels 2,3,4,8", len(zones))
 	}
 	populated := 0
 	for _, raw := range zones[1].(map[string]any)["rooms"].([]any) {

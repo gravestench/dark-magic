@@ -151,10 +151,31 @@ func validateCaveApproach(world *gameworld.Map, source, destination gameworld.Po
 // rules to WalkableStep. A 24x24 Den bounds it to 14,400 cells and eight edges
 // per cell; no repeated whole-map path searches or persistent cache is needed.
 func denHasReachableInterior(world *gameworld.Map, arrival gameworld.Point) bool {
+	visited := denReachableCells(world, arrival)
+	if len(visited) == 0 {
+		return false
+	}
+	width, height := world.WidthSubtiles, world.HeightSubtiles
+	for cell, reachable := range visited {
+		x, y := cell%width, cell/width
+		if reachable && x >= width/4 && x < width*3/4 && y >= height/4 && y < height*3/4 {
+			return true
+		}
+	}
+	return false
+}
+
+// Compute the player's entire arrival component once so Den population can
+// select reachable points without repeatedly pathfinding through cave pockets.
+func denReachableCells(world *gameworld.Map, arrival gameworld.Point) []bool {
+	if world == nil || world.WidthSubtiles <= 0 || world.HeightSubtiles <= 0 {
+		return nil
+	}
 	width, height := world.WidthSubtiles, world.HeightSubtiles
 	startX, startY := gameworld.CollisionCell(arrival.X), gameworld.CollisionCell(arrival.Y)
-	if !world.WalkableStep(arrival, arrival, 1) {
-		return false
+	if startX < 0 || startY < 0 || startX >= width || startY >= height ||
+		!world.WalkableStep(arrival, arrival, 1) {
+		return nil
 	}
 	start := startY*width + startX
 	visited := make([]bool, width*height)
@@ -163,9 +184,6 @@ func denHasReachableInterior(world *gameworld.Map, arrival gameworld.Point) bool
 	for index := 0; index < len(queue); index++ {
 		cell := queue[index]
 		x, y := cell%width, cell/width
-		if x >= width/4 && x < width*3/4 && y >= height/4 && y < height*3/4 {
-			return true
-		}
 		from := gameworld.Point{X: float64(x), Y: float64(y)}
 		for _, step := range [][2]int{{0, -1}, {-1, 0}, {1, 0}, {0, 1}, {-1, -1}, {1, -1}, {-1, 1}, {1, 1}} {
 			nx, ny := x+step[0], y+step[1]
@@ -180,7 +198,7 @@ func denHasReachableInterior(world *gameworld.Map, arrival gameworld.Point) bool
 			queue = append(queue, next)
 		}
 	}
-	return false
+	return visited
 }
 
 // caveOpenPoint bounds the adjustment from an authored subtile anchor to a safe player-sized point.
