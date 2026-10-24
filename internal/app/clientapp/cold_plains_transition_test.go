@@ -299,7 +299,8 @@ func moveConnectedAcrossColdPlains(t *testing.T, fixture *realD2LegacyFixture, t
 		time.Sleep(40 * time.Millisecond)
 		fixture.advanceGame(t, 1)
 
-		hud, _ := app.network.client.View()
+		// The watch worker may publish a newer HUD after this frame; compare the HUD this frame installed.
+		hud := app.clientWorld.lastHUD
 		if int(hud.Location.LevelID) != to {
 			continue
 		}

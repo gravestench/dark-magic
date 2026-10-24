@@ -632,7 +632,6 @@ func TestConnectedColdPlainsPopulationMatchesAuthority(t *testing.T) {
 			}
 
 			assertColdPopulationVisible(t, want)
-			verifyProductionPopulationReplay(t, f, replay)
 
 			initialIDs := checkpointPopulationIDs(t, checkpoint)
 			moveConnectedAcrossColdPlains(t, f, 2, seam.Second, seam.First)
@@ -646,6 +645,9 @@ func TestConnectedColdPlainsPopulationMatchesAuthority(t *testing.T) {
 			if !reflect.DeepEqual(checkpointPopulationIDs(t, final), initialIDs) {
 				t.Fatal("connected return recreated wilderness residents")
 			}
+
+			// Offline replay can outlast the live event tail; finish connected frames before verifying it.
+			verifyProductionPopulationReplay(t, f, replay)
 
 			return
 		}
