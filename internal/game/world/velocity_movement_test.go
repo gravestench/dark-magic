@@ -89,6 +89,7 @@ func TestVelocityMovementSkipsPathSearchInsideCollisionCell(t *testing.T) {
 	}
 }
 
+// velocityRestoreFixture registers the native mover before snapshots so restore retains its system definition.
 func velocityRestoreFixture(t *testing.T) (*gameecs.Engine, VelocityComponents) {
 	t.Helper()
 
@@ -105,6 +106,7 @@ func velocityRestoreFixture(t *testing.T) (*gameecs.Engine, VelocityComponents) 
 	return engine, components
 }
 
+// addVelocityRestoreMover gives one entity every schema required by the native movement filter.
 func addVelocityRestoreMover(t *testing.T, engine *gameecs.Engine, components VelocityComponents) akara.Entity {
 	t.Helper()
 
@@ -132,6 +134,7 @@ func addVelocityRestoreMover(t *testing.T, engine *gameecs.Engine, components Ve
 	return entity
 }
 
+// assertVelocityRestoreX reads the engine's current world so writes to stale pre-restore stores cannot pass.
 func assertVelocityRestoreX(t *testing.T, engine *gameecs.Engine, name string, entity akara.Entity, want float64) {
 	t.Helper()
 
@@ -156,6 +159,7 @@ func assertVelocityRestoreX(t *testing.T, engine *gameecs.Engine, name string, e
 	}
 }
 
+// TestVelocityMovementExistingMoverAdvancesAfterRestore catches stale writes through two world replacements.
 func TestVelocityMovementExistingMoverAdvancesAfterRestore(t *testing.T) {
 	engine, components := velocityRestoreFixture(t)
 	defer func() { _ = engine.Close() }()
@@ -179,6 +183,7 @@ func TestVelocityMovementExistingMoverAdvancesAfterRestore(t *testing.T) {
 	}
 }
 
+// TestVelocityMovementNewMoverAdvancesAfterRestore catches an old store's absent entity read after restore.
 func TestVelocityMovementNewMoverAdvancesAfterRestore(t *testing.T) {
 	engine, components := velocityRestoreFixture(t)
 	defer func() { _ = engine.Close() }()
@@ -200,6 +205,7 @@ func TestVelocityMovementNewMoverAdvancesAfterRestore(t *testing.T) {
 	assertVelocityRestoreX(t, engine, components.Position, entity, 10.04)
 }
 
+// TestVelocityMovementMissingPositionReturnsError exercises the guard directly because the query excludes it.
 func TestVelocityMovementMissingPositionReturnsError(t *testing.T) {
 	engine, components := velocityRestoreFixture(t)
 	defer func() { _ = engine.Close() }()
@@ -209,12 +215,14 @@ func TestVelocityMovementMissingPositionReturnsError(t *testing.T) {
 	velocity, _ := akara.GetDynamicStore(engine.World(), components.Velocity)
 	collider, _ := akara.GetDynamicStore(engine.World(), components.Collider)
 
-	err := moveVelocityEntity(nil, velocityStores{position: position, velocity: velocity, collider: collider}, entity, 0.04)
+	stores := velocityStores{position: position, velocity: velocity, collider: collider}
+	err := moveVelocityEntity(nil, stores, entity, 0.04)
 	if err == nil || !strings.Contains(err.Error(), "position") {
 		t.Fatalf("missing position error = %v", err)
 	}
 }
 
+// TestVelocityMovementContinuesAfterSessionRollback makes a late network command replace the authoritative world.
 func TestVelocityMovementContinuesAfterSessionRollback(t *testing.T) {
 	engine, components := velocityRestoreFixture(t)
 	entity := addVelocityRestoreMover(t, engine, components)
