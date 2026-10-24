@@ -65,15 +65,16 @@ func (server *Server) watch(
 	stream *quic.Stream,
 	credential gameserver.SessionCredential,
 ) {
+	// Keep reservation changes and diagnostic visibility in one short critical section.
+	server.transformWatchMu.Lock()
 	if err := server.endpoint.BeginWatch(credential); err != nil {
+		server.transformWatchMu.Unlock()
 		_ = writeFrame(stream, response{Error: err.Error()})
 
 		return
 	}
-	defer server.endpoint.EndWatch(credential)
 
 	counters := &transformWatchCounters{}
-	server.transformWatchMu.Lock()
 	if server.transformWatches == nil {
 		server.transformWatches = make(map[gameserver.SessionCredential]*transformWatchCounters)
 	}
@@ -83,6 +84,7 @@ func (server *Server) watch(
 		server.transformWatchMu.Lock()
 		defer server.transformWatchMu.Unlock()
 
+		server.endpoint.EndWatch(credential)
 		delete(server.transformWatches, credential)
 	}()
 
