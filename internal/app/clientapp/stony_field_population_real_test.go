@@ -39,9 +39,11 @@ func assertStonyPopulationView(t *testing.T, checkpoint simulation.Checkpoint, v
 		if visible.Kind != "hostile" || visible.LevelID != 4 {
 			continue
 		}
+
 		if !strings.HasPrefix(visible.SpawnID, "level:4:room:") {
 			t.Fatalf("unqualified identity %q", visible.SpawnID)
 		}
+
 		if visible.DefinitionID != "skeleton1" && visible.DefinitionID != "zombie2" &&
 			visible.DefinitionID != "crownest1" {
 			t.Fatalf("unexpected family %s", visible.DefinitionID)
@@ -51,18 +53,21 @@ func assertStonyPopulationView(t *testing.T, checkpoint simulation.Checkpoint, v
 
 		for _, entity := range identities.Entities() {
 			identity, _ := identities.Get(entity)
+
 			id, _ := identity.Get("spawn_id")
 			if id != visible.SpawnID {
 				continue
 			}
 
 			definition, _ := identity.Get("definition_id")
+
 			x, y := dynamicPosition(positions, entity)
 			if definition != visible.DefinitionID || visible.Position.X != x || visible.Position.Y != y {
 				t.Fatal("public identity/position differs from authority")
 			}
 
 			found = true
+
 			break
 		}
 
@@ -119,10 +124,12 @@ func assertConnectedStonyPopulation(t *testing.T, f *realD2LegacyFixture) map[st
 			}
 
 			assertStonyPopulationView(t, checkpoint, presentation.World)
+
 			return checkpointPopulationIDs(t, checkpoint)
 		}
 	}
 
 	t.Fatal("no acknowledged population checkpoint")
+
 	return nil
 }

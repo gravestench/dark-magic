@@ -45,6 +45,7 @@ func TestStonyFieldOfflinePopulationRecoveryRoundTrip(t *testing.T) {
 	if len(ids) == 0 {
 		t.Fatal("Stony Field created no ordinary residents")
 	}
+
 	assertStonyPopulationProjection(t, source)
 
 	bundle, err := source.app.entryWorldRecoveryCheckpoint()
@@ -85,6 +86,7 @@ func TestStonyFieldOfflinePopulationRecoveryRoundTrip(t *testing.T) {
 
 		for range 1500 {
 			advancePopulationRecoveryTick(t, source, restored)
+
 			if int(recoveryPlayerHUD(t, source).Location.LevelID) == crossing.to {
 				crossed = true
 				break
@@ -96,6 +98,7 @@ func TestStonyFieldOfflinePopulationRecoveryRoundTrip(t *testing.T) {
 		}
 
 		advancePopulationRecoveryTick(t, source, restored)
+
 		if crossing.to == 3 {
 			assertPopulationInactive(t, source, ids, true)
 		}
@@ -303,7 +306,9 @@ func TestStonyFieldConnectedPopulationReconnectRoundTrip(t *testing.T) {
 			t.Fatal("4-to-3 return committed more than once")
 		}
 	}
+
 	moveConnectedAcrossStonyField(t, f, 4, seam.First, seam.Second)
+
 	finalPopulation := assertConnectedStonyPopulation(t, f)
 	if !reflect.DeepEqual(initialPopulation, finalPopulation) {
 		t.Fatal("connected return recreated residents")
