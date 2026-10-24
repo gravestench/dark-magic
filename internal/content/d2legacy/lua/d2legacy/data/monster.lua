@@ -293,12 +293,25 @@ local function raw_stats(stats, difficulty)
     }
 end
 
+-- Owned Den MonStats rows leave higher-difficulty life percentages blank.
+-- Keep explicit zeroes, but use the authored Normal percentage for a blank
+-- scaled-life cell so an otherwise valid ordinary spawn has positive life.
+local function life_percentage(stats, column, difficulty)
+    local selected = difficulty == 2 and column .. "(H)" or difficulty == 1 and column .. "(N)" or column
+    if stats[selected] == nil or stats[selected] == "" then
+        return integer(stats, column)
+    end
+    return integer(stats, selected)
+end
+
 local function scaled_stats(stats, level, difficulty)
     if truth(stats, "noRatio") or not level then
         return raw_stats(stats, difficulty)
     end
 
     local percentages = raw_stats(stats, difficulty)
+    percentages.life_min = life_percentage(stats, "minHP", difficulty)
+    percentages.life_max = life_percentage(stats, "maxHP", difficulty)
     return {
         life_min = ratio(difficulty_value(level, columns("HP"), difficulty), percentages.life_min),
         life_max = ratio(difficulty_value(level, columns("HP"), difficulty), percentages.life_max),

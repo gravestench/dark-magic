@@ -72,10 +72,11 @@ func TestBuildColdPlainsReal(t *testing.T) {
 		t.Fatal(err)
 	}
 	zones := population["zones"].([]any)
-	if len(zones) != 3 || zones[0].(map[string]any)["level_id"] != float64(2) ||
+	if len(zones) != 4 || zones[0].(map[string]any)["level_id"] != float64(2) ||
 		zones[1].(map[string]any)["level_id"] != float64(3) ||
-		zones[2].(map[string]any)["level_id"] != float64(4) {
-		t.Fatalf("owned population zones=%#v", zones)
+		zones[2].(map[string]any)["level_id"] != float64(4) ||
+		zones[3].(map[string]any)["level_id"] != float64(8) {
+		t.Fatalf("owned population has %d zones; want levels 2,3,4,8", len(zones))
 	}
 	populated := 0
 	for _, raw := range zones[1].(map[string]any)["rooms"].([]any) {
@@ -138,7 +139,8 @@ func TestRestorePreparedV1KeepsTwoZonesReal(t *testing.T) {
 	}
 
 	if len(prepared.Worlds) != 2 || len(prepared.Zones) != 2 || len(prepared.Seams) != 1 ||
-		prepared.Worlds[3] != nil || prepared.Worlds[4] != nil {
+		prepared.Worlds[3] != nil || prepared.Worlds[4] != nil ||
+		prepared.Worlds[8] != nil || prepared.Zones[8] != nil || prepared.CaveWarp != nil {
 		t.Fatalf("v1 restore gained a wilderness: maps=%d zones=%d seams=%d",
 			len(prepared.Worlds), len(prepared.Zones), len(prepared.Seams))
 	}
@@ -164,6 +166,64 @@ func TestRestorePreparedV1KeepsTwoZonesReal(t *testing.T) {
 	}
 	if count := len(TransitionData(prepared.Seams)["seams"].([]any)); count != 2 {
 		t.Fatalf("v1 directed transitions = %d, want two", count)
+	}
+}
+
+// Older outdoor snapshots materialize only their saved maps and population zones under the current binary.
+func TestRestorePreparedV2V3KeepsOutdoorZonesReal(t *testing.T) {
+	source := realEntryWorldContent(t)
+	records := recordstore.New(source)
+	generated, err := d2mapgen.GenerateEntryWorld(t.Context(), content.D2Legacy(), records, 17, 0)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, test := range []struct {
+		name    string
+		version int
+	}{
+		{"v2", 2}, {"v3", 3},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			legacy := d2mapgen.EntryWorld{Version: test.version, Zones: map[int]*worldgen.Zone{
+				1: generated.Zones[1], 2: generated.Zones[2], 3: generated.Zones[3],
+			}, Seams: generated.Seams[:2]}
+			if test.version == 3 {
+				legacy.Zones[4] = generated.Zones[4]
+				legacy.Seams = generated.Seams[:3]
+			}
+			snapshot, err := legacy.Snapshot()
+			if err != nil {
+				t.Fatal(err)
+			}
+			prepared, err := RestorePrepared(t.Context(), source, content.D2Legacy(), records,
+				entryWorldObjectResolver{}, snapshot)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if len(prepared.Worlds) != test.version+1 || len(prepared.Zones) != test.version+1 ||
+				len(prepared.Seams) != test.version || prepared.Worlds[8] != nil ||
+				prepared.Zones[8] != nil || prepared.CaveWarp != nil {
+				t.Fatalf("%s restore changed outdoor topology or gained Den: maps=%d zones=%d seams=%d",
+					test.name, len(prepared.Worlds), len(prepared.Zones), len(prepared.Seams))
+			}
+			population, err := prepared.PopulationData(0)
+			if err != nil {
+				t.Fatal(err)
+			}
+			zones := population["zones"].([]any)
+			if len(zones) != test.version {
+				t.Fatalf("%s population zones=%d, want %d", test.name, len(zones), test.version)
+			}
+			for index, raw := range zones {
+				if level := raw.(map[string]any)["level_id"].(float64); level != float64(index+2) {
+					t.Fatalf("%s population zone %d has level %v", test.name, index, level)
+				}
+			}
+			restoredSnapshot, err := prepared.Topology.Snapshot()
+			if err != nil || !bytes.Equal(restoredSnapshot, snapshot) {
+				t.Fatalf("%s prepared topology changed snapshot bytes: %v", test.name, err)
+			}
+		})
 	}
 }
 

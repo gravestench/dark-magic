@@ -2,14 +2,16 @@ package entryworld
 
 import (
 	"fmt"
+	"math"
 	"strconv"
 
 	gameworld "github.com/gravestench/dark-magic/internal/game/world"
 	"github.com/gravestench/dark-magic/internal/game/worldgen"
 )
 
-// PopulationData publishes geometry from each admitted wilderness in seam order.
-// A missing keyed map or mismatched request aborts the entire bootstrap.
+// PopulationData publishes each admitted wilderness in seam order, then the
+// separate Den cave when its validated pair exists. Incomplete keyed geometry
+// aborts the entire bootstrap.
 func (world *Prepared) PopulationData(nearby int) (map[string]any, error) {
 	if world == nil || len(world.Seams) == 0 {
 		return nil, fmt.Errorf("population requires prepared seams")
@@ -47,12 +49,82 @@ func (world *Prepared) PopulationData(nearby int) (map[string]any, error) {
 			"links":      populationLinks(zone.Links()),
 		})
 	}
+	if world.CaveWarp != nil {
+		cave, err := world.denPopulationData(seen)
+		if err != nil {
+			return nil, err
+		}
+		zones = append(zones, cave)
+	}
 	return map[string]any{"zones": zones}, nil
+}
+
+// Den room candidates come from the player's connected cave component. The
+// population owner still makes every monster choice and full-footprint check.
+func (world *Prepared) denPopulationData(outdoor map[int]bool) (map[string]any, error) {
+	pair := world.CaveWarp
+	denZone, denMap, moorMap := world.Zones[8], world.Worlds[8], world.Worlds[2]
+	if !outdoor[2] || !outdoor[3] || !outdoor[4] || len(outdoor) != 3 ||
+		denZone == nil || denMap == nil || moorMap == nil || denZone.Request().LevelID != 8 ||
+		pair.First.LevelID != 2 || pair.First.TargetLevel != 8 ||
+		pair.Second.LevelID != 8 || pair.Second.TargetLevel != 2 ||
+		pair.First.Width != float64(denMap.WidthSubtiles) ||
+		pair.First.Height != float64(denMap.HeightSubtiles) ||
+		pair.Second.Width != float64(moorMap.WidthSubtiles) ||
+		pair.Second.Height != float64(moorMap.HeightSubtiles) {
+		return nil, fmt.Errorf("population Den cave pair or keyed geometry is incomplete")
+	}
+	arrival := gameworld.Point{X: pair.First.ArrivalX, Y: pair.First.ArrivalY}
+	reachable := denReachableCells(denMap, arrival)
+	if len(reachable) == 0 ||
+		!denMap.WalkableStep(gameworld.Point{X: pair.Second.X, Y: pair.Second.Y},
+			gameworld.Point{X: pair.Second.X, Y: pair.Second.Y}, 1) {
+		return nil, fmt.Errorf("population Den arrival or return source is unsafe")
+	}
+	populated := populatedStamps(denZone)
+	rooms := make([]any, 0, len(denZone.Rooms()))
+	for _, room := range denZone.Rooms() {
+		// The owned Den families have at most a 1.5-subtile collider. Filter
+		// candidate geometry before the four-point budget is consumed; Lua
+		// still makes the final monster and placement decision.
+		const radius = 1.5
+		minX, minY := float64(room.X*gameworld.SubtilesPerTile), float64(room.Y*gameworld.SubtilesPerTile)
+		maxX := minX + float64(room.Width*gameworld.SubtilesPerTile)
+		maxY := minY + float64(room.Height*gameworld.SubtilesPerTile)
+		points := roomPopulationPointsWhere(denMap, room, func(x, y int) bool {
+			px, py := float64(x), float64(y)
+			if !reachable[y*denMap.WidthSubtiles+x] || px-radius < minX || py-radius < minY ||
+				px+radius >= maxX || py+radius >= maxY ||
+				math.Hypot(px-arrival.X, py-arrival.Y) < 1+radius ||
+				math.Hypot(px-pair.Second.X, py-pair.Second.Y) < 3.5+radius {
+				return false
+			}
+			point := gameworld.Point{X: px, Y: py}
+			return denMap.WalkableStep(point, point, radius)
+		})
+		rooms = append(rooms, populationRoom(room, populated[room.StampID], points))
+	}
+	request := denZone.Request()
+	return map[string]any{
+		"seed": float64(request.Seed), "act": float64(request.Act),
+		"level_id": float64(8), "difficulty": float64(request.Difficulty),
+		"rooms": rooms, "links": populationLinks(denZone.Links()),
+		"exclusions": []any{
+			map[string]any{"x": pair.First.ArrivalX, "y": pair.First.ArrivalY, "radius": float64(1)},
+			map[string]any{"x": pair.Second.X, "y": pair.Second.Y, "radius": float64(3.5)},
+		},
+	}, nil
 }
 
 // roomPopulationPoints searches only this room, retaining distinct center cells
 // in deterministic rings around its center. Lua checks the selected footprint.
 func roomPopulationPoints(gameMap *gameworld.Map, room worldgen.Room) []any {
+	return roomPopulationPointsWhere(gameMap, room, nil)
+}
+
+// The optional filter keeps Den's point order while skipping disconnected
+// cells; the scanner continues until it finds four usable centers.
+func roomPopulationPointsWhere(gameMap *gameworld.Map, room worldgen.Room, allowed func(int, int) bool) []any {
 	points := make([]any, 0, 4)
 	minX, minY := room.X*gameworld.SubtilesPerTile, room.Y*gameworld.SubtilesPerTile
 	maxX, maxY := minX+room.Width*gameworld.SubtilesPerTile, minY+room.Height*gameworld.SubtilesPerTile
@@ -61,7 +133,7 @@ func roomPopulationPoints(gameMap *gameworld.Map, room worldgen.Room) []any {
 		if len(points) >= 4 || x < minX || x >= maxX || y < minY || y >= maxY {
 			return
 		}
-		if flags, ok := gameMap.FlagsAt(x, y); ok && !flags.Blocked() {
+		if flags, ok := gameMap.FlagsAt(x, y); ok && !flags.Blocked() && (allowed == nil || allowed(x, y)) {
 			points = append(points, map[string]any{"x": float64(x), "y": float64(y)})
 		}
 	}

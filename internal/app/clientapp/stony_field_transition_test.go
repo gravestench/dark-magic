@@ -423,6 +423,11 @@ func TestStonyFieldLegacyV2RecoveryKeepsThreeMaps(t *testing.T) {
 	assertStonyLegacyPopulationRecovery(t, 2)
 }
 
+// Version 3 recovery retains its four outdoor maps without acquiring the later Den cave.
+func TestStonyFieldLegacyV3RecoveryKeepsOutdoorPopulation(t *testing.T) {
+	assertStonyLegacyPopulationRecovery(t, 3)
+}
+
 // Restore a full session checkpoint composed from the preserved topology policy.
 func assertStonyLegacyPopulationRecovery(t *testing.T, version int) {
 	t.Helper()
@@ -447,10 +452,16 @@ func assertStonyLegacyPopulationRecovery(t *testing.T, version int) {
 	legacy := d2mapgen.EntryWorld{Version: 2, Zones: map[int]*worldgen.Zone{
 		1: generated.Zones[1], 2: generated.Zones[2], 3: plains}, Seams: generated.Seams[:2]}
 
-	if version == 1 {
+	switch version {
+	case 1:
 		legacy.Version = 1
 		delete(legacy.Zones, 3)
 		legacy.Seams = legacy.Seams[:1]
+	case 3:
+		legacy.Version = 3
+		legacy.Zones[3] = generated.Zones[3]
+		legacy.Zones[4] = generated.Zones[4]
+		legacy.Seams = generated.Seams[:3]
 	}
 
 	snapshot, err := legacy.Snapshot()
@@ -481,9 +492,14 @@ func assertStonyLegacyPopulationRecovery(t *testing.T, version int) {
 	}
 
 	if restored.app.entryWorldTopology.Version != version || len(restored.app.gameWorlds) != version+1 ||
-		len(restored.app.transitionSeams) != version || restored.app.gameWorlds[4] != nil ||
+		len(restored.app.transitionSeams) != version || restored.app.gameWorlds[8] != nil ||
+		restored.app.entryWorldTopology.CaveWarp != nil ||
 		restored.app.entryWorldChecksum != bundle.TopologyChecksum {
-		t.Fatal("legacy recovery gained a Stony Field map or seam")
+		t.Fatal("legacy recovery changed its outdoor topology or gained a Den cave")
+	}
+
+	if version < 3 && restored.app.gameWorlds[4] != nil {
+		t.Fatal("legacy recovery added Stony Field")
 	}
 
 	got, err := restored.app.offlineSession.RecoveryCheckpoint()
@@ -491,13 +507,22 @@ func assertStonyLegacyPopulationRecovery(t *testing.T, version int) {
 		t.Fatalf("legacy checkpoint changed: %v", err)
 	}
 
-	for _, zone := range populationPlan(t, restored).Zones {
-		if zone.Level == 4 {
-			t.Fatal("legacy recovery added level-4 population plan")
+	plan := populationPlan(t, restored)
+	if len(plan.Zones) != version {
+		t.Fatalf("legacy v%d plan has %d zones, want %d", version, len(plan.Zones), version)
+	}
+
+	for index, zone := range plan.Zones {
+		if zone.Level != index+2 {
+			t.Fatalf("legacy v%d plan zone %d has level %d, want %d", version, index, zone.Level, index+2)
 		}
 	}
 
-	if len(populationResidentIDs(t, restored, 4, false)) != 0 {
+	if len(populationResidentIDs(t, restored, 8, false)) != 0 {
+		t.Fatal("legacy recovery added Den residents")
+	}
+
+	if version < 3 && len(populationResidentIDs(t, restored, 4, false)) != 0 {
 		t.Fatal("legacy recovery added level-4 residents")
 	}
 

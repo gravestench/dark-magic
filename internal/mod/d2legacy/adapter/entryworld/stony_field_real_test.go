@@ -82,10 +82,10 @@ func TestStonyFieldPreparedSeamReal(t *testing.T) {
 				t.Fatal(err)
 			}
 			zones := population["zones"].([]any)
-			if len(zones) != 3 {
-				t.Fatalf("population zones=%d, want three wildernesses", len(zones))
+			if len(zones) != 4 || zones[3].(map[string]any)["level_id"] != float64(8) {
+				t.Fatalf("population zones=%d, want three wildernesses and Den", len(zones))
 			}
-			for index, raw := range zones {
+			for index, raw := range zones[:3] {
 				zone := raw.(map[string]any)
 				if zone["level_id"] != float64(index+2) || zone["difficulty"] != float64(difficulty) {
 					t.Fatalf("population zone order/identity=%#v", zone)

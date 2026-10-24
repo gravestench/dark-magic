@@ -196,8 +196,9 @@ func TestLegacyEntryWorldSnapshotComposesWithoutColdPlains(t *testing.T) {
 
 	restored := newRealD2LegacyFixture(t, realD2LegacyFixtureConfig{topologySnapshot: snapshot})
 	if restored.app.entryWorldTopology.Version != 1 || len(restored.app.gameWorlds) != 2 ||
-		len(restored.app.transitionSeams) != 1 || restored.app.gameWorlds[3] != nil {
-		t.Fatal("v1 composition gained Cold Plains")
+		len(restored.app.transitionSeams) != 1 || restored.app.gameWorlds[3] != nil ||
+		restored.app.gameWorlds[8] != nil || restored.app.entryWorldTopology.CaveWarp != nil {
+		t.Fatal("v1 composition gained a later outdoor map or Den cave")
 	}
 
 	wantChecksum, err := legacy.Checksum()
@@ -210,6 +211,10 @@ func TestLegacyEntryWorldSnapshotComposesWithoutColdPlains(t *testing.T) {
 	plan := populationPlan(t, restored)
 	if len(plan.Zones) != 1 || plan.Zones[0].Level != 2 {
 		t.Fatalf("v1 topology population = %#v, want level 2 alone", plan.Zones)
+	}
+
+	if len(populationResidentIDs(t, restored, 8, false)) != 0 {
+		t.Fatal("v1 topology created Den residents")
 	}
 
 	if len(restored.app.transitionBootstrapData()["seams"].([]any)) != 2 {
