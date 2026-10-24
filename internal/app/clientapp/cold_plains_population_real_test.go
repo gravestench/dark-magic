@@ -78,9 +78,13 @@ func TestLiveColdPlainsOrdinaryPopulation(t *testing.T) {
 	f.advanceGame(t, 10)
 
 	before := populationPlan(t, f)
-	if len(before.Zones) != 3 || before.Zones[0].Created == 0 ||
-		before.Zones[1].Created != 0 || before.Zones[2].Created != 0 {
-		t.Fatalf("initial plan = %#v", before)
+	if len(before.Zones) != 4 {
+		t.Fatalf("initial population zones=%d, want 4", len(before.Zones))
+	}
+	if before.Zones[0].Created == 0 ||
+		before.Zones[1].Created != 0 || before.Zones[2].Created != 0 || before.Zones[3].Created != 0 {
+		t.Fatalf("initial population created counts=%v",
+			[]int{before.Zones[0].Created, before.Zones[1].Created, before.Zones[2].Created, before.Zones[3].Created})
 	}
 
 	bloodIDs := populationResidentIDs(t, f, 2, false)

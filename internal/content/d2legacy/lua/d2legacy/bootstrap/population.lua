@@ -85,6 +85,9 @@ end
 
 -- Keep later-area draws isolated from earlier-area random outcomes.
 local function stream(zone, purpose)
+    if zone.level_id == 8 then
+        return "d2legacy.population.level8." .. purpose
+    end
     if zone.level_id == 4 then
         return "d2legacy.population.level4." .. purpose
     end
@@ -135,6 +138,13 @@ local function safe_point(zone, room, point, radius, occupied)
     for _, other in ipairs(occupied) do
         if other.level_id == zone.level_id and overlaps(point, radius, other) then
             return false
+        end
+    end
+    if zone.level_id == 8 then
+        for _, exclusion in ipairs(zone.exclusions) do
+            if overlaps(point, radius, exclusion) then
+                return false
+            end
         end
     end
     return true
@@ -194,7 +204,10 @@ end
 
 local function validate_zone(zone)
     assert(type(zone) == "table", "population zone is required")
-    assert(zone.level_id == 2 or zone.level_id == 3 or zone.level_id == 4, "population level is required")
+    assert(
+        zone.level_id == 2 or zone.level_id == 3 or zone.level_id == 4 or zone.level_id == 8,
+        "population level is required"
+    )
     assert(zone.act == 1, "population act is required")
     assert(
         zone.difficulty == nil or zone.difficulty == game_rules.difficulty(),
@@ -245,6 +258,33 @@ local function validate_zone(zone)
         assert(link.from ~= link.to, "population room links cannot be self-referential")
         assert(room_ids[link.from] and room_ids[link.to], "population room link references an unknown room")
     end
+    if zone.level_id == 8 then
+        assert(#zone.rooms == 1 and #zone.links == 0, "Den population requires one room")
+        assert(
+            type(zone.exclusions) == "table" and #zone.exclusions == 2,
+            "Den population requires arrival and return exclusions"
+        )
+        local room = zone.rooms[1]
+        for index, exclusion in ipairs(zone.exclusions) do
+            assert(type(exclusion) == "table", "Den population exclusion is invalid")
+            for _, field in ipairs({ "x", "y", "radius" }) do
+                local value = exclusion[field]
+                assert(
+                    type(value) == "number" and value == value and math.abs(value) < math.huge,
+                    "Den population exclusion is not finite"
+                )
+            end
+            assert(
+                exclusion.x >= room.x
+                    and exclusion.x < room.x + room.width
+                    and exclusion.y >= room.y
+                    and exclusion.y < room.y + room.height,
+                "Den population exclusion is outside its room"
+            )
+            local minimum = index == 1 and 1 or 3.5
+            assert(exclusion.radius >= minimum, "Den population exclusion clearance is too small")
+        end
+    end
 end
 
 -- Retain flat single-zone command compatibility while storing one canonical zone envelope.
@@ -258,11 +298,9 @@ local function normalized_zones(payload)
 end
 
 function M.validate(command)
-    local previous = 1
-    for _, zone in ipairs(normalized_zones(command.payload)) do
+    for index, zone in ipairs(normalized_zones(command.payload)) do
         validate_zone(zone)
-        assert(zone.level_id == previous + 1, "population zones must be unique and ordered from level 2")
-        previous = zone.level_id
+        assert(zone.level_id == (index == 4 and 8 or index + 1), "population zones must be ordered as 2,3,4,8")
     end
 end
 
@@ -534,16 +572,19 @@ local function activate_zone(context, plan, entities, structural, occupied)
                     and room_is_selected(plan, room, integer(level, density_column(difficulty)), plan.created)
                 then
                     local definition = weighted_monster(plan, candidates, rarity)
-                    plan.created = plan.created
-                        + materialize_group(
-                            context,
-                            plan,
-                            room,
-                            definition,
-                            live_player_count(entities),
-                            structural,
-                            occupied
-                        )
+                    local created = materialize_group(
+                        context,
+                        plan,
+                        room,
+                        definition,
+                        live_player_count(entities),
+                        structural,
+                        occupied
+                    )
+                    plan.created = plan.created + created
+                    if plan.level_id == 8 and created == 0 then
+                        room.population_skip_reason = "no_safe_point"
+                    end
                 end
                 room.activated = true
             end
