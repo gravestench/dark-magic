@@ -88,6 +88,85 @@ ecs.system{
 	}
 }
 
+// TestLuaECSSystemsCloseOnRegistrationEngineAfterRebind keeps scoped cleanup bound to the engine that registered it.
+func TestLuaECSSystemsCloseOnRegistrationEngineAfterRebind(t *testing.T) {
+	for _, test := range []struct {
+		name            string
+		registerReplica bool
+	}{
+		{name: "replica has no matching system"},
+		{name: "replica has same system ID", registerReplica: true},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			runtime := New()
+			original := gameecs.New()
+			replica := gameecs.New()
+			capability := NewECSCapability(runtime, original)
+			originalScope := &Scope{}
+			replicaScope := &Scope{}
+
+			if err := runtime.RegisterModule(capability.Module()); err != nil {
+				t.Fatal(err)
+			}
+			if err := runtime.Start(context.Background()); err != nil {
+				t.Fatal(err)
+			}
+			t.Cleanup(func() {
+				_ = originalScope.Close()
+				_ = replicaScope.Close()
+				_ = runtime.Stop(context.Background())
+				_ = original.Close()
+				_ = replica.Close()
+			})
+
+			register := func(scope *Scope) {
+				t.Helper()
+				if err := runtime.RunScoped(context.Background(), scope, func(state *lua.LState) error {
+					return state.DoString(`
+local ecs = require("engine.ecs/v1")
+ecs.system{id="scene.follow", phase="movement", update=function() end}
+`)
+				}); err != nil {
+					t.Fatal(err)
+				}
+			}
+
+			register(originalScope)
+			if systems := original.Systems(); len(systems) != 1 || systems[0] != "scene.follow" {
+				t.Fatalf("original registration = %v, want scene.follow", systems)
+			}
+
+			if err := capability.SetEngine(context.Background(), replica); err != nil {
+				t.Fatal(err)
+			}
+			if test.registerReplica {
+				register(replicaScope)
+			}
+
+			if err := originalScope.Close(); err != nil {
+				t.Fatalf("close original scope after rebind: %v", err)
+			}
+			if systems := original.Systems(); len(systems) != 0 {
+				t.Fatalf("original scope leaked systems: %v", systems)
+			}
+			if systems := replica.Systems(); test.registerReplica {
+				if len(systems) != 1 || systems[0] != "scene.follow" {
+					t.Fatalf("original scope changed replica systems: %v", systems)
+				}
+			} else if len(systems) != 0 {
+				t.Fatalf("unexpected replica systems: %v", systems)
+			}
+
+			if err := replicaScope.Close(); err != nil {
+				t.Fatalf("close replica scope: %v", err)
+			}
+			if systems := replica.Systems(); len(systems) != 0 {
+				t.Fatalf("replica scope leaked systems: %v", systems)
+			}
+		})
+	}
+}
+
 // TestLuaCanQueryAnOrderedEntitySnapshotOutsideSystems verifies filtering and stable entity order for ad hoc Lua
 // queries outside engine-managed system iteration.
 func TestLuaCanQueryAnOrderedEntitySnapshotOutsideSystems(t *testing.T) {

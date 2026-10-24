@@ -566,18 +566,19 @@ func (capability *ECSCapability) registerSystem(state *lua.LState) int {
 			},
 		)
 	}
-	if err := capability.engine.Register(definition); err != nil {
+	registrationEngine := capability.engine
+	if err := registrationEngine.Register(definition); err != nil {
 		state.RaiseError("%v", err)
 	}
 
 	if err := scope.Add(func() error {
-		if !capability.engine.Unregister(id) {
+		if !registrationEngine.Unregister(id) {
 			return fmt.Errorf("game ecs: unregister %q", id)
 		}
 
 		return nil
 	}); err != nil {
-		capability.engine.Unregister(id)
+		registrationEngine.Unregister(id)
 		state.RaiseError("%v", err)
 	}
 
