@@ -79,6 +79,7 @@ func TestDenOfEvilProductionAuthorityCreatesTokenlessPairReal(t *testing.T) {
 	}
 }
 
+// TestDenOfEvilWarpLabRetainsPortalTokensReal guards the existing portal appearance path against static-warp changes.
 func TestDenOfEvilWarpLabRetainsPortalTokensReal(t *testing.T) {
 	fixture := newRealD2LegacyFixture(t, realD2LegacyFixtureConfig{
 		startScene: "warp_lab", applySceneDefaults: true,

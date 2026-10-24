@@ -78,6 +78,7 @@ function M.generate(level_id, seed, town_exit, difficulty)
     }))
 end
 
+-- key names a route cell without depending on Lua table iteration order.
 local function key(x, y) return x .. ":" .. y end
 
 -- Plan a player-sized branch using only semantic passability. The flood is
@@ -121,6 +122,7 @@ local function den_approaches(zone)
     return reached
 end
 
+-- den_candidates reserves a cave cell and an approach branch outside earlier authored routes.
 local function den_candidates(zone)
     local reached, candidates = den_approaches(zone), {}
     for y = CELL, zone.bounds.height - 2 * CELL, CELL do

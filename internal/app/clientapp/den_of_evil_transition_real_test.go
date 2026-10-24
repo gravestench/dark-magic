@@ -124,6 +124,7 @@ func TestDenOfEvilPointerCheckpointReturnReal(t *testing.T) {
 	}
 }
 
+// testDenCheckpointReturn captures level-8 authority after scene teardown, then verifies a fresh scene can use it.
 func testDenCheckpointReturn(t *testing.T, difficulty int) {
 	app, input := newPointerWorldClient(t, false, realD2LegacyFixtureConfig{
 		fixtureWorldLevel: 2, gameDifficulty: difficulty,
@@ -199,6 +200,7 @@ func testDenCheckpointReturn(t *testing.T, difficulty int) {
 	}
 }
 
+// denFrames advances presentation and gives connected correction delivery time between frames.
 func denFrames(t *testing.T, app *application, frames int) {
 	t.Helper()
 
@@ -211,6 +213,7 @@ func denFrames(t *testing.T, app *application, frames int) {
 	}
 }
 
+// denMoveTo waits for the production movement route to finish before the interaction click.
 func denMoveTo(t *testing.T, app *application, x, y, radius float64) {
 	t.Helper()
 
@@ -231,6 +234,7 @@ func denMoveTo(t *testing.T, app *application, x, y, radius float64) {
 	t.Fatalf("cave approach stopped at %.2f,%.2f, want %.2f,%.2f", px, py, x, y)
 }
 
+// denClick uses the scene pointer path and requires exactly one authoritative relocation.
 func denClick(t *testing.T, app *application, input *bridgeTestInput, endpoint entryworld.CaveWarpEndpoint) {
 	t.Helper()
 	before := denAuthorityHUD(t, app)
@@ -266,6 +270,7 @@ func denClick(t *testing.T, app *application, input *bridgeTestInput, endpoint e
 	t.Fatalf("ordinary cave pointer click stayed in level %d, want %d", app.activeWorldLevel, endpoint.TargetLevel)
 }
 
+// denAssertArrival checks authority, presentation, and camera against the prepared safe destination.
 func denAssertArrival(t *testing.T, app *application, endpoint entryworld.CaveWarpEndpoint, level int) {
 	t.Helper()
 	denAssertRelocation(t, app, "warp", endpoint.LevelID, level)
@@ -312,10 +317,11 @@ func denAssertArrival(t *testing.T, app *application, endpoint entryworld.CaveWa
 	}
 
 	if app.playerControl.HasMoveTarget() {
-		t.Fatal("warp retained old movement route")
+		t.Fatal("movement target remains after warp arrival")
 	}
 }
 
+// denCheckpoint reads the active offline or hosted authority through its canonical checkpoint API.
 func denCheckpoint(t *testing.T, app *application) simulation.Checkpoint {
 	t.Helper()
 
@@ -336,6 +342,7 @@ func denCheckpoint(t *testing.T, app *application) simulation.Checkpoint {
 	return checkpoint
 }
 
+// mustDenTopology captures the durable recipe so the journey can reject accidental regeneration.
 func mustDenTopology(t *testing.T, app *application) []byte {
 	t.Helper()
 
@@ -382,6 +389,7 @@ func denTerrainRoots(t *testing.T, app *application) map[render.NodeID]bool {
 	return nil
 }
 
+// denRejectRequests proves unadmitted far, wrong-level, and stale targets leave authority in Blood Moor.
 func denRejectRequests(t *testing.T, app *application, pair entryworld.CaveWarpPair) {
 	t.Helper()
 
@@ -412,6 +420,7 @@ type denSceneObservation struct {
 	offsets map[int]gameworld.Point
 }
 
+// install observes the real scene after its update without supplying layout or changing scene policy.
 func (observation *denSceneObservation) install(t *testing.T, app *application) {
 	t.Helper()
 
@@ -474,6 +483,7 @@ func (observation *denSceneObservation) install(t *testing.T, app *application) 
 	}
 }
 
+// assertLevels requires the active scene to compose precisely the expected indoor or outdoor maps.
 func (observation *denSceneObservation) assertLevels(t *testing.T, want ...int) {
 	t.Helper()
 	slices.Sort(observation.levels)
@@ -625,6 +635,7 @@ func denOutdoorSeams(t *testing.T, app *application, scene *denSceneObservation)
 	}
 }
 
+// denAssertRelocation distinguishes intentional warps from preserved seamless outdoor crossings.
 func denAssertRelocation(t *testing.T, app *application, kind string, from, to int) {
 	t.Helper()
 

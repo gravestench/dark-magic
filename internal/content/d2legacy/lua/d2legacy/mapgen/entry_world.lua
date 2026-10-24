@@ -42,6 +42,7 @@ function M.wilderness(seed, difficulty, town)
     return outdoor.generate(2, seed, direction, difficulty)
 end
 
+-- wilderness_v4 adds the Den entrance only for the new production topology.
 function M.wilderness_v4(seed, difficulty, town)
     local stamp = assert(town.stamps and town.stamps[1], "d2legacy entry town has no stamp")
     local direction = assert(stamp.role:match("^act1%-town:exit%-(%a+)$"),
@@ -49,6 +50,7 @@ function M.wilderness_v4(seed, difficulty, town)
     return outdoor.generate_with_den(2, seed, direction, difficulty)
 end
 
+-- den requests the separate indoor level without joining it to an outdoor seam.
 function M.den(seed, difficulty)
     return maze.generate(8, seed, difficulty)
 end

@@ -72,17 +72,20 @@ func resolveCaveWarp(
 	}, nil
 }
 
+// caveDirectedEndpoint binds each source marker to the opposite side's validated arrival and map bounds.
 func caveDirectedEndpoint(id, paired string, level, target int, source, destination caveSide) CaveWarpEndpoint {
 	return CaveWarpEndpoint{ID: id, PairedID: paired, LevelID: level, TargetLevel: target,
 		X: source.source.X, Y: source.source.Y, ArrivalX: destination.arrival.X, ArrivalY: destination.arrival.Y,
 		Width: float64(destination.world.WidthSubtiles), Height: float64(destination.world.HeightSubtiles)}
 }
 
+// resolveCaveSide accepts only one authored marker and a traversable source/arrival pair.
 func resolveCaveSide(world *gameworld.Map, identity gameworld.TileIdentity, warp models.LevelWarp) (caveSide, error) {
 	var marker gameworld.SpecialTile
 	count := 0
 	for _, tile := range world.SpecialTiles {
-		if tile.Orientation == identity.Orientation && tile.MainIndex == identity.MainIndex && tile.SubIndex == identity.SubIndex {
+		if tile.Orientation == identity.Orientation && tile.MainIndex == identity.MainIndex &&
+			tile.SubIndex == identity.SubIndex {
 			marker = tile
 			count++
 		}
@@ -133,6 +136,7 @@ func validateOutdoorCaveInterior(side caveSide) error {
 	return validateCaveApproach(world, side.arrival, gameworld.Point{X: cx, Y: cy})
 }
 
+// validateCaveApproach rejects a marker whose player-sized route cannot reach the expected outdoor component.
 func validateCaveApproach(world *gameworld.Map, source, destination gameworld.Point) error {
 	if _, err := world.FindPath(gameworld.PathRequest{Start: source, Goal: destination, Radius: 1}); err != nil {
 		return fmt.Errorf("cave entrance has no route to the established outdoor area: %w", err)
@@ -179,8 +183,10 @@ func denHasReachableInterior(world *gameworld.Map, arrival gameworld.Point) bool
 	return false
 }
 
+// caveOpenPoint bounds the adjustment from an authored subtile anchor to a safe player-sized point.
 func caveOpenPoint(world *gameworld.Map, anchor gameworld.Point) (gameworld.Point, error) {
-	if anchor.X < 0 || anchor.Y < 0 || anchor.X >= float64(world.WidthSubtiles) || anchor.Y >= float64(world.HeightSubtiles) {
+	if anchor.X < 0 || anchor.Y < 0 || anchor.X >= float64(world.WidthSubtiles) ||
+		anchor.Y >= float64(world.HeightSubtiles) {
 		return gameworld.Point{}, fmt.Errorf("authored anchor outside map")
 	}
 	x, y, found := world.OpenPointNearSubtileForRadius(anchor.X, anchor.Y, 1)
@@ -235,6 +241,7 @@ func caveWarpRecords(records Records, spec d2mapgen.CaveWarpSpec) (models.LevelW
 	return first, second, err
 }
 
+// uniqueCaveRecord prevents an ambiguous authored row from selecting a different warp on restore.
 func uniqueCaveRecord(rows []map[string]string, id int) (map[string]string, error) {
 	var found map[string]string
 	for _, row := range rows {
@@ -252,6 +259,7 @@ func uniqueCaveRecord(rows []map[string]string, id int) (map[string]string, erro
 	return found, nil
 }
 
+// caveRecordNumber rejects missing or malformed numeric fields before publishing endpoints.
 func caveRecordNumber(row map[string]string, key string) (int, error) {
 	value, err := strconv.Atoi(row[key])
 	if err != nil {
@@ -260,6 +268,7 @@ func caveRecordNumber(row map[string]string, key string) (int, error) {
 	return value, nil
 }
 
+// bindCaveWarp reads only the offset fields needed for the selected interactive LvlWarp row.
 func bindCaveWarp(rows []map[string]string, id int) (models.LevelWarp, error) {
 	row, err := uniqueCaveRecord(rows, id)
 	if err != nil {
@@ -269,7 +278,10 @@ func bindCaveWarp(rows []map[string]string, id int) (models.LevelWarp, error) {
 	for _, field := range []struct {
 		key    string
 		target *int
-	}{{"OffsetX", &warp.OffsetX}, {"OffsetY", &warp.OffsetY}, {"ExitWalkX", &warp.ExitWalkX}, {"ExitWalkY", &warp.ExitWalkY}} {
+	}{
+		{"OffsetX", &warp.OffsetX}, {"OffsetY", &warp.OffsetY},
+		{"ExitWalkX", &warp.ExitWalkX}, {"ExitWalkY", &warp.ExitWalkY},
+	} {
 		value, err := caveRecordNumber(row, field.key)
 		if err != nil {
 			return models.LevelWarp{}, err

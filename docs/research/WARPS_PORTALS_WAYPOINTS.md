@@ -93,7 +93,7 @@ portal appearance token: cave art comes from the authored map.
 production clients at all three difficulties. The round-trip test walks onto
 both cave endpoints without relocation, uses the ordinary `game_world` pointer
 and selectable path for entry and return, and checks authoritative/public levels,
-safe arrival, `warp` relocation facts, route reset, and camera position. It
+safe arrival, `warp` relocation facts, no movement target on arrival, and camera position. It
 observes the live Lua scene's separate `{8}` indoor and `{1,2,3,4}` outdoor
 components, and retained renderer handles confirm old terrain is destroyed on
 each cave warp. Both offline and listen-server journeys retain map and resident

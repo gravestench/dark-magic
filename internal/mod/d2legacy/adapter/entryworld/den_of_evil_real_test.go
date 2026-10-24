@@ -18,7 +18,9 @@ func TestDenOfEvilPreparedReal(t *testing.T) {
 	for _, seed := range []uint64{0, 17, 42, 73} {
 		for difficulty := 0; difficulty < 3; difficulty++ {
 			t.Run(fmt.Sprintf("seed-%d/difficulty-%d", seed, difficulty), func(t *testing.T) {
-				prepared, err := Build(t.Context(), source, content.D2Legacy(), records, entryWorldObjectResolver{}, seed, difficulty)
+				prepared, err := Build(
+					t.Context(), source, content.D2Legacy(), records, entryWorldObjectResolver{}, seed, difficulty,
+				)
 				if err != nil {
 					t.Fatal(err)
 				}
@@ -61,7 +63,9 @@ func TestDenOfEvilPreparedReal(t *testing.T) {
 				if err != nil {
 					t.Fatal(err)
 				}
-				restored, err := RestorePrepared(t.Context(), source, content.D2Legacy(), records, entryWorldObjectResolver{}, saved)
+				restored, err := RestorePrepared(
+					t.Context(), source, content.D2Legacy(), records, entryWorldObjectResolver{}, saved,
+				)
 				if err != nil {
 					t.Fatal(err)
 				}

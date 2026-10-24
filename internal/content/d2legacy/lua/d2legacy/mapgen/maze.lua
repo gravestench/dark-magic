@@ -23,6 +23,7 @@ local function sorted_cells(cells)
     return cells
 end
 
+-- den_chamber validates every authored one-room variant before selecting one for the Den.
 local function den_chamber(level, seed, width, height, count)
     assert(count == 1 and width == 24 and height == 24, "d2legacy mapgen: Den requires one 24x24 room")
     local moor = assert(data.level(2), "d2legacy mapgen: Blood Moor level is absent")

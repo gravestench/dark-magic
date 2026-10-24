@@ -45,7 +45,9 @@ func GenerateEntryWorld(
 		return EntryWorld{}, err
 	}
 	defer func() { _ = runtime.Close(context.Background()) }()
-	value, err := modruntime.Call(ctx, runtime.lua, "d2legacy.mapgen.entry_world", "v4", float64(seed), float64(difficulty))
+	value, err := modruntime.Call(
+		ctx, runtime.lua, "d2legacy.mapgen.entry_world", "v4", float64(seed), float64(difficulty),
+	)
 	if err != nil {
 		return EntryWorld{}, err
 	}
@@ -98,6 +100,7 @@ func GenerateEntryWorld(
 	return restoreEntryWorldV4(encoded)
 }
 
+// snapshotEntryWorldV4 writes the canonical five-zone order so restore and checksum share one envelope.
 func snapshotEntryWorldV4(world EntryWorld) ([]byte, error) {
 	if err := validateEntryWorldV4(world); err != nil {
 		return nil, err
@@ -109,6 +112,7 @@ func snapshotEntryWorldV4(world EntryWorld) ([]byte, error) {
 	return json.Marshal(snapshot)
 }
 
+// restoreEntryWorldV4 admits saved topology without rerunning the current Lua generator.
 func restoreEntryWorldV4(encoded []byte) (EntryWorld, error) {
 	var snapshot entryWorldSnapshotV4
 	if err := json.Unmarshal(encoded, &snapshot); err != nil {
@@ -118,7 +122,10 @@ func restoreEntryWorldV4(encoded []byte) (EntryWorld, error) {
 	if len(snapshot.Zones) != len(ids) {
 		return EntryWorld{}, fmt.Errorf("entry world v4 requires levels 1,2,3,4,8")
 	}
-	world := EntryWorld{Version: 4, Zones: make(map[int]*worldgen.Zone), Seams: snapshot.Seams, CaveWarp: snapshot.CaveWarp}
+	world := EntryWorld{
+		Version: 4, Zones: make(map[int]*worldgen.Zone),
+		Seams: snapshot.Seams, CaveWarp: snapshot.CaveWarp,
+	}
 	for i, definition := range snapshot.Zones {
 		if definition.Request.LevelID != ids[i] {
 			return EntryWorld{}, fmt.Errorf("entry world v4 has noncanonical level order")
@@ -135,6 +142,7 @@ func restoreEntryWorldV4(encoded []byte) (EntryWorld, error) {
 	return world, nil
 }
 
+// validateEntryWorldV4 preserves the three outdoor seams while admitting one separate indoor Den.
 func validateEntryWorldV4(world EntryWorld) error {
 	if len(world.Zones) != 5 || world.Zones[8] == nil {
 		return fmt.Errorf("entry world v4 requires five zones including Den")

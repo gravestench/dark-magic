@@ -9,6 +9,7 @@ import (
 	"github.com/gravestench/dark-magic/internal/content"
 )
 
+// entryWorldV4Records extends the synthetic outdoor rows with reciprocal Den facts for v4 tests.
 func entryWorldV4Records() entryRecords {
 	r := entryWorldV3Records()
 	for _, row := range r[levelsPath] {
@@ -17,9 +18,14 @@ func entryWorldV4Records() entryRecords {
 			row["Warp3"] = "0"
 		}
 	}
-	r[levelsPath] = append(r[levelsPath], map[string]string{"Id": "8", "Act": "0", "DrlgType": "1", "LevelType": "3", "Vis0": "2", "Warp0": "4"})
+	r[levelsPath] = append(r[levelsPath], map[string]string{
+		"Id": "8", "Act": "0", "DrlgType": "1", "LevelType": "3", "Vis0": "2", "Warp0": "4",
+	})
 	r[typesPath] = append(r[typesPath], map[string]string{"File 1": "Act1/Caves/cave.dt1"})
-	r["data/global/excel/LvlMaze.txt"] = []map[string]string{{"Level": "8", "SizeX": "24", "SizeY": "24", "Rooms": "1", "Rooms(N)": "1", "Rooms(H)": "1"}}
+	r["data/global/excel/LvlMaze.txt"] = []map[string]string{{
+		"Level": "8", "SizeX": "24", "SizeY": "24",
+		"Rooms": "1", "Rooms(N)": "1", "Rooms(H)": "1",
+	}}
 	for _, id := range []int{51, 83, 84, 85, 86} {
 		size := "24"
 		if id == 51 {
