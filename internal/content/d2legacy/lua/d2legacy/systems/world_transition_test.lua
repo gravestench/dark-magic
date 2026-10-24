@@ -162,6 +162,8 @@ local suite = {
                     { hero_y = 84, target_y = 84, want_x = 275, want_y = 84 },
                     { hero_y = 88, target_y = 88, want_x = 275, want_y = 86 },
                     { hero_y = 89, target_y = 89, want_x = 281, want_y = 89 },
+                    -- The ray reaches the east edge beside the strip, but misses at the trigger plane.
+                    { hero_y = 70, target_y = 85, want_x = 281, want_y = 85 },
                     { hero_y = 80, target_y = 100, want_x = 281, want_y = 100 },
                 }) do
                     local x, y = geometry.pointer_target(1, 269, case.hero_y, 281, case.target_y, 280, 200)
