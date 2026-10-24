@@ -479,10 +479,12 @@ func testTownBridgeShoulderPointerCrosses(t *testing.T, hosted bool) {
 	t.Logf("bridge shoulder crossing committed level=%d position=(%.2f,%.2f)", app.activeWorldLevel, x, y)
 }
 
+// TestTownBridgeShoulderPointerCrossesOffline checks the local bridge shoulder click.
 func TestTownBridgeShoulderPointerCrossesOffline(t *testing.T) {
 	testTownBridgeShoulderPointerCrosses(t, false)
 }
 
+// TestTownBridgeShoulderPointerCrossesConnected checks the same click through a listen host.
 func TestTownBridgeShoulderPointerCrossesConnected(t *testing.T) {
 	testTownBridgeShoulderPointerCrosses(t, true)
 }
