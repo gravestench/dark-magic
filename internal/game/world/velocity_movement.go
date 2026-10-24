@@ -33,11 +33,16 @@ type velocityStores struct {
 	position *akara.DynamicStore
 	velocity *akara.DynamicStore
 	collider *akara.DynamicStore
+	location *akara.DynamicStore
 }
 
 // RegisterVelocityMovement registers the opt-in marker and fixed-tick movement system against mod-owned spatial
 // schemas. Component names remain configurable so the engine does not impose a namespace on game content.
 func RegisterVelocityMovement(engine *gameecs.Engine, paths VelocityPathFinder, components VelocityComponents) error {
+	return registerVelocityMovement(engine, paths, components, nil)
+}
+
+func registerVelocityMovement(engine *gameecs.Engine, paths VelocityPathFinder, components VelocityComponents, levels *velocityLevelSelection) error {
 	if engine == nil {
 		return fmt.Errorf("world: velocity movement requires an engine")
 	}
@@ -70,14 +75,23 @@ func RegisterVelocityMovement(engine *gameecs.Engine, paths VelocityPathFinder, 
 	}
 
 	stores := velocityStores{position: position, velocity: velocity, collider: collider}
+	read := []akara.ComponentType{velocity, collider}
+	if levels != nil {
+		store, found := akara.GetDynamicStore(engine.World(), levels.location.Component)
+		if !found {
+			return fmt.Errorf("world: velocity movement missing location store %q", levels.location.Component)
+		}
+		stores.location = store
+		read = append(read, store)
+	}
 
 	return engine.Register(gameecs.Definition{
 		ID:     VelocityMovementSystemID,
 		Phase:  gameecs.PhaseMovement,
 		All:    []akara.ComponentType{marker, position, velocity, collider},
-		Read:   []akara.ComponentType{velocity, collider},
+		Read:   read,
 		Write:  []akara.ComponentType{position, velocity},
-		Update: velocityMovementUpdate(engine, paths, components, stores),
+		Update: velocityMovementUpdate(engine, paths, components, stores, levels),
 	})
 }
 
@@ -111,6 +125,7 @@ func velocityMovementUpdate(
 	paths VelocityPathFinder,
 	components VelocityComponents,
 	stores velocityStores,
+	levels *velocityLevelSelection,
 ) gameecs.UpdateFunc {
 	boundWorld := engine.World()
 
@@ -138,11 +153,26 @@ func velocityMovementUpdate(
 			}
 
 			stores = velocityStores{position: position, velocity: velocity, collider: collider}
+			if levels != nil {
+				store, found := akara.GetDynamicStore(currentWorld, levels.location.Component)
+				if !found {
+					return fmt.Errorf("world: velocity movement missing restored location store %q", levels.location.Component)
+				}
+				stores.location = store
+			}
 			boundWorld = currentWorld
 		}
 
 		for _, entity := range entities {
-			if err := moveVelocityEntity(paths, stores, entity, seconds); err != nil {
+			selectedPaths := paths
+			if levels != nil {
+				var err error
+				selectedPaths, err = levels.pathsFor(stores.location, entity)
+				if err != nil {
+					return err
+				}
+			}
+			if err := moveVelocityEntity(selectedPaths, stores, entity, seconds); err != nil {
 				return err
 			}
 		}
