@@ -48,17 +48,17 @@ func realEntryWorldContent(t *testing.T) *content.FS {
 	return source
 }
 
-// The public Build boundary must publish all four materialized zones and six directed transitions together.
+// The public Build boundary must publish all five materialized zones and six directed transitions together.
 func TestBuildColdPlainsReal(t *testing.T) {
 	source := realEntryWorldContent(t)
 	started := time.Now()
 	prepared, err := Build(t.Context(), source, content.D2Legacy(), recordstore.New(source),
 		entryWorldObjectResolver{}, 17, 0)
-	t.Logf("owned-asset four-zone preparation took %s", time.Since(started))
+	t.Logf("owned-asset five-zone preparation took %s", time.Since(started))
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(prepared.Worlds) != 4 || len(prepared.Zones) != 4 || len(prepared.Seams) != 3 {
+	if len(prepared.Worlds) != 5 || len(prepared.Zones) != 5 || len(prepared.Seams) != 3 {
 		t.Fatalf("prepared zones/maps/seams = %d/%d/%d",
 			len(prepared.Zones), len(prepared.Worlds), len(prepared.Seams))
 	}

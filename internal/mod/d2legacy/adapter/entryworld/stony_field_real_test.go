@@ -24,7 +24,7 @@ func TestStonyFieldPreparedSeamReal(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			if len(prepared.Worlds) != 4 || len(prepared.Zones) != 4 || len(prepared.Seams) != 3 {
+			if len(prepared.Worlds) != 5 || len(prepared.Zones) != 5 || len(prepared.Seams) != 3 {
 				t.Fatalf("prepared maps/zones/seams=%d/%d/%d",
 					len(prepared.Worlds), len(prepared.Zones), len(prepared.Seams))
 			}
@@ -116,7 +116,7 @@ func TestStonyFieldPreparedSeamReal(t *testing.T) {
 				t.Fatal("Stony Field has no eligible rooms with open candidate points")
 			}
 
-			t.Logf("owned seed 17 difficulty %d: four maps, three seams, safe aligned 3/4 routes",
+			t.Logf("owned seed 17 difficulty %d: five maps, three seams, safe aligned 3/4 routes",
 				difficulty)
 		})
 	}

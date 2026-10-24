@@ -222,6 +222,7 @@ function M.register()
     })
     component("d2legacy.world.warp", {
         { name = "pair_id", type = "string" },
+        { name = "static", type = "bool" },
         { name = "destination_level", type = "i64" },
         { name = "destination_x", type = "f64" },
         { name = "destination_y", type = "f64" },

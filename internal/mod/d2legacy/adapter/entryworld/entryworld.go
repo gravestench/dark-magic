@@ -25,6 +25,7 @@ type Records interface {
 // Prepared owns the generated zones, materialized maps, trusted spawns, seams, and topology identity as one result.
 // Consumers should not mix fields from different Prepared values because their geometry is seed-dependent.
 type Prepared struct {
+	CaveWarp         *CaveWarpPair
 	Worlds           map[int]*gameworld.Map
 	Zones            map[int]*worldgen.Zone
 	Spawns           map[int][2]float64

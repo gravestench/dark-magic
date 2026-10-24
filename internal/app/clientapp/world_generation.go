@@ -174,6 +174,7 @@ func (app *application) publishEntryWorld(
 	app.worldMu.Lock()
 	app.transitionSeam = prepared.Seams[0]
 	app.transitionSeams = append([]gametransition.Seam(nil), prepared.Seams...)
+	app.caveWarp = prepared.CaveWarp
 	app.entryWorldTopology = prepared.Topology
 	app.entryWorldChecksum = checksum
 	app.gameWorldZones = prepared.Zones

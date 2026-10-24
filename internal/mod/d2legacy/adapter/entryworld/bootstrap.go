@@ -29,6 +29,32 @@ func (world *Prepared) InitialData(owner string, developmentItems bool) map[stri
 		},
 		"d2legacy.interactions":      InteractionData(world.Worlds, world.Zones, owner, ""),
 		"d2legacy.world_transitions": TransitionData(world.Seams),
+		"d2legacy.world_warps":       world.WarpData(),
+	}
+}
+
+// WarpData publishes the two directed, materialization-validated cave ends.
+// The authored DS1 supplies their appearance, so no portal token is sent.
+func (world *Prepared) WarpData() map[string]any {
+	endpoints := []any{}
+	if world != nil && world.CaveWarp != nil {
+		endpoints = append(endpoints,
+			caveWarpData(world.CaveWarp.First, "DEN OF EVIL"),
+			caveWarpData(world.CaveWarp.Second, "BLOOD MOOR"),
+		)
+	}
+	return map[string]any{"endpoints": endpoints}
+}
+
+// caveWarpData publishes validated authored cave geometry without a portal appearance token.
+func caveWarpData(endpoint CaveWarpEndpoint, label string) map[string]any {
+	return map[string]any{
+		"id": endpoint.ID, "pair_id": endpoint.PairedID, "static": true,
+		"label": label, "level_id": endpoint.LevelID,
+		"x": endpoint.X, "y": endpoint.Y, "radius": float64(3.5),
+		"destination_level": endpoint.TargetLevel,
+		"destination_x":     endpoint.ArrivalX, "destination_y": endpoint.ArrivalY,
+		"destination_width": endpoint.Width, "destination_height": endpoint.Height,
 	}
 }
 

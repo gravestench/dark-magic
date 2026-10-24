@@ -76,6 +76,7 @@ func (app *application) preparedEntryWorld() *entryworld.Prepared {
 		Zones:    app.gameWorldZones,
 		Spawns:   app.gameWorldSpawns,
 		Seams:    app.transitionSeams,
+		CaveWarp: app.caveWarp,
 		Topology: app.entryWorldTopology,
 	}
 }

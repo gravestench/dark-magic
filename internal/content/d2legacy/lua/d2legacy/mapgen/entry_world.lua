@@ -6,6 +6,7 @@ local preset = require("d2legacy.mapgen.preset")
 local outdoor = require("d2legacy.mapgen.outdoor")
 local cold_plains = require("d2legacy.mapgen.cold_plains")
 local stony_field = require("d2legacy.mapgen.stony_field")
+local maze = require("d2legacy.mapgen.maze")
 local M = {}
 local opposite = {north = "south", east = "west", south = "north", west = "east"}
 
@@ -39,6 +40,19 @@ function M.wilderness(seed, difficulty, town)
     local direction = assert(stamp.role:match("^act1%-town:exit%-(%a+)$"),
         "d2legacy entry town has no cardinal exit")
     return outdoor.generate(2, seed, direction, difficulty)
+end
+
+-- wilderness_v4 adds the Den entrance only for the new production topology.
+function M.wilderness_v4(seed, difficulty, town)
+    local stamp = assert(town.stamps and town.stamps[1], "d2legacy entry town has no stamp")
+    local direction = assert(stamp.role:match("^act1%-town:exit%-(%a+)$"),
+        "d2legacy entry town has no cardinal exit")
+    return outdoor.generate_with_den(2, seed, direction, difficulty)
+end
+
+-- den requests the separate indoor level without joining it to an outdoor seam.
+function M.den(seed, difficulty)
+    return maze.generate(8, seed, difficulty)
 end
 
 -- The admitted Blood Moor exit selects the Cold Plains approach direction.
@@ -141,6 +155,38 @@ function M.stony_field_seam(plains, stony)
     local exit = named_warp(plains, "stony-field-exit", 4)
     local entry = named_warp(stony, "cold-plains-entry", 3)
     return generated_seam(plains, stony, exit, entry)
+end
+
+-- The IDs below deliberately distinguish semantic zone endpoints, zero-based
+-- Levels Vis/Warp slots, and LvlWarp row identities. Marker geometry is resolved
+-- from decoded authored facts after materialization, never from filenames.
+function M.den_warp(blood_moor, den)
+    assert(blood_moor.request and blood_moor.request.level_id == 2,
+        "d2legacy entry world requires Blood Moor for the cave link")
+    assert(den.request and den.request.level_id == 8,
+        "d2legacy entry world requires Den for the cave link")
+    local entrance = named_warp(blood_moor, "den-entrance", 8)
+    local exit = named_warp(den, "den-exit", 2)
+    return {
+        first_level = 2, first_warp_role = entrance.role, first_zone_warp_id = entrance.id,
+        first_vis_slot = 3, first_lvlwarp_id = 0,
+        second_level = 8, second_warp_role = exit.role, second_zone_warp_id = exit.id,
+        second_vis_slot = 0, second_lvlwarp_id = 4,
+    }
+end
+
+-- The single production v4 composition owns its five-zone policy in Lua.
+function M.v4(seed, difficulty)
+    local town = M.town(seed, difficulty)
+    local blood_moor = M.wilderness_v4(seed, difficulty, town)
+    local plains = M.cold_plains_v3(seed, difficulty, blood_moor)
+    local stony = M.stony_field(seed, difficulty, plains)
+    local den = M.den(seed, difficulty)
+    return {
+        zones = {town, blood_moor, plains, stony, den},
+        seams = {M.seam(town, blood_moor), M.generated_seam(blood_moor, plains), M.stony_field_seam(plains, stony)},
+        cave_warp = M.den_warp(blood_moor, den),
+    }
 end
 
 return M

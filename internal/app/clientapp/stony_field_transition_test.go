@@ -60,9 +60,9 @@ func TestStonyFieldOfflinePopulationRecoveryRoundTrip(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if restored.app.entryWorldTopology.Version != 3 || len(restored.app.gameWorlds) != 4 ||
+	if restored.app.entryWorldTopology.Version != 4 || len(restored.app.gameWorlds) != 5 ||
 		restored.app.entryWorldChecksum != bundle.TopologyChecksum || restored.app.activeWorldLevel != 4 {
-		t.Fatal("recovery lost the four-map topology or active Stony Field map")
+		t.Fatal("recovery lost the five-map topology or active Stony Field map")
 	}
 
 	got, err := restored.app.offlineSession.RecoveryCheckpoint()

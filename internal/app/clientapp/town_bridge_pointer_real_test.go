@@ -110,14 +110,27 @@ func (bridgeTestConsole) Close() {}
 func newBridgePointerClient(t *testing.T, hosted bool, spawn ...string) (*application, *bridgeTestInput) {
 	t.Helper()
 	requireRealD2LegacyAssets(t)
+
+	config := realD2LegacyFixtureConfig{fixtureWorldSpawn: "seam"}
+	if len(spawn) > 0 {
+		config.fixtureWorldSpawn = spawn[0]
+	}
+
+	return newPointerWorldClient(t, hosted, config)
+}
+
+// newPointerWorldClient shares the production scene shell with cave difficulty and recovery acceptance.
+func newPointerWorldClient(t *testing.T, hosted bool, config realD2LegacyFixtureConfig,
+	startScene ...func(*application) error,
+) (*application, *bridgeTestInput) {
+	t.Helper()
+	requireRealD2LegacyAssets(t)
 	options := realD2LegacyOptions(t)
 	options.StartScene = "game_world"
 	options.FixtureCharacters = 1
-	options.FixtureWorldSpawn = "seam"
-
-	if len(spawn) > 0 {
-		options.FixtureWorldSpawn = spawn[0]
-	}
+	options.FixtureWorldSpawn = config.fixtureWorldSpawn
+	options.FixtureWorldLevel = config.fixtureWorldLevel
+	options.GameDifficulty = config.gameDifficulty
 
 	app := newApplication(options)
 	input := &bridgeTestInput{}
@@ -159,6 +172,13 @@ func newBridgePointerClient(t *testing.T, hosted bool, spawn ...string) (*applic
 	app.console = bridgeTestConsole{}
 
 	startBridgeClientStep(t, "game catalogs", app.loadGameCatalogs)
+
+	if config.recovery != nil {
+		startBridgeClientStep(t, "recovery topology", func() error {
+			return app.prepareOfflineEntryWorldRecovery(*config.recovery)
+		})
+	}
+
 	startBridgeClientStep(t, "offline authority", app.buildOfflineSession)
 	startBridgeClientStep(t, "Lua capabilities", app.registerLuaRuntime)
 	startBridgeClientStep(t, "engine host", app.startEngineHost)
@@ -168,7 +188,11 @@ func newBridgePointerClient(t *testing.T, hosted bool, spawn ...string) (*applic
 		startBridgeClientStep(t, "listen host", app.network.Host)
 	}
 
-	startBridgeClientStep(t, "game-world scene", app.loadScriptComponents)
+	if len(startScene) != 0 {
+		startBridgeClientStep(t, "game-world scene", func() error { return startScene[0](app) })
+	} else {
+		startBridgeClientStep(t, "game-world scene", app.loadScriptComponents)
+	}
 
 	if hosted {
 		deadline := time.Now().Add(30 * time.Second)

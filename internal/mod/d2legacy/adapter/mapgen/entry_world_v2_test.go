@@ -239,10 +239,12 @@ func TestEntryWorldV1SnapshotKeepsLegacyEnvelope(t *testing.T) {
 	}
 }
 
-// These synthetic snapshots were captured at 6f8df124 before new-world generation changed.
+// Synthetic v1/v2 snapshots were captured at 6f8df124; v3 at a9883e98.
+// They contain only test records and freeze the pre-v4 envelope bytes.
 var legacyEntryWorldChecksums = map[int]string{
 	1: "66f0dddcfa6bb8fc651aea4a26a688539941e91cfece30d780a8600c2057d821",
 	2: "ff29d0a8ac781b1ad802e507e2c144f6306467a8b6c9882e4a45d9c154639abb",
+	3: "877c373b9dcdd8723ac23b3568413d03aec1a78985d5975d932d588a248ed686",
 }
 
 // legacyEntryWorldBytes expands the exact canonical bytes; fixtures contain only synthetic records.
@@ -266,7 +268,7 @@ func legacyEntryWorldBytes(t *testing.T, version int) []byte {
 
 // Legacy worlds must not gain new zones or change checksum when restored by a newer generator release.
 func TestEntryWorldLegacySnapshotBytes(t *testing.T) {
-	for version := 1; version <= 2; version++ {
+	for version := 1; version <= 3; version++ {
 		t.Run(fmt.Sprint(version), func(t *testing.T) {
 			encoded := legacyEntryWorldBytes(t, version)
 			restored, err := RestoreEntryWorld(encoded)
