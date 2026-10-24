@@ -205,6 +205,13 @@ func TestLegacyEntryWorldSnapshotComposesWithoutColdPlains(t *testing.T) {
 		t.Fatalf("v1 checksum = %s, want %s: %v", restored.app.entryWorldChecksum, wantChecksum, err)
 	}
 
+	restored.advanceOffline(t, 1)
+
+	plan := populationPlan(t, restored)
+	if len(plan.Zones) != 1 || plan.Zones[0].Level != 2 {
+		t.Fatalf("v1 topology population = %#v, want level 2 alone", plan.Zones)
+	}
+
 	if len(restored.app.transitionBootstrapData()["seams"].([]any)) != 2 {
 		t.Fatal("v1 entry seam lost reciprocal transitions")
 	}

@@ -16,6 +16,7 @@ import (
 	"github.com/gravestench/dark-magic/internal/app/serverapp"
 	recordstore "github.com/gravestench/dark-magic/internal/game/data/store"
 	gamesession "github.com/gravestench/dark-magic/internal/game/session"
+	gameworld "github.com/gravestench/dark-magic/internal/game/world"
 	playeradapter "github.com/gravestench/dark-magic/internal/mod/d2legacy/adapter/player"
 	modruntime "github.com/gravestench/dark-magic/internal/runtime/lua"
 )
@@ -242,6 +243,15 @@ func (controller *networkController) installListenWorlds(
 		); err != nil {
 			return err
 		}
+	}
+
+	// Match offline authority: Lua supplies velocity; the native system integrates opted-in residents.
+	if err := gameworld.RegisterVelocityMovement(host.Engine, controller.app.gameWorlds[2], gameworld.VelocityComponents{
+		Position: "d2legacy.world.position",
+		Velocity: "d2legacy.world.velocity",
+		Collider: "d2legacy.world.collider",
+	}); err != nil {
+		return wrap("register listen hostile movement", err)
 	}
 
 	population, err := controller.app.populationBootstrapCommand()

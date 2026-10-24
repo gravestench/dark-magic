@@ -77,7 +77,7 @@ end
 local function field_residency(inactive)
     local ecs = require("engine.ecs/v1")
     local state = require("engine.authority_state/v1")
-    local room = state.read("d2legacy.population.plan").rooms[1]
+    local room = state.read("d2legacy.population.plan").zones[1].rooms[1]
     test.expect(#room.inactive_residents):equals(inactive and 1 or 0)
     if inactive then
         local endpoints = ecs.query({ all = { "d2legacy.world.town_portal", "d2legacy.world.inactive" } })
