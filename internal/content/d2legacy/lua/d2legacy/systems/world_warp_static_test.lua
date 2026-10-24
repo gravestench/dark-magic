@@ -34,6 +34,7 @@ local endpoints = {
     },
 }
 
+-- enter admits the player before static interaction scenarios begin.
 local function enter()
     return {
         test.submit_system({ tick = 1, sequence = 1, kind = "system.player.enter", payload = fixtures.amazon_entry }),
@@ -41,6 +42,7 @@ local function enter()
     }
 end
 
+-- open_at submits an ordinary interaction command and advances the authoritative tick.
 local function open_at(tick, id)
     return {
         test.submit({
@@ -54,6 +56,7 @@ local function open_at(tick, id)
     }
 end
 
+-- player_at checks the committed location and optional transition kind after a command.
 local function player_at(level, x, y, kind)
     return test.run(function()
         local ecs = require("engine.ecs/v1")
@@ -69,6 +72,7 @@ local function player_at(level, x, y, kind)
     end)
 end
 
+-- pair_entities resolves current selectable IDs so mutation cases alter live ECS state.
 local function pair_entities()
     local ecs = require("engine.ecs/v1")
     local by_id = {}
@@ -78,6 +82,7 @@ local function pair_entities()
     return ecs, by_id
 end
 
+-- joined preserves action order across setup, mutation, click, and assertion phases.
 local function joined(...)
     local result = {}
     for _, actions in ipairs({ ... }) do
@@ -88,6 +93,7 @@ local function joined(...)
     return result
 end
 
+-- reject_after_mutation proves a stale reciprocal pair cannot relocate the player.
 local function reject_after_mutation(change)
     return joined(enter(), {
         test.run(function()

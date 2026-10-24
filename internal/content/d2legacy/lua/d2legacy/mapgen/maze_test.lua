@@ -1,5 +1,6 @@
 local test = require("d2legacy.tests/v1")
 
+-- den_records supplies one-room authored rows for all Den chamber definitions.
 local function den_records()
     local presets = {}
     for definition = 83, 86 do
@@ -33,6 +34,7 @@ local function den_records()
     }
 end
 
+-- load_den binds synthetic rows before requiring the maze policy under test.
 local function load_den(rows)
     test.mock_module("engine.records/v1", {
         load = function(path)

@@ -1,5 +1,6 @@
 local test = require("d2legacy.tests/v1")
 
+-- outdoor_records includes the entrance rows needed by the v4 Blood Moor recipe.
 local function outdoor_records()
     local prest = {}
     for _, definition in ipairs({ 17, 26, 27, 28, 29, 30, 35, 51 }) do
@@ -48,6 +49,7 @@ local function outdoor_records()
     return rows
 end
 
+-- load_outdoor isolates each recipe test from cached record modules.
 local function load_outdoor(rows)
     test.mock_module("engine.records/v1", {
         load = function(path)
@@ -60,6 +62,7 @@ local function load_outdoor(rows)
     return require("d2legacy.mapgen.outdoor")
 end
 
+-- verify checks the existing outdoor border recipe for each town exit direction.
 local function verify(direction)
     local outdoor = load_outdoor(outdoor_records())
     local zone = outdoor.generate(2, 42, direction, 0)
@@ -94,6 +97,7 @@ local function verify(direction)
     test.assert(bridge == 64 and passable == 48, [=[bridge == 64 and passable == 48]=])
 end
 
+-- equal compares admitted recipes recursively so earlier stream changes are visible.
 local function equal(first, second)
     if type(first) ~= "table" or type(second) ~= "table" then
         return first == second

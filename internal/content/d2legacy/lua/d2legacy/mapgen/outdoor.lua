@@ -90,6 +90,7 @@ local function den_approaches(zone)
     for _, tile in ipairs(zone.structures) do
         if not tile.passable then blocked[key(tile.x, tile.y)] = true end
     end
+    -- clear requires a three-tile footprint inside bounds and away from blocked structures.
     local function clear(x, y)
         if x < 1 or y < 1 or x >= width - 1 or y >= height - 1 then return false end
         for dy = -1, 1 do

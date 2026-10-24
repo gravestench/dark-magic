@@ -46,6 +46,7 @@ func (world *Prepared) WarpData() map[string]any {
 	return map[string]any{"endpoints": endpoints}
 }
 
+// caveWarpData publishes validated authored cave geometry without a portal appearance token.
 func caveWarpData(endpoint CaveWarpEndpoint, label string) map[string]any {
 	return map[string]any{
 		"id": endpoint.ID, "pair_id": endpoint.PairedID, "static": true,

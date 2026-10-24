@@ -1,5 +1,6 @@
 local test = require("d2legacy.tests/v1")
 
+-- records supplies a reciprocal synthetic five-zone recipe without owned game files.
 local function records()
     local presets = {}
     for _, definition in ipairs({ 17, 26, 27, 28, 29, 30, 35, 51, 83, 84, 85, 86 }) do
@@ -60,6 +61,7 @@ local function records()
     }
 end
 
+-- equal detects recipe drift through nested zone and seam tables.
 local function equal(first, second)
     if type(first) ~= "table" or type(second) ~= "table" then
         return first == second
@@ -77,6 +79,7 @@ local function equal(first, second)
     return true
 end
 
+-- load_entry confines mock records to each v4 recipe case.
 local function load_entry(rows)
     test.mock_module("engine.records/v1", {
         load = function(path)
