@@ -2,12 +2,13 @@ package mapgen
 
 import (
 	"bytes"
-	"crypto/sha256"
+	"compress/gzip"
 	"encoding/json"
 	"fmt"
+	"io"
+	"os"
 	"testing"
 
-	"github.com/gravestench/dark-magic/internal/content"
 	modruntime "github.com/gravestench/dark-magic/internal/runtime/lua"
 )
 
@@ -119,37 +120,35 @@ func TestEntryWorldV2UsesOppositeColdPlainsEdge(t *testing.T) {
 	}
 }
 
-// A generated entry world must use the admitted Blood Moor exit to add the
-// only level-3 zone and a reciprocal second pair at every difficulty.
-func TestEntryWorldV2SelectsUniqueBloodMoorExit(t *testing.T) {
-	for difficulty := 0; difficulty <= 2; difficulty++ {
-		world, err := GenerateEntryWorld(t.Context(), content.D2Legacy(), entryWorldV2Records(), 42, difficulty)
-		if err != nil {
-			t.Fatalf("difficulty %d: %v", difficulty, err)
+// The pinned v2 topology retains its original three levels and reciprocal second seam.
+func TestEntryWorldV2RestoresPinnedThreeZoneTopology(t *testing.T) {
+	difficulty := 0
+	world, err := RestoreEntryWorld(legacyEntryWorldBytes(t, 2))
+	if err != nil {
+		t.Fatalf("difficulty %d: %v", difficulty, err)
+	}
+	if world.Version != 2 || len(world.Zones) != 3 || len(world.Seams) != 2 {
+		t.Fatalf("difficulty %d: topology version=%d zones=%d seams=%d",
+			difficulty, world.Version, len(world.Zones), len(world.Seams))
+	}
+	for _, level := range []int{1, 2, 3} {
+		zone := world.Zones[level]
+		if zone == nil || zone.Request().Seed != 42 || int(zone.Request().Difficulty) != difficulty {
+			t.Fatalf("difficulty %d level %d: zone=%#v", difficulty, level, zone)
 		}
-		if world.Version != 2 || len(world.Zones) != 3 || len(world.Seams) != 2 {
-			t.Fatalf("difficulty %d: topology version=%d zones=%d seams=%d",
-				difficulty, world.Version, len(world.Zones), len(world.Seams))
-		}
-		for _, level := range []int{1, 2, 3} {
-			zone := world.Zones[level]
-			if zone == nil || zone.Request().Seed != 42 || int(zone.Request().Difficulty) != difficulty {
-				t.Fatalf("difficulty %d level %d: zone=%#v", difficulty, level, zone)
-			}
-		}
-		if world.Seams[0].FirstLevel != 1 || world.Seams[0].SecondLevel != 2 ||
-			world.Seams[1].FirstLevel != 2 || world.Seams[1].SecondLevel != 3 {
-			t.Fatalf("difficulty %d: seam order=%#v", difficulty, world.Seams)
-		}
-		if world.Seams[1].FirstDirection != "east" || world.Seams[1].SecondDirection != "west" {
-			t.Fatalf("difficulty %d: reciprocal level-3 seam=%#v", difficulty, world.Seams[1])
-		}
+	}
+	if world.Seams[0].FirstLevel != 1 || world.Seams[0].SecondLevel != 2 ||
+		world.Seams[1].FirstLevel != 2 || world.Seams[1].SecondLevel != 3 {
+		t.Fatalf("difficulty %d: seam order=%#v", difficulty, world.Seams)
+	}
+	if world.Seams[1].FirstDirection != "east" || world.Seams[1].SecondDirection != "west" {
+		t.Fatalf("difficulty %d: reciprocal level-3 seam=%#v", difficulty, world.Seams[1])
 	}
 }
 
 // V2 snapshot bytes must round-trip canonically and reject drift in any admitted zone or seam.
 func TestEntryWorldV2SnapshotRejectsTopologyDrift(t *testing.T) {
-	world, err := GenerateEntryWorld(t.Context(), content.D2Legacy(), entryWorldV2Records(), 42, 0)
+	world, err := RestoreEntryWorld(legacyEntryWorldBytes(t, 2))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -222,25 +221,7 @@ func TestEntryWorldV2SnapshotRejectsTopologyDrift(t *testing.T) {
 
 // A v1 checkpoint preserves its original two-zone envelope, bytes, and checksum after restore.
 func TestEntryWorldV1SnapshotKeepsLegacyEnvelope(t *testing.T) {
-	world, err := GenerateEntryWorld(t.Context(), content.D2Legacy(), entryWorldV2Records(), 42, 0)
-	if err != nil {
-		t.Fatal(err)
-	}
-	legacySeam := world.Seams[0]
-	legacySeam.TriggerRadius = 0
-	legacySeam.MaxArrivalDistance = 0
-	legacySeam.ArrivalInset = 0
-	legacySeam.FirstWarpID = 0
-	legacySeam.SecondWarpID = 0
-	legacySeam.FirstWarpRole = ""
-	legacySeam.SecondWarpRole = ""
-	legacy, err := json.Marshal(entryWorldSnapshot{
-		Version: 1, Town: world.Zones[1].Definition(), Wilderness: world.Zones[2].Definition(),
-		Seam: legacySeam,
-	})
-	if err != nil {
-		t.Fatal(err)
-	}
+	legacy := legacyEntryWorldBytes(t, 1)
 	legacyWorld, err := RestoreEntryWorld(legacy)
 	if err != nil {
 		t.Fatal(err)
@@ -253,7 +234,56 @@ func TestEntryWorldV1SnapshotKeepsLegacyEnvelope(t *testing.T) {
 		t.Fatalf("v1 restore gained topology: %#v", legacyWorld)
 	}
 	checksum, err := legacyWorld.Checksum()
-	if err != nil || checksum != fmt.Sprintf("%x", sha256.Sum256(legacy)) {
+	if err != nil || checksum != legacyEntryWorldChecksums[1] {
 		t.Fatalf("v1 checksum=%s, err=%v", checksum, err)
+	}
+}
+
+// These synthetic snapshots were captured at 6f8df124 before new-world generation changed.
+var legacyEntryWorldChecksums = map[int]string{
+	1: "66f0dddcfa6bb8fc651aea4a26a688539941e91cfece30d780a8600c2057d821",
+	2: "ff29d0a8ac781b1ad802e507e2c144f6306467a8b6c9882e4a45d9c154639abb",
+}
+
+// legacyEntryWorldBytes expands the exact canonical bytes; fixtures contain only synthetic records.
+func legacyEntryWorldBytes(t *testing.T, version int) []byte {
+	t.Helper()
+	compressed, err := os.ReadFile(fmt.Sprintf("testdata/entry-world-v%d-d0.json.gz", version))
+	if err != nil {
+		t.Fatal(err)
+	}
+	reader, err := gzip.NewReader(bytes.NewReader(compressed))
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer reader.Close()
+	encoded, err := io.ReadAll(reader)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return encoded
+}
+
+// Legacy worlds must not gain new zones or change checksum when restored by a newer generator release.
+func TestEntryWorldLegacySnapshotBytes(t *testing.T) {
+	for version := 1; version <= 2; version++ {
+		t.Run(fmt.Sprint(version), func(t *testing.T) {
+			encoded := legacyEntryWorldBytes(t, version)
+			restored, err := RestoreEntryWorld(encoded)
+			if err != nil {
+				t.Fatal(err)
+			}
+			got, err := restored.Snapshot()
+			if err != nil || !bytes.Equal(got, encoded) {
+				t.Fatalf("legacy bytes changed: %v", err)
+			}
+			checksum, err := restored.Checksum()
+			if err != nil || checksum != legacyEntryWorldChecksums[version] {
+				t.Fatalf("legacy checksum=%s: %v", checksum, err)
+			}
+			if restored.Version != version || len(restored.Zones) != version+1 || len(restored.Seams) != version {
+				t.Fatalf("legacy topology changed: %#v", restored)
+			}
+		})
 	}
 }

@@ -126,7 +126,9 @@ func (prediction *positionPrediction) applyInputs(tick uint64) {
 		}
 
 		var payload movement.MovePayload
-		if json.Unmarshal(intent.Payload, &payload) == nil && prediction.classKnown {
+		// Match authority: queued input from before a level crossing cannot move the arrived hero.
+		if json.Unmarshal(intent.Payload, &payload) == nil && prediction.classKnown &&
+			(payload.SourceLevel == 0 || int64(payload.SourceLevel) == prediction.hud.Location.LevelID) {
 			prediction.motion = &payload
 		}
 

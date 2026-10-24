@@ -82,19 +82,19 @@ local function fill_candidates(level_type)
     return candidates
 end
 
--- The incoming Blood Moor exit determines the facing edge of this zone.
-local function entry_warp(width, height, direction)
+-- Midpoint endpoints are provisional structural policy for both outdoor joins.
+local function edge_warp(width, height, direction, id, role, destination)
     local x, y = math.floor(width / 2), math.floor(height / 2)
     if direction == "north" then y = 0
     elseif direction == "east" then x = width - 1
     elseif direction == "south" then y = height - 1
     else x = 0 end
-    return {id = 1, role = "blood-moor-entry", direction = direction,
-        x = x, y = y, destination_level = 2}
+    return {id = id, role = role, direction = direction,
+        x = x, y = y, destination_level = destination}
 end
 
 -- A semantic route reserves a connected corridor through provisional fill.
-local function route_to_interior(entry, width, height)
+local function route_to_interior(entry, width, height, exit)
     local path, x, y = {}, entry.x, entry.y
     local goal_x, goal_y = math.floor(width / 2), math.floor(height / 2)
     while true do
@@ -105,12 +105,23 @@ local function route_to_interior(entry, width, height)
         elseif y < goal_y then y = y + 1
         else y = y - 1 end
     end
+    -- Extend from the existing center without duplicating it. Applying the
+    -- dirt identities once keeps the center continuous across both halves.
+    if exit then
+        while x ~= exit.x or y ~= exit.y do
+            if x < exit.x then x = x + 1
+            elseif x > exit.x then x = x - 1
+            elseif y < exit.y then y = y + 1
+            else y = y - 1 end
+            path[#path + 1] = {x = x, y = y}
+        end
+    end
     return dirt_path.apply(path)
 end
 
 -- Admit the complete deterministic recipe only after all source rows and
 -- candidate assets have been checked, independent of this seed's fill draws.
-function M.generate(level_id, seed, source_direction, difficulty)
+local function generate(level_id, seed, source_direction, difficulty, with_stony_exit)
     level_id, seed = math.floor(assert(tonumber(level_id))), math.floor(assert(tonumber(seed)))
     difficulty = math.floor(tonumber(difficulty) or 0)
     assert(level_id == 3, "d2legacy mapgen: Cold Plains strategy requires level 3")
@@ -145,19 +156,37 @@ function M.generate(level_id, seed, source_direction, difficulty)
             if y > 0 then links[#links + 1] = {from = id - columns, to = id} end
         end
     end
-    local entry = entry_warp(width, height, direction)
+    local entry = edge_warp(width, height, direction, 1, "blood-moor-entry", 2)
+    local warps, exit = {entry}, nil
+    if with_stony_exit then
+        exit = edge_warp(width, height, opposite[direction], 2, "stony-field-exit", 4)
+        warps[#warps + 1] = exit
+    end
     return assert(worldgen.admit({
         request = {version = 1, seed = seed, act = 1, level_id = level_id, difficulty = difficulty},
         kind = "outdoor", bounds = {x = 0, y = 0, width = width, height = height},
-        stamps = stamps, rooms = rooms, links = links, warps = {entry},
-        paths = route_to_interior(entry, width, height),
+        stamps = stamps, rooms = rooms, links = links, warps = warps,
+        paths = route_to_interior(entry, width, height, exit),
         trace = {
             "Cold Plains uses provisional generic Act I stone-fill definitions 29 and 30",
             string.format("Blood Moor %s exit joins the Cold Plains %s edge", source_direction, direction),
             "entry placement and interior route are deterministic Dark Magic structural policy",
-            "Stony Field, Burial Grounds, and Cave Level 1 exits await placed-endpoint evidence",
+            with_stony_exit
+                and "Stony Field exit and corridor are provisional Dark Magic structural policy; "
+                    .. "Burial Grounds and Cave Level 1 exits await placed-endpoint evidence"
+                or "Stony Field, Burial Grounds, and Cave Level 1 exits await placed-endpoint evidence",
         },
     }))
+end
+
+-- Legacy direct callers retain their original single-entry recipe.
+function M.generate(level_id, seed, source_direction, difficulty)
+    return generate(level_id, seed, source_direction, difficulty, false)
+end
+
+-- Only v3 composition opts into the additional outdoor endpoint and corridor.
+function M.generate_with_stony_exit(level_id, seed, source_direction, difficulty)
+    return generate(level_id, seed, source_direction, difficulty, true)
 end
 
 return M

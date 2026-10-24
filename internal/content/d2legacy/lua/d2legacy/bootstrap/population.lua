@@ -191,7 +191,7 @@ end
 
 local function validate_zone(zone)
     assert(type(zone) == "table", "population zone is required")
-    assert(zone.level_id == 2 or zone.level_id == 3, "population level is required")
+    assert(zone.level_id == 2 or zone.level_id == 3 or zone.level_id == 4, "population level is required")
     assert(zone.act == 1, "population act is required")
     assert(
         zone.difficulty == nil or zone.difficulty == game_rules.difficulty(),
@@ -517,6 +517,10 @@ local function activate_zone(context, plan, entities, structural, occupied)
         elseif wanted and not room.active then
             if #(room.inactive_residents or {}) > 0 then
                 restore_room(room, entities, structural)
+            elseif not room.activated and plan.level_id == 4 then
+                -- Stony Field has room residency, but monster policy is deferred.
+                -- Skip candidate loading and every population draw on first visit.
+                room.activated = true
             elseif not room.activated then
                 if not level then
                     level = assert(

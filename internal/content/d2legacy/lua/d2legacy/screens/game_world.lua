@@ -194,8 +194,8 @@ local function prepare_terrain(self, capability, level_id)
     table.sort(ids, function(a, b) return a > b end)
     for _, id in ipairs(ids) do
         local placement = self.layout.levels[id]
-        -- Reserve integer tie slots: town covers Moor, Moor covers Plains.
-        -- Other components are single-map discrete destinations.
+        -- Reserve four integer tie slots: town covers Moor, Moor covers Plains, and Plains covers Stony Field.
+        -- Level 4 uses slot zero; later discrete destinations occupy separate single-map components.
         placement.priority = id <= 3 and 4 - id or 0
         placement.recipe.palette = screen.map.palette
         local adapter = chunked_map.create(self.root, placement.recipe, {

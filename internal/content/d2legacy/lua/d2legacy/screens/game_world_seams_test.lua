@@ -8,6 +8,8 @@ local function fixture()
         level = 1,
         nodes = {},
         jobs = {},
+        projections = {},
+        collisions = {},
         hero = {
             x = 940,
             y = 500,
@@ -36,7 +38,8 @@ local function fixture()
         end
         function n:set_world_tile(map, _, index)
             self.level, self.width, self.height = map.id, 160, 160
-            return index * 900, 440, 160, 160
+            self.tile_kind = index < 2 and "front_wall" or index < 4 and "floor" or "back_wall"
+            return (index % 2) * 900, 440, 160, 160
         end
         function n:set_dc6(path)
             self.item = path
@@ -82,6 +85,10 @@ local function fixture()
                 width = 1000,
                 height = 1000,
                 chunks = {
+                    { index = 2, x = 0, y = 440, width = 160, height = 160, depth = -1000002 },
+                    { index = 3, x = 900, y = 440, width = 160, height = 160, depth = -1000002 },
+                    { index = 4, x = 0, y = 440, width = 160, height = 160, depth = 490 },
+                    { index = 5, x = 900, y = 440, width = 160, height = 160, depth = 490 },
                     { index = 0, x = 0, y = 440, width = 160, height = 160, depth = 510 },
                     { index = 1, x = 900, y = 440, width = 160, height = 160, depth = 510 },
                 },
@@ -226,6 +233,10 @@ local function fixture()
         { source_level = 2, destination_level = 3, source_x = 1000, source_y = 500, arrival_x = 0, arrival_y = 500 }
     seams[#seams + 1] =
         { source_level = 3, destination_level = 2, source_x = 0, source_y = 500, arrival_x = 1000, arrival_y = 500 }
+    seams[#seams + 1] =
+        { source_level = 3, destination_level = 4, source_x = 1000, source_y = 500, arrival_x = 0, arrival_y = 500 }
+    seams[#seams + 1] =
+        { source_level = 4, destination_level = 3, source_x = 0, source_y = 500, arrival_x = 1000, arrival_y = 500 }
     for _, seam in ipairs(seams) do
         seam.source_direction = seam.source_x == 0 and "west" or "east"
         seam.trigger_radius, seam.world_width, seam.world_height = 2, 1100, 1000
@@ -241,7 +252,7 @@ local function fixture()
     end
     f.relocation = { sequence = 0, source_level = 0, kind = "" }
     local maps = {}
-    for id = 1, 4 do
+    for _, id in ipairs({ 1, 2, 3, 4, 8 }) do
         maps[id] = {
             id = id,
             selectable_at = function()
@@ -260,6 +271,7 @@ local function fixture()
                 return y
             end,
             screen_to_subtile = function(_, x, y, cx, cy, tx, ty)
+                f.projections[#f.projections + 1] = id
                 return x - tx + cx, y - ty + cy
             end,
         }
@@ -291,7 +303,9 @@ local function fixture()
         bind = function()
             return true
         end,
-        set_collision = function() end,
+        set_collision = function(_, map, level)
+            f.collisions[#f.collisions + 1] = { map = map.id, level = level }
+        end,
         snap_camera = function()
             f.camera.x, f.camera.y = f.hero.x, f.hero.y
         end,
@@ -334,6 +348,7 @@ local function fixture()
                             { level_id = 2, map = maps[2] },
                             { level_id = 3, map = maps[3] },
                             { level_id = 4, map = maps[4] },
+                            { level_id = 8, map = maps[8] },
                         },
                     }
                 end,
@@ -372,7 +387,7 @@ local function fixture()
                 test.expect(sx >= 0 and sx < 800 and sy >= 0 and sy < 600):is_true()
                 local covered = false
                 for _, n in ipairs(self.nodes) do
-                    if n.level == side[1] and n.alive and n.visible and n.parent == root then
+                    if n.level == side[1] and n.tile_kind == "floor" and n.alive and n.visible and n.parent == root then
                         local nx, ny = n.x + root.x, n.y + root.y
                         covered = covered
                             or (
@@ -392,6 +407,7 @@ local function fixture()
         for _, n in ipairs(self.nodes) do
             if
                 (n.level == source or n.level == destination)
+                and n.tile_kind == "floor"
                 and n.alive
                 and n.visible
                 and n.parent == root
@@ -468,10 +484,106 @@ local function visible_hero_case(name, pending_appearance, crossing)
     end)
 end
 
+-- The two approach cases start outside the trigger and share actual admitted
+-- floor/wall nodes with the hero. Missing neighbor admission, a second camera,
+-- wrong depth priority or stale input/collision binding breaks these assertions.
+local function stony_approach_case(name, level, x)
+    return test.case(name, function(t)
+        t:run(function()
+            local f = fixture()
+            f.level, f.hero.x, f.hero.y = level, x, 500
+            f:frame()
+            f:frame()
+            local hero, root = f.scene.hero, f.scene.hero.parent
+            test.expect(f.at_trigger()):is_false()
+            test.expect(f.scene.world_level_id):equals(level)
+            local admitted = {}
+            -- Check visible border coverage, retained terrain, and depth ordering under the shared camera.
+            local function assert_border()
+                f:assert_join(3, 4)
+                local by_level, resident = { [3] = {}, [4] = {} }, 0
+                for _, n in ipairs(f.nodes) do
+                    if n.level and n.alive then
+                        resident = resident + 1
+                        test.expect(n.parent == root):is_true()
+                        local sx, sy = n.x + root.x, n.y + root.y
+                        if n.visible and sx >= 0 and sx < 800 and sy >= 0 and sy < 600 then
+                            test.expect(by_level[n.level] ~= nil):is_true()
+                            by_level[n.level][n.tile_kind] = n
+                            admitted[n] = true
+                        end
+                    end
+                end
+                -- Only the two seam-edge strips are near this camera. Across
+                -- repeated reversals the other 18 prepared draws stay sparse.
+                test.expect(resident):equals(6)
+                for _, id in ipairs({ 3, 4 }) do
+                    local nodes = by_level[id]
+                    test.expect(nodes.floor ~= nil, "visible floor for level " .. id):is_true()
+                    test.expect(nodes.back_wall ~= nil, "visible back wall for level " .. id):is_true()
+                    test.expect(nodes.front_wall ~= nil, "visible front wall for level " .. id):is_true()
+                    test.expect(nodes.floor.z < nodes.back_wall.z):is_true()
+                    test.expect(nodes.back_wall.z < hero.z):is_true()
+                    test.expect(hero.z < nodes.front_wall.z):is_true()
+                end
+                -- Equal-depth art overlaps in global pixels x=3000..3060.
+                -- Plains must keep its tie priority on either active level.
+                for _, kind in ipairs({ "floor", "back_wall", "front_wall" }) do
+                    test.expect(by_level[3][kind].z > by_level[4][kind].z):is_true()
+                end
+                test.expect(hero:exists() and hero.visible):is_true()
+                test.expect(hero.animation):equals("hero")
+                test.expect(f.scene.hero == hero and hero.parent == root):is_true()
+                local active = f.scene.world_level_id
+                local binding = f.collisions[#f.collisions]
+                test.expect(binding):deep_equals({ map = active, level = active })
+                f.projections = {}
+                f.click = true
+                f:frame()
+                f.click = false
+                test.expect(f.projections):deep_equals({ active })
+                -- Identity map projection and known 1000-pixel map spacing
+                -- give the active map's target under the drawn shared camera.
+                test.expect(f.move):deep_equals({ 200 - root.x - (active - 1) * 1000, 330 - root.y })
+            end
+            assert_border()
+            for _ = 1, 3 do
+                for _, destination in ipairs({ level == 3 and 4 or 3, level }) do
+                    local rx, ry = root.x, root.y
+                    local hx, hy = hero.x + rx, hero.y + ry
+                    -- Force any unintended reload to remain pending at crossing.
+                    f.delay_all = true
+                    f:cross(destination, destination == 4 and 0 or 1000, 500)
+                    f:frame(1 / 60)
+                    test.expect(root.x):equals(rx)
+                    test.expect(root.y):equals(ry)
+                    test.expect(hero.x + root.x):equals(hx)
+                    test.expect(hero.y + root.y):equals(hy)
+                    assert_border()
+                    for n in pairs(admitted) do
+                        test.expect(n.alive and n.visible):is_true()
+                    end
+                    f.delay_all = false
+                    f:frame(0.04)
+                    assert_border()
+                end
+            end
+            f:frame(1)
+            assert_border()
+            f:close()
+            for n in pairs(admitted) do
+                test.expect(n.alive):is_false()
+            end
+        end)
+    end)
+end
+
 return test.suite({
     profile = "module",
     tier = "fast",
     cases = {
+        stony_approach_case("stony_field_art_visible_from_off_center_plains_approach", 3, 940),
+        stony_approach_case("cold_plains_art_visible_from_off_center_stony_approach", 4, 60),
         test.case("pending_actor_jobs_release_on_removal_level_change_and_close", function(t)
             t:run(function()
                 local f = fixture()
@@ -548,10 +660,14 @@ return test.suite({
         visible_hero_case("visible_hero_2_to_1_with_delayed_preload", false, { 2, 3, 1, 1000 }),
         visible_hero_case("visible_hero_2_to_3_with_delayed_preload", false, { 2, 997, 3, 0 }),
         visible_hero_case("visible_hero_3_to_2_with_delayed_preload", false, { 3, 3, 2, 1000 }),
+        visible_hero_case("visible_hero_3_to_4_with_delayed_preload", false, { 3, 997, 4, 0 }),
+        visible_hero_case("visible_hero_4_to_3_with_delayed_preload", false, { 4, 3, 3, 1000 }),
         visible_hero_case("visible_hero_1_to_2_with_pending_appearance", true, { 1, 997, 2, 0 }),
         visible_hero_case("visible_hero_2_to_1_with_pending_appearance", true, { 2, 3, 1, 1000 }),
         visible_hero_case("visible_hero_2_to_3_with_pending_appearance", true, { 2, 997, 3, 0 }),
         visible_hero_case("visible_hero_3_to_2_with_pending_appearance", true, { 3, 3, 2, 1000 }),
+        visible_hero_case("visible_hero_3_to_4_with_pending_appearance", true, { 3, 997, 4, 0 }),
+        visible_hero_case("visible_hero_4_to_3_with_pending_appearance", true, { 4, 3, 3, 1000 }),
         test.case("stale_seam_reason_cannot_ease_a_later_level_change", function(t)
             t:run(function()
                 local f = fixture()
@@ -680,11 +796,11 @@ return test.suite({
                 f:frame(1 / 60)
                 test.expect(root.x):equals(-600)
                 test.expect(f.scene.hero.x + root.x):equals(400)
-                f:cross(3, 0, 500)
+                f:cross(4, 0, 500)
                 f:frame()
                 f.hero.x, f.camera.x = 990, 990
                 f:frame(1)
-                test.expect(root.x):equals(-2200)
+                test.expect(root.x):equals(-3200)
                 f:close()
             end)
         end),
@@ -714,7 +830,7 @@ return test.suite({
                 f:frame()
                 f:frame()
                 for _, n in ipairs(f.nodes) do
-                    test.expect(n.level == 4 and n.alive):is_false()
+                    test.expect(n.level == 8 and n.alive):is_false()
                 end
                 local old_hero, old_root = f.scene.hero, f.scene.hero.parent
                 f.delay_hero = true
@@ -722,7 +838,7 @@ return test.suite({
                 f:frame()
                 local old_job = f.scene.hero_pending_job
                 test.expect(old_job ~= nil):is_true()
-                f:cross(4, 500, 500, "warp")
+                f:cross(8, 500, 500, "warp")
                 f:frame()
                 test.expect(old_job.releases):equals(1)
                 test.expect(f.scene.hero_pending_job ~= old_job):is_true()
@@ -735,6 +851,13 @@ return test.suite({
                 test.expect(f.scene.hero.visible):is_true()
                 test.expect(f.scene.hero.animation):equals("changed_hero")
                 test.expect(old_root.alive):is_false()
+                test.expect(f.scene.visual_carry):is_nil()
+                for _, n in ipairs(f.nodes) do
+                    if n.level and n.alive then
+                        test.expect(n.level):equals(8)
+                        test.expect(n.parent == f.scene.hero.parent):is_true()
+                    end
+                end
                 test.expect(f.scene.hero.x + f.scene.hero.parent.x):equals(400)
                 f:close()
             end)

@@ -34,6 +34,13 @@ type entryWorldSnapshotV2 struct {
 	Seams   []SeamSpec            `json:"seams"`
 }
 
+// v3 preserves the four admitted recipes and three seams in canonical level order.
+type entryWorldSnapshotV3 struct {
+	Version int                   `json:"version"`
+	Zones   []worldgen.Definition `json:"zones"`
+	Seams   []SeamSpec            `json:"seams"`
+}
+
 // SeamSpec is serialized policy chosen by d2legacy. Coordinates remain in tile space until the generic transition
 // adapter resolves materialized maps.
 type SeamSpec struct {
@@ -52,6 +59,19 @@ type SeamSpec struct {
 // Snapshot returns the canonical durable envelope for the joined entry topology. It stores admitted recipes and their
 // Lua-authored seam, not transient generator or runtime state.
 func (world EntryWorld) Snapshot() ([]byte, error) {
+	if world.Version == 3 {
+		if err := validateEntryWorldTopology(world, 4); err != nil {
+			return nil, err
+		}
+		return json.Marshal(entryWorldSnapshotV3{
+			Version: 3,
+			Zones: []worldgen.Definition{
+				world.Zones[1].Definition(), world.Zones[2].Definition(),
+				world.Zones[3].Definition(), world.Zones[4].Definition(),
+			},
+			Seams: world.Seams,
+		})
+	}
 	if world.Version == 2 {
 		if err := validateEntryWorldV2(world); err != nil {
 			return nil, err
@@ -96,6 +116,9 @@ func RestoreEntryWorld(encoded []byte) (EntryWorld, error) {
 	}
 	if err := json.Unmarshal(encoded, &header); err != nil {
 		return EntryWorld{}, err
+	}
+	if header.Version == 3 {
+		return restoreEntryWorldV3(encoded)
 	}
 	if header.Version == 2 {
 		return restoreEntryWorldV2(encoded)
@@ -158,14 +181,48 @@ func restoreEntryWorldV2(encoded []byte) (EntryWorld, error) {
 	return world, nil
 }
 
+// restoreEntryWorldV3 re-admits saved definitions without consulting current Lua policy.
+func restoreEntryWorldV3(encoded []byte) (EntryWorld, error) {
+	var snapshot entryWorldSnapshotV3
+	if err := json.Unmarshal(encoded, &snapshot); err != nil {
+		return EntryWorld{}, err
+	}
+	if len(snapshot.Zones) != 4 || len(snapshot.Seams) != 3 {
+		return EntryWorld{}, fmt.Errorf("restore entry world: v3 requires four zones and three seams")
+	}
+	zones := make(map[int]*worldgen.Zone, 4)
+	for index, definition := range snapshot.Zones {
+		zone, err := worldgen.NewZone(definition)
+		if err != nil {
+			return EntryWorld{}, fmt.Errorf("restore entry zone %d: %w", index, err)
+		}
+		level := zone.Request().LevelID
+		if level != index+1 {
+			return EntryWorld{}, fmt.Errorf("restore entry world: zones are not in canonical level order")
+		}
+		zones[level] = zone
+	}
+	world := EntryWorld{Zones: zones, Seams: snapshot.Seams, Version: 3}
+	if err := validateEntryWorldTopology(world, 4); err != nil {
+		return EntryWorld{}, err
+	}
+	return world, nil
+}
+
 // validateEntryWorldV2 binds each policy-selected edge to exactly one admitted warp in canonical level order.
 func validateEntryWorldV2(world EntryWorld) error {
-	if len(world.Zones) != 3 || len(world.Seams) != 2 {
-		return fmt.Errorf("d2legacy entry world: v2 requires three zones and two seams")
+	return validateEntryWorldTopology(world, 3)
+}
+
+// validateEntryWorldTopology checks shared identities and binds every generated side to one admitted warp.
+func validateEntryWorldTopology(world EntryWorld, levelCount int) error {
+	if len(world.Zones) != levelCount || len(world.Seams) != levelCount-1 {
+		return fmt.Errorf("d2legacy entry world: v%d requires %d zones and %d seams",
+			world.Version, levelCount, levelCount-1)
 	}
 	var seed uint64
 	var difficulty int
-	for level := 1; level <= 3; level++ {
+	for level := 1; level <= levelCount; level++ {
 		zone := world.Zones[level]
 		if zone == nil || zone.Request().LevelID != level {
 			return fmt.Errorf("d2legacy entry world: missing or mismatched zone %d", level)
@@ -179,7 +236,7 @@ func validateEntryWorldV2(world EntryWorld) error {
 	}
 	for index, seam := range world.Seams {
 		if seam.FirstLevel != index+1 || seam.SecondLevel != index+2 ||
-			(index == 0 && seam.FirstGenerated) || (index == 1 && !seam.FirstGenerated) {
+			(index == 0 && seam.FirstGenerated) || (index > 0 && !seam.FirstGenerated) {
 			return fmt.Errorf("d2legacy entry world: duplicate or mismatched seam %d", index)
 		}
 		if !oppositeSeamDirections(seam.FirstDirection, seam.SecondDirection) ||
@@ -192,18 +249,37 @@ func validateEntryWorldV2(world EntryWorld) error {
 		if !seamTileInside(world.Zones[seam.SecondLevel], seam.SecondTileX, seam.SecondTileY) {
 			return fmt.Errorf("d2legacy entry world: second seam tile is outside zone %d", seam.SecondLevel)
 		}
-		if index == 0 && !seamMatchesWarp(world.Zones[2], seam.SecondWarpID, seam.SecondWarpRole, 1,
-			seam.SecondDirection, seam.SecondTileX, seam.SecondTileY) {
-			return fmt.Errorf("d2legacy entry world: first seam does not match admitted second-zone warp")
+		// V3 preserves Lua's unique-role binding even when duplicate endpoints use different IDs.
+		// Older envelopes retain their original ID-based acceptance contract.
+		if world.Version == 3 {
+			if !seamRoleIsUnique(world.Zones[seam.SecondLevel], seam.SecondWarpRole) ||
+				(seam.FirstGenerated && !seamRoleIsUnique(world.Zones[seam.FirstLevel], seam.FirstWarpRole)) {
+				return fmt.Errorf("d2legacy entry world: seam %d has an ambiguous endpoint role", index)
+			}
 		}
-		if index == 1 && (!seamMatchesWarp(world.Zones[2], seam.FirstWarpID, seam.FirstWarpRole, 3,
-			seam.FirstDirection, seam.FirstTileX, seam.FirstTileY) ||
-			!seamMatchesWarp(world.Zones[3], seam.SecondWarpID, seam.SecondWarpRole, 2,
-				seam.SecondDirection, seam.SecondTileX, seam.SecondTileY)) {
-			return fmt.Errorf("d2legacy entry world: generated seam does not match admitted warps")
+		if !seamMatchesWarp(world.Zones[seam.SecondLevel], seam.SecondWarpID, seam.SecondWarpRole,
+			seam.FirstLevel, seam.SecondDirection, seam.SecondTileX, seam.SecondTileY) {
+			return fmt.Errorf("d2legacy entry world: seam %d does not match admitted second-zone warp", index)
+		}
+		if seam.FirstGenerated && !seamMatchesWarp(world.Zones[seam.FirstLevel], seam.FirstWarpID,
+			seam.FirstWarpRole, seam.SecondLevel, seam.FirstDirection, seam.FirstTileX, seam.FirstTileY) {
+			return fmt.Errorf("d2legacy entry world: seam %d does not match admitted first-zone warp", index)
 		}
 	}
 	return nil
+}
+
+// seamRoleIsUnique binds a semantic endpoint independently of its numeric ID, destination, or coordinates.
+func seamRoleIsUnique(zone *worldgen.Zone, role string) bool {
+	matches := 0
+
+	for _, warp := range zone.Warps() {
+		if warp.Role == role {
+			matches++
+		}
+	}
+
+	return matches == 1
 }
 
 // seamMatchesWarp rejects stale or ambiguous warp claims after a snapshot has been restored.
@@ -236,7 +312,7 @@ func oppositeSeamDirections(first, second string) bool {
 	return map[string]string{"north": "south", "east": "west", "south": "north", "west": "east"}[first] == second
 }
 
-// GenerateEntryWorld asks d2legacy for the first three recipes and both policy-owned seams. The headless runtime
+// GenerateEntryWorld asks d2legacy for the first four recipes and three policy-owned seams. The headless runtime
 // prevents authoritative policy from observing client state; all recipes are admitted before the topology is returned.
 func GenerateEntryWorld(
 	ctx context.Context,
@@ -302,7 +378,7 @@ func GenerateEntryWorld(
 	}
 
 	plains, err := runtime.generateFrom(
-		ctx, "d2legacy.mapgen.entry_world", "cold_plains",
+		ctx, "d2legacy.mapgen.entry_world", "cold_plains_v3",
 		float64(seed), float64(difficulty), wildernessFacts,
 	)
 	if err != nil {
@@ -312,15 +388,30 @@ func GenerateEntryWorld(
 	if err != nil {
 		return EntryWorld{}, err
 	}
-	plainsSeam, err := describeGeneratedSeam(ctx, runtime, wildernessFacts, plainsFacts)
+	plainsSeam, err := describeGeneratedSeam(ctx, runtime, "generated_seam", wildernessFacts, plainsFacts)
+	if err != nil {
+		return EntryWorld{}, err
+	}
+	stony, err := runtime.generateFrom(
+		ctx, "d2legacy.mapgen.entry_world", "stony_field",
+		float64(seed), float64(difficulty), plainsFacts,
+	)
+	if err != nil {
+		return EntryWorld{}, fmt.Errorf("generate d2legacy Stony Field: %w", err)
+	}
+	stonyFacts, err := zoneFacts(stony, "Stony Field")
+	if err != nil {
+		return EntryWorld{}, err
+	}
+	stonySeam, err := describeGeneratedSeam(ctx, runtime, "stony_field_seam", plainsFacts, stonyFacts)
 	if err != nil {
 		return EntryWorld{}, err
 	}
 	world := EntryWorld{
-		Zones: map[int]*worldgen.Zone{1: town, 2: wilderness, 3: plains},
-		Seams: []SeamSpec{seam, plainsSeam}, Version: 2,
+		Zones: map[int]*worldgen.Zone{1: town, 2: wilderness, 3: plains, 4: stony},
+		Seams: []SeamSpec{seam, plainsSeam, stonySeam}, Version: 3,
 	}
-	if err := validateEntryWorldV2(world); err != nil {
+	if err := validateEntryWorldTopology(world, 4); err != nil {
 		return EntryWorld{}, err
 	}
 	return world, nil
@@ -370,15 +461,16 @@ func describeEntrySeam(
 	return parseSeamFacts(facts)
 }
 
-// describeGeneratedSeam passes admitted recipes back to Lua so native code cannot invent a level-3 edge or warp role.
+// describeGeneratedSeam passes admitted recipes back to the selected Lua policy to bind their edges and warp roles.
 func describeGeneratedSeam(
 	ctx context.Context,
 	runtime *Runtime,
+	function string,
 	firstFacts map[string]any,
 	secondFacts map[string]any,
 ) (SeamSpec, error) {
 	value, err := modruntime.Call(
-		ctx, runtime.lua, "d2legacy.mapgen.entry_world", "generated_seam", firstFacts, secondFacts,
+		ctx, runtime.lua, "d2legacy.mapgen.entry_world", function, firstFacts, secondFacts,
 	)
 	if err != nil {
 		return SeamSpec{}, fmt.Errorf("describe generated d2legacy seam: %w", err)

@@ -48,21 +48,21 @@ func realEntryWorldContent(t *testing.T) *content.FS {
 	return source
 }
 
-// The public Build boundary must publish all three materialized zones and four directed transitions together.
+// The public Build boundary must publish all four materialized zones and six directed transitions together.
 func TestBuildColdPlainsReal(t *testing.T) {
 	source := realEntryWorldContent(t)
 	started := time.Now()
 	prepared, err := Build(t.Context(), source, content.D2Legacy(), recordstore.New(source),
 		entryWorldObjectResolver{}, 17, 0)
-	t.Logf("owned-asset three-zone preparation took %s", time.Since(started))
+	t.Logf("owned-asset four-zone preparation took %s", time.Since(started))
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(prepared.Worlds) != 3 || len(prepared.Zones) != 3 || len(prepared.Seams) != 2 {
+	if len(prepared.Worlds) != 4 || len(prepared.Zones) != 4 || len(prepared.Seams) != 3 {
 		t.Fatalf("prepared zones/maps/seams = %d/%d/%d",
 			len(prepared.Zones), len(prepared.Worlds), len(prepared.Seams))
 	}
-	for _, level := range []int{1, 2, 3} {
+	for _, level := range []int{1, 2, 3, 4} {
 		if _, err := prepared.Destination(level); err != nil {
 			t.Fatalf("level %d has no trusted destination: %v", level, err)
 		}
@@ -72,7 +72,9 @@ func TestBuildColdPlainsReal(t *testing.T) {
 		t.Fatal(err)
 	}
 	zones := population["zones"].([]any)
-	if len(zones) != 2 || zones[1].(map[string]any)["level_id"] != float64(3) {
+	if len(zones) != 3 || zones[0].(map[string]any)["level_id"] != float64(2) ||
+		zones[1].(map[string]any)["level_id"] != float64(3) ||
+		zones[2].(map[string]any)["level_id"] != float64(4) {
 		t.Fatalf("owned population zones=%#v", zones)
 	}
 	populated := 0
@@ -100,8 +102,8 @@ func TestBuildColdPlainsReal(t *testing.T) {
 		t.Fatal("owned Cold Plains has no population rooms")
 	}
 	transitions := TransitionData(prepared.Seams)
-	if count := len(transitions["seams"].([]any)); count != 4 {
-		t.Fatalf("directed transitions = %d, want four", count)
+	if count := len(transitions["seams"].([]any)); count != 6 {
+		t.Fatalf("directed transitions = %d, want six", count)
 	}
 }
 
@@ -134,8 +136,10 @@ func TestRestorePreparedV1KeepsTwoZonesReal(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(prepared.Worlds) != 2 || len(prepared.Zones) != 2 || len(prepared.Seams) != 1 || prepared.Worlds[3] != nil {
-		t.Fatalf("v1 restore gained level 3: maps=%d zones=%d seams=%d",
+
+	if len(prepared.Worlds) != 2 || len(prepared.Zones) != 2 || len(prepared.Seams) != 1 ||
+		prepared.Worlds[3] != nil || prepared.Worlds[4] != nil {
+		t.Fatalf("v1 restore gained a wilderness: maps=%d zones=%d seams=%d",
 			len(prepared.Worlds), len(prepared.Zones), len(prepared.Seams))
 	}
 	population, err := prepared.PopulationData(0)

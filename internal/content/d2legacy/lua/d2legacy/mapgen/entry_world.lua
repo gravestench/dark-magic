@@ -1,10 +1,11 @@
--- Compose the first three playable d2legacy zones without leaking level
+-- Compose the first playable d2legacy zones without leaking level
 -- identities into the generic host. Lua selects recipes and seam roles; Go
 -- transports and validates the admitted topology.
 
 local preset = require("d2legacy.mapgen.preset")
 local outdoor = require("d2legacy.mapgen.outdoor")
 local cold_plains = require("d2legacy.mapgen.cold_plains")
+local stony_field = require("d2legacy.mapgen.stony_field")
 local M = {}
 local opposite = {north = "south", east = "west", south = "north", west = "east"}
 
@@ -48,6 +49,22 @@ function M.cold_plains(seed, difficulty, blood_moor)
     return cold_plains.generate(3, seed, exit.direction, difficulty)
 end
 
+-- V3 explicitly opts into the placed Stony Field border without changing v2.
+function M.cold_plains_v3(seed, difficulty, blood_moor)
+    assert(blood_moor.request and blood_moor.request.level_id == 2,
+        "d2legacy entry world requires an admitted Blood Moor")
+    local exit = named_warp(blood_moor, "next-level-exit", 3)
+    return cold_plains.generate_with_stony_exit(3, seed, exit.direction, difficulty)
+end
+
+-- Stony Field faces the admitted exit instead of choosing its approach independently.
+function M.stony_field(seed, difficulty, plains)
+    assert(plains.request and plains.request.level_id == 3,
+        "d2legacy entry world requires an admitted Cold Plains")
+    local exit = named_warp(plains, "stony-field-exit", 4)
+    return stony_field.generate(4, seed, exit.direction, difficulty)
+end
+
 -- Describe how the town and wilderness recipes meet. The values here are policy: which levels
 -- connect, which authored roles identify the connection, and which edges face
 -- one another. Go receives only this finished specification and resolves safe
@@ -83,6 +100,27 @@ function M.seam(town, wilderness)
     return seam
 end
 
+-- Both generated pairs share the same geometry and admitted endpoint binding.
+local function generated_seam(first, second, exit, entry)
+    assert(opposite[exit.direction] == entry.direction,
+        "d2legacy entry world generated edges do not face one another")
+    local seam = seam_geometry()
+    seam.first_generated = true
+    seam.first_level = first.request.level_id
+    seam.first_direction = exit.direction
+    seam.first_tile_x = exit.x
+    seam.first_tile_y = exit.y
+    seam.first_warp_id = exit.id
+    seam.first_warp_role = exit.role
+    seam.second_level = second.request.level_id
+    seam.second_direction = entry.direction
+    seam.second_tile_x = entry.x
+    seam.second_tile_y = entry.y
+    seam.second_warp_id = entry.id
+    seam.second_warp_role = entry.role
+    return seam
+end
+
 -- Bind both generated warp identities so restored topology cannot silently drift from the admitted recipes.
 function M.generated_seam(blood_moor, plains)
     assert(blood_moor.request and blood_moor.request.level_id == 2,
@@ -91,23 +129,18 @@ function M.generated_seam(blood_moor, plains)
         "d2legacy entry world requires level 3 second")
     local exit = named_warp(blood_moor, "next-level-exit", 3)
     local entry = named_warp(plains, "blood-moor-entry", 2)
-    assert(opposite[exit.direction] == entry.direction,
-        "d2legacy entry world generated edges do not face one another")
-    local seam = seam_geometry()
-    seam.first_generated = true
-    seam.first_level = 2
-    seam.first_direction = exit.direction
-    seam.first_tile_x = exit.x
-    seam.first_tile_y = exit.y
-    seam.first_warp_id = exit.id
-    seam.first_warp_role = exit.role
-    seam.second_level = 3
-    seam.second_direction = entry.direction
-    seam.second_tile_x = entry.x
-    seam.second_tile_y = entry.y
-    seam.second_warp_id = entry.id
-    seam.second_warp_role = entry.role
-    return seam
+    return generated_seam(blood_moor, plains, exit, entry)
+end
+
+-- Bind the unique Cold Plains exit and Stony Field entry into the reciprocal outdoor seam.
+function M.stony_field_seam(plains, stony)
+    assert(plains.request and plains.request.level_id == 3,
+        "d2legacy entry world requires level 3 first")
+    assert(stony.request and stony.request.level_id == 4,
+        "d2legacy entry world requires level 4 second")
+    local exit = named_warp(plains, "stony-field-exit", 4)
+    local entry = named_warp(stony, "cold-plains-entry", 3)
+    return generated_seam(plains, stony, exit, entry)
 end
 
 return M

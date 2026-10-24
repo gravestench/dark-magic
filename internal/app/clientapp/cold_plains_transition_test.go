@@ -35,8 +35,8 @@ func TestLiveColdPlainsRoundTrip(t *testing.T) {
 
 	fixture.advanceGame(t, 10)
 
-	if len(app.transitionSeams) != 2 {
-		t.Fatalf("prepared seams = %d, want two", len(app.transitionSeams))
+	if len(app.transitionSeams) != 3 {
+		t.Fatalf("prepared seams = %d, want three", len(app.transitionSeams))
 	}
 
 	if checksum, err := app.entryWorldTopology.Checksum(); err != nil || checksum != app.entryWorldChecksum {

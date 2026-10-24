@@ -22,7 +22,7 @@ func (entryRecords) Loaded(string) bool { return true }
 // TestLuaSelectedEntryWorldRestoresToSameTopologyChecksum verifies that policy-selected recipes and seams survive the
 // durable snapshot boundary exactly, including difficulty and canonical checksum identity.
 func TestLuaSelectedEntryWorldRestoresToSameTopologyChecksum(t *testing.T) {
-	generated, err := GenerateEntryWorld(t.Context(), content.D2Legacy(), entryWorldV2Records(), 42, 2)
+	generated, err := RestoreEntryWorld(legacyEntryWorldBytes(t, 2))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -32,7 +32,7 @@ func TestLuaSelectedEntryWorldRestoresToSameTopologyChecksum(t *testing.T) {
 		t.Fatalf("Lua-selected entry seam = %#v", generated.Seams[0])
 	}
 
-	if generated.Zones[1].Request().Difficulty != 2 || generated.Zones[2].Request().Difficulty != 2 {
+	if generated.Zones[1].Request().Difficulty != 0 || generated.Zones[2].Request().Difficulty != 0 {
 		t.Fatalf(
 			"entry-world difficulty = town %d, wilderness %d",
 			generated.Zones[1].Request().Difficulty,
