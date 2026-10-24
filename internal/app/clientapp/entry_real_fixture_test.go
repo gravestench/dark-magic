@@ -147,6 +147,14 @@ func startTestD2LegacyAuthority(t *testing.T, app *application, queuePopulation 
 		t.Fatal(err)
 	}
 
+	// Match production bootstrap: population validates full footprints against these maps.
+	for levelID, worldMap := range app.gameWorlds {
+		if err := modruntime.SetWorldMapForLevel(t.Context(), app.scripts,
+			"d2legacy.gameplay.systems.init", "set_collision", levelID, worldMap); err != nil {
+			t.Fatal(err)
+		}
+	}
+
 	if app.pendingEntryRecovery != nil {
 		if err := app.restoreOfflineEntryWorldRecovery(*app.pendingEntryRecovery); err != nil {
 			t.Fatal(err)

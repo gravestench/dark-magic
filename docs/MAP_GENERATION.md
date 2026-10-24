@@ -325,8 +325,13 @@ reopens the saved topology before composing the replacement authority, then
 compares the saved runtime identity before restoring state. Existing v1
 two-zone snapshots still restore as two zones. The seed, stone-fill choices,
 seam radius, and arrival offsets are Dark Magic policy. They do not establish
-original 1.13c/1.14d geometry. Cold Plains' outward exits, waypoint,
-population, and original layout remain separate work. The
+original 1.13c/1.14d geometry. Cold Plains now shares Blood Moor's authoritative
+room population lifecycle through a version-6, level-keyed plan. Level 3 uses
+its own room-local collision-safe points and random streams; ordinary movement
+activates current and neighboring rooms and retains inactive residents on
+return. Current-runtime recovery of a v1 topology bootstraps level 2 alone;
+pre-v6 full session checkpoint migration is outside this boundary. Cold Plains'
+outward exits, waypoint, and original layout remain separate work. The
 [issue #618 design](superpowers/specs/2026-10-23-issue-618-cold-plains-design.md)
 and [issue #620 design](superpowers/specs/2026-10-23-issue-620-live-cold-plains-design.md)
 record the evidence and limits.

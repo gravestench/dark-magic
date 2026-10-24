@@ -309,7 +309,7 @@ Room streaming must preserve all deterministic AI/combat/state/RNG information n
 
 Do not despawn a monster merely because its render node was culled.
 
-Current implementation status: `d2legacy.population.plan/v5` keeps stable
+Current implementation status: `d2legacy.population.plan/v6` keeps stable
 inactive resident records per generated room. The world-owned
 `d2legacy.world.room_resident {id, level_id, room_id}` contract no longer depends on
 monster identity, and each activation record preserves whether the generic
@@ -345,6 +345,57 @@ public generated-loot ownership/drop/pickup policy and stateful object
 operation/event attachment,
 inactive timer-aging policy, and exact 1.14d activation or long-inactive
 mutation policy remain unresolved.
+
+### Ordinary Cold Plains population (#622)
+
+The owned Diablo II 1.14d `patch_d2.mpq` supplies these narrow table facts:
+
+| Table and row | Fields observed |
+| --- | --- |
+| `Levels.txt`, `Id=3`, `Name=Act 1 - Wilderness 2` | `NumMon=3`; `MonDen=520`, `MonDen(N)=520`, `MonDen(H)=520` |
+| Same row, `mon1`/`nmon1` through `mon4`/`nmon4` | `brute1`, `corruptrogue1`, `fallenshaman1`, `cr_lancer1`; slots 5–10 empty |
+| `MonStats.txt`, `brute1` | `enabled=1`, `isSpawn=1`, `Rarity=1`, `MinGrp=1`, `MaxGrp=1` |
+| `MonStats.txt`, `corruptrogue1` | `enabled=1`, `isSpawn=1`, `Rarity=2`, `MinGrp=2`, `MaxGrp=3` |
+| `MonStats.txt`, `fallenshaman1` | `enabled=1`, `isSpawn=1`, `Rarity=2`, `MinGrp=1`, `MaxGrp=1`; `minion1=fallen1`, `PartyMin=2`, `PartyMax=6` |
+| `LvlPrest.txt`, `Def=29` and `Def=30` | `Populate=1`, `Outdoors=1`, `LevelId=0` |
+
+The three selected `MonStats` rows have blank `boss`, `primeevil`, and `npc`
+fields. The current interpreter selects `mon*` for Normal and `nmon*` for
+Nightmare/Hell, using only slots 1 through `NumMon`. Consequently it selects
+these three ordinary families and excludes the fourth, also spawnable
+`cr_lancer1`. This is verified interpreter selection, not evidence that the
+original game excludes that family. The current group interpretation does not
+reproduce the shaman's `fallen1` minion party metadata.
+
+The density roll `520/100000`, rarity-weighted family selection, group-size
+arithmetic, first-group fallback while `created==0`, and occupied-room plus
+neighbors activation are **Dark Magic policy**. A room without usable points
+still creates no group. Using generic stone fills 29/30 for Cold Plains and
+treating their `Populate` flag as room eligibility are also provisional Dark
+Magic policy. Original 1.13c/1.14d density arithmetic, group/party construction,
+and random call order remain unverified.
+
+The existing population owner now stores ordered level-2 and level-3 zones in
+one v6 envelope. Level-qualified resident IDs and room matching preserve both
+levels through 2→3→2; separate level-3 random streams preserve Blood Moor's
+existing draws. Level-3 placement uses its own room-local candidate points,
+checks full collider-radius terrain safety, and rejects overlapping active or
+same-tick queued footprints. The production tests in
+`internal/app/clientapp/cold_plains_population_real_test.go` exercise owned-data
+movement, public visibility, QUIC authority projection, and checkpoint/replay
+continuation. These tests require local owned MPQs and skip without them.
+Both offline and listen composition register the existing native velocity
+integrator. That integrator currently binds Blood Moor navigation even for
+level-3 velocity movers; this slice verifies initial level-3 placement and
+visibility, and does not establish level-aware hostile movement collision.
+Current-runtime v1 two-zone topology recovery admits level 2 alone; migration
+of a pre-v6 full session checkpoint is not supported by the exact runtime
+identity gate.
+
+Reproduce the table inspection locally with
+`go run ./internal/dev/tools/mpq2file -source "$MPQ_DIRECTORY/patch_d2.mpq" -asset data/global/excel/Levels.txt`
+(and the corresponding `MonStats.txt` and `LvlPrest.txt` paths). Protected game
+data and captures are not checked in.
 
 ## Death, corpses, resurrection
 
