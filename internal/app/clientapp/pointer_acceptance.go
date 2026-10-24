@@ -32,6 +32,7 @@ func newPointerMovementAcceptance(
 	screenHeight int,
 ) *pointerMovementAcceptance {
 	targetX, targetY := acceptanceMovementTarget(world, spawnX, spawnY)
+
 	return newPointerMovementAcceptanceAt(world, spawnX, spawnY, targetX, targetY,
 		screenWidth, float64(screenHeight)/2)
 }

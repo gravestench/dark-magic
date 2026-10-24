@@ -136,11 +136,13 @@ func (app *application) newFixturePointerAcceptance(
 	if !app.options.FixturePointerMove {
 		return nil
 	}
+
 	if app.options.FixtureWorldSpawn == "seam" {
 		endpoint := townSeam.First
 		if activeLevel == townSeam.Second.LevelID {
 			endpoint = townSeam.Second
 		}
+
 		if activeLevel != endpoint.LevelID {
 			return nil
 		}

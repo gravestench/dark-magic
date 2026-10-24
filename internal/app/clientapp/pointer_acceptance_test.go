@@ -16,6 +16,7 @@ func TestSeamPointerFixtureChoosesCurrentLevelEndpoint(t *testing.T) {
 		First:  gametransition.SeamEndpoint{LevelID: 1, X: 35, Y: 20},
 		Second: gametransition.SeamEndpoint{LevelID: 2, X: 5, Y: 20},
 	}
+
 	app := &application{options: Options{FixturePointerMove: true, FixtureWorldSpawn: "seam"},
 		profile: content.PresentationProfile{Width: 800, Height: 600}}
 	for _, test := range []struct {
@@ -28,6 +29,7 @@ func TestSeamPointerFixtureChoosesCurrentLevelEndpoint(t *testing.T) {
 		fixture := app.newFixturePointerAcceptance(world, [2]float64{test.spawnX, 20}, test.level, seam)
 		frame := fixture.Frame(inputstate.Frame{}, test.spawnX, 20, true)
 		spawnPixelX, spawnPixelY := world.SubtileToPixel(test.spawnX, 20)
+
 		targetPixelX, targetPixelY := world.SubtileToPixel(test.targetX, 20)
 		if frame.CursorX != 400+targetPixelX-spawnPixelX ||
 			frame.CursorY != 330+targetPixelY-spawnPixelY {
@@ -43,6 +45,7 @@ func TestPointerMovementAcceptanceTargetsResolvedSeam(t *testing.T) {
 	fixture := newPointerMovementAcceptanceAt(world, 29, 20, 35, 20, 800, 330)
 	spawnPixelX, spawnPixelY := world.SubtileToPixel(29, 20)
 	targetPixelX, targetPixelY := world.SubtileToPixel(35, 20)
+
 	frame := fixture.Frame(inputstate.Frame{}, 29, 20, true)
 	if frame.CursorX != 400+targetPixelX-spawnPixelX ||
 		frame.CursorY != 330+targetPixelY-spawnPixelY || !frame.Actions["pointer_primary"].Pressed {

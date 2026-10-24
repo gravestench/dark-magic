@@ -115,6 +115,7 @@ func newBridgePointerClient(t *testing.T, hosted bool) (*application, *bridgeTes
 	options.FixtureWorldSpawn = "seam"
 	app := newApplication(options)
 	input := &bridgeTestInput{}
+
 	t.Cleanup(func() {
 		// #627 tracks camera-follow cleanup after connected replica rebinding.
 		if app.scenes != nil {
@@ -133,15 +134,19 @@ func newBridgePointerClient(t *testing.T, hosted bool) (*application, *bridgeTes
 				t.Errorf("close bridge connection: %v", err)
 			}
 		}
+
 		if err := app.shutdown(); err != nil {
 			t.Errorf("shut down bridge client: %v", err)
 		}
+
 		app.stop()
+
 		if app.entitySimulation != nil {
 			if err := app.entitySimulation.Close(); err != nil {
 				t.Errorf("close bridge authority: %v", err)
 			}
 		}
+
 		if err := content.Close(options.Content); err != nil {
 			t.Errorf("close bridge content: %v", err)
 		}
@@ -157,29 +162,36 @@ func newBridgePointerClient(t *testing.T, hosted bool) (*application, *bridgeTes
 	startBridgeClientStep(t, "offline authority", app.buildOfflineSession)
 	startBridgeClientStep(t, "Lua capabilities", app.registerLuaRuntime)
 	startBridgeClientStep(t, "engine host", app.startEngineHost)
+
 	if hosted {
 		// The direct-start scene admits its selected character after the listen host is selected.
 		startBridgeClientStep(t, "listen host", app.network.Host)
 	}
+
 	startBridgeClientStep(t, "game-world scene", app.loadScriptComponents)
+
 	if hosted {
 		deadline := time.Now().Add(30 * time.Second)
 		for !app.network.Connected() && time.Now().Before(deadline) {
 			if status := app.network.Status(); status["phase"] == "failed" {
 				t.Fatalf("listen connection failed: %v", status["error"])
 			}
+
 			time.Sleep(10 * time.Millisecond)
 		}
+
 		if !app.network.Connected() {
 			t.Fatalf("listen connection timed out: %#v", app.network.Status())
 		}
 	}
+
 	return app, input
 }
 
 // startBridgeClientStep names setup failures so they cannot be mistaken for a crossing failure.
 func startBridgeClientStep(t *testing.T, name string, start func() error) {
 	t.Helper()
+
 	if err := start(); err != nil {
 		t.Fatalf("start %s: %v", name, err)
 	}
@@ -188,11 +200,14 @@ func startBridgeClientStep(t *testing.T, name string, start func() error) {
 // advanceBridgePointerFrame preserves the client frame order so Lua sees input after the authority tick.
 func advanceBridgePointerFrame(t *testing.T, app *application) {
 	t.Helper()
+
 	ctx := app.scenes.FrameContext(context.Background())
 	app.publishInput(ctx)
+
 	if err := app.advanceGame(time.Second / 25); err != nil {
 		t.Fatal(err)
 	}
+
 	if err := app.scenes.Update(ctx, time.Second/25); err != nil {
 		t.Fatal(err)
 	}
@@ -201,19 +216,25 @@ func advanceBridgePointerFrame(t *testing.T, app *application) {
 // clickBridgeEndpoint projects a visible subtile into a normal screen click and requires Lua to admit it.
 func clickBridgeEndpoint(t *testing.T, app *application, input *bridgeTestInput, target gameworld.Point) {
 	t.Helper()
+
 	x, y, present := app.controlledPlayerPosition()
 	if !present {
 		t.Fatal("player was not admitted")
 	}
+
 	cursor := app.currentWorld().Map.Coordinates().SubtileToScreen(target,
 		gameworld.Point{X: x, Y: y}, gameworld.Point{X: 400, Y: 330})
 	if cursor.X < 0 || cursor.X >= 800 || cursor.Y < 0 || cursor.Y >= 600 {
 		t.Fatalf("bridge target is outside the viewport: %v", cursor)
 	}
+
 	input.frame = inputstate.Frame{CursorX: cursor.X, CursorY: cursor.Y,
 		Actions: map[string]inputstate.ActionState{"pointer_primary": {Pressed: true, Down: true}}}
+
 	advanceBridgePointerFrame(t, app)
+
 	input.frame = inputstate.Frame{CursorX: cursor.X, CursorY: cursor.Y}
+
 	if !app.playerControl.HasMoveTarget() {
 		t.Fatal("game_world did not turn the pointer click into a movement target")
 	}
@@ -222,35 +243,44 @@ func clickBridgeEndpoint(t *testing.T, app *application, input *bridgeTestInput,
 // awaitBridgeLevel bounds a crossing wait; hosted authority advances on a real timer between client frames.
 func awaitBridgeLevel(t *testing.T, app *application, target int) {
 	t.Helper()
+
 	for range 400 {
 		if app.network.Connected() {
 			time.Sleep(40 * time.Millisecond)
 		}
+
 		advanceBridgePointerFrame(t, app)
+
 		if app.activeWorldLevel == target {
 			return
 		}
 	}
+
 	t.Fatalf("pointer click did not reach level %d; remained at %d", target, app.activeWorldLevel)
 }
 
 // testTownBridgePointerRoundTrip crosses the displayed east opening and returns in one live session.
 func testTownBridgePointerRoundTrip(t *testing.T, hosted bool) {
 	t.Helper()
+
 	app, input := newBridgePointerClient(t, hosted)
 	for range 10 {
 		advanceBridgePointerFrame(t, app)
 	}
+
 	seam := app.transitionSeams[0]
 	if seam.First.LevelID != 1 || seam.Second.LevelID != 2 || seam.First.X < 250 {
 		t.Fatalf("selected town seam does not meet the visible bridge: %#v", seam)
 	}
+
 	clickBridgeEndpoint(t, app, input, gameworld.Point{X: seam.First.X, Y: seam.First.Y})
 	awaitBridgeLevel(t, app, 2)
 	assertBridgePointerLevel(t, app, 2, seam.Second)
+
 	for range 10 {
 		advanceBridgePointerFrame(t, app)
 	}
+
 	clickBridgeEndpoint(t, app, input, gameworld.Point{X: seam.Second.X, Y: seam.Second.Y})
 	awaitBridgeLevel(t, app, 1)
 	assertBridgePointerLevel(t, app, 1, seam.First)
@@ -260,11 +290,14 @@ func testTownBridgePointerRoundTrip(t *testing.T, hosted bool) {
 func assertBridgePointerLevel(t *testing.T, app *application, levelID int,
 	arrival gametransition.SeamEndpoint) {
 	t.Helper()
+
 	if app.network.Connected() {
 		view, _ := app.network.client.View()
 		assertConnectedColdPlainsArrival(t, app, view, levelID, arrival)
+
 		return
 	}
+
 	if level, found := controlledPlayerLevel(app.entitySimulation.World(), "local-player"); !found || level != levelID {
 		t.Fatalf("offline authority level = %d/%t, want %d", level, found, levelID)
 	}
