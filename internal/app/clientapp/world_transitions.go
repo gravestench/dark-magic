@@ -93,6 +93,7 @@ func (app *application) warpBootstrapData() map[string]any {
 		app.worldMu.RLock()
 		data := (&entryworld.Prepared{CaveWarp: app.caveWarp}).WarpData()
 		app.worldMu.RUnlock()
+
 		return data
 	}
 
