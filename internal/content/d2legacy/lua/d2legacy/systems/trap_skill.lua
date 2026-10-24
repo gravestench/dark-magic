@@ -5,6 +5,7 @@
 -- credit plus the shared five-trap replacement policy.
 
 local ecs = require("engine.ecs/v1")
+local random = require("engine.authority_random/v1")
 local geometry = require("d2legacy.policy.geometry")
 local progression = require("d2legacy.policy.skill_progression")
 local projectile_spawn = require("d2legacy.gameplay.projectile_spawn")
@@ -468,11 +469,18 @@ local function create_damage_event(structural, context, owner_id, target_id, sou
     })
 end
 
+local function roll_corpse_damage(minimum, maximum)
+    if maximum <= minimum then
+        return minimum
+    end
+    return minimum + random.integer("d2legacy.combat.damage.roll", maximum - minimum)
+end
+
 local function explode_corpse(context, entities, trap, autonomous, definition, corpse, structural)
     local corpse_stats = assert(ecs.get(corpse.entity, "d2legacy.monster.stats"))
     local minimum = math.floor(corpse_stats:get("max_health") * definition.corpse_minimum_percent / 100)
     local maximum = math.floor(corpse_stats:get("max_health") * definition.corpse_maximum_percent / 100)
-    local amount = damage.roll(minimum, maximum)
+    local amount = roll_corpse_damage(minimum, maximum)
     local fire = math.floor(amount * definition.corpse_fire_percent / 100)
     local physical = math.floor(amount * (100 - definition.corpse_fire_percent) / 100)
     local radius = progression.linear(
