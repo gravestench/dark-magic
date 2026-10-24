@@ -62,6 +62,7 @@ local sentry_monstats2 = {
     { Id = "death-sentry-gfx", SizeX = "2", SizeY = "2", MeleeRng = "1" },
 }
 
+-- Health 202 gives ordered corpse bounds; health 20 collapses both percentage bounds to 10.
 local function install_transaction(corpse_max_health)
     local ecs = require("engine.ecs/v1")
     local player = ecs.query({ all = { "d2legacy.player.identity" } })[1]
@@ -411,6 +412,7 @@ return test.suite({
             test.expect_checkpoint_parity(1),
             test.run(function()
                 local random = require("engine.authority_random/v1")
+                -- The collapsed corpse range consumes no draw, leaving 132 as the stream's first value.
                 test.expect(random.integer("d2legacy.combat.damage.roll", 1000)):equals(132)
             end),
         }),

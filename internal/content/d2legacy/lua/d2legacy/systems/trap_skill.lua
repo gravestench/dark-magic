@@ -469,6 +469,7 @@ local function create_damage_event(structural, context, owner_id, target_id, sou
     })
 end
 
+-- Corpse damage excludes the upper endpoint; collapsed or reversed bounds leave the RNG stream untouched.
 local function roll_corpse_damage(minimum, maximum)
     if maximum <= minimum then
         return minimum

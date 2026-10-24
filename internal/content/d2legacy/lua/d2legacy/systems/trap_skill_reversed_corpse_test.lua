@@ -62,6 +62,7 @@ local sentry_monstats2 = {
     { Id = "death-sentry-gfx", SizeX = "2", SizeY = "2", MeleeRng = "1" },
 }
 
+-- Health 202 with 53/50 percent bounds yields 107/101 and must consume no RNG draw.
 local function install_transaction()
     local ecs = require("engine.ecs/v1")
     local player = ecs.query({ all = { "d2legacy.player.identity" } })[1]
@@ -171,6 +172,7 @@ return test.suite({
             test.expect_checkpoint_parity(1),
             test.run(function()
                 local random = require("engine.authority_random/v1")
+                -- A reversed corpse range leaves 132 as the stream's first value.
                 test.expect(random.integer("d2legacy.combat.damage.roll", 1000)):equals(132)
             end),
         }),
