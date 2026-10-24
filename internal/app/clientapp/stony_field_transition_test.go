@@ -291,11 +291,12 @@ func TestStonyFieldRecoveryRejectsCorruptTopology(t *testing.T) {
 				t.Fatal(err)
 			}
 
-			if field == "seam" {
+			switch field {
+			case "seam":
 				snapshot.Seams[2].SecondWarpRole = "blood-moor-entry"
-			} else if field == "zone" {
+			case "zone":
 				snapshot.Zones[2], snapshot.Zones[3] = snapshot.Zones[3], snapshot.Zones[2]
-			} else {
+			default:
 				zone, role := &snapshot.Zones[2], "stony-field-exit"
 				if strings.Contains(field, "stony") {
 					zone, role = &snapshot.Zones[3], "cold-plains-entry"
