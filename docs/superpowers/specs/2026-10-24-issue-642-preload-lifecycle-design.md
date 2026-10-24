@@ -2,35 +2,41 @@
 
 ## Intent
 
-A sparse outdoor map adapter can close while its initial or tile decode job is still running. The native preloader currently rejects release of unfinished jobs, and the Lua adapter drops the job identifiers at teardown. Completed bookkeeping then remains in the shared preloader. Release the bookkeeping without touching outdoor seam geometry, gameplay authority, or native texture ownership.
+The outdoor game scene can close while its map tiles, monsters, missiles, overlays, or hero art are still decoding. The native preloader rejects release of unfinished jobs, while several Lua paths clear a job ID without releasing it even after completion. The shared preloader then retains completed bookkeeping across repeated scene visits. Release these records without changing visible outdoor seam behavior, gameplay authority, or native texture ownership.
 
 ## Goals and boundary
 
-- `engine.render/v1.preload_release(job)` accepts a valid unfinished job exactly once, makes it unavailable to callers immediately, and removes its record after every worker in that job finishes. It still releases completed and empty jobs immediately. Unknown or already released IDs return false.
-- Worker decoding may finish after release. The preloader keeps accurate in-flight counts until completion, records no late status for a released job, and cannot panic or resurrect a released record when completion races release.
-- `chunked_map.destroy` releases both its initial job and every tile job regardless of completion, drops its identifiers, and leaves no tile node to admit after teardown. Repeated create/destroy cycles leave no completed job records.
-- Use synthetic controlled jobs for native concurrency tests and Lua adapter tests. No game assets or screenshots are needed.
+- `engine.render/v1.preload_release(job)` accepts a valid unfinished job exactly once, hides its status immediately, and removes its record after every worker in that job finishes. Completed and empty jobs release immediately; unknown or already released IDs return false.
+- Worker decoding may finish after release. `Pending()` still counts actual unfinished work, including released jobs, until completion. Release/completion races cannot panic or resurrect records.
+- `chunked_map.destroy` releases its initial job and every tile job regardless of completion, clears its handles, and does not admit nodes if update is mistakenly called after destruction. The shared camera root remains owned by the scene.
+- The `game_world` scene releases its own monster, missile, overlay, and hero preload IDs before clearing them on normal completion, entity removal, non-retained world change, or scene teardown. Existing warp and ground-item release paths use the new native early-release semantics. A seamless crossing that retains the hero keeps its current pending art job.
+- Repeated game-world and adapter create/destroy cycles leave no completed preload records. Synthetic tests use no game assets or captures.
 
 ## Non-goals and constraints
 
-- No worker cancellation, cache eviction, texture disposal, new scene-wide ownership system, or change to rendering/admission of a live adapter.
-- Keep decoding on bounded workers and native texture uploads on the renderer thread. `Pending()` continues to count actual unfinished work, including jobs released by their Lua owner, so capture diagnostics still see work in progress.
-- Other callers of `preload_release` retain their current behavior for completed jobs; allowing early release is a compatible extension. Scene code must drop an ID after release because status intentionally becomes unavailable.
+- No worker cancellation, cache eviction, native texture disposal, new scene-wide job registry, changes to other screens' long-lived preload policy, or change to a live adapter's draw/admission behavior.
+- Keep decoding on bounded workers and native texture uploads on the renderer thread. Retained render nodes remain owned by the Lua scene and are destroyed separately from job bookkeeping.
+- The issue covers the outdoor `game_world` scene and its sparse adapters. Other screens that intentionally retain preload handles are outside this acceptance slice.
 
 ## Approaches
 
-1. **Chosen: deferred native forget.** Mark a pending job released under the preloader mutex, hide its status, and delete the record when the final worker completes. The map adapter unconditionally releases all IDs in `destroy`. This is a small change at the two existing owners and preserves pending-work diagnostics.
-2. **Worker cancellation.** Propagate cancellation through queued work and asset decoders. This would touch many decode paths and still needs careful completion bookkeeping; #642 does not require stopping CPU work already begun.
-3. **Scene-scope registry.** Transfer every job ID to a new scene owner that polls after teardown. This adds a second bookkeeping mechanism and periodic cleanup outside the existing preloader.
+1. **Chosen: deferred native forget plus owner cleanup.** Mark a pending job released under the preloader mutex, hide its status, and delete its record on final worker completion. Each outdoor scene owner releases its own handles at completion and teardown. This uses existing ownership boundaries and preserves pending-work diagnostics.
+2. **Worker cancellation.** Propagate cancellation through queues and asset decoders. This crosses many decode paths and still needs completion bookkeeping; #642 does not require stopping CPU work already begun.
+3. **Scene-scope registry.** Transfer every job ID to a new scene owner that polls after teardown. This duplicates the preloader's registry and creates periodic cleanup outside current owners.
 
-## Design and verification
+## Design
 
-Add a release marker to each native job. `Forget` returns false if the ID is absent or already released; if complete it deletes immediately, otherwise it marks released. `Status` returns absent for a released job. Worker completion updates its own job under the mutex and deletes it when all requests finish and it is released. `Pending` still sums unfinished requests until that point. The existing lock serializes completion and release, so both orders converge on deletion.
+Add a release marker to each native job. `Forget` returns false for an absent or already released ID; it deletes a completed record or marks a pending one. `Status` treats released jobs as absent. Worker completion updates the job under the same mutex and deletes it when all requests finish and it is released. `Pending` continues to sum unfinished requests until deletion. The lock serializes release before/after final completion.
 
-In Lua, `chunked_map.destroy` releases every retained job ID without first checking status, nils the initial ID, clears the tile-job map, and destroys existing nodes. The native preloader handles safe eventual removal. A destroyed adapter is never updated or used to admit tiles.
+In Lua, `chunked_map.destroy` releases every retained ID without a status check, nils the initial ID, clears the tile-job map, and sets a destroyed flag before removing nodes. `update` returns without admitting nodes when destroyed. In `game_world`, add release-before-nil at normal completion for monster, missile, overlay, and hero jobs. Release pending IDs when their entity/node is removed, when a non-retained hero is replaced at a warp, and at scene teardown. Reuse narrow cleanup helpers for the corresponding removal paths; do not change AI, rendering recipes, seam layout, or camera policy. Warp and ground-item owners already call release on removal.
 
-Tests first establish failure on current code: a blocked native worker is released before completion, then allowed to finish; status vanishes immediately and the job map becomes empty. Repeat the cycle and race release against completion. A Lua mock keeps an unfinished initial and tile job while `destroy` runs; it must receive both releases, clear ownership, preserve a shared camera root, and create no tile node afterward. Existing sparse-residency and render tests must continue to pass.
+## Verification
+
+- Native tests use controlled blocked workers to prove release before and after completion, exactly one successful release, unavailable status, `Pending()` transition, and zero retained records after completion; repeat the cycle and run a race-instrumented ordering test.
+- One synthetic Go/Lua integration test registers the real `engine.render/v1` capability and the first-party `chunked_map` module. It starts an unfinished initial preload through the adapter, destroys that adapter through Lua, lets the native worker complete, and checks the real preloader's job map is empty. Repeating the cycle proves bounded records. A missing synthetic DS1 may fail decoding; the lifecycle result is the assertion.
+- Lua scene tests use tracked synthetic jobs for monster, missile, overlay, and hero completion/removal/teardown, including a retained hero across a seamless crossing and release across a discrete warp. Adapter tests assert both initial and tile releases, idempotent destruction, shared-root preservation, and no post-destroy admission.
+- Existing sparse-residency, seam presentation, Go render, and Lua hardening suites must pass on the submitted commit.
 
 ## Evidence status
 
-This is a Dark Magic engine lifecycle invariant inferred from the current `assetPreloader` and `chunked_map` code and issue #642. It makes no claim about original Diablo II 1.13c or 1.14d preload internals. The visual seam target from #641 remains unchanged.
+This is a Dark Magic engine lifecycle invariant inferred from `assetPreloader`, `chunked_map`, `game_world`, and issue #642. It makes no claim about original Diablo II 1.13c or 1.14d preload internals. The visual seam target from #641 remains unchanged.
