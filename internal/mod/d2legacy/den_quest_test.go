@@ -1,8 +1,10 @@
 package d2legacy
 
 import (
+	"context"
 	"encoding/json"
 	"testing"
+	"time"
 
 	"github.com/gravestench/dark-magic/internal/content"
 	gameecs "github.com/gravestench/dark-magic/internal/game/ecs"
@@ -44,7 +46,8 @@ func startDenQuest(t *testing.T, checkpoint *simulation.Checkpoint) *denQuestFix
 		}
 		restore = checkpoint.Participants
 	}
-	session, err := gamesession.New(engine, gamesession.Config{CheckpointInterval: 1})
+
+	session, err := gamesession.New(engine, gamesession.Config{CheckpointInterval: 25})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -60,7 +63,23 @@ func startDenQuest(t *testing.T, checkpoint *simulation.Checkpoint) *denQuestFix
 		"d2legacy.gameplay.systems.init", "set_collision", 8, denMap); err != nil {
 		t.Fatal(err)
 	}
-	t.Cleanup(func() { _ = authority.Stop(t.Context()); _ = session.Close(); _ = engine.Close() })
+
+	t.Cleanup(func() {
+		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+		defer cancel()
+
+		if err := authority.Stop(ctx); err != nil {
+			t.Errorf("stop Den quest authority: %v", err)
+		}
+
+		if err := session.Close(); err != nil {
+			t.Errorf("close Den quest session: %v", err)
+		}
+
+		if err := engine.Close(); err != nil {
+			t.Errorf("close Den quest engine: %v", err)
+		}
+	})
 	return &denQuestFixture{engine: engine, session: session, sequences: map[string]uint64{}}
 }
 
