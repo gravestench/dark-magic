@@ -8,7 +8,9 @@ import (
 	gameecs "github.com/gravestench/dark-magic/internal/game/ecs"
 	gamesession "github.com/gravestench/dark-magic/internal/game/session"
 	"github.com/gravestench/dark-magic/internal/game/simulation"
+	gameworld "github.com/gravestench/dark-magic/internal/game/world"
 	playeradapter "github.com/gravestench/dark-magic/internal/mod/d2legacy/adapter/player"
+	modruntime "github.com/gravestench/dark-magic/internal/runtime/lua"
 )
 
 type denQuestFixture struct {
@@ -22,12 +24,14 @@ type denQuestFixture struct {
 func startDenQuest(t *testing.T, checkpoint *simulation.Checkpoint) *denQuestFixture {
 	t.Helper()
 	records := generatedHostileRecords()
+	records["data/global/excel/monstats.txt"][0]["MinGrp"] = "2"
+	records["data/global/excel/monstats.txt"][0]["MaxGrp"] = "2"
 	records["data/global/excel/levels.txt"] = append(records["data/global/excel/levels.txt"], map[string]string{"Id": "8", "MonDen": "100000", "NumMon": "1", "mon1": "fallen"})
 	initial := map[string]any{"d2legacy.interactions": map[string]any{"owner": "alice", "targets": []any{
 		map[string]any{"id": "npc:akara", "npc": "akara", "x": 1, "y": 1, "radius": 4, "act": 1, "level_id": 1, "selectable": true},
 	}}, "d2legacy.world_transitions": map[string]any{"seams": []any{
-		map[string]any{"source_level": 1, "destination_level": 8, "source_x": 9, "source_y": 1, "arrival_x": 1, "arrival_y": 1, "world_width": 100, "world_height": 100},
-		map[string]any{"source_level": 8, "destination_level": 1, "source_x": 1, "source_y": 9, "arrival_x": 1, "arrival_y": 1, "world_width": 100, "world_height": 100},
+		map[string]any{"source_level": 1, "destination_level": 8, "source_x": 9, "source_y": 1, "arrival_x": 1, "arrival_y": 1, "world_width": 100, "world_height": 100, "source_direction": "east", "trigger_radius": 2},
+		map[string]any{"source_level": 8, "destination_level": 1, "source_x": 1, "source_y": 9, "arrival_x": 1, "arrival_y": 1, "world_width": 100, "world_height": 100, "source_direction": "south", "trigger_radius": 2},
 	}}}
 	engine := gameecs.New()
 	var restore []simulation.ParticipantState
@@ -46,6 +50,14 @@ func startDenQuest(t *testing.T, checkpoint *simulation.Checkpoint) *denQuestFix
 	}
 	authority, err := StartWithConfig(t.Context(), content.D2Legacy(), records, engine, session, Config{Seed: 314, InitialData: initial, Restore: restore})
 	if err != nil {
+		t.Fatal(err)
+	}
+	denMap, err := gameworld.NewOpenMap(100, 100)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := modruntime.SetWorldMapForLevel(t.Context(), authority.Runtime,
+		"d2legacy.gameplay.systems.init", "set_collision", 8, denMap); err != nil {
 		t.Fatal(err)
 	}
 	t.Cleanup(func() { _ = authority.Stop(t.Context()); _ = session.Close(); _ = engine.Close() })
@@ -105,10 +117,13 @@ func (f *denQuestFixture) quest(t *testing.T, remaining, unsettled int64, comple
 	}
 }
 
-func (f *denQuestFixture) killActive(t *testing.T) {
+func (f *denQuestFixture) killResidents(t *testing.T, count int) {
 	t.Helper()
 	identities := dynamicStore(t, f.engine, "d2legacy.monster.identity")
 	for _, entity := range identities.Entities() {
+		if _, dead := dynamicStore(t, f.engine, "d2legacy.monster.death").Get(entity); dead {
+			continue
+		}
 		if _, inactive := dynamicStore(t, f.engine, "d2legacy.world.inactive").Get(entity); inactive {
 			continue
 		}
@@ -129,26 +144,42 @@ func (f *denQuestFixture) killActive(t *testing.T) {
 				componentSnapshot(t, f.engine, entity, "d2legacy.monster.stats"), componentSnapshot(t, f.engine, entity, "d2legacy.world.position"),
 				componentSnapshot(t, f.engine, playerEntity(t, f.engine, "alice"), "d2legacy.world.position"), componentSnapshot(t, f.engine, playerEntity(t, f.engine, "alice"), "d2legacy.player.vitals"))
 		}
+		count--
+		if count == 0 {
+			return
+		}
 	}
+	t.Fatalf("%d expected active residents were missing", count)
+}
+
+func (f *denQuestFixture) bootstrap(t *testing.T, populate bool) {
+	t.Helper()
+	area := map[string]any{"act": 1, "level_id": 8, "difficulty": 0, "links": []any{}, "rooms": []any{
+		map[string]any{"id": "entrance", "populate": populate, "x": 0, "y": 0, "width": 50, "height": 50,
+			"points": []any{map[string]any{"x": 4, "y": 3}, map[string]any{"x": 10, "y": 15}}},
+	}, "exclusions": []any{
+		map[string]any{"x": 1, "y": 1, "radius": 1},
+		map[string]any{"x": 1, "y": 9, "radius": 3.5},
+	}}
+	zones := []any{}
+	for level := 2; level <= 4; level++ {
+		zones = append(zones, map[string]any{"act": 1, "level_id": level, "difficulty": 0, "rooms": []any{}, "links": []any{}})
+	}
+	zones = append(zones, area)
+	f.command(t, "system.population.bootstrap", map[string]any{"zones": zones}, "system")
 }
 
 func TestDenQuestNaturalClearReturnRewardAndCheckpoint(t *testing.T) {
 	f := startDenQuest(t, nil)
-	area := map[string]any{"act": 1, "level_id": 8, "difficulty": 0, "links": []any{}, "rooms": []any{
-		map[string]any{"id": "entrance", "populate": true, "x": 0, "y": 0, "width": 20, "height": 20, "points": []any{map[string]any{"x": 4, "y": 1}}},
-		map[string]any{"id": "far", "populate": true, "x": 30, "y": 0, "width": 20, "height": 20, "points": []any{map[string]any{"x": 34, "y": 1}}},
-	}}
-	f.command(t, "system.population.bootstrap", map[string]any{"act": 1, "level_id": 2, "difficulty": 0, "rooms": []any{}, "links": []any{}, "additional_zones": []any{area}}, "system")
+	f.bootstrap(t, true)
 	f.enter(t, "alice")
 	f.enter(t, "bob") // Town-only bystander must not acquire quest credit.
 	f.move(t, 9, 1)
 	if got := componentSnapshot(t, f.engine, playerEntity(t, f.engine, "alice"), "d2legacy.world.location")["level_id"]; got != int64(8) {
 		t.Fatal("ordinary entry failed", got)
 	}
-	f.quest(t, 1, 1, false, false)
-	f.killActive(t)
-	f.quest(t, 0, 1, false, false)
-	f.move(t, 31, 1)
+	f.quest(t, 2, 0, false, false)
+	f.killResidents(t, 1)
 	f.quest(t, 1, 0, false, false)
 	f.move(t, 1, 9)
 	f.quest(t, 1, 0, false, false) // An unloaded area still owns a living resident.
@@ -174,8 +205,8 @@ func TestDenQuestNaturalClearReturnRewardAndCheckpoint(t *testing.T) {
 	restored := startDenQuest(t, &beforeKill)
 	finish := func(f *denQuestFixture) {
 		f.move(t, 9, 1)
-		f.move(t, 31, 1)
-		f.killActive(t)
+		f.move(t, 10, 10)
+		f.killResidents(t, 1)
 		f.quest(t, 0, 0, true, false)
 		stepSession(t, f.session, 3) // Reobserving retained death facts is idempotent.
 		if _, found := dynamicStore(t, f.engine, "d2legacy.quest.progress").Get(playerEntity(t, f.engine, "bob")); found {
@@ -232,25 +263,24 @@ func TestDenQuestNaturalClearReturnRewardAndCheckpoint(t *testing.T) {
 
 func TestDenQuestSettledEmptyRoomAndMissingResident(t *testing.T) {
 	f := startDenQuest(t, nil)
-	f.command(t, "system.population.bootstrap", map[string]any{"act": 1, "level_id": 8, "difficulty": 0, "links": []any{}, "rooms": []any{
-		map[string]any{"id": "live", "populate": true, "x": 0, "y": 0, "width": 20, "height": 20, "points": []any{map[string]any{"x": 4, "y": 1}}},
-		map[string]any{"id": "empty", "populate": false, "x": 30, "y": 0, "width": 20, "height": 20, "points": []any{}},
-	}}, "system")
+	f.bootstrap(t, true)
 	f.enter(t, "alice")
 	f.move(t, 9, 1)
-	f.killActive(t)
-	f.quest(t, 0, 1, false, false)
+	f.quest(t, 2, 0, false, false)
 	checkpoint := f.checkpoint(t)
 	missing := startDenQuest(t, &checkpoint)
 	store := dynamicStore(t, missing.engine, "d2legacy.world.room_resident")
 	for _, entity := range dynamicStore(t, missing.engine, "d2legacy.monster.identity").Entities() {
 		store.Remove(entity)
 	}
-	missing.move(t, 31, 1)
+	stepSession(t, missing.session, 1)
 	q := componentSnapshot(t, missing.engine, playerEntity(t, missing.engine, "alice"), "d2legacy.quest.progress")
 	if q["population_available"] != false || q["completed"] != false {
 		t.Fatal("missing resident was treated as death", q)
 	}
-	f.move(t, 31, 1)
-	f.quest(t, 0, 0, true, false)
+	empty := startDenQuest(t, nil)
+	empty.bootstrap(t, false)
+	empty.enter(t, "alice")
+	empty.move(t, 9, 1)
+	empty.quest(t, 0, 0, false, false)
 }

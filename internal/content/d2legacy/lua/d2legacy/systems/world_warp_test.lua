@@ -160,6 +160,9 @@ return test.suite({
                 local residents = ecs.query({ all = { "d2legacy.world.warp", "d2legacy.world.room_resident" } })
                 test.expect(#residents):equals(2)
                 test.expect(location:get("level_id")):equals(2)
+                test.expect(location:get("transition_kind")):equals("warp")
+                test.expect(location:get("transition_source")):equals(1)
+                test.expect(location:get("transition_sequence")):equals(1)
                 test.expect(position:get("x")):equals(20)
                 test.expect(position:get("y")):equals(20)
                 test.expect(bounds:get("width")):equals(200)
@@ -183,6 +186,10 @@ return test.suite({
                 local ecs = require("engine.ecs/v1")
                 local player = ecs.query({ all = { "d2legacy.world.player_control" } })[1]
                 test.expect(ecs.get(player, "d2legacy.world.location"):get("level_id")):equals(1)
+                local relocation = ecs.get(player, "d2legacy.world.location")
+                test.expect(relocation:get("transition_sequence")):equals(2)
+                test.expect(relocation:get("transition_source")):equals(2)
+                test.expect(relocation:get("transition_kind")):equals("warp")
                 test.expect(ecs.get(player, "d2legacy.world.position"):get("x")):equals(10)
                 test.expect(ecs.get(player, "d2legacy.world.position"):get("y")):equals(12)
             end),

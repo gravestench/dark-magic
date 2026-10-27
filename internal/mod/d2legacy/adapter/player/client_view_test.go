@@ -18,6 +18,13 @@ func TestValidateClientViewRejectsUnboundedOrInvalidNetworkState(t *testing.T) {
 		t.Fatalf("valid poison state: %v", err)
 	}
 
+	for _, kind := range []string{"seam", "warp"} {
+		candidate := validClientView(7)
+		candidate.HUD.Location = HUDLocation{Act: 1, LevelID: 2, TransitionSequence: 1, TransitionSource: 1, TransitionKind: kind}
+		if err := ValidateClientView(candidate, 7); err != nil {
+			t.Fatalf("valid relocation %s: %v", kind, err)
+		}
+	}
 	tests := map[string]func(*ClientView){
 		"pre-quest private schema":  func(view *ClientView) { view.Private.Version = 2 },
 		"pre-quest envelope":        func(view *ClientView) { view.Version = 16 },
@@ -27,7 +34,18 @@ func TestValidateClientViewRejectsUnboundedOrInvalidNetworkState(t *testing.T) {
 		"cleared unknown rooms": func(view *ClientView) {
 			view.Private.Quest = &QuestView{QuestID: 1, Completed: true, UnsettledRooms: 1}
 		},
-		"cleared living resident":         func(view *ClientView) { view.Private.Quest = &QuestView{QuestID: 1, Completed: true, Remaining: 1} },
+		"cleared living resident":      func(view *ClientView) { view.Private.Quest = &QuestView{QuestID: 1, Completed: true, Remaining: 1} },
+		"negative relocation sequence": func(view *ClientView) { view.HUD.Location.TransitionSequence = -1 },
+		"unknown relocation kind": func(view *ClientView) {
+			view.HUD.Location.TransitionSequence = 1
+			view.HUD.Location.TransitionSource = 1
+			view.HUD.Location.TransitionKind = "other"
+		},
+		"relocation missing source": func(view *ClientView) {
+			view.HUD.Location.TransitionSequence = 1
+			view.HUD.Location.TransitionKind = "seam"
+		},
+		"reason without relocation":       func(view *ClientView) { view.HUD.Location.TransitionKind = "warp" },
 		"pre-commerce private schema":     func(view *ClientView) { view.Private.Version = 1 },
 		"pre-commerce client schema":      func(view *ClientView) { view.Version = 14 },
 		"previous combined client schema": func(view *ClientView) { view.Version = 15 },

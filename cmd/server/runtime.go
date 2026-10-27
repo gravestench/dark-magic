@@ -71,7 +71,7 @@ func runRealmWorker(
 	admissions admissionState,
 	config serverConfig,
 ) error {
-	destination, err := prepared.entryWorld.Destination(prepared.entryWorld.Seam.Town.LevelID)
+	destination, err := prepared.entryWorld.Destination(prepared.entryWorld.Seams[0].First.LevelID)
 	if err != nil {
 		return fmt.Errorf("resolve authoritative d2legacy entry destination: %w", err)
 	}

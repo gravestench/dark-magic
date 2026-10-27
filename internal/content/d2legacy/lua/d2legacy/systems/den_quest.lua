@@ -9,8 +9,7 @@ local M = {}
 local function den_plan()
     local root = state.read("d2legacy.population.plan")
     if not root or not root.installed then return nil end
-    if root.level_id == 8 then return root end
-    for _, area in ipairs(root.additional_zones or {}) do
+    for _, area in ipairs(root.zones) do
         if area.level_id == 8 then return area end
     end
 end

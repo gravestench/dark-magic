@@ -7,6 +7,31 @@ return test.suite({
     tier = "fast",
     covers = { "internal/game/player" },
     cases = {
+        test.case("old_level_move_cannot_resume_after_seam", {
+            test.submit_system({
+                tick = 1,
+                sequence = 1,
+                kind = "system.player.enter",
+                payload = fixtures.player_entry({ x = 10, y = 12, level_id = 3 }),
+            }),
+            test.step(1),
+            test.submit({
+                tick = 2,
+                sequence = 1,
+                player = "alice",
+                kind = "player.move",
+                payload = { x = 1, y = 0, running = false, source_level = 2 },
+            }),
+            test.step(1),
+            test.run(function()
+                local ecs = require("engine.ecs/v1")
+                local player = ecs.query({ all = { "d2legacy.player.identity" } })[1]
+                local position = ecs.get(player, "d2legacy.world.position")
+                local velocity = ecs.get(player, "d2legacy.world.velocity")
+                test.expect(position:get("x")):equals(10)
+                test.expect(velocity:get("x")):equals(0)
+            end),
+        }),
         test.case("close_running_waypoint_settles_without_oscillation", {
             test.submit_system({
                 tick = 1,

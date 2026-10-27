@@ -52,11 +52,19 @@ func TestProjectHUDSelectsAuthenticatedPlayerAndAllowlistedFields(t *testing.T) 
 			intsComponent("d2legacy.player.combat_stats", []string{"attack_rating", "defense"}, 1, 44, 21),
 			defenses,
 			floatsComponent("d2legacy.world.position", []string{"x", "y"}, 1, 10.5, 20.25),
-			intsComponent("d2legacy.world.location", []string{"act", "level_id"}, 1, 1, 40),
+			intsComponent("d2legacy.world.location", []string{"act", "level_id", "transition_sequence", "transition_source"}, 1, 1, 40, 7, 2),
 			stringsComponent("d2legacy.player.belt", []string{"slot_1"}, []any{uint64(1), "secret-item"}),
 		},
 	}
 
+	for i := range snapshot.Components {
+		location := &snapshot.Components[i]
+		if location.Name == "d2legacy.world.location" {
+			kind := "seam"
+			location.Fields = append(location.Fields, gameecs.FieldSnapshot{Name: "transition_kind", Kind: akara.FieldString})
+			location.Instances[0].Values = append(location.Instances[0].Values, gameecs.ValueSnapshot{String: &kind})
+		}
+	}
 	payload, err := ProjectHUD("alice", simulation.Checkpoint{Tick: 9, Snapshot: &snapshot})
 	if err != nil {
 		t.Fatal(err)
@@ -74,6 +82,15 @@ func TestProjectHUDSelectsAuthenticatedPlayerAndAllowlistedFields(t *testing.T) 
 		t.Fatalf("HUD = %#v", view)
 	}
 
+	var relocationWire struct {
+		Location map[string]any `json:"location"`
+	}
+	if err := json.Unmarshal(payload, &relocationWire); err != nil {
+		t.Fatal(err)
+	}
+	if relocationWire.Location["transition_sequence"] != float64(7) || relocationWire.Location["transition_source"] != float64(2) || relocationWire.Location["transition_kind"] != "seam" {
+		t.Fatalf("relocation missing from owner projection: %v", relocationWire.Location)
+	}
 	if view.Belt.Slots[0] != "secret-item" {
 		t.Fatalf("owner-private belt was not projected: %#v", view.Belt)
 	}

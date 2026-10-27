@@ -42,7 +42,7 @@ function M.validate(command)
     assert(type(definition.id) == "string" and definition.id ~= "", "monster definition ID is required")
 end
 
-function M.components(command, game_player_count)
+function M.components(command, game_player_count, life_stream)
     local spawn, definition = command.payload, command.payload.definition
     -- Monster life endpoints are authored as whole values encoded in Diablo's
     -- 8.8 fixed-point unit. Draw a whole point, then restore the raw scale.
@@ -53,7 +53,7 @@ function M.components(command, game_player_count)
         "monster life endpoints must be whole 8.8 values"
     )
     local minimum, maximum = definition.life_min / 256, definition.life_max / 256
-    local base_health = minimum + random.integer("d2legacy.monster.spawn.life", maximum - minimum + 1)
+    local base_health = minimum + random.integer(life_stream or "d2legacy.monster.spawn.life", maximum - minimum + 1)
     local scaling = player_count.monster_spawn(game_player_count, definition.evil ~= false)
     -- The recovered spawn path caps whole life at 2^23 - 1 before scaling to 8.8.
     local health = math.min(base_health + percentage(base_health, scaling.life_bonus_percent), 8388607) * 256

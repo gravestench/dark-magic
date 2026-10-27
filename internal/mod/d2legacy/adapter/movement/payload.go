@@ -14,10 +14,11 @@ const MoveCommand = "player.move"
 // MovePayload carries either discrete directional input or an exact world-space target.
 // A target takes precedence when the simulation resolves the command.
 type MovePayload struct {
-	X       int         `json:"x"`
-	Y       int         `json:"y"`
-	Running bool        `json:"running"`
-	Target  *MoveTarget `json:"target,omitempty"`
+	X           int         `json:"x"`
+	Y           int         `json:"y"`
+	Running     bool        `json:"running"`
+	Target      *MoveTarget `json:"target,omitempty"`
+	SourceLevel int         `json:"source_level,omitempty"`
 }
 
 // decodeMove validates a serialized movement command without accepting schema extensions.
@@ -38,6 +39,9 @@ func decodeMove(encoded []byte) (MovePayload, error) {
 
 	if payload.X < -1 || payload.X > 1 || payload.Y < -1 || payload.Y > 1 {
 		return MovePayload{}, fmt.Errorf("movement axes must be between -1 and 1")
+	}
+	if payload.SourceLevel < 0 {
+		return MovePayload{}, fmt.Errorf("movement source level must be non-negative")
 	}
 
 	if !validMoveTarget(payload.Target) {

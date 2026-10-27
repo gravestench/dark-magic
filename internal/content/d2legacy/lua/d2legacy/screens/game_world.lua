@@ -35,6 +35,9 @@ local state_tint_presentation = require("d2legacy.gameplay.state_tint_presentati
 local aura_overlay_cycle = require("d2legacy.gameplay.aura_overlay_cycle")
 local interaction_approach = require("d2legacy.gameplay.interaction_approach")
 local skill_data = require("d2legacy.data.skill")
+local seam_geometry = require("d2legacy.gameplay.seam_geometry")
+local outdoor_seams = require("d2legacy.presentation.outdoor_seams")
+local camera_bounds = require("d2legacy.presentation.camera_bounds")
 local chunked_map = require("d2legacy.presentation.chunked_map")
 local tooltip = require("d2legacy.ui.tooltip")
 local text = require("d2legacy.ui.text")
@@ -55,11 +58,34 @@ local function network_connected()
     return network_ok and network.status().phase == "connected"
 end
 
+-- Release the entry-owned preload before clearing its handle, including unfinished work.
+local function release_pending(entry)
+    if entry.pending_job then
+        render.preload_release(entry.pending_job)
+        entry.pending_job = nil
+    end
+end
+
+-- Retire an entity's preload ownership before removing its independently owned render node.
+local function destroy_preloaded_entry(entry)
+    release_pending(entry)
+    if entry.node and entry.node:exists() then
+        entry.node:destroy()
+    end
+end
+
+-- Retire the scene-owned pending hero recipe after completion or when its art is no longer retained.
+local function release_hero_preload(self)
+    if self.hero_pending_job then
+        render.preload_release(self.hero_pending_job)
+        self.hero_pending_job = nil
+    end
+    self.hero_pending_key, self.hero_pending_composite = nil, nil
+end
+
 local function destroy_monsters(self)
     for _, monster in pairs(self.monsters or {}) do
-        if monster.node and monster.node:exists() then
-            monster.node:destroy()
-        end
+        destroy_preloaded_entry(monster)
     end
     self.monsters = {}
 end
@@ -76,28 +102,17 @@ end
 local function destroy_missiles(self)
     missile_audio.close(self.missile_sounds)
     for _, missile in pairs(self.missiles or {}) do
-        if missile.node and missile.node:exists() then
-            missile.node:destroy()
-        end
+        destroy_preloaded_entry(missile)
     end
     self.missiles = {}
 end
 
-local function destroy_overlay_entry(entry)
-    if entry.pending_job then
-        render.preload_release(entry.pending_job)
-    end
-    if entry.node and entry.node:exists() then
-        entry.node:destroy()
-    end
-end
-
 local function destroy_state_overlays(self)
     for _, overlay in pairs(self.state_overlays or {}) do
-        destroy_overlay_entry(overlay)
+        destroy_preloaded_entry(overlay)
     end
     for _, overlay in pairs(self.state_overlay_effects or {}) do
-        destroy_overlay_entry(overlay)
+        destroy_preloaded_entry(overlay)
     end
     self.state_overlays = {}
     self.state_overlay_effects = {}
@@ -116,6 +131,83 @@ local function destroy_warps(self)
     self.warps = {}
 end
 
+local function entity_pixel(self, x, y)
+    local px, py = self.world:subtile_to_pixel(x, y)
+    if self.placement then
+        return px + self.placement.offset_x, py + self.placement.offset_y
+    end
+    return px - self.world_canvas_width / 2, py - self.world_canvas_height / 2
+end
+
+local function presentation_depth(self, depth)
+    if self.placement then return depth * 4 + self.placement.priority end
+    return depth
+end
+
+local function entity_depth(self, x, y, bias)
+    local depth = self.world:entity_depth(x, y) + (bias or 0)
+        + (self.placement and self.placement.depth_offset or 0)
+    return presentation_depth(self, depth)
+end
+
+local function destroy_terrain(self)
+    if self.terrain then
+        for _, adapter in ipairs(self.terrain) do chunked_map.destroy(adapter) end
+        self.terrain = nil
+        self.camera_root:destroy()
+        self.camera_root, self.layout, self.adapters = nil, nil, nil
+    else
+        chunked_map.destroy(self.map)
+    end
+end
+
+local function prepare_terrain(self, capability, level_id)
+    if self.layout and self.layout.levels[level_id] then return end
+    destroy_terrain(self)
+    self.map = nil
+    self.last_rendered, self.visual_carry = nil, nil
+    if not capability.presentation then return end
+    local snapshot = capability.presentation()
+    local seams = seam_geometry.configured_seams()
+    local prepared, connected = {}, { [level_id] = true }
+    for _, entry in ipairs(snapshot.maps) do prepared[entry.level_id] = entry end
+    local changed = true
+    while changed do
+        changed = false
+        for _, seam in ipairs(seams) do
+            if connected[seam.source_level] and prepared[seam.destination_level]
+                and not connected[seam.destination_level] then
+                connected[seam.destination_level], changed = true, true
+            end
+        end
+    end
+    local component = { active_level = level_id, maps = {} }
+    for _, entry in ipairs(snapshot.maps) do
+        if connected[entry.level_id] then component.maps[#component.maps + 1] = entry end
+    end
+    self.layout = outdoor_seams.layout(component, seams)
+    self.camera_root = render.create("world", self.root)
+    self.camera_root:set_z(screen.map.z or 0)
+    self.terrain, self.adapters = {}, {}
+    local ids = {}
+    for id in pairs(self.layout.levels) do ids[#ids + 1] = id end
+    table.sort(ids, function(a, b) return a > b end)
+    for _, id in ipairs(ids) do
+        local placement = self.layout.levels[id]
+        -- Reserve four integer tie slots: town covers Moor, Moor covers Plains, and Plains covers Stony Field.
+        -- Level 4 uses slot zero; later discrete destinations occupy separate single-map components.
+        placement.priority = id <= 3 and 4 - id or 0
+        placement.recipe.palette = screen.map.palette
+        local adapter = chunked_map.create(self.root, placement.recipe, {
+            shared_root = self.camera_root,
+            offset_x = placement.offset_x, offset_y = placement.offset_y,
+            depth_offset = placement.depth_offset, depth_scale = 4, depth_priority = placement.priority,
+            viewport_width = manifest.resolution.width, viewport_height = manifest.resolution.height,
+        })
+        self.terrain[#self.terrain + 1], self.adapters[id] = adapter, adapter
+    end
+end
+
 local function install_current_world(self)
     local world_capability = self.world_capability
     if not world_capability then
@@ -123,13 +215,20 @@ local function install_current_world(self)
         self.world_capability = world_capability
     end
     local level_id = world_capability.current_level()
-    if self.world_level_id == level_id then
-        return false
-    end
+    local relocation = self.gameplay and self.gameplay.hero and self.gameplay_world.relocation
+        and self.gameplay_world.relocation(self.gameplay.hero)
+    local previous_sequence = self.transition_sequence
+    local changed = relocation and previous_sequence ~= nil and relocation.sequence > previous_sequence
+    self.transition_sequence = relocation and relocation.sequence or previous_sequence
+    if self.world_level_id == level_id and not changed then return false end
     local next_world, recipe = world_capability.current()
     assert(next_world and recipe, "session world is unavailable")
-    if self.hero and self.hero:exists() then
-        self.hero:destroy()
+    -- Terrain in the same prepared component keeps its camera root. Keep the
+    -- bound hero there too: even cached appearances preload asynchronously.
+    local retain_hero = self.layout and self.layout.levels[level_id] and self.hero and self.hero:exists()
+    if not retain_hero then
+        release_hero_preload(self)
+        if self.hero and self.hero:exists() then self.hero:destroy() end
     end
     destroy_monsters(self)
     destroy_players(self)
@@ -141,31 +240,41 @@ local function install_current_world(self)
     -- world. It must not survive into the destination presentation.
     self.pending_interaction = nil
     self.held_hostile = nil
+    if self.collision_node then self.collision_node:destroy() end
+    if self.tile_debug_node then self.tile_debug_node:destroy() end
+    if self.hero_origin then
+        self.hero_origin.horizontal:destroy()
+        self.hero_origin.vertical:destroy()
+    end
     self.collision_node, self.collision_region_key = nil, nil
     self.tile_debug_node, self.tile_debug_region_key = nil, nil
     self.hero_origin = nil
-    if self.map then
-        chunked_map.destroy(self.map)
-    end
+    -- The collision tick consumes the source trigger before rendering. Use
+    -- the committed reason, not a sampled source position or arrival guess.
+    self.crossing_pending = changed and relocation.kind == "seam"
+        and relocation.source_level == self.world_level_id and self.world_level_id ~= level_id
+    if not self.crossing_pending then self.visual_carry = nil end
+    prepare_terrain(self, world_capability, level_id)
     self.world, self.world_recipe, self.world_level_id = next_world, recipe, recipe.level_id
     recipe.palette = screen.map.palette
     recipe.world = next_world
     self.world_dimensions = next_world:dimensions()
     self.world_canvas_width, self.world_canvas_height = next_world:canvas()
-    self.map = chunked_map.create(self.root, recipe, {
+    self.placement = self.layout and self.layout.levels[level_id]
+    self.map = self.adapters and self.adapters[level_id] or chunked_map.create(self.root, recipe, {
         z = screen.map.z,
         viewport_width = manifest.resolution.width,
         viewport_height = manifest.resolution.height,
         canvas_width = self.world_canvas_width,
         canvas_height = self.world_canvas_height,
     })
-    self.ground_items = require("d2legacy.gameplay.ground_items").new(self.map.root, next_world, level_id, manifest.palettes.units)
-    self.hero = render.create("world", self.map.root)
-    self.hero:set_visible(false)
-    -- The previous render handle belonged to the destroyed map root. Force the
-    -- cached appearance to attach to this new handle while preserving the
-    -- playback clock, so crossing a seam does not rewind the animation.
-    self.hero_composite_key = nil
+    self.ground_items = require("d2legacy.gameplay.ground_items").new(self.map.root, next_world, level_id, manifest.palettes.units, self.placement)
+    if not retain_hero then
+        self.hero = render.create("world", self.map.root)
+        self.hero:set_visible(false)
+        -- A different root needs a fresh binding; preserve the playback clock.
+        self.hero_composite_key = nil
+    end
     if self.gameplay then
         self.gameplay_world.set_collision(self.gameplay, next_world, level_id)
         self.gameplay_world.snap_camera(self.gameplay)
@@ -174,7 +283,9 @@ local function install_current_world(self)
 end
 
 local function place_region_node(self, node, x, y, width, height)
-    node:set_position(x - self.world_canvas_width / 2 + width / 2, y - self.world_canvas_height / 2 + height / 2)
+    local ox = self.placement and self.placement.offset_x or -self.world_canvas_width / 2
+    local oy = self.placement and self.placement.offset_y or -self.world_canvas_height / 2
+    node:set_position(x + ox + width / 2, y + oy + height / 2)
 end
 
 local function refresh_collision_overlay(self, hero_x, hero_y)
@@ -189,7 +300,7 @@ local function refresh_collision_overlay(self, hero_x, hero_y)
     self.collision_region_key = key
     if not self.collision_node then
         self.collision_node = render.create("world", self.map.root)
-        self.collision_node:set_z(900000)
+        self.collision_node:set_z(presentation_depth(self, 900000))
     end
     local radius = 30
     local x, y, width, height = self.collision_node:set_world_collision_region(
@@ -214,7 +325,7 @@ local function refresh_tile_overlay(self, hero_x, hero_y)
     self.tile_debug_region_key = key
     if not self.tile_debug_node then
         self.tile_debug_node = render.create("world", self.map.root)
-        self.tile_debug_node:set_z(900001)
+        self.tile_debug_node:set_z(presentation_depth(self, 900001))
     end
     local radius = 30
     local x, y, width, height = self.tile_debug_node:set_world_tile_region(
@@ -301,7 +412,7 @@ local function update_warps(self)
     self.warps = self.warps or {}
     local seen = {}
     for _, snapshot in ipairs(self.gameplay_world.warp_snapshots()) do
-        if snapshot.level_id == self.world_level_id then
+        if snapshot.level_id == self.world_level_id and snapshot.token ~= nil then
             local key = tostring(snapshot.entity_id)
             seen[key] = true
             local warp = self.warps[key]
@@ -339,9 +450,9 @@ local function update_warps(self)
                     end
                 end
             end
-            local x, y = self.world:subtile_to_pixel(snapshot.x, snapshot.y)
-            warp.node:set_position(x - self.world_canvas_width / 2, y - self.world_canvas_height / 2)
-            warp.node:set_z(self.world:entity_depth(snapshot.x, snapshot.y))
+            local x, y = entity_pixel(self, snapshot.x, snapshot.y)
+            warp.node:set_position(x, y)
+            warp.node:set_z(entity_depth(self, snapshot.x, snapshot.y))
         end
     end
     for key, warp in pairs(self.warps) do
@@ -408,9 +519,9 @@ local function update_players(self, elapsed)
             if snapshot.animation_seconds ~= nil and player.key == composite.key then
                 player.node:animation_seek(player.playback.seconds)
             end
-            local x, y = self.world:subtile_to_pixel(snapshot.x, snapshot.y)
-            player.node:set_position(x - self.world_canvas_width / 2, y - self.world_canvas_height / 2)
-            player.node:set_z(self.world:entity_depth(snapshot.x, snapshot.y))
+            local x, y = entity_pixel(self, snapshot.x, snapshot.y)
+            player.node:set_position(x, y)
+            player.node:set_z(entity_depth(self, snapshot.x, snapshot.y))
         end
     end
     for key, player in pairs(self.remote_players) do
@@ -450,7 +561,8 @@ local function finish_monster_preload(monster, composite)
         -- renderer's global busy flag can then settle and captures can complete.
         monster.failed_composite_key = pending.key
     end
-    monster.pending_job, monster.pending_composite = nil, nil
+    release_pending(monster)
+    monster.pending_composite = nil
 end
 
 local function update_monster(self, monster, snapshot, elapsed)
@@ -472,9 +584,9 @@ local function update_monster(self, monster, snapshot, elapsed)
         monster.pending_composite = composite
     end
     finish_monster_preload(monster, composite)
-    local x, y = self.world:subtile_to_pixel(snapshot.x, snapshot.y)
-    monster.node:set_position(x - self.world_canvas_width / 2, y - self.world_canvas_height / 2)
-    monster.node:set_z(self.world:entity_depth(snapshot.x, snapshot.y))
+    local x, y = entity_pixel(self, snapshot.x, snapshot.y)
+    monster.node:set_position(x, y)
+    monster.node:set_z(entity_depth(self, snapshot.x, snapshot.y))
 end
 
 -- Reconcile copied ECS monster facts with retained render nodes. This is a
@@ -499,7 +611,7 @@ local function update_monsters(self, elapsed)
     end
     for key, monster in pairs(self.monsters) do
         if not seen[key] then
-            monster.node:destroy()
+            destroy_preloaded_entry(monster)
             self.monsters[key] = nil
         end
     end
@@ -549,19 +661,18 @@ local function update_overlay_node(self, overlay, snapshot)
             else
                 overlay.failed = true
             end
-            overlay.pending_job = nil
+            release_pending(overlay)
         end
     end
-    local x, y = self.world:subtile_to_pixel(snapshot.x, snapshot.y)
+    local x, y = entity_pixel(self, snapshot.x, snapshot.y)
     overlay.node:set_position(
-        x - self.world_canvas_width / 2 + overlay.recipe.offset_x,
+        x + overlay.recipe.offset_x,
         y
-            - self.world_canvas_height / 2
             + overlay.recipe.offset_y
             + state_overlay_presentation.height_offset(overlay.recipe, snapshot.overlay_height)
     )
     local behind = overlay.recipe.predraw or overlay.recipe.layer == "back"
-    overlay.node:set_z(self.world:entity_depth(snapshot.x, snapshot.y) + (behind and -1 or 1))
+    overlay.node:set_z(entity_depth(self, snapshot.x, snapshot.y, behind and -1 or 1))
 end
 
 local function queue_state_overlay_effect(self, cue)
@@ -655,7 +766,7 @@ local function update_state_overlays(self, elapsed)
     end
     for key, overlay in pairs(self.state_overlays) do
         if not seen[key] then
-            destroy_overlay_entry(overlay)
+            destroy_preloaded_entry(overlay)
             self.state_overlays[key] = nil
         end
     end
@@ -665,7 +776,7 @@ local function update_state_overlays(self, elapsed)
             overlay.remaining_seconds = overlay.remaining_seconds - elapsed
         end
         if overlay.failed or overlay.remaining_seconds <= 0 then
-            destroy_overlay_entry(overlay)
+            destroy_preloaded_entry(overlay)
             self.state_overlay_effects[key] = nil
         end
     end
@@ -773,20 +884,20 @@ local function update_missiles(self, snapshots)
                         -- the background residency queue every frame.
                         missile.failed = true
                     end
-                    missile.pending_job = nil
+                    release_pending(missile)
                 end
             end
-            local x, y = self.world:subtile_to_pixel(snapshot.x, snapshot.y)
+            local x, y = entity_pixel(self, snapshot.x, snapshot.y)
             missile.node:set_position(
-                x - self.world_canvas_width / 2 + snapshot.offset_x,
-                y - self.world_canvas_height / 2 + snapshot.offset_y - snapshot.offset_z
+                x + snapshot.offset_x,
+                y + snapshot.offset_y - snapshot.offset_z
             )
-            missile.node:set_z(self.world:entity_depth(snapshot.x, snapshot.y) + snapshot.offset_z)
+            missile.node:set_z(entity_depth(self, snapshot.x, snapshot.y, snapshot.offset_z))
         end
     end
     for key, missile in pairs(self.missiles) do
         if not seen[key] then
-            missile.node:destroy()
+            destroy_preloaded_entry(missile)
             self.missiles[key] = nil
         end
     end
@@ -998,9 +1109,7 @@ return {
                         -- changes. Retrying every frame keeps the whole client "busy".
                         self.hero_failed_composite_key = pending.key
                     end
-                    self.hero_pending_job = nil
-                    self.hero_pending_key = nil
-                    self.hero_pending_composite = nil
+                    release_hero_preload(self)
                 end
             end
             if authority.animation_seconds ~= nil and self.hero_composite_key == composite.key then
@@ -1099,27 +1208,51 @@ return {
         if self.world then
             -- The hero is a sibling of map bands. Its local point is therefore
             -- map-canvas space; their shared parent applies the camera once.
-            hero_screen_x, hero_screen_y = self.world:subtile_to_pixel(hero_x, hero_y)
-            hero_screen_x = hero_screen_x - self.world_canvas_width / 2
-            hero_screen_y = hero_screen_y - self.world_canvas_height / 2
+            hero_screen_x, hero_screen_y = entity_pixel(self, hero_x, hero_y)
             camera_pixel_x, camera_pixel_y = self.world:subtile_to_pixel(camera_x, camera_y)
-            self.hero:set_z(self.world:entity_depth(hero_x, hero_y))
+            self.hero:set_z(entity_depth(self, hero_x, hero_y))
         end
         if self.origins_visible and not self.hero_origin and self.map then
-            self.hero_origin = create_cross("world", self.map.root, 900002, 255, 64, 255)
-        end
-        if self.hero_origin then
-            set_cross(self.hero_origin, true, hero_screen_x, hero_screen_y)
+            self.hero_origin = create_cross("world", self.map.root, presentation_depth(self, 900002), 255, 64, 255)
         end
 
-        if self.map then
-            -- Absolute authoritative camera coordinates determine both chunk
-            -- culling and placement. Re-entering the scene cannot accumulate drift.
+        if self.terrain then
+            local cx = camera_pixel_x + self.placement.offset_x
+            local cy = camera_pixel_y + self.placement.offset_y
+            local bounds = self.layout.bounds
+            local rx = camera_bounds.clamp_center(target_x - cx + bounds.min_x + bounds.width / 2,
+                bounds.width, manifest.resolution.width) - bounds.min_x - bounds.width / 2
+            local ry = camera_bounds.clamp_center(target_y - cy + bounds.min_y + bounds.height / 2,
+                bounds.height, manifest.resolution.height) - bounds.min_y - bounds.height / 2
+            if self.crossing_pending and self.last_rendered then
+                local last = self.last_rendered
+                self.visual_carry = { x = last.root_x - rx, y = last.root_y - ry,
+                    hero_x = last.hero_x - hero_screen_x, hero_y = last.hero_y - hero_screen_y, age = 0 }
+            elseif self.visual_carry then
+                self.visual_carry.age = self.visual_carry.age + math.max(0, elapsed)
+            end
+            self.crossing_pending = false
+            if self.visual_carry then
+                local carry = self.visual_carry
+                local weight = math.max(0, 1 - carry.age / 0.15)
+                rx, ry = rx + carry.x * weight, ry + carry.y * weight
+                hero_screen_x = hero_screen_x + carry.hero_x * weight
+                hero_screen_y = hero_screen_y + carry.hero_y * weight
+                if weight == 0 then self.visual_carry = nil end
+            end
+            self.camera_root:set_position(rx, ry)
+            for _, adapter in ipairs(self.terrain) do
+                local _, map_error = chunked_map.update(adapter, 0, 0, rx, ry, world_view)
+                if map_error then error("updating world map: " .. tostring(map_error)) end
+            end
+            self.last_rendered = { root_x = rx, root_y = ry, hero_x = hero_screen_x, hero_y = hero_screen_y }
+            -- The active map remains the input authority. Its effective anchor
+            -- includes both the shared placement and the temporary visual carry.
+            target_x, target_y = rx + cx, ry + cy
+        elseif self.map then
             local _, map_error, effective_target_x, effective_target_y =
                 chunked_map.update(self.map, camera_pixel_x, camera_pixel_y, target_x, target_y, world_view)
-            if map_error then
-                error("updating world map: " .. tostring(map_error))
-            end
+            if map_error then error("updating world map: " .. tostring(map_error)) end
             target_x = effective_target_x or target_x
             target_y = effective_target_y or target_y
         end
@@ -1207,7 +1340,19 @@ return {
                 end
             else
                 self.pending_interaction = nil
-                self.player.request_move(target_world_x, target_world_y)
+                local move_x, move_y = target_world_x, target_world_y
+                if self.world_dimensions then
+                    move_x, move_y = seam_geometry.pointer_target(
+                        self.world_level_id,
+                        hero_x,
+                        hero_y,
+                        target_world_x,
+                        target_world_y,
+                        self.world_dimensions.width_subtiles,
+                        self.world_dimensions.height_subtiles
+                    )
+                end
+                self.player.request_move(move_x, move_y)
             end
         end
         if self.pending_interaction then
@@ -1245,6 +1390,10 @@ return {
             request_right_skill(self, skill_x, skill_y, selected and selected.id or "")
         end
 
+        if self.hero_origin then
+            set_cross(self.hero_origin, true, hero_screen_x, hero_screen_y)
+        end
+
         -- Hero screen position is target anchor plus hero-to-camera relative offset.
         self.hero:set_position(hero_screen_x, hero_screen_y)
     end,
@@ -1259,6 +1408,8 @@ return {
         destroy_state_overlays(self)
         destroy_warps(self)
         if self.ground_items then self.ground_items:destroy(); self.ground_items = nil end
-        chunked_map.destroy(self.map)
+        release_hero_preload(self)
+        destroy_terrain(self)
+        if self.hero and self.hero:exists() then self.hero:destroy() end
     end,
 }

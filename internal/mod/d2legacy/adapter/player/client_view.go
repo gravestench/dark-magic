@@ -119,6 +119,17 @@ func validPartyRelationship(value string) bool {
 // validateHUDView bounds every owner-private collection and numeric field before
 // presentation allocates resources or derives movement and health state.
 func validateHUDView(hud HUD) error {
+	relocation := hud.Location
+	if relocation.TransitionSequence < 0 || relocation.TransitionSource < 0 {
+		return ErrClientView
+	}
+	if relocation.TransitionSequence == 0 {
+		if relocation.TransitionSource != 0 || relocation.TransitionKind != "" {
+			return ErrClientView
+		}
+	} else if relocation.TransitionSource == 0 || (relocation.TransitionKind != "seam" && relocation.TransitionKind != "warp") {
+		return ErrClientView
+	}
 	identity := hud.Player
 	if !boundedRequired(identity.PlayerID, maxViewIdentityBytes) ||
 		!boundedRequired(identity.CharacterID, maxViewIdentityBytes) ||

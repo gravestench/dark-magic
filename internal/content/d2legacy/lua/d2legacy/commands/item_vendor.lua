@@ -12,6 +12,7 @@ local find = require("d2legacy.items.find")
 local placement = require("d2legacy.items.placement")
 local arrangement = require("d2legacy.items.vendor_arrangement")
 local offers = require("d2legacy.items.vendor_offers")
+local contexts = require("d2legacy.interactions.context")
 local M = {}
 
 local PRICE_SCALE = 1024
@@ -51,10 +52,42 @@ local function validate(command, buying)
             "category cannot contain a slash")
     end
     owner.resolve(command)
-    if not buying then terms(payload.vendor) end
+    if not buying and command.authority ~= "player" then terms(payload.vendor) end
     if buying then
         assert(payload.to_inventory == nil or type(payload.to_inventory) == "boolean", "inventory purchase choice must be boolean")
     end
+end
+
+-- Require a complete category token; a shared prefix cannot authorize a trade.
+local function allowed_category(categories, wanted)
+    for category in string.gmatch(categories, "[^,]+") do
+        if category == wanted then return true end
+    end
+    return false
+end
+
+-- Check player-only trade authority at application time. The general context
+-- helper permits missing player and location facts for bootstrap interactions,
+-- so transactions must establish those facts before trusting its range result.
+local function player_trading(command, owner_id, category)
+    if command.authority ~= "player" then return true end
+    local player_location
+    for _, entity in ipairs(ecs.query({ all = { "d2legacy.player.identity" } })) do
+        local identity = ecs.get(entity, "d2legacy.player.identity")
+        if identity:get("player") == owner_id then
+            if not ecs.get(entity, "d2legacy.world.position") then return false end
+            player_location = ecs.get(entity, "d2legacy.world.location")
+            break
+        end
+    end
+    if not player_location then return false end
+    local context, target = contexts.active(owner_id)
+    if not context or context:get("dialogue_page") ~= "trade" then return false end
+    local target_location = ecs.get(context:get("target"), "d2legacy.world.location")
+    if not target_location or player_location:get("act") ~= target_location:get("act")
+        or player_location:get("level_id") ~= target_location:get("level_id") then return false end
+    return string.lower(target:get("vendor")) == string.lower(command.payload.vendor)
+        and allowed_category(target:get("categories"), category)
 end
 
 local function held_item(layout_entity, item_id, entities)
@@ -70,9 +103,11 @@ end
 
 function M.apply_sell(command)
     local payload = command.payload
+    local owner_id = owner.resolve(command)
+    if not player_trading(command, owner_id, payload.category) then return end
     local entities = all_items()
     local layout_entity, layout = assert(find.layout(
-        owner.resolve(command),
+        owner_id,
         entities
     ))
     local entity, item, placed = held_item(
@@ -121,8 +156,9 @@ end
 function M.apply_buy(command)
     local payload = command.payload
     local entities = all_items()
+    local owner_id = owner.resolve(command)
     local layout_entity, layout = find.layout(
-        owner.resolve(command),
+        owner_id,
         entities
     )
     if not layout_entity then return end
@@ -132,6 +168,11 @@ function M.apply_buy(command)
         entities
     )
     if not entity then return end
+    if command.authority == "player" then
+        local placed = ecs.get(entity, "d2legacy.item.placement")
+        if not placed or placed:get("container") ~= "vendor"
+            or not player_trading(command, owner_id, placed:get("slot")) then return end
+    end
     local offer = ecs.get(entity, "d2legacy.vendor.offer")
     if offer then
         buy_offer(command, layout_entity, layout, entity, item, offer, entities)

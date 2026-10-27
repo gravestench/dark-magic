@@ -7,6 +7,7 @@ local pickup = require("d2legacy.commands.item_pickup")
 local movement = require("d2legacy.commands.item_movement")
 local vendor = require("d2legacy.commands.item_vendor")
 local services = require("d2legacy.commands.item_services")
+local use = require("d2legacy.commands.item_use")
 local M = {}
 
 function M.register()
@@ -14,6 +15,7 @@ function M.register()
     pickup.register()
     vendor.register()
     services.register()
+    use.register()
 end
 
 return M

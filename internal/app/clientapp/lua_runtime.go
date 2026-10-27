@@ -93,9 +93,10 @@ func (app *application) baseLuaModules(mapEditorStorage *mapeditor.Storage) []mo
 		modruntime.ShellModule(app.shellSettings),
 		modruntime.VFSModule(app.options.Content),
 		modruntime.MapEditorModule(app.options.Content, mapEditorStorage, app.worldObjectResolver),
-		modruntime.SessionWorldModule(
+		modruntime.SessionWorldModuleWithPresentation(
 			app.options.Content,
 			app.currentWorld,
+			app.presentationWorld,
 			app.worldObjectResolver,
 		),
 		modruntime.InputModule(app.inputState),

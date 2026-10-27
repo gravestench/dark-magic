@@ -17,15 +17,24 @@ import (
 
 // MovementSource converts the latest native input snapshot into one replayable command per active gameplay tick.
 type MovementSource struct {
-	mu         sync.Mutex
-	engine     *gameecs.Engine
-	input      *inputstate.Store
-	player     string
-	focusID    string
-	control    *MovementController
-	navigation movementPathFinder
-	path       []gameworld.Point
-	pathTarget *MoveTarget
+	mu                    sync.Mutex
+	engine                *gameecs.Engine
+	input                 *inputstate.Store
+	player                string
+	focusID               string
+	control               *MovementController
+	navigation            movementPathFinder
+	path                  []gameworld.Point
+	pathTarget            *MoveTarget
+	authenticatedPosition routeProgressSample
+	hasAuthenticated      bool
+}
+
+// routeProgressSample is server-authenticated movement evidence for client routing, not a second world authority.
+type routeProgressSample struct {
+	player   string
+	level    int
+	position gameworld.Point
 }
 
 // NewMovementSource binds local input and presentation state to one authoritative player identity.
@@ -66,7 +75,18 @@ func (source *MovementSource) SetPlayer(player string) {
 	}
 
 	source.mu.Lock()
+	if source.player != player {
+		source.hasAuthenticated = false
+	}
 	source.player = player
+	source.mu.Unlock()
+}
+
+// SetAuthenticatedPosition receives the connected local player's latest accepted movement position.
+func (source *MovementSource) SetAuthenticatedPosition(player string, level int, position gameworld.Point) {
+	source.mu.Lock()
+	source.authenticatedPosition = routeProgressSample{player: player, level: level, position: position}
+	source.hasAuthenticated = true
 	source.mu.Unlock()
 }
 
@@ -79,6 +99,7 @@ func (source *MovementSource) SetEngine(engine *gameecs.Engine) {
 
 	source.mu.Lock()
 	source.engine = engine
+	source.hasAuthenticated = false
 	source.resetAcceptedPath()
 	source.mu.Unlock()
 }
@@ -168,11 +189,39 @@ func movementAxis(negative, positive inputstate.ActionState) int {
 // encodeMovePayload serializes a closed value-only schema whose fields cannot fail JSON encoding.
 func (source *MovementSource) encodeMovePayload(x, y int, target *MoveTarget) []byte {
 	payload, _ := json.Marshal(MovePayload{
-		X:       x,
-		Y:       y,
-		Running: source.control.Running(),
-		Target:  target,
+		X:           x,
+		Y:           y,
+		Running:     source.control.Running(),
+		Target:      target,
+		SourceLevel: source.controlledLevel(),
 	})
 
 	return payload
+}
+
+// controlledLevel stamps the observed world on a movement sample so delayed commands cannot resume an old route
+// after the authority has crossed a seam. A missing projection keeps legacy startup samples compatible.
+func (source *MovementSource) controlledLevel() int {
+	controls, found := akara.GetDynamicStore(source.engine.World(), "d2legacy.world.player_control")
+	if !found {
+		return 0
+	}
+	locations, found := akara.GetDynamicStore(source.engine.World(), "d2legacy.world.location")
+	if !found {
+		return 0
+	}
+	for _, entity := range controls.Entities() {
+		control, _ := controls.Get(entity)
+		player, _ := control.Get("player")
+		if player != source.player {
+			continue
+		}
+		location, present := locations.Get(entity)
+		if !present {
+			return 0
+		}
+		level, _ := location.Get("level_id")
+		return int(level.(int64))
+	}
+	return 0
 }
