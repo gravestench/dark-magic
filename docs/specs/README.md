@@ -77,6 +77,12 @@ specs to the project's tracker and are the only place issue numbers appear.
 |------|--------|--------|
 | [drlg-world-clock](drlg-world-clock.md) | #505 (spec); #415 (gameplay) | #346 |
 
+### Drawing (`draw-`)
+
+| Spec | Issues | Parent |
+|------|--------|--------|
+| [draw-light-map-and-light-radius](draw-light-map-and-light-radius.md) | #468 (spec; light-map and radius slice) | #362 |
+
 ### Monsters (`monster-`)
 
 | Spec | Issues | Parent |
