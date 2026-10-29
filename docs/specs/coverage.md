@@ -457,7 +457,7 @@ All D2Client.
 
 | Candidate spec | Original source | Data tables and columns | 1.13c entry points | Status | Notes |
 |---|---|---|---|---|---|
-| draw-light-map-and-light-radius | `DRAW\dLightMap` | light columns in Missiles, MonStats2, Objects, States; light radius stat | `0xA8C20`, `0xA9100`, `0x1BC0` | candidate | Labels in this range say "Automap" and are likely wrong. |
+| [draw-light-map-and-light-radius](draw-light-map-and-light-radius.md) | `DRAW\dLightMap` | Radius/color, prepared object/missile/monster fields, component light selection, separate light associations, collision inputs, shadow scratch/cache and map-cell writes | `0xA8C20`, `0xA9B50`, `0xA9100`, `0xA8A40` | written | Draft: prepared-input shadow/raster, temporary/projectile/monster/overlay light and cleanup stages verified; collision masking and one temporary-light creation/attachment case runtime-confirmed. Source/world producers and remaining gameplay observations stay explicit. `0x1BC0` was rejected as a sprite-composition lead; see companion. |
 | draw-room-and-ambient-lighting | `DRAW\dLightMap` | Levels, LvlTypes lighting | `0x4F770`, `0xA8520` | candidate | May merge with the row above. |
 | draw-palette-shifts | `GAME\PalShift` | States colorshift, colorpri; MonStats2 Utrans | `0x538F0`, `0x53B20`, `0x539E0`, `0x40190` | candidate | |
 | draw-unit-color-transform-and-glow | `ENGINE\GfxUtil` | Items InvTrans; MonStats2 | `0x6DEE0`, `0x6DFE0`, `0x52200` | candidate | |

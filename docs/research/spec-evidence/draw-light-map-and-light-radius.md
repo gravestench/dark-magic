@@ -1,0 +1,542 @@
+# Evidence: light map and light radius
+
+Behavioral contract: [Light map and light radius](../../specs/draw-light-map-and-light-radius.md).
+
+## Identity and limits
+
+Read date: 2026-10-27. Evidence build: original Windows x86 Lord of Destruction Expansion 1.13c. Original modules are [LOD113C-D2CLIENT, LOD113C-D2COMMON and LOD113C-FOG](../source-manifest.md). Fresh SHA-256 reads of the original files matched the cited manifest entries. Descriptions below are analyst labels, not exported function names. The continued reading establishes prepared-input shadow-cache and complete source-raster stages as well as radius/color stages; it does not establish the complete original-game producer-to-pixel path. No finding applies automatically to another patch.
+
+## Prepared overlay continuation, 2026-10-29
+
+Existing 2026-10-27 records were checked before new reading. Their original dates, fingerprints, boundaries and labels are retained, including RT-LMR-COLLISION-MASK and RT-LMR-CAST-LISTHEAD. Fresh original-image SHA-256 reads match the existing Client and Common manifest identities. The remaining question selected from LMR-Q02 was the reached overlay light stage, not complete overlay spawning or lifetime. New LMR-R23/LMR-V28 narrow only that question; all twenty-two existing rules and twenty-seven vector families retain their assertions and observed coverage.
+
+**Dispatch and owned writes.** The already identified skill-action stage D2Client `0xA1CF0` reaches overlay creation `0x6B300` at its `0xA21E1` call before the independently specified temporary missile-record light tail. At the reached overlay's light stage `0x6B49F..0x6B4E5`, the selected prepared record is already valid and the new overlay is already initialized. The consumer tests the signed 32-bit target at record `+0x74` for zero, not the initial radius. A nonzero target forwards initial request `+0x70`, intensity 255, RGB bytes `+0x7D..0x7F`, kind 1 and the owner to source creation `0xA8C20`. It stores that result at overlay `+0x40`. It then compares raw initial and target requests and calls target setter `0xA8BE0` only when they differ. The light-owned stage has no unread callee: creation and target setter consume LMR-R01/LMR-R03's existing complete readings. The reached stage itself has no byte-emitted instruction ambiguity. Surrounding overlay RNG, animation, eligibility, attachment and teardown are outside this stage and remain LMR-Q02; they are not labeled verified merely because the light stage was read.
+
+**Field identities.** D2Common `0x82F90` defines the Overlay schema, using numeric 32-bit kind 2 at destinations `+0x70/+0x74`, and numeric byte kind 4 at `+0x7D/+0x7E/+0x7F`. Original image strings at Common RVAs `0x957F8`, `0x957F0`, `0x8AEE8`, `0x8AEE0`, `0x8AED8` respectively identify `InitRadius`, `Radius`, `Red`, `Green`, `Blue`. The consumer's signed source/setter semantics establish the radius interpretation, rather than an assumed meaning of the names. GDA-R03a/GDA-R03b/GDA-R03c supply selected descriptor conversion; GDA-R02 still owns arbitrary compiled correspondence. No authored archive cell or actual overlay row value is claimed from this schema reading.
+
+**Vector distinction.** V28 tests different initial/target values and the association separate from the unit's lights. Cases (a)..(g) additionally distinguish zero target, equal requests, absent creation followed by positive-target fatal assertion, nonpositive target, both requests nonpositive, and unequal raw requests that cap to the same effective radius. These are synthetic prepared inputs. No new gameplay observation or runtime promotion is claimed. Adding this rule and vector requires a fresh full blind-implementer review; the historical reader passes below apply to their recorded contracts.
+
+## Blind-implementer pass 10, 2026-10-29
+
+Fresh full independent reader of the resulting twenty-three-rule, twenty-eight-vector-family contract: MISMATCH 0, GUESS 0, GAP 0, DISCRIM 0, GATED 6, COVERAGE 22, HARDEST 3. The reader recomputed all executable cases without source or runtime tools. GATED lists the five existing local questions and consumed GDA-R02; these keep their stated boundaries and do not become invented defaults. No new input, rule, expected output, assertion, ownership or gate changed after this pass.
+
+The following records each advisory coverage disposition. No new output category or ambiguity was identified: the cited cases already discriminate the corresponding result or operation; the reader did not claim exhaustive branch observations. Precise rule branches remain required even where their combinations are not individually enumerated. Historical reviewed vector values and observation flags are preserved.
+
+| Reader coverage entry | Outcome and rationale |
+|---|---|
+| R01 missing position storage | No change: fatal missing required dynamic path is explicit; V02(a) already distinguishes invalid-owner fatal behavior. Static missing storage is outside the stated successful-position domain, with no invented recovery. |
+| R02 missing source/changed-radius cache | No change: positive absent-source fatal behavior is explicit. V03 tests immediate replacement and kind-2 invalidation even at unchanged radius, a stronger invalidation discriminator than a changed-radius-only case; V27 also exercises changed radius and discard. |
+| R03 missing source | No change: V28(c) now explicitly exercises the positive target with absent creation result and fatal assertion. |
+| R04 request truncation/absent zero | No change: u16 conversion is explicit in the rule and numeric foundation; V05 exercises zero removal/no-create cases, V06 distinguishes unsigned half-request and reuse. Additional input combinations add no new result category. |
+| R05 owner lookup/downward step | No change: V07(a) exercises downward stepping and suppressed refresh; V08 supplies an absent owner and retained center. Ownerless/missing lookup use the same explicit no-refresh outcome, not a guessed position. |
+| R06 absent/unsupported cases | No change: V09(c) distinguishes unsupported-category no-op with a source; absent inputs use the same explicit no-write guard. |
+| R07 overflow/negative sum | No change: signed wrapped addition is consumed from numeric foundations; V10 tests nonpositive setter no-op. Negative sums map to that same zero-request branch, also exercised by V27(a). |
+| R08 dispatch combinations | No change: V19/V20 cover the selected raster/cache operations and their ordered calls. The quality/kind dispatch conditions remain explicit; further combinations are optional branch coverage rather than unspecified behavior. |
+| R09 owner and radius combinations | No change: V11 cases distinguish quality-dependent radii, excluded owner, invalid radius and nonpositive contribution. Further owner/boundary combinations follow the stated exhaustive selection branches and add no new result category. |
+| R10 unsaturated/lower-row clipping | No change: unsaturated weighted color is already V13 (total 5); clipping on either signed axis has the same explicit no-write result, discriminated by V13(a)..(c). |
+| R11 nonwrap counter below previous | No change: equality/wrap already exercise unsigned skip; a nonwrap lower value uses the same comparison and no-rebuild output. |
+| R12 missing room/cells | No change: V15 includes missing-data/adjacent selection results; the unmasked sentinel outcome is explicit and distinct from V21's masked present cell. Further absent-storage paths yield that same sentinel. |
+| R13 blockers/larger radius | No change: V16/V18 exercise scratch/blocker/propagation effects; wider radius repeats the stated sample loop, without a new initialization default. |
+| R14 larger sweep | No change: V18 tests exact ordered duplicate-preserving sweep and hand trace; larger rings repeat that specified operation. |
+| R15 invalid/fatal state | No change: invalid radius and failed cache invariants are explicit, while valid-room/cache supplied cases are V18/V20. Malformed storage is outside the successful-storage execution domain. |
+| R16 skipped samples/clipping | No change: V19/V20 discriminate raster order, attenuation and map results; nonpositive/clipped no-write behavior is separately tested in the consumed sample/map operations V11/V13. |
+| R17 displaced temporary source | No change: V22's replacement case already asserts displaced-source removal; V22(c)'s runtime limit is not a missing executable replacement case. |
+| R18 zero Light/zero force | No change: the zero-operation/removal branch is explicit and shares the cleared-primary outcome tested by V23's forced-zero case; no new allocation default is needed. |
+| R19 absent association | No change: V24 specifies retained other association and ordered cleanup; missing associations take the stated no-op branches. |
+| R20 other invalid/override combinations | No change: V25 tests component-code fallback/overrides and item maximum; invalid record/component guards explicitly return zero. Full override constants remain specified, without requiring a separate vector for every list entry. |
+| R21 small-light condition combinations | No change: V26 distinguishes normal, replacement, zero, capped-bookkeeping and fatal branches; additional combinations select one of those defined outcomes. |
+| R22 invalid/absent/wrapped callback | No change: V27 distinguishes recomputation, immediate setter and nonpositive no-op; invalid selection/absence explicitly returns unchanged, and arithmetic width is the consumed foundation. |
+
+HARDEST dispositions, all no change: R14/V18 already supplies the exact duplicate-preserving target trace; R16/V19/V20 states dispatch/raster effects and prepared-state boundary explicitly; R20..R22/V25..V27 separately computes component selection, initializer overrides and callback base so their different rules cannot be silently combined. The review stopping rule is met for this resulting contract; document status remains draft and approval is not inferred.
+
+## Runtime collection limitation, 2026-10-29
+
+A dedicated owned vanilla `lod-113c` member loaded the existing level-1 research Sorceress on Normal in Rogue Encampment. A new source-creation trace request at D2Client `0xA8C20` was rejected by input validation because the recorder accepts only ECX/EDX/stack dereference labels, while the source's owner arrives in EDI. Trace status reported no targets, so this attempt produced no capture. The contract was not changed to fit an incomplete observation, and neither dated confirmed case was recaptured. Normal exit returned to title; the owned container was subsequently stopped and its slot checked separately. No memory write, direct game-function call, save edit or surviving hook was used. Remaining complete observations stay LMR-Q05.
+
+Existing compatible original instruction listings remain reused; the newly read overlay light slice uses ordinary decoded instructions and the loader uses a reconstruction checked against original bytes. Tool availability and unsuccessful collection setup are preserved separately in the private audit.
+
+## Functions and boundaries
+
+| Artifact | Function RVA | Export ordinal | Analyst description | Rules | Method / boundary |
+|---|---|---|---|---|---|
+| LOD113C-D2CLIENT | 0x8B110 | none established | Viewport render caller | LMR-Q01 | Disassembly; lighting-update compare through call, not complete viewport-render ownership |
+| LOD113C-D2CLIENT | 0xA9E30 | none established | Initialize map then traverse sources | LMR-Q01, LMR-R05, LMR-R08 | Disassembly corroborated against original-image instruction listing; source traversal and update call |
+| LOD113C-D2CLIENT | 0xA8C20 | none established | Allocate/init light source | LMR-R01 | Complete disassembly; valid owner and successful allocation boundary |
+| LOD113C-D2CLIENT | 0xA8B60 | none established | Immediate current/target radius setter | LMR-R02 | Complete disassembly including nonpositive no-op and kind-2 invalidation |
+| LOD113C-D2CLIENT | 0xA8BE0 | none established | Target-only setter | LMR-R03 | Complete disassembly including positive-null fatal path |
+| LOD113C-D2CLIENT | 0x24920 | none established | Object light association request | LMR-R04 | Complete disassembly including zero-removal and unsigned half-request |
+| LOD113C-D2CLIENT | 0xA9B50 | none established | Source update and renderer dispatch | LMR-R05, LMR-R08 | Complete local source update and dispatch; LMR-R16 verifies supplied-input renderer outputs, while world/base-map producers and final graphics consumption remain outside this stage |
+| LOD113C-D2CLIENT | 0x189A0, 0xA86C0 | none established | Packed-color request and RGB setter | LMR-R06 | Complete disassembly from supplied callback operation to channel writes |
+| LOD113C-D2CLIENT | 0xA8630, 0xA5420 | none established | Remove source and clear unit association | LMR-R04, LMR-R05 | Complete disassembly; list removal and cache freeing, normal valid association |
+| LOD113C-D2COMMON | 0x30340 | 11080 | Unit fixed-point x | LMR-R01, LMR-R05 | Reconstruction checked against original bytes; complete coordinate return branch |
+| LOD113C-D2COMMON | 0x302E0 | 11168 | Unit fixed-point y | LMR-R01, LMR-R05 | Reconstruction checked against original bytes; complete coordinate return branch |
+| LOD113C-D2COMMON | 0x3AF00 | 11166 | Register a unit's stat-list callback and context | LMR-R07 | Disassembly; pointer/context registration writes read, complete stat aggregation execution not claimed |
+| LOD113C-D2CLIENT | 0xA4E20, 0xA8D30 | none established | Unit lookup from source identity | LMR-R05, LMR-Q04 | Complete identity/hash branch disassembly; original-image instruction listing corroborates raw-byte decoding |
+| LOD113C-D2CLIENT | 0x18C20, 0x18BC0 | none established | Stat dispatch and radius modifier callback | LMR-R07, LMR-Q02 | Original-image instruction listing plus raw dispatch-table bytes; player branch through immediate radius write |
+| LOD113C-D2CLIENT | 0x191E0 | none established | Player initialization source request | LMR-Q02 | Read disassembly; radius 13/intensity and RGB 255 request identified, full creation eligibility not established |
+| LOD113C-D2CLIENT | 0x4C150, 0x01260, 0xA4B00 | none established | Monster light initializer, linked record and stored-radius write | LMR-R21 | Complete reached light initializer and owned callees; original-image corroborated instructions; wider initialization eligibility/condition producers remain LMR-Q02 |
+| LOD113C-D2COMMON | 0x1A900, 0x84C70 | 11077 for 0x1A900 | Component light maximum and component code selection | LMR-R20 | Complete prepared-state consumers, including special level/base-identity overrides; original-image corroboration |
+| LOD113C-D2COMMON | 0x013B0, 0x5E1C0, 0x3C000, 0x2D2C0, 0x01280, 0x71960 | none established here | Linked extended record, component code, level identity/classification, class validation and item-code lookup | LMR-R20 | Complete reconstructions checked against original bytes; misleading labels do not identify their actual consumers |
+| LOD113C-D2COMMON | 0x01860, 0x2FE10 | 10331 for 0x2FE10 | Monster base identity and current room | LMR-R20, LMR-R21 | Complete disassembly; supplied valid unit/path/room context |
+| LOD113C-FOG | 0x11F00 | 10213 | Unsigned code lookup | LMR-R20 | Complete 80-byte plain disassembly; original file SHA-256 freshly matches manifest; unique prepared keys boundary |
+| LOD113C-D2COMMON | 0x787C0, 0x616D0, 0x56C10 | none established | Item light, CompCode code and MonStats2 light descriptors | LMR-R20, LMR-R21 | Selected descriptor/consumer binding; generic preparation remains GDA-R02/GDA-R03d where applicable |
+| LOD113C-D2CLIENT | 0xA0F60 | none established | Acting-unit temporary skill light | LMR-R17 | Complete light operation; original-image instruction corroboration; selected valid missile record and successful allocation |
+| LOD113C-D2CLIENT | 0xA1CF0 | none established | Skill-action temporary-light dispatch | LMR-R17, LMR-Q02 | Reached successful-action light tail through positive signed selector and 0xA0F60 call; other skill eligibility and effects outside this stage |
+| LOD113C-D2CLIENT | 0xB30F0 | none established | Projectile-creation primary-light stage | LMR-R18 | Original-image corroborated stage 0xB3641 through 0xB36BA; supplied created projectile, selected record and conditions; other projectile creation outside boundary |
+| LOD113C-D2CLIENT | 0x18900, 0xA6D60 | none established | Temporary-only clear and dual-light cleanup | LMR-R19 | Complete 0x18900 operation and 0xA6D60 entry through 0xA6D8A; remaining teardown outside light cleanup |
+| LOD113C-D2COMMON | 0x4E300 | 10327 | Temporary-association swap | LMR-R17, LMR-R19 | Complete reconstruction checked against original bytes; null unit/container returns zero, otherwise replaces auxiliary association and returns former reference |
+| LOD113C-D2COMMON | 0x7C8D0 | none established | Missiles light byte descriptors | LMR-R17, LMR-R18 | Original-image descriptors and byte consumers; generic conversion consumes GDA-R03a/GDA-R03b/GDA-R03c |
+| LOD113C-D2COMMON | 0x61EC0 | none established | Skills client-missile selector descriptor | LMR-R17, LMR-Q02 | Original descriptor at 0x6401F binds cltmissile to ready-record field +0xE8; complete skill selection/spawning not claimed |
+| LOD113C-D2CLIENT | 0x25280, 0x25490, 0x25660, 0x259F0 | none established | Object-mode producers | LMR-Q02 | Read disassembly; calls to 0x24920, not complete producer verification |
+| LOD113C-D2CLIENT | 0x6B300 | none established | Reached overlay light request | LMR-R23, LMR-Q02 | Light stage through source creation, association and target request read completely on 2026-10-29; full overlay eligibility and lifetime remain outside this reached stage |
+| LOD113C-D2COMMON | 0x82F90 | none established | Overlay schema | LMR-R23 | Reconstruction checked against original bytes; selected numeric 32-bit initial/target and byte RGB descriptor identities corroborated from original-image strings |
+| LOD113C-D2CLIENT | 0xA9100, 0xA8F60, 0xA8310, 0xA8470 | none established | Kind-2 cache construction/application and interpolation helpers | LMR-R08, LMR-R13, LMR-R14, LMR-R15, LMR-R16 | Complete local paths; original-image instruction listings corroborate raw-byte decoding; supplied room/grid/scratch/cache boundary |
+| LOD113C-D2CLIENT | 0xA9860, 0xA8760 | none established | Uncached radial contribution and integer distance | LMR-R09 | Complete selected-sample stage; original-image listing corroborates raw-byte instructions; full enumeration not accepted by supplied-sample vectors |
+| LOD113C-D2CLIENT | 0xA8A40, 0xA99E0 | none established | Map-cell combination and reciprocal preparation | LMR-R10 | Complete cell-write and reciprocal-initialization stage; original-image instruction listing corroborates raw-byte instructions |
+| LOD113C-D2CLIENT | 0x443D0, 0x44A80, 0x8A090, 0x8B110 | none established | Counter initialization, completed-tick increment and eligible viewport rebuild | LMR-R11 | Counter writes and unsigned guard corroborated against original-image instruction listing; wider tick/render eligibility not claimed |
+| LOD113C-D2COMMON | 0x4C9D0 | 10482 | Lighting collision query | LMR-R12, LMR-R13 | Complete disassembly through masked result or unmasked missing-data return |
+| LOD113C-D2COMMON | 0x01330 | none established | Containing current/adjacent-room selection | LMR-R12 | Byte-checked assembly reading, not a C reconstruction; complete room bounds and ordered adjacent scan |
+| LOD113C-D2COMMON | 0x2FE10 | 10331 | Current unit room | LMR-R15 | Complete disassembly; dynamic/static position branches |
+| LOD113C-D2CLIENT | 0x01630, 0x01660 | none established | Integer owner coordinates | LMR-R13, LMR-R15 | Reconstructions checked against original bytes; complete dynamic/static branches |
+| LOD113C-D2COMMON | 0x34BB0, 0x34B80 | 10867, 10750 | Dynamic-position integer coordinate fields | LMR-R13, LMR-R15 | Reconstructions checked against original bytes; unsigned 16-bit x/y fields |
+| LOD113C-D2CLIENT | 0xA8950, 0xA9480, 0xA87B0 | none established | Viewport blocker sampling, shadowed raster and distance duplicate | LMR-R13, LMR-R14, LMR-R16 | Complete prepared-input consumers; original-image listings corroborate raw-byte runs |
+| LOD113C-D2COMMON | 0x3F0C0 | none established | Objects loader lighting descriptors | LMR-R04 | Original-image descriptor and consumer binding; generic numeric byte conversion consumes GDA-R03a/GDA-R03b/GDA-R03c |
+| LOD113C-D2COMMON | 0x3E980 | 10688 | Selected Objects ready-record getter | LMR-R04 | Reconstruction checked against original bytes; validated index and record stride; original descriptor/consumer context establishes the table identity |
+
+## Dispatch and output anchors
+
+The viewport path at D2Client `0x8B110` compares the unsigned current update counter at preferred VA `0x6FBC97F8` against last-processed `0x6FBCBEF8`; when greater it stores the current value and calls `0xA9E30`. The latter calls environmental/base-map initialization, collision-map initialization and quality selection, then traverses the source list at preferred VA `0x6FBCBBEC`. For each entry it saves the next source before calling `0xA9B50`. Those preceding environmental/base-map producers are outside local-source radius ownership; the source counter producer remains unresolved.
+
+Creation `0xA8C20` is reached from the object wrapper `0x24920`, player initializer `0x191E0`, monster initializer `0x4C150`, missile-light request `0xA0F60`, overlay creator `0x6B300`, and additional skill/missile producers whose complete integration remains unverified. The object wrapper is called by object initialization/mode paths `0x25280`, `0x25490`, `0x25660`, `0x259F0`. These are entry anchors into the independently specified supplied-request operation, not proof of each producer's authored semantics.
+
+The source-updater `0xA9B50` writes refreshed center and current radius before selecting `0xA9480` for kind 0/quality greater than 1, `0xA9100` then `0xA8F60` for kind 2, or `0xA9860` otherwise. These are local light-map paths; the misleading analyst names containing Automap are not used as behavioral evidence.
+
+## Semantic field mapping and import resolution
+
+Source current radius is `+0x18`, target `+0x1C`, center x/y `+0x10/+0x14`, kind `+0x0C`, removal condition `+0x20`, intensity `+0x24`, RGB `+0x25/+0x26/+0x27`, next source `+0x28`, cache-valid `+0x2C`, cache storage `+0x30`. Unit source association is `+0x64`. These internal layouts are investigation locators, not required implementation layouts.
+
+Source allocation returns absent for signed radius nonpositive before accessing owner position. Positive radius clamps to 18 and stores radius times 8. Kind 2 allocates `4*(2*q+1)^2` bytes. Radius setters take their request in EAX; the immediate setter takes source in ESI, target-only setter in ECX. The object wrapper receives the unsigned 16-bit request in AX, unit in ECX and three stack color arguments. Its allocation passes kind 2 and intensity 255; existing associations skip color writes.
+
+D2Client thunk `0xC1AE` imports D2Common ordinal 11080 at RVA `0x30340`, and thunk `0xC232` imports ordinal 11168 at RVA `0x302E0`. Both coordinate getters were read in full through their success returns. Object/item/tile-like unit categories select integer path coordinates shifted left 16; other categories require a valid dynamic path and return its first two fixed-point coordinates. Invalid required pointers use assertion/fatal paths. Allocation uses logical shift by 13; updater uses arithmetic shift by 13. The source updater resolves its identity through client registry/hash lookup; no gameplay RNG occurs in these lookup/radius operations.
+
+Removal `0xA8630` unlinks its supplied entry from the source list, frees nonnull cache, frees entry and increments a removal counter. Missing source in a removal request is an assertion/fatal invariant violation. Object wrapper only invokes it when the association is nonnull. Memory allocator/free imports are generic infrastructure; out-of-memory semantics are not specified by the successful-allocation boundary.
+
+## Rule rationale and search records
+
+- LMR-R01 through LMR-R05: read source allocation, immediate/target setters, object wrapper, source updater and removal from entry through result/write. The setter's misleading label about animation/buffer sizes does not describe its actual light-source consumer. Zero radius is an early no-op in both setters; the object zero case explicitly removes the entry. Thus “zero always extinguishes a light” contradicts the traced branches.
+- LMR-R06: `0x189A0` accepts player/monster units with a nonnull source; it defaults three local color bytes to 255, replaces them from packed value only when nonzero, and calls `0xA86C0`. The push order makes the most significant selected byte red, middle green, low byte blue. The callee writes only RGB bytes, not intensity.
+- LMR-R07: `0x18C20` extracts selector from the high half of a packed key, subtracts 89 and uses a byte-to-jump table. Fresh original-image reads at RVA `0x18DA8` give the first two selector bytes `[0,1]`; the jump table at `0x18D94` gives first targets preferred VA `0x6FAC8C54` and `0x6FAC8C64`. Original-image instruction listings corroborate those branches calling `0x18BC0` and `0x189A0`, respectively. The radius callback selects player base 13, adds the new callback value and maps nonpositive result to zero before the immediate setter. The complete player branch has no owned unread callee. The monster branch consumes the still-unresolved base producer described in LMR-Q02. The authored stat names are TD-LMR-STAT below. Original source registration is the player initialization call through client thunk `0xC490`, with callback pointer preferred VA `0x6FAC8C20`; generic stat-list aggregate/notification execution remains outside this supplied-callback boundary.
+- LMR-Q02: monster initializer first validates the base monster record; helper `0x01260` follows its linked signed record id into the secondary monster table. It reads light radius at secondary record `+0x11E` and colors `+0x11F..0x121`, and compares radius with D2Common ordinal 11077, RVA `0x1A900`. That routine scans component-associated item records, but its full item-record and component dependencies were not resolved. Its return is not promoted to an authored light value. Missile request reads record `+0x130` and RGB `+0x132..0x134`; object producers read mode-indexed radius bytes beginning `+0x110` and RGB `+0x164..0x166`. Those are candidate loader bindings only.
+- LMR-Q04: the initial pass located cache/interpolation consumers but left their complete local contract open. The continuation below reads the missing collision/room/coordinate helpers and specifies complete prepared-input cache and raster operations. Collision materialization, base-map initialization and graphics-driver consumption remain separate producer/consumer boundaries, not missing local raster defaults.
+- LMR-R09: uncached renderer `0xA9860` checks positive current radius below 256, applies quality-zero owner-category cases, and computes a signed quotient of intensity shifted left 16 by effective radius. At each reached sample, distance helper `0xA8760` computes two 32-bit absolute values, compares signed magnitudes, multiplies the greater by 983 and lesser by 407, then logically shifts the wrapped sum by 10. The renderer multiplies remaining radius by scale and arithmetically shifts by 16; only a signed positive result calls `0xA8A40`. All selected-sample owned callees are read. The full loop's start is each center rounded down to a multiple of eight minus effective radius; side count is `(2*effectiveRadius >> 3)+1`, with x/y advancing by eight, y outermost. Coarse viewport rejection precedes the loop. Those enumeration/integration assertions are recorded as located evidence; the present vectors accept only supplied samples, leaving full-raster acceptance with LMR-Q04.
+- LMR-R10: map writer `0xA8A40` converts x/y with arithmetic shift by three, subtracts viewport origins and clips each index to 0..47. It reads old intensity and channels, saturates old-plus-new intensity to 255, then uses the saturated result as reciprocal index. Colored-light condition at preferred VA `0x6FB8E830` selects zero RGB or weighted channels; each weighted result logically shifts the wrapped product by 16 and caps to 255. Intensity and RGB writes are original cell `+4..+7`; preceding cell fields are untouched. Initialization `0xA99E0` sets reciprocal entry zero to zero and loops unsigned division of 65536 by each index 1..255. Full original-image instruction redecoding corroborates this initialization despite its initially undefined analysis listing. Runtime memory correspondence of entries 0..7 is recorded separately and does not establish sample execution.
+
+## Continued missile-record light attachment and lifetime verification
+
+Reading date 2026-10-27; original artifact identities are unchanged. This continuation resolves the light attachment/replacement stages previously grouped under LMR-Q02. It does not establish the complete skill or projectile gameplay producer. LMR-R17/R18/R19 and LMR-V22/V23/V24 use reached stages and valid prepared records; none has a matching gameplay vector observation at this static handoff.
+
+**Separate association owners.** D2Client `0xA0F60` takes a missile-template selector in EAX and the acting unit in ECX. It resolves the selected ready Missiles record from the table base/count, stride `0x1A4`. A selected record is required: an invalid index yields null followed by an unguarded `+0x130` byte read, rather than a successful missing-record no-op. Light zero exits before allocation. Positive Light passes owner EDI, kind EBX=1, radius 1, intensity 255 and selected RGB to `0xA8C20`, then writes target radius `min(Light,18)*8` while retaining current radius 8. The successful source operation is LMR-R01/R03.
+
+The next call is Client thunk `0xC5C2` -> D2Common ordinal 10327, RVA `0x4E300`. Its complete reconstruction checked against original bytes checks the supplied unit, then the pointer at unit `+0xA8`. If either is null, it returns zero without writing. Otherwise it returns the former reference at that auxiliary record's `+0x14` and stores the supplied new reference there. Client `0xA0F60` removes that returned former source through `0xA8630`. It never stores unit `+0x64`. Therefore the acting unit's temporary association differs from its primary association, and missing auxiliary storage does not undo allocation or unlink the new source. The auxiliary record is not identified here as projectile data merely because a missile-template light is used.
+
+**Reached skill dispatch and authored selector.** The successful-action tail of `0xA1CF0`, at `0xA21E6..0xA2204`, tests a supplied action-result local for nonzero, reads signed word ready Skills `+0xE8`, requires it positive, and passes that selector and acting unit to `0xA0F60`. Original Common loader `0x61EC0` writes the descriptor name pointer at `0x6401F` to preferred VA `0x6FDE0C48`, whose original bytes spell `cltmissile`; its destination is `0xE8` at `0x64038`. The next descriptor at `0x6404E` names `cltmissilea` and targets `0xEA`; the two selectors must not be conflated. This proves which prepared selector the reached tail consumes. Resolving arbitrary authored names into compiled selectors and establishing every action-success condition remain outside the supplied-record operation.
+
+**Missiles light descriptor binding.** Common `0x7C8D0` sets EAX=4 for numeric-byte descriptors, then uses original string pointers and destination offsets as follows: `Light`, preferred string VA `0x6FDDAEF4`, descriptor instruction `0x7DBF4`, destination `0x130`; `Red`, VA `0x6FDDAEE8`, descriptor `0x7DC4A`, destination `0x132`; `Green`, VA `0x6FDDAEE0`, descriptor `0x7DC75`, destination `0x133`; `Blue`, VA `0x6FDDAED8`, descriptor `0x7DCA0`, destination `0x134`. Zero descriptor parameter and numeric-byte type are used throughout these four entries. The loader supplies stride `0x1A4` to its generic table-loader boundary. Its reached postprocessing clamps a separate field `+0x183`; it does not rewrite these four light bytes. GDA-R03a/GDA-R03b/GDA-R03c supply schema binding and present-cell conversion; GDA-R02 still owns arbitrary compiled-record correspondence. The initial V22/V23 fixtures use synthetic selected ready fields rather than claiming a particular archive row was executed. The later observed V22(c) uses its separately identified selected ready record and capture below.
+
+**Projectile primary association.** In Client `0xB30F0`, the unit allocated as category 3 becomes EDI. The light stage `0xB3641..0xB36BA` reads the enable condition from preferred VA `0x6FB8D854`. False enable or creation flags bit `0x4000` selects `0xA5420`, which removes a nonnull primary source and clears unit `+0x64`. Otherwise the stage tests the selected record's Light byte and creation byte `+0x50`. Both zero skips the light operation. Either nonzero first calls `0xA5420`, then requests `0xA8C20` with actual Light, kind 1, intensity 255 and RGB; its result is stored at unit `+0x64` at `0xB36AC`. A nonzero creation byte does not replace a zero Light value: creation receives zero and returns no source. The temporary association is neither read nor written by this stage. The preceding unrelated unit-flag update and following optional callback/projectile work remain in their owning creator contract; the rule asserts light outputs only.
+
+Configuration is supplied as a neutral enable condition in LMR-R18. The setting wrapper `0x641E0` has a reconstruction checked against original bytes: setting 0 or 1 stores zero in that condition and setting 2 stores one; other values leave it unchanged after registry handling. This is a provenance lead for configuration production, not a claim to have specified registry, graphics/performance configuration or all writers of the condition.
+
+**Removal and cleanup.** `0xA5420` reads only the primary association for its light operation, calls already-read removal `0xA8630` when present, then clears that association. `0x18900` calls the same Common temporary swap with zero, then removes the returned former source if nonzero; the primary slot is untouched. At `0xA6D60..0xA6D8A`, unit cleanup first removes and clears the primary, then swaps temporary to zero and removes the returned old source. This exact prefix defines `CleanupLights`; the remaining resource teardown is not hidden inside LMR-R19. Additional reached temporary-clear calls were located in mode/action paths `0x19830`, `0xA7D50` and `0xA2C90`; their broader eligibility is not promoted to a complete transition contract. Valid distinct live associations avoid removal-invariant violations or double removal. Generic freeing/allocation failure remains infrastructure under LMR-Q03.
+
+**Closure and verification limits.** Every light-owned local callee in these bounded stages is read: source allocation/target update, primary clear, temporary swap, and source unlink/free. Original-image listings matching the manifest SHA-256 corroborate `0xA0F60`, `0xA1CF0`, `0xB30F0`, `0x18900`, `0xA6D60`, `0x7C8D0` and descriptor decoding in `0x61EC0`. The current stage contract does not substitute supplied inputs for an unread local light callee. Wider skill selection/spawning, original configuration eligibility, monster/state producers and arbitrary ready-record correspondence remain LMR-Q02. The prior candidate description of `0xA0F60` as a projectile's light attachment is superseded by the distinct association writes documented here.
+
+## Continued monster component and base-light verification
+
+Reading date 2026-10-27. This continuation adds LMR-R20/R21/R22 and synthetic prepared-input LMR-V25/V26/V27. No matching monster gameplay observation is claimed. Original D2Client/D2Common identities remain the manifest entries; the additional original Fog.dll fingerprint freshly matches `LOD113C-FOG`, SHA-256 `96c05770ab06b71a7a2d6abe5dc7c2f943b30ac8fe367e44bdbad7e2643bb863`.
+
+**Complete component maximum.** Client thunk `0xCDAE` imports Common ordinal 11077, RVA `0x1A900`. For null/non-monster it returns byte zero. A monster requires nonnull unit `+0x14` for the component choices beginning `+4`; absent storage returns zero. The loop visits sixteen component indices and calls Common `0x84C70` with owner, component index and selected unsigned variant byte. It skips code zero and exact code words `0x2074696C`, `0x2064656D`, `0x20797668` (bytes `lit `, `med `, `hvy `). For another code it calls `0x71960`; missing item lookup is skipped, otherwise unsigned byte item `+0x12F` updates an unsigned maximum. Return byte AL is that maximum, initially zero. No RNG call occurs.
+
+**Component selection and overrides.** Common `0x84C70` rejects null/non-monster or component index outside unsigned 0..15. Its `0x013B0` helper resolves class into MonStats, signed linked identity at `+0x18` into MonStats2, with both count bounds; missing selection returns zero. The component's unsigned variant count is MonStats2 `+0x15+component`; a variant at or above that count returns code zero. Otherwise unsigned byte `+0x26+12*component+variant` indexes CompCode through `0x5E1C0`, which rejects an index at or above its count and otherwise returns that prepared four-byte code.
+
+After valid-variant selection, `0x2FE10` obtains the room. A missing room retains the default code. `0x3C000` returns the level identity through room `+0x10`, linked record `+0x58`, field `+0x1D0`; a null room itself returns zero. `0x2D2C0` compares the level identity against five signed thresholds at preferred VA `0x6FDE4668`, indices 1..5: original words are `40,75,103,109,1024`. It returns class 1 exactly for levels 40..74; no difficulty input is read. Only that class reaches overrides. `0x01860` resolves the monster's signed BaseId word `+2` or returns the supplied class when its record is invalid; `0x01280` then bounds-checks the resulting identity against MonStats count. Base 0 selects the pointer array at preferred VA `0x6FDEE208`; base 170 selects `0x6FDEE288`; other results keep the default. A nonnull array entry replaces the default with its selected-variant word, including replacement of a zero default.
+
+Original image data at these two arrays and their pointed lists was read directly under the manifest identity. The lists are embedded engine constants, not copied authored table rows. For base 0 the selected list pointers by component are: 0 -> `0x6FDEE164`, 1 -> `0x6FDEE1F8`, 2/3/4 -> `0x6FDEE180`, 5 -> `0x6FDEE18C`, 7 -> `0x6FDEE1B4`, 8/9 -> `0x6FDEE1C8`; other entries are null. Base 170 uses 0/2/3/4 -> `0x6FDEE248`, 1 -> `0x6FDEE1F8`, 6 -> `0x6FDEE280`, 8/9 -> `0x6FDEE254`; others null. The spec gives the decoded code lists and explicitly bounds reached indices to them. Reads beyond those fixed lists are not assigned invented recovery semantics or treated as ordinary ready-record input. Prepared component list/count production, including descriptor callback integration, remains an upstream dependency.
+
+**Item-code lookup closure.** The complete reconstruction of Common `0x71960` calls import thunk RVA `0x9240`, IAT preferred VA `0x6FDD90BC` -> Fog ordinal 10213, RVA `0x11F00`. That complete plain-assembly routine searches supplied sorted eight-byte entries using unsigned key comparisons, returns the matched entry's stored record index, and returns -1 if no key is found. The Common wrapper returns null for negative result (also writes output index zero) or returns item-base plus index times `0x1A8`. The spec supplies unique code keys and ready item records, so no ambiguous duplicate-key default is assumed. Producing and validating an arbitrary linker collection remains GDA-R02 integration, rather than an unread local lookup callee.
+
+**Authored field bindings.** Common `0x787C0` establishes the shared item schema: at `0x793C7`, original string pointer `0x6FDDF1E8` spells `lightradius`; numeric byte type EAX=4 writes destination `0x12F` at `0x793E0`. Its code field uses original `code` string, direct four-byte conversion, destination `0x80`, and the code linker consumed by `0x71960`. Common `0x616D0..0x61763` establishes `compcode` with stride 4, direct four-byte `code` descriptor and published collection/count consumed by `0x5E1C0`. Common `0x56C10` numeric-byte descriptors bind original `light` to `0x11E`, `light-r` to `0x11F`, `light-g` to `0x120`, `light-b` to `0x121`; the linked record is selected through MonStats.MonStatsEx, not directly by monster class. MonStats.Align and BaseId consume GDA-R08a. These schema/selected-cell bindings consume GDA-R03a/R03b/R03c; component-list callbacks and arbitrary compiled correspondence retain GDA-R03d/GDA-R02 limits. No original named table-cell value is inferred from the synthetic vectors.
+
+**Reached initializer and callback.** Client `0x4C150` validates monster type/class/selected records, obtains the unsigned component maximum and takes its unsigned maximum with MonStats2 `+0x11E`. Its room call chain is Client `0xC1F0` -> Common ordinal 10331/RVA `0x2FE10`, then Client `0xC1DE` -> Common ordinal 10826/RVA `0x3C000`. At level identity 8 it requires context preferred VA `0x6FBCC0A0` nonnull, otherwise asserts fatally. With context present, byte `0x6FBC5591` nonzero, unit `+0xC4` bit 21 clear, and MonStats.Align byte `+0x4C` neither 1 nor 2, it assigns selected radius 3 unconditionally. Otherwise selected radius zero returns without changing the existing source.
+
+For a positive selected radius, `0x4C150` requests source kind 0, intensity 255, selected RGB at `+0x11F..0x121`, then removes/clears an existing primary through `0xA5420`, stores the new source at unit `+0x64`, and calls `0xA4B00` to store the uncapped selected radius at unit `+0x68`. Creation precedes removal here, unlike the projectile primary-light stage. `0xA4B00` is fully read through the valid-unit write and null-unit assertion. Wider caller eligibility is not claimed; direct anchors include `0x21D60`, `0x4D160`, `0x4D610`, `0x4DC70`. At the shared radius-modifier callback `0x18BC0`, the monster branch resolves the linked record and recomputes the maximum, then performs wrapped modifier addition, maps nonpositive result to zero and calls the immediate setter. It neither reads unit `+0x68` nor applies the initializer's level-8 replacement. Existing callback dispatch `0x18C20` maps stat 89 to this operation.
+
+All local light-owned dependencies above are read through their outputs, using reconstructions checked against original bytes where available and disassembly otherwise. Original-image listings corroborate raw-byte runs in the component selector/maximum, Client initializer/record getter/stored-radius helper/callback, and Common lighting descriptors. The earlier unresolved component-base description is superseded only for these valid prepared-state consumers. Upstream component construction, arbitrary compiled correspondence, state-light producers, stat aggregation and wider source-init/configuration eligibility remain LMR-Q02. Full independent review is required after these three new rules; the preceding review stopping rule applied to its earlier contract.
+
+## Instruction corroboration
+
+Fresh original-image instruction listings dated 2026-10-27, matching `LOD113C-D2CLIENT` SHA-256, were checked against the source readings for `0xA9E30`, `0x18BC0`, `0x18C20`, `0xA4E20`, `0xA9860`, `0xA8A40`, and `0xA99E0`. This resolves the raw-byte decoding ambiguity for the verified stages. The `0x18C20` branch tables were independently read from original PE-mapped bytes rather than inferred from disassembler labels. Additional original-image listings corroborate cache functions `0xA9100`, `0xA8470` and `0xA8310`; corroboration alone does not settle their complete behavioral scope or unresolved collision consumers.
+
+The root/output search has identified the light-source path; it has not exhausted the six-rung absence ladder, and no function or behavior is labeled not found. The coverage candidate `0x01BC0` was rejected: its actual consumer `0x6E2C0` uses the result in sprite composition, and the routine reads unit graphics information. The similarly named `0x017B0` consumes a skill-record field rather than the light-source radius. Neither label establishes a light rule.
+
+## Continued local shadow and raster verification
+
+Date: 2026-10-27. The spec filename and LMR prefix were searched for consumers outside sibling specifications, evidence, gap files and the index/coverage map; no implementation plan, code or test consumed them. Existing ids are nevertheless retained to keep the review boundary legible. Compatible instruction readings and original-image fingerprints above are reused without treating them as fresh gameplay observations.
+
+### Scheduling stage
+
+Completed client-world tick `0x44A80` increments preferred VA `0x6FBC97F8` at instruction `0x6FAF4B2F`, after the tick's prior work. Client-world initialization `0x443D0` resets it at `0x6FAF44FB`. Viewport creation `0x8A090` resets processed-counter VA `0x6FBCBEF8` at `0x6FB3A137`. The reached viewport stage `0x8B110` compares current versus processed unsigned, assigns processed before calling `0xA9E30`, and has no per-missed-tick catch-up loop. The complete counter operations support LMR-R11, not a claim that the wider caller `0x44B50` reaches them on every server/display frame. Direct-reference searches found the named initialization/increment writers for the current counter and the viewport initialization/guard writers for the processed counter within the searched client instructions.
+
+### Collision query and caller ownership
+
+Client thunk `0xC4A8` imports D2Common ordinal 10482 at RVA `0x4C9D0`. Its four stack inputs are current room, subtile x, subtile y and mask; the lighting callers pass mask `0x22` (34). The callee invokes same-module helper `0x01330`, which was read from byte-checked assembly because that reconstruction is explicitly assembly, not C. It tests the current room's bounds first, then its ordered adjacent-room pointer array, skipping absent entries. Bounds use room `+0x4C/+0x50` minima and `+0x54/+0x58` extents; adjacent list/count are `+0x00/+0x24`. Rectangles use signed comparisons and exclusive upper bounds. The selected room's collision storage is `+0x20`; its own origin x/y/width are `+0x00/+0x04/+0x08`, and unsigned 16-bit cell array is `+0x20`. Missing selected room, storage or cells returns `0x27` (39), rather than applying the mask to that sentinel. Otherwise the return is the cell AND the supplied mask. No further local collision callee remains unread.
+
+Client thunk `0xC1F0` resolves to Common ordinal 10331 at `0x2FE10`: it returns the unit's current room from the dynamic path or static position branch, with an absent dynamic path returning no room. Client integer-coordinate helpers `0x01630/0x01660` use byte-matched reconstructions; their dynamic paths call Common ordinals 10867/10750 at `0x34BB0/0x34B80`, whose byte-matched bodies return unsigned words at path `+0x02/+0x06`. Static object/item/tile-like paths read integer coordinates directly. The misleading labels on these Common exports do not establish their meanings; the callers, actual reads and original import/export resolution do.
+
+### Working-grid state and ray interpolation
+
+The propagated scratch grid P begins at preferred VA `0x6FBACDE8`; B begins at `0x6FBB0DE8`. The consumer indexes rows with stride 64 integers. Original code at `0xA9100` and `0xA9480` clears only `0x400` doublewords, exactly 1024 values, from P's beginning, not 4096. Therefore the logical rows -32 through -17 are reset, while the rest retain their incoming values until assigned. PE metadata puts the scratch address in the zero-filled virtual tail of `.data` for a fresh process: `.data` starts RVA `0xDB000`, raw size `0x20000`, and P starts RVA `0xFCDE8`, beyond that raw range. This establishes initial-image zeros, not a universal per-call full clear. The graphics handoff also receives the P pointer, so the behavioral contract takes persistent incoming scratch values explicitly rather than assuming an unverified lifetime invariant.
+
+Viewport preparation `0xA8950` fills only the source square in B from light-map obstruction byte zero, using value 1 outside the 48-square window, then shifts each flag left four. Cache builder `0xA9100` instead fills all 64 by 64 B cells from collision queries centered on the resolved owner's integer position. Every nonzero low-16-bit collision result becomes 16. The source's direction-sampling center is derived separately from its stored lighting-coordinate center; these centers are not silently identified for supplied fixtures.
+
+Direction helper `0xA8470` computes source-center minus target-center differences, their signs and magnitudes, then selects no-op, horizontal, vertical, x-major or y-major interpolation. The nonzero minor/major ratio uses signed division of the minor magnitude shifted left eight. Interpolator `0xA8310` first prefers nonzero B at each selected neighbor, otherwise P; x-major and y-major cases use weighted two-neighbor interpolation with arithmetic shift eight. Original PE bytes at jump table RVA `0xA8458` identify mode targets, in order 0 through 4, as `0xA8451`, `0xA83F8`, `0xA8329`, `0xA8392`, `0xA8425`. This independently corroborates coincident/no-write, horizontal, x-major, y-major and vertical behavior. No mode is inferred from its label.
+
+Both cache builder `0xA9100` and high-quality source renderer `0xA9480` enumerate rings from distance two through radius divided by eight, with eight calls for each i=0 through ring distance in the exact order specified by LMR-R14. Duplicate axis/corner calls remain duplicate calls. The central three-by-three propagated region is never assigned by those sweeps. The caller constructs each direction sample at the corresponding source-centered subtile center, while the eventual raster sample lies on the eight-unit coordinate grid; these positions are deliberately distinct in the contract.
+
+### Cache and full-raster outputs
+
+Cache builder `0xA9100` validates current radius before scratch clearing, then resolves owner and current room. Missing owner returns after the partial clear; a found owner without room asserts. After blocker fill and ring propagation it requires an invalid cache and nonnull storage, copies the central source square from P in row-major order and sets validity. Source update `0xA9B50` reserves missing cache storage and invokes this builder only when kind 2 has a false valid flag. A position refresh alone does not invalidate that flag. Application `0xA8F60` performs radius and coarse viewport rejection before its cache-storage/validity assertions. This explains the distinct missing-owner results in LMR-V20's outside-versus-inside raster cases.
+
+Uncached `0xA9860`, viewport-shadowed `0xA9480`, and cached `0xA8F60` share grid-aligned raster starts and row-major eight-unit sample stepping. Their coarse bound comparisons use strict greater/less comparisons with a one-sample extended far edge; final map-cell clipping remains `0xA8A40`. The cached path uses duplicate distance helper `0xA87B0`, read in full; it matches `0xA8760`'s integer distance recipe. High-quality kind 0 has an inline copy of that same recipe. Shadowed paths skip a shadow sample at least 16, otherwise apply `(8-(shadow>>1))` to the already truncated radial intensity and arithmetically shift by three before the positive-contribution test. They feed the existing verified map-cell writer. All owned local callees on those prepared-input paths are resolved and read.
+
+Full shadow/cache success is specified for positive radii divisible by eight and below 256, the domain preserved by original radius creation, setters and eight-unit steps. It requires adequate supplied cache storage and shadow values in 0 through 16. Corrupted nonmultiple radii and insufficient storage are not silently made safe by an invented clamp. World collision/base-map materialization and the eventual graphics-driver map handoff remain outside these local operations. Client thunk `0xD0C0` resolves to D2Gfx ordinal 10075 at RVA `0xBB80`, a graphics-interface dispatch; no final-pixel or read-only-driver claim is inferred from that handoff.
+
+### Prepared object field binding
+
+Original Common Objects loader `0x3F0C0` binds `Lit0` at descriptor instruction `0x3F6E5`, name pointer preferred VA `0x6FDE3D74`, destination `0x110`, numeric-byte descriptor kind 4; `Lit1` begins `0x3F710` and binds `0x111`, followed by the consecutive remaining mode bytes through `Lit7`. RGB descriptor instruction sites `0x403D4`, `0x403FF`, `0x4042A` bind `Red`, `Green`, `Blue` to `0x164..0x166`, also kind 4. Original-image ASCII/descriptor reads and the existing GDA-R03a/GDA-R03b/GDA-R03c loader contracts establish the named prepared fields, independent of arbitrary compiled-file correspondence under GDA-R02.
+
+Selected record getter Common ordinal 10688 at `0x3E980` validates an index before returning the Objects base plus `index*0x1C0`; its byte-checked reconstruction's analyst name is not used as table evidence. Client object initializer `0x25490` stores that selected ready record in object data. Client `0x25280` and the object-mode consumers read unsigned byte `record+0x110+selectedMode`, RGB at `+0x164..0x166`, then call `0x24920`. LMR-R04 therefore accepts a supplied ready record and selected mode 0 through 7, without asserting complete mode-selection/spawn eligibility. Existing loader records do not establish all compiled rows; named runtime row correspondence remains a separately recorded check.
+
+### Invalid owner boundary
+
+The fully read Common coordinate getters used by allocation assert on absent unit, despite the allocator's earlier default owner-category/id writes. A positive source request with absent owner therefore has no successful ownerless result; a nonpositive source request returns before those reads. Missing required dynamic path likewise asserts. Generic allocator-failure infrastructure stays outside the successful-allocation stage and no recoverable failure default is introduced.
+
+### Review applicability
+
+The continued contract adds rules LMR-R11 through LMR-R16, promotes LMR-R08's local dispatch, adds a prepared-record entry to LMR-R04, narrows LMR-Q01/LMR-Q03/LMR-Q04, and adds vectors LMR-V14 through LMR-V20 plus cases to LMR-V02/LMR-V06. Earlier reader-pass counts below remain historical evidence for their original supplied-radius/sample contract only. A new full blind-implementer pass is required for this resulting contract.
+
+## Table-data records
+
+Source profile TD-LMR-STAT: newly launched owned vanilla Lord of Destruction Expansion 1.13c, queried on 2026-10-27 through the game's Storm archive loader. Effective virtual file `data/global/excel/itemstatcost.txt`, complete read 40109 of 40109 bytes; column selection from its own header. Row identity is the explicit numeric `ID` cell rather than a guessed physical row position.
+
+| Record | Row identity | Column | Raw named value | Supported assertion |
+|---|---|---|---|---|
+| TD-LMR-STAT | ID 89 | Stat | `item_lightradius` | Name-to-id mapping only |
+| TD-LMR-STAT | ID 90 | Stat | `item_lightcolor` | Name-to-id mapping only |
+
+The same complete read reports `Signed` = 1 for both rows, `Send Bits` = 5 and `Save Bits` = 4 for ID 89, and `Send Bits` = 24 and `Save Bits` = 24 for ID 90. These are raw authored cell values; no network or save packing behavior is inferred from them. Effective-file hashes, complete override identity and the physical supplying archive were not captured. Name-to-id correspondence does not by itself prove the callback's dispatch or the provenance of a runtime modifier.
+
+Source profile TD-LMR-OBJECT: the same 1.13c owned source profile/date, effective virtual file `data/global/excel/objects.txt`. Read range 0 through 31999 of total 211970 bytes includes the complete header and complete identified row. It is not a complete-file read and proves no later-row absence.
+
+| Record | Row identity | Column | Raw named value | Supported assertion |
+|---|---|---|---|---|
+| TD-LMR-OBJECT | Id 39, Name `fire` | Lit0 | 0 | Named object cell only |
+| TD-LMR-OBJECT | Id 39, Name `fire` | Lit1 | 19 | Named object cell only |
+| TD-LMR-OBJECT | Id 39, Name `fire` | Lit2 | 19 | Named object cell only |
+| TD-LMR-OBJECT | Id 39, Name `fire` | Red | 255 | Named object cell only |
+| TD-LMR-OBJECT | Id 39, Name `fire` | Green | 236 | Named object cell only |
+| TD-LMR-OBJECT | Id 39, Name `fire` | Blue | 176 | Named object cell only |
+
+The header calls the per-mode columns `Lit0` through `Lit7`; no `Radius` column is inferred. This initial table read alone did not bind those cells to loaded fields or their consumer. The continued record below establishes that binding and selected-field correspondence for rows 37/39; arbitrary compiled records remain separate. No table row or column is reproduced in full.
+
+### Continued object-field correspondence
+
+TD-LMR-OBJECT-COMPILED, 2026-10-27: a subsequent dedicated vanilla 1.13c process loaded the same research Sorceress on Normal. A fresh Storm read of effective `data/global/excel/objects.txt`, range 0 through 31999 of 211970 bytes, included the complete header and rows identified by explicit `Id` 37 and 39. Counting data records after the header confirms their zero-based record indices 37 and 39; their physical text lines are 39 and 41. The named selected cells are:
+
+| Row identity | Column | Raw cell / observed loaded value |
+|---|---|---|
+| Id 37, Name `Dummy` | Lit0 | 0 / 0 |
+| Id 37, Name `Dummy` | Lit1 | 19 / 19 |
+| Id 37, Name `Dummy` | Lit2 | 19 / 19 |
+| Id 37, Name `Dummy` | Red | 255 / 255 |
+| Id 37, Name `Dummy` | Green | 236 / 236 |
+| Id 37, Name `Dummy` | Blue | 176 / 176 |
+| Id 39, Name `fire` | Lit0 | 0 / 0 |
+| Id 39, Name `fire` | Lit1 | 19 / 19 |
+| Id 39, Name `fire` | Lit2 | 19 / 19 |
+| Id 39, Name `fire` | Red | 255 / 255 |
+| Id 39, Name `fire` | Green | 236 / 236 |
+| Id 39, Name `fire` | Blue | 176 / 176 |
+
+The loaded fields were reached through each observed object unit's object-data record and its selected object-table record. The ID-39 object was sampled in mode 0 with no source association. The ID-37 object was sampled in mode 2 with a kind-2 source, current/target radius `72/72`, intensity 255 and RGB `(255,236,176)`. The latter agrees with the selected `Lit2` request 19 becoming `floor(19/2)*8=72`; these separate snapshots do not capture creation, a mode transition, or the whole V06 vector.
+
+Original D2Common RVA `0x3F0C0` descriptors bind `Lit0..Lit7` to bytes beginning `+0x110`, and `Red/Green/Blue` to `+0x164/+0x165/+0x166`. Present numeric fields use byte-conversion kind 4, consumed through GDA-R03a/GDA-R03b/GDA-R03c. The descriptor setup leaves the conversion-kind register at 4 through these stores. Loader postprocessing changes animation-related fields while leaving these selected light bytes unchanged. D2Client `0x25490` obtains the selected record through thunk `0xC226`, D2Common ordinal 10688 at RVA `0x3E980`; the matched getter validates the zero-based index and returns the selected record at stride `0x1C0`. The initializer stores that record reference before its object-light branches. The prepared consumers read the selected mode's light byte and the RGB bytes before calling `0x24920`.
+
+This closes field identity and named-field correspondence for these selected records, not arbitrary compiled-record provenance, every mode's eligibility, or all source producers. The fresh read's effective-file hash, physical archive identity and complete override inventory were not captured. No table-only evidence is promoted to gameplay confirmation.
+
+## Observation procedures
+
+**LMR-O01:** Use an owned vanilla 1.13c client on Normal, with a fresh character of any class/level in a stable room and an ordinary light-emitting object or missile whose actual loader row and request have been recorded. Read the source at creation and before/after consecutive light-map updates, including requested radius, kind, fixed-point owner position, current/target radius and cache-valid state. Expect capped creation and exactly one eight-unit step per reached source update, under the verified source-state conditions. Record the update counter as well; elapsed displayed frames alone do not prove cadence. Compare only the executable cases whose actual inputs match. Final brightness requires separate map/pixel capture after LMR-Q04 is settled.
+
+**LMR-O02:** Use a player of any class/level on Normal with a valid source, in a stable room. Record an original-game equipment or stat change that reaches selector 89 or 90, with the authored ItemStatCost row identified independently. Capture callback selector/new value and source current/target/intensity/RGB before and after. Distinguish the supplied callback operation from evidence that the actual equipment change produced that callback. Test a positive radius modifier and its reversal, and nonzero color followed by zero reset when an owned-data setup permits it. Do not manufacture a negative modifier or assume a named item supplies a particular value without reading its data. No matching execution has yet been recorded in this companion.
+
+## Runtime collection, 2026-10-27
+
+Source profile: newly launched owned vanilla Lord of Destruction Expansion 1.13c, with a fresh level-1 Sorceress on Normal for the creation capture. The launch profile reports the Game.exe identity recorded as LOD113C-GAME in the source manifest. Full hashes of the DLLs loaded in this runtime process and a complete override inventory were not captured; static original-image fingerprints do not substitute for those measurements. No gameplay memory write or direct invocation of a game function was used.
+
+| Record | Location and actual coverage | Observed result | Limits and supported assertions |
+|---|---|---|---|
+| RT-LMR-UPDATE | D2Client RVA `0xA9B50`, 12 calls, caller return RVA `0xA9EE5`, zero dropped records, stopped at the 12-record cap | Calls originate in the source-list traversal identified statically. Observed stack cleanup is four bytes | Only incoming ECX/EDX and stack values were captured; the source argument in EAX and its before/after fields were absent. This supports the reached caller relationship, not an executable radius vector, cadence, or a unique calling-convention claim |
+| RT-LMR-QUIET | D2Client RVA `0xA8C20`, already loaded town area, 30-second window, zero calls and zero dropped records | No allocation was recorded during that window | Existing room sources were already loaded. The missing allocation is inconclusive and does not contradict the source-creation identity |
+| RT-LMR-CREATE | D2Client RVA `0xA8C20`, fresh character entering the town, 17 calls, zero dropped records; one caller return RVA `0x192FA`, sixteen at `0x2496F` | Player-path call received requested radius 13, intensity 255 and RGB `(255,255,255)`. A later read of its returned source found current/target radius `104/104`, kind 0, intensity 255 and white RGB. The first object-path call received requested radius 9, intensity 255 and RGB `(255,236,176)`; its returned source later had current/target `72/72`, kind 2, the same intensity/RGB and a valid cache. Allocation-call stack cleanup was twenty bytes | These post-call values agree with the radius-times-eight result at these uncapped inputs. Source-owner/kind register arguments were not captured at entry, and source reads occurred after later lighting updates rather than at return. Initial centers, initial cache validity, complete list insertion and exact before/after state were not captured. No complete LMR-V01/LMR-V06 case is reproduced; this capture sets no vector's runtime flag |
+| RT-LMR-RECIPROCAL | Read of the initialized D2Client reciprocal table at module RVA `0x104E00`, entries 0 through 7 | Integer values `0,65536,32768,21845,16384,13107,10922,9362` | Matches the initialized entries consumed by LMR-R10. This is data/memory correspondence, not execution of a light-map contribution or a gameplay-confirmed rule |
+| RT-LMR-COLLISION-MASK | Subsequent vanilla 1.13c process, D2Common RVA `0x4C9D0`, 160 calls from D2Client caller return RVA `0xA890B`; zero dropped records, stopped at the 160-record cap | Each record includes all four stack inputs, relevant current-room bounds, collision metadata and the actual selected cell in its entry capture, plus result and unchanged captured bytes after return. All 160 results match `cell AND 34`: 106 raw cells were 0, 38 were 1 and 16 were 16, all returning 0. The observed stack cleanup was sixteen bytes | Sequence 0 exactly reproduces LMR-V21: current room `[4840,4880)` by `[5640,5680)`, grid origin `(4840,5640)`, width 40, query `(4851,5641)`, selected index 51, raw cell 16, mask 34, return 0 and blocker false. The current room contains this point, so adjacent rooms and other cells are not consumed. This confirms only R12's named current-room case; missing-data and adjacent-room cases, shadow construction and final pixels were not confirmed |
+
+For RT-LMR-COLLISION-MASK, the entry capture returned all requested 96 current-room bytes and 512 bytes beginning at its collision metadata. In this observed storage, the cell array followed the metadata, so the selected cell was inside that captured window; its input value is not an after-the-fact inference. All relevant before/after deltas were empty. The normal lighting update reached the queries while the research character moved within Rogue Encampment. No function call or memory write manufactured a query input. A preceding 12-call capture reached the same caller but lacked the selected cell in its shorter window; it remained partial and was replaced by the larger window for the confirmation claim.
+
+After the trace stopped and its hook had drained, the loaded D2Common query range RVA `0x4C9D0`, 80 bytes, and room-selector range RVA `0x1330`, 119 bytes, matched the corresponding original-image bytes exactly. Their SHA-256 values are `a2541a6e8faf35eeb25f18ebba08e125e21aed8a8566ebb0c1d1db634d76f481` and `e607da33461ca8ca0ac68035c4a6f094e8be1d1d238a05438f295a2f69151b7c`. These are code-range identities, not full loaded-DLL fingerprints. The source profile and full-module identity limits stated above remain explicit.
+
+To reproduce V21, use an owned vanilla 1.13c Expansion client, Normal, with a level-1 Sorceress in Rogue Encampment. Move to subtile `(4875,5665)` in a room whose origin is `(4840,5640)` and dimensions are `40 by 40` subtiles. At the reached query for `(4851,5641)`, capture all query arguments, current-room bounds, selected collision metadata/cell before and after, and the returned result. Require the exact V21 cell value 16 and mask 34; a different generated town/grid does not reproduce this vector merely because it also returns zero. Read and compare the relevant code ranges against the identified original image, verify that the capture includes the selected cell, and report record loss or truncation. Only the recorded fixture's exact assertions qualify as a match. The research client was quit after this continued collection and its slot was confirmed absent.
+
+To repeat RT-LMR-CREATE, start an owned vanilla 1.13c Expansion client on Normal with a fresh character, record the light allocator while entering Rogue Encampment, and compare its requested radius/intensity/colors with the returned source's later fields. To turn this partial observation into a full vector, capture the valid owner identity and fixed-point position, source kind, source sequence and cache state at the allocation return, before another lighting update can change them. The O01 procedure still requires a separate before/after capture for a target-radius step. O02's equipment/stat callback cases were not exercised. A transient state query during save-and-exit timed out; a later fresh frame showed the title screen, so it was not treated as a crash or a gameplay mismatch. The dedicated research client was quit after collection.
+
+## Review and runtime status
+
+Mechanical spec lint run on the draft dated 2026-10-27 returned zero errors and zero warnings before the first reader pass. RT-LMR-COLLISION-MASK confirms R12's current-room masking case as V21; the later RT-LMR-CAST-LISTHEAD record confirms R17's positive temporary-light creation/attachment case as V22(c). Other behavioral cases retain their stated static or pending-observation status. Collection results retain their actual date, coverage and outcome; unexecuted procedures above are proposed checks only.
+
+### Blind-implementer pass 1
+
+Full independent reader pass, 2026-10-27: MISMATCH 1, GUESS 0, GAP 1, DISCRIM 3, GATED 8, COVERAGE 9, HARDEST 3. This pass applies to the draft before the corrections below; a fresh full reader pass is required because vector outputs and cases changed.
+
+| Finding | Disposition | Outcome |
+|---|---|---|
+| MISMATCH LMR-V12 blue channel | Spec edit | The draft asserted 100. Exact original arithmetic gives `25500*257=6553500`; logical shift by 16 gives 99, since `100*65536=6553600`. Corrected trace and output to 99; the source formula is unchanged. |
+| GAP object/source association not in Inputs | Spec edit | Section 3 explicitly lists the existing object/source association as present or absent. |
+| DISCRIM LMR-V01 logical creation shift | Spec edit | Added V01(a), a below-cap source with negative fixed-point coordinates. Required initial center `(524284,524276)` rejects arithmetic-shift center `(-4,-12)`. |
+| DISCRIM LMR-V06 positive request could be ignored | Spec edit | Existing target is now 24 before request 11; required target 40 rejects ignoring the request, while still rejecting round-up and RGB refresh alternatives. |
+| DISCRIM LMR-V07 arithmetic refresh shift | Spec edit | Added V07(c) with negative fixed-point coordinates; required refreshed center `(-4,-12)` rejects logical-shift center `(524284,524276)`. |
+| HARDEST LMR-R05 update ordering | No change | R05 already orders eligible position refresh, cache invalidation, one step, ceiling correction, expiry removal, then rendering. V07/V08 exercise the writes and suppression boundaries; negative-coordinate case adds a direct shift discriminator. |
+| HARDEST LMR-R09 fixed-width arithmetic and quality | No change | R09 states wrapping, signed magnitude selection, logical distance shift, signed contribution shift, and supplied-sample execution boundary. V11(d-f) now also discriminate nonlocal-player quality, invalid radius and nonpositive contribution. |
+| HARDEST LMR-R10 clipped reciprocal weighting | No change | R10 explicitly uses the saturated intensity as reciprocal index and floor reciprocal, then logical shift before channel clamp. V12/V13 distinguish both rounding stages; V12(b) adds the channel clamp case. |
+
+Advisory coverage dispositions:
+
+| Coverage group | Disposition |
+|---|---|
+| LMR-R01 below-cap creation | Added V01(a) with radius 2, kind 1 and exact source initialization. |
+| LMR-R02 positive null and equal-radius invalidation | V03(a) now starts with both radii already 104 and still requires cache invalidation. No new positive-null fixture: the rule explicitly specifies fatal assertion and numeric foundations define termination; this advisory branch adds no successful numeric result. |
+| LMR-R03 nonpositive and positive null | Added V04(a) no-op request zero. No new positive-null fixture for the same explicit fatal-assertion reason as R02. |
+| LMR-R04 successful absent-source creation | Added V06(a), including owner position, new association, source sequence, radii, RGB and exact cache reservation. |
+| LMR-R05 downward step, ownerless and missing-owner paths | Downward steps and refresh suppression are V07(a-b); missing owner retains the center in V08. No new ownerless fixture: the rule explicitly suppresses registry refresh for the sentinel, and the remaining step/removal arithmetic is already covered; no separate arithmetic recipe is introduced. |
+| LMR-R06 absent unit, unsupported unit, absent source | Added V09(c) unsupported-object no-op. Absent-unit/source branches remain explicitly stated no-ops; no extra arithmetic/vector fixture is added for equivalent early exits. |
+| LMR-R07 absent source and stat-90 dispatch | Added V10(c) no-create behavior and V09(b) stat-90 dispatch to packed RGB; V09 now cites R07 as well as R06. |
+| LMR-R09 invalid radius, nonpositive contribution and low-quality nonlocal player | Added V11(d-f), with exact source-radius preservation, positive/absent contributions and arithmetic traces. |
+| LMR-R10 high-row clip, unsaturated total and channel clamp | Unsaturated total is already V13's total 5. Added high-row clipping V13(c) and per-channel clamp V12(b). |
+
+GATED 8 records the reader's acknowledged documented limits, not eight newly introduced defaults or obligations. Their existing questions and boundaries remain unchanged. GUESS 0 required no disposition.
+
+### Blind-implementer pass 2
+
+Fresh full independent reader pass, 2026-10-27, on the corrected initial contract: MISMATCH 0, GUESS 0, GAP 0, DISCRIM 0, GATED 5, COVERAGE 8, HARDEST 3. The reader recomputed every executable vector case from the rules and inputs. The five acknowledged gates were LMR-Q01 through LMR-Q05 as then scoped; this review did not resolve them or approve implementation. The original handoff made no further behavioral edits; the later continued local-shadow verification above changes the contract and requires a new full reader pass.
+
+| Finding | Disposition | Outcome |
+|---|---|---|
+| HARDEST LMR-V11 radial falloff | No change | R09 explicitly states signed versus logical shifts, wrapped multiplication, truncation and quality-dependent effective radius; V11's exact cases discriminate the arithmetic. Reader found no missing decision or mismatch. |
+| HARDEST LMR-V12 saturated reciprocal | No change | R10 states the saturated denominator and floored reciprocal separately; corrected V12/V13 expose both truncation stages. Reader recomputation matched. |
+| HARDEST LMR-V01(a) negative creation coordinates | No change | R01 explicitly requires a logical initial-position shift; V01(a) gives exact negative inputs and logical-shift outputs, separately from R05's arithmetic refresh shift. Reader recomputation matched. |
+| COVERAGE object request truncation | No change | R04's low-16-bit conversion is explicit; the listed object vectors exercise zero, one and positive requests without claiming a high-word-discard observation. No contradictory arithmetic or unknown decision was reported. |
+| COVERAGE positive-null setters | No change | R02/R03 explicitly state the fatal path. Existing vectors claim successful/no-op numeric behavior only; this does not establish allocation-failure recovery or remove Q03. |
+| COVERAGE ownerless/missing-owner and non-removal decrement | No change | R05 explicitly suppresses refresh for ownerless sources, preserves center on lookup miss and applies the same signed step independently of the removal condition. V08 already supplies an absent owner and unchanged center; V07 includes decreasing-radius and expiry cases. No new default is needed. |
+| COVERAGE packed-color guard exits | No change | R06 explicitly defines absent-unit and absent-source no-ops. Unsupported-unit no-op is covered; duplicating equivalent early exits adds no arithmetic discriminator. |
+| COVERAGE quality-zero local player | No change | R09 explicitly limits the low-quality player cap to identities different from the local player; V11 covers the changed nonlocal case. The same-player case follows the stated unchanged-radius branch. |
+| COVERAGE negative-row/lower-edge clipping | No change | R10 applies the same signed bounds to each coordinate; V13 exercises negative and upper-bound clipping and a valid cell. The reader reported no ambiguous clipping operation. |
+
+COVERAGE 8 is the reader's reported advisory count; grouped dispositions above address every reported branch. Those limits were distinct from the five evidence gates at that handoff. Subsequent substantive shadow/raster and observation changes require the later full pass below.
+
+### Blind-implementer pass 3
+
+Fresh full independent review on 2026-10-27 of the expanded sixteen-rule, twenty-one-vector contract: MISMATCH 0, GUESS 0, GAP 0, DISCRIM 0, GATED 5, COVERAGE 6, HARDEST 3. The reader independently recomputed every numerical output and stated side effect, including the new shadow matrices, ring propagation, three raster paths, scheduling cases and V21's observed masking case. No behavioral, ownership, vector, acceptance or gate changes followed at that handoff. The later R17-R19 attachment and cleanup continuation changes the contract and requires a fresh full pass.
+
+| Finding | Disposition | Outcome |
+|---|---|---|
+| HARDEST V18 ring sweep | No change | R13/R14 state blocker precedence, retained scratch, interpolation and repeated targets. V18's matrix recomputation matched without a missing decision. |
+| HARDEST V19 raster paths | No change | R08/R16 state path selection and row-major visits; R09/R10 specify arithmetic and ordered persistent map writes. All three path cases recomputed correctly. |
+| HARDEST V20 failure/rejection order | No change | The caller orders cache build before raster dispatch; the raster performs coarse rejection before cache validation. The early-return and reached-assertion cases matched that order. |
+| COVERAGE V18 target-visit log | No change | R14 explicitly fixes the 24 target visits for ring size 2, including duplicates. V18 asserts final scratch/cache values rather than claiming an instrumented visit-log capture. The reader found no failing claimed discriminator. |
+| COVERAGE interpolation weights and ring sizes | No change | R14 defines a single formula and loop for the stated valid domain. Representative axis/diagonal and full-ring cases discriminate blocker precedence, interpolation and retained-center behavior; exhaustive weight/radius coverage is not claimed. |
+| COVERAGE multiple matching adjacent rooms and absent current room | No change | R12 explicitly chooses the first containing adjacent room or returns 39 for an absent current room. Existing vectors discriminate current-versus-adjacent selection, exclusive bounds, missing storage and masking; the additional branches introduce no unknown rule. |
+| COVERAGE every cache fatal branch | No change | R15 explicitly specifies missing-room and violated-cache-invariant fatal paths. The vectors exercise successful storage and failed owner resolution, without claiming that every assertion was observed. |
+| COVERAGE one combined cache-build-to-raster fixture | No change | V18 tests the cache outputs; V19 tests raster consumption and V20 tests dispatcher failure/rejection order. The explicit stage contracts compose without an additional unspecified value; no whole-runtime pipeline observation is inferred. |
+| COVERAGE multiple sources accumulating into one cell | No change | V12/V13 exercise cell accumulation; V19 exercises source-local enumeration. R16 logs traversal order and R10 defines persistent writes, while source-sequence order is explicit in R01 and section 2. A combined multi-source observation remains unclaimed. |
+
+The five acknowledged remaining limits are Q01 wider scheduler eligibility, Q02 upstream source/data/stat producers, Q03 generic allocation failure, Q04 world/base-map/graphics owners and Q05 remaining gameplay observation. They do not supply guessed defaults for the prepared-input consumer. That full reader pass satisfied the review stopping rule for the sixteen-rule contract at its handoff. The subsequent attachment/cleanup continuation requires a fresh full review; document status remains draft because review, observation and integration limitations remain.
+
+
+### Further source-stage observation attempt, 2026-10-27
+
+An additional owned vanilla 1.13c run reused the level-1 Normal Sorceress. A thirty-second capture of D2Common `0x4E300` during a right-skill attempt in Rogue Encampment recorded zero calls and zero dropped records. A separate thirty-second capture of D2Client `0xB30F0` during town movement also recorded zero calls, with no evictions. These windows do not reproduce V22 or V23: a completed eligible cast was not captured. No additional vector is runtime-confirmed. Final trace status was disarmed with zero in-flight calls. The owned research client was quit and its slot was absent from a fresh fleet inventory; other clients were not controlled.
+
+### Blind-implementer pass 4
+
+Fresh full independent review, 2026-10-27, of nineteen rules and twenty-four vector families: MISMATCH 0, GUESS 0, GAP 3, DISCRIM 0, GATED 5, COVERAGE 10, HARDEST 3. The reader recomputed all cases, including temporary/projectile association and cleanup operation logs. The following input-declaration edits require a fresh delta check. They do not change behavior, ownership, gates, vector values or expected outputs.
+
+| Finding | Disposition | Outcome |
+|---|---|---|
+| GAP source sequence absent from section 3 | Spec edit | Added ordered semantic state and existing creation/traversal/removal meaning; R01, section 2 and vectors already specified it. |
+| GAP initialization events absent from section 3 | Spec edit | Added game-world initialization and viewport-creation events, consuming existing R11 resets. |
+| GAP successful allocation absent from section 3 | Spec edit | Declared supplied successful outcome, fresh source identity and sufficient storage; Q03 still owns failure. |
+| HARDEST R14/V18 | No change | Ring order, repeated targets, blocker precedence and retained scratch matched without missing decisions. |
+| HARDEST R16/V19-V20 | No change | Explicit dispatch, rejection, validation, raster order, attenuation and persistent writes matched. |
+| HARDEST R09-R10/V11-V13 | No change | Width, shifts, saturation, reciprocal and channel truncation are explicit; outputs matched. |
+| COVERAGE positive-null radius setters | No change | R02/R03 define fatal paths; numeric vectors use valid sources without claiming exhaustive assertion coverage. |
+| COVERAGE ownerless refresh suppression | No change | R05 explicitly suppresses refresh for category 6; existing cases exercise unchanged centers without an exhaustive owner-category claim. |
+| COVERAGE absent unit/source color guards | No change | R06 explicitly defines these no-ops; tested color processing does not claim exhaustive guard coverage. |
+| COVERAGE absent/no containing room | No change | R12 explicitly returns unmasked 39; V15 distinguishes this missing-data result from valid-cell masking. |
+| COVERAGE multiple matching adjacent rooms | No change | R12 explicitly selects the first containing nonnull room from the supplied ordered sequence. |
+| COVERAGE absent collision cells | No change | R12 defines the same missing-data return as absent grid storage, exercised by V15(a). |
+| COVERAGE cache early-return/fatal paths | No change | R15 specifies exact conditions; success, failed lookup and reached cache validation are covered without exhaustive diagnostic claims. |
+| COVERAGE four coarse-rejection conditions | No change | R16 states symmetric bounds; V20 discriminates rejection-before-validation order without exhaustive geometric coverage. |
+| COVERAGE low-quality missile full raster | No change | R16 consumes R09 eligibility before writes; the supplied-sample vector discriminates rejection. No separate eligibility default is needed. |
+| COVERAGE object high-word truncation | No change | R04 states low-sixteen-bit conversion; existing vectors do not claim an observed high-word case. |
+
+The five acknowledged gates remain Q01 through Q05. This review does not approve implementation or promote runtime labels.
+
+
+
+### Blind-implementer pass 5 (delta)
+
+Fresh independent delta review, 2026-10-27, of the three section-3 declarations added after full pass 4: MISMATCH 0, GUESS 0, GAP 0, DISCRIM 0. The reader confirmed that ordered source state matches R01 and traversal, successful allocation matches R01/R17/R18 without resolving Q03, and initialization events match R11/V14. All pass-4 gaps were resolved at that handoff. Full pass 4 plus this delta completed the reader check for its nineteen-rule contract; the later R20-R22 monster additions require the fresh full pass below. Status remained draft for the documented integration and observation limits.
+
+
+### Fire Bolt source-state correspondence, 2026-10-27
+
+A further owned vanilla Expansion 1.13c run on Normal used the same level-1 Sorceress. Normal walking reached Blood Moor (level identity 2) at subtile position (4793,5675). Two normal right-skill casts reached the temporary-light function and projectile creator. No memory write, direct game-function call or game-clock modification supplied an input. Earlier town windows remain inconclusive; these later successful casts do not retroactively validate them.
+
+| Record | Actual captured boundary | Result and limitation |
+|---|---|---|
+| RT-LMR-CAST-TEMP | D2Client RVA `0xA0F60`, caller return `0xA2204`; one call in the second cast, zero dropped. Entry and return windows contain the unit, auxiliary association, primary source and dynamic position | Owner is player identity 1. Fixed-point position is (314146816,371949568), yielding initial center (38352,45408). Temporary association changes from absent to new source N. The primary association and all 52 captured primary-source bytes remain unchanged. Primary current/target are 104/104, intensity 255, RGB (255,255,255), kind 0, and center (38352,45408) |
+| RT-LMR-CAST-ATTACH | D2Common RVA `0x4E300`, five calls, zero dropped; sequence 1 from D2Client caller return `0xA1008` | Both arguments and new source N were captured at entry. N has owner player 1, kind 1, center (38352,45408), current radius 8, target radius 56, intensity 255, RGB (255,178,64), no shadow cache, and no removal condition. The old temporary association is absent; the result is absent; the auxiliary association is written to N. All 52 source bytes are unchanged by the swap itself |
+| RT-LMR-CAST-CLEAR | Sequence 2 of the same Common capture, D2Client caller return `0xA2E3C` | Supplied new association is absent. Entry temporary association is N, result is N, and the captured auxiliary association becomes absent. This corroborates the reached swap/clear; source unlink/free and the entire source sequence were not captured |
+| RT-LMR-CAST-PROJECTILE | First cast, D2Client RVA `0xB30F0`, caller return `0xA2792`; one call, zero dropped | Captured creator record selects missile 58, creation flags 33 (suppression bit clear), force byte zero. Returned projectile identity was later seen as category 3, id 223 at cleanup. Its primary source was not captured immediately after creation. This identifies a reached creator, without confirming V23's lighting outputs |
+
+The second cast's dynamic position window is unchanged across the temporary-light function. The two coordinates, logical shifts and +4 adjustment independently compute the observed source center. The current/target pair distinguishes temporary radius-1 growth from immediate creation at radius 7. The unchanged primary source distinguishes temporary association from primary replacement.
+
+Read-only loaded-record correspondence in this run found the used skill record's signed client-missile selector 58, and prepared missile record 58's unsigned Light 7 and RGB (255,178,64). The Common table count was 684, with the selected index in range. These are observations of the prepared fields consumed by the static contract. They are not evidence that every compiled record matches its authored text. The enable condition read after the first cast was 1; that later read does not establish its value at the earlier creator entry.
+
+Compatible named text-cell evidence from the preceding vanilla run is retained with its original date and limits: effective `data/global/excel/missiles.txt`, offset 0, returned 50000 of 192979 bytes, includes a complete header and named row `firebolt`, explicit Id 58. Header-selected cells were Light `7`, Red `255`, Green `178`, Blue `64`. Effective `data/global/excel/skills.txt`, offset 0, returned 60000 of 173535 bytes, includes a complete header and named row `Fire Bolt`, explicit Id 36, with cltmissile `firebolt` and empty cltmissilea. Header-based parsing used decoded returned bytes, not truncated previews. These named cells are verified in 1.13c data; whole-table coverage, effective-file hashes, physical archive origin and complete override identity were not captured. The current loaded fields corroborate these selected values only.
+
+After the hooks stopped and drained, loaded Client `0xA0F60` for 192 bytes matched the identified original image exactly, SHA-256 `93443754cbd6d9b686315ba7ec1ca8db52b0fbf3303fcdc263437c3414b82759`. Loaded Common `0x4E300` for 64 bytes also matched exactly, SHA-256 `f8db4802d82cf910ee57b0d2610ee7158f3f50dfc0a2ea7bad1613f73f9477e5`. These are code-range identities; full loaded-module hashes and override inventory remain uncaptured.
+
+**Outcome of this earlier collection: partial correspondence, no label promotion.** The global sequence head before and after creation was not captured. The later RT-LMR-CAST-LISTHEAD record below supplies that missing measurement for its separate V22(c) fixture. Thus the data do not establish every output of R17/V22, especially front insertion. V24's removal-order/source-unlink assertions and V23's projectile-source outputs also remain unconfirmed. No new vector is marked runtime-observed. To close the temporary creation case, capture the global head at Client `0xA0F60` entry and at the association call, together with N's next reference, and require new head N with N.next equal to the entry head. Keep the complete owner-position, prepared record and association/source windows described above. Wider cast eligibility and resource behavior remain outside this light-stage contract.
+
+The research character was left alive with full life. The dedicated client was quit after collection, and its slot was absent from a fresh inventory. Other clients were not controlled.
+
+
+
+### Blind-implementer pass 6
+
+Fresh full independent review, 2026-10-27, of twenty-two rules and twenty-seven vector families: MISMATCH 0, GUESS 0, GAP 3, DISCRIM 1, GATED 5, COVERAGE 10, HARDEST 3. All numerical vector outputs matched. The declared-input and target-evaluation assertions below were corrected before a fresh delta check. The R14 sweep order itself is unchanged.
+
+| Finding | Disposition | Outcome |
+|---|---|---|
+| GAP R20 BaseId input declaration | Spec edit | Section 3 now explicitly names the selected MonStats signed 16-bit BaseId. V25/V26 already supplied it. |
+| GAP R21 alignment input declaration | Spec edit | Section 3 now explicitly names the selected MonStats unsigned Align byte. V26 already supplied it. |
+| GAP R22 callback modifier declaration | Spec edit | Radius modifier now explicitly comes from the player or monster callback; signed 32-bit format is unchanged. |
+| DISCRIM V18 deduplicated targets | Spec edit | V18 now asserts the exact ordered 24-target evaluation trace, including duplicates, rather than relying solely on the final matrix. Section 5 names these evaluations; no persistent game log is required. This strengthens the previously advisory pass-3 coverage note into a discriminating assertion. |
+| HARDEST R20 component/override/item resolution | No change | Valid selection, override bounds and unsigned maximum are explicit; all new fixture results matched. |
+| HARDEST R21 initialization | No change | The exact-3 replacement, create-before-remove order, source cap and uncapped bookkeeping matched the supplied vectors. |
+| HARDEST R22 callback | No change | Recomputed base, signed wrapping, nonpositive no-op and kind-2 cache behavior are explicit and matched. |
+| COVERAGE R05 sentinel/lookup/equal radius | No change | R05 explicitly distinguishes refresh suppression, failed lookup and equal radii; existing unchanged-center and radius cases do not claim exhaustive owner coverage. |
+| COVERAGE R06 absent guards | No change | Absent unit/source no-ops are explicit and introduce no unknown value; existing vectors exercise actual color operations. |
+| COVERAGE R10 zero total | No change | Outside the specified contribution domain: R10 requires n in 1..255 and existing p is unsigned, so total cannot be zero. |
+| COVERAGE R12 no containing room | No change | R12 explicitly returns unmasked 39; existing missing-data and adjacent-room cases discriminate the sentinel and masking. |
+| COVERAGE R15 invalid radius/no room | No change | Explicit no-op/fatal conditions remain stated; the existing cache fixtures do not claim exhaustive diagnostics. |
+| COVERAGE R19 absent-unit no-op | No change | ClearTemporary explicitly permits absent unit; CleanupLights instead supplies a valid unit. No absent-unit dual-cleanup result is inferred. |
+| COVERAGE R20 bounds and armor skip codes | No change | Invalid selections explicitly yield zero; the component fixture exercises invalid-variant zero contributions and armor-code skipping without exhaustive code/bounds coverage. |
+| COVERAGE R21 record/exclusion/alignment branches | No change | Record guards, exclusion and both excluded alignments are explicit. V26(b) exercises Align 1; the same selected-radius retention applies to the other excluded cases. |
+| COVERAGE R22 missing record/source | No change | The guarded no-creation/no-change paths are explicit; V27 discriminates successful recomputation and nonpositive no-op. |
+| COVERAGE R18 disabled/suppressed outputs | No change | Both conditions already have independent V23 cases with the same required removal output. This is acknowledged coverage, not a missing discriminator. |
+
+The five documented limits remain Q01 through Q05; the review does not resolve them or approve implementation.
+
+
+
+### Blind-implementer pass 7 (delta)
+
+Fresh independent delta review, 2026-10-27, of the pass-6 input declarations and V18 ordered target-evaluation assertion: MISMATCH 0, GUESS 0, GAP 0, DISCRIM 0. The exact duplicate-preserving trace and unchanged final grid recomputed correctly. All pass-6 blocking findings are resolved. No rule, vector, ownership, acceptance or gate changed at that handoff; full pass 6 plus this delta completed the reader check then. The subsequent V22(c) addition and R17 observation-label change require a fresh full pass. The document remains draft because wider producer integration and remaining complete gameplay observations are unresolved.
+
+
+## Runtime temporary-light list-head confirmation
+
+**RT-LMR-CAST-LISTHEAD**, 2026-10-27: LMR-V22(c) adds a matching positive temporary-light creation/attachment case with no displaced source. The observed entry source head H becomes N with N.next=H, while H retains its opaque successor S; the new source fields, empty-to-N temporary association and preserved primary P match LMR-R17. This closes front-insertion coverage omitted from the earlier partial cast record. The suffix is not traversed or assigned invented contents. R17 is runtime-confirmed for this case only; its other branches remain statically verified without matching vectors. R01 and R03 retain their static labels: this capture records the combined operation after target assignment, not the transient initial target or every assertion of their independent creation/setter vectors. Detailed capture identity, data correspondence and windows follow in this record.
+
+
+Source profile: dedicated owned vanilla Lord of Destruction Expansion 1.13c, Normal, level-1 Sorceress, reached Blood Moor (level identity 2) through normal walking and cast the right-hand Fire Bolt skill. This is a new capture; the earlier incomplete casts retain their original limits. No clock change, gameplay memory write or direct game-function call was used. Full loaded-module fingerprints and complete override identity remain uncaptured; the relevant loaded code-range comparisons below establish the measured instruction correspondence.
+
+| Capture point | Actual inputs and entry state | Observed output / assertion |
+|---|---|---|
+| Client `0xA0F60` entry, caller return `0xA2204` | One call, zero dropped records. Owner player 1; fixed-point position (313950208,372211712). Primary P is kind 0, same owner, center (38328,45440), radii 104/104, intensity 255 and white RGB. The global source-head cell at Client RVA `0x11BBEC` resolves to H. H is kind 1, same owner/center, current 8, target 72, intensity 255, RGB (255,178,64), no removal condition or cache; its successor is opaque suffix S | Complete 192-byte owner, 64-byte dynamic-position, 52-byte primary-source and 52-byte entry-head-source windows were captured. All their before/after deltas were empty. In particular H and its successor reference, P and its association, and owner position are preserved |
+| Common `0x4E300` entry, caller return `0xA1008` | Five total calls, zero dropped records; sequence 1 is the unique reached temporary attachment for the same owner and cast. Stack inputs are the owner and N. At this point the same global head cell resolves to N. The auxiliary record has an absent temporary association | Complete 192-byte owner, 32-byte auxiliary record, 52-byte supplied N and 52-byte head-selected N windows were captured. Both N windows have identical addresses and bytes. N.next is exactly the H observed at Client entry. Thus creation changed the head from H to N and linked N before H |
+| Same association call at return | Old temporary association absent, new association N | Returned old association is absent. The auxiliary association changes only from absent to N; N and its head-selected copy have empty deltas. N is kind 1, owner player 1, center (38328,45440), current 8, target 56, intensity 255, RGB (255,178,64), removal condition false, cache absent, next H |
+
+The final source state matches V22(c): `313950208 >>> 13 = 38324`, plus 4 gives 38328; `372211712 >>> 13 = 45436`, plus 4 gives 45440. Current radius is 8 and final target is `7*8=56`. Temporary attachment selects N while the primary remains P. The sampled new head equals the supplied new source, and its successor equals the sampled entry head. Together with H's unchanged successor reference, these establish the prefix `[H]+S -> [N,H]+S` without traversing or inventing S.
+
+The head reads occur at the computing-function entry and at the association-function entry after source creation and target assignment. They are synchronous entry observations, rather than separate later reads that might miss the transient source. The latter call's return captures the completed temporary association write. The association operation has no source-list write, and the absent returned old association selects no removal after it; the source prefix and final attachment therefore describe the completed no-displaced-source case. The original caller return, matching owner and unique computing/attachment calls identify the pair. Every requested window in that pair was complete; no lost record or truncated window supplied an assertion. Source successor fields use original offset `+0x28`; primary and temporary association locations are mapped to semantic names in the earlier source-stage record.
+
+Read-only prepared-input checks in the same process found the used skill record's signed selector at `+0xE8` equal to 58. The live Missiles table metadata supplied count 684 and selected ready record 58, stride `0x1A4`; its byte at `+0x130` was 7 and bytes `+0x132..0x134` were (255,178,64). These corroborate the named text-cell records and binding instructions already documented. They establish this prepared input, not arbitrary compiled-table correspondence. The capture does not claim a gameplay observation of a different selector or a missing record.
+
+After disarming and draining both hooks, loaded code matched the identified original images byte for byte:
+
+| Original artifact | Range | Byte count | SHA-256 of matching range |
+|---|---|---|---|
+| LOD113C-D2CLIENT | RVA `0xA0F60` | 192 | `93443754cbd6d9b686315ba7ec1ca8db52b0fbf3303fcdc263437c3414b82759` |
+| LOD113C-D2COMMON | RVA `0x4E300` | 64 | `f8db4802d82cf910ee57b0d2610ee7158f3f50dfc0a2ea7bad1613f73f9477e5` |
+| LOD113C-D2CLIENT | RVA `0xA8C20` | 272 | `037bda14e7e4a7f74f0b910060b8fdce0e1c98d75f69bc52414b3768ff3c2c9c` |
+
+These ranges include the computing function, association swap and allocation/list-head writer. They are range fingerprints, not full loaded-DLL hashes. Original artifact identities remain the linked source-manifest entries.
+
+To reproduce, use matching original 1.13c Expansion files and an owned Normal Sorceress able to cast Fire Bolt. Capture the global head at Client `0xA0F60` entry and again at its reached Common `0x4E300` association call, with the complete owner, fixed-point position, primary source, auxiliary association and new-source windows. Require the V22(c) fixed position and ready Light/RGB fields; a cast at another position is a different fixture. Name the entry head H and new source N; require new head N, N.next=H, preserved H successor and primary P, current/target 8/56 and empty-to-N temporary attachment with no old source returned. Treat the unchanged tail as opaque; do not claim a tail traversal, transient initial target, displaced-source removal or final rendered pixel. Compare the loaded code ranges, and report capture truncation or record loss before interpreting results.
+
+Final hook status was disarmed with zero in-flight calls. The character was alive with full life after collection. The dedicated client was quit and its slot was absent from a fresh inventory; other clients were not controlled. This record closes only the V22(c) observation gap.
+
+
+
+### Blind-implementer pass 8
+
+Fresh full independent review, 2026-10-27, including V22(c) and its R17 observation label: MISMATCH 0, GUESS 0, GAP 0, DISCRIM 1, GATED 5, COVERAGE 22, HARDEST 3. All vector outputs, including the new list-head case, recomputed correctly. The five documented limits remain Q01 through Q05.
+
+| Finding | Disposition | Outcome |
+|---|---|---|
+| DISCRIM V26(e) premature stored-radius write | Spec edit | The fatal-context case now explicitly retains stored base radius 6, sequence [T,P] and unchanged associations/source fields. A premature bookkeeping write can no longer pass. The original Client 0x4C150 path checks the required context before source creation; the primary write at 0x4C264 and bookkeeping call at 0x4C267 occur later. Compatible original-image instruction evidence was rechecked; no fatal gameplay execution is claimed. |
+| HARDEST R16 full raster | No change | Explicit dispatch, coarse rejection, validation, ordered samples and shadow application matched the vectors. |
+| HARDEST R14 propagation | No change | Neighbor selection, blocker precedence, interpolation and repeated target order are explicit and matched. |
+| HARDEST R20 component selection | No change | Prepared variants, fixed overrides, code skips, item lookup and unsigned maximum matched. |
+| COVERAGE R01 invalid position storage | No change | Valid position is a supplied precondition; the specified diagnostic paths and generic failure limits retain their existing boundary. No recovery default is inferred. |
+| COVERAGE R02 positive-null source | No change | The fatal path is explicit; normal setter vectors do not claim exhaustive diagnostic observation. |
+| COVERAGE R03 positive-null source | No change | Same explicit fatal-source contract, without a new missing value. |
+| COVERAGE R04 high-word truncation | No change | Low-sixteen-bit conversion is explicit; the request vectors do not claim exhaustive wrapper-encoding coverage. |
+| COVERAGE R05 ordinary owner miss | No change | R05 preserves center on lookup miss independently of removal selection; no fallback position is inferred. |
+| COVERAGE R06 high-bit packed color | No change | R06 explicitly extracts the channel bytes and ignores other bits; the shared numeric width contract supplies unsigned bit operations. |
+| COVERAGE R07 overflow | No change | Signed 32-bit wrapping and nonpositive handling are explicit, consuming numeric foundations. |
+| COVERAGE R08 lower-quality kind 0 | No change | The path selector is explicit; raster vectors need not exhaust every equivalent quality value. |
+| COVERAGE R09 same player/nonpositive radius | No change | Identity-specific reduction and invalid-radius no-contribution guards are explicit. |
+| COVERAGE R10 negative row | No change | Identical signed bounds apply to row and column; existing clipping cases do not claim exhaustive geometry. |
+| COVERAGE R11 accepted post-wrap comparison | No change | Eligibility consumes unsigned counter values, rather than wrap history. Existing accepted/skip/reset fixtures discriminate that comparison. |
+| COVERAGE R12 no room/cells/multiple adjacent matches | No change | Unmasked missing-data return and first matching adjacent room are explicit. Existing vectors discriminate masking, bounds and adjacent selection. |
+| COVERAGE R13 blocking owner fill | No change | Nonzero query result maps explicitly to 16; collision result and owner-grid fill have separate prepared-input fixtures. |
+| COVERAGE R14 equal nonzero magnitudes | No change | The greater-or-equal branch is explicit; at equality weight 256 selects the shared diagonal neighbor. No alternate interpolation default is needed. |
+| COVERAGE R15 invalid radius/room/cache failures | No change | Required guards and fatal paths remain explicit; success/lookup/validation fixtures do not claim exhaustive diagnostic execution. |
+| COVERAGE R16 opaque shadow/invalid radius | No change | s>=16 skips and invalid radius produces no contribution under the explicit rule. |
+| COVERAGE R17 displaced source runtime | No change | This is an observation limit already stated: V22(c) confirms the empty-association branch only; original replacement vectors remain unobserved. |
+| COVERAGE R18 positive force byte | No change | The explicit disjunction selects the same positive-Light allocation, while the zero-Light force fixture discriminates the changed result. |
+| COVERAGE R19 one association absent | No change | Present/absent checks and ordered cleanup are explicit; no extra removal occurs for an absent association. |
+| COVERAGE R20 invalid/malformed selections | No change | Invalid class/link yields no component code; reached out-of-list override combinations are outside the valid prepared-record domain, not a guessed recovery branch. |
+| COVERAGE R21 exclusion/Align 2/false condition | No change | Explicit guards retain the computed radius; Align 1 already exercises a retained-radius alternative without exhaustive condition coverage. |
+| COVERAGE R22 callback observations | No change | Missing source/record no-ops are explicit; positive monster callbacks remain static without a matching gameplay vector. |
+
+No V22(c) calculation, source-list assertion or ownership change followed this pass. The sole edit strengthens an existing fatal-path vector and requires a fresh delta check.
+
+### Blind-implementer pass 9 (delta)
+
+Fresh independent review of the V26(e) unchanged-state assertion, 2026-10-27: MISMATCH 0, GUESS 0, GAP 0, DISCRIM 0. The assertion follows the existing R21 pre-creation fatal check and rejects the premature-write alternative. Full pass 8 plus this delta completes the reader check for the resulting contract. No rule, vector, ownership, acceptance or gate changed after this pass. R17 remains runtime-confirmed only for V22(c); document status remains draft for the other integration and observation limits.
+
