@@ -105,7 +105,7 @@ Existing compatible original instruction listings remain reused; the newly read 
 
 ## Dispatch and output anchors
 
-The viewport path at D2Client `0x8B110` compares the unsigned current update counter at preferred VA `0x6FBC97F8` against last-processed `0x6FBCBEF8`; when greater it stores the current value and calls `0xA9E30`. The latter calls environmental/base-map initialization, collision-map initialization and quality selection, then traverses the source list at preferred VA `0x6FBCBBEC`. For each entry it saves the next source before calling `0xA9B50`. Those preceding environmental/base-map producers are outside local-source radius ownership; the source counter producer remains unresolved.
+The viewport path at D2Client `0x8B110` compares the unsigned current update counter at preferred VA `0x6FBC97F8` against last-processed `0x6FBCBEF8`; when greater it stores the current value and calls `0xA9E30`. The latter calls environmental/base-map initialization, collision-map initialization and quality selection, then traverses the source list at preferred VA `0x6FBCBBEC`. For each entry it saves the next source before calling `0xA9B50`. Those preceding environmental/base-map producers are outside local-source radius ownership; R11 identifies the completed-tick counter producer, while wider scheduler eligibility remains unresolved.
 
 Creation `0xA8C20` is reached from the object wrapper `0x24920`, player initializer `0x191E0`, monster initializer `0x4C150`, missile-light request `0xA0F60`, overlay creator `0x6B300`, and additional skill/missile producers whose complete integration remains unverified. The object wrapper is called by object initialization/mode paths `0x25280`, `0x25490`, `0x25660`, `0x259F0`. These are entry anchors into the independently specified supplied-request operation, not proof of each producer's authored semantics.
 
@@ -539,3 +539,45 @@ No V22(c) calculation, source-list assertion or ownership change followed this p
 ### Blind-implementer pass 9 (delta)
 
 Fresh independent review of the V26(e) unchanged-state assertion, 2026-10-27: MISMATCH 0, GUESS 0, GAP 0, DISCRIM 0. The assertion follows the existing R21 pre-creation fatal check and rejects the premature-write alternative. Full pass 8 plus this delta completes the reader check for the resulting contract. No rule, vector, ownership, acceptance or gate changed after this pass. R17 remains runtime-confirmed only for V22(c); document status remains draft for the other integration and observation limits.
+
+## Publication review, 2026-10-29
+
+The maintainer authorized publication of this qualified draft with its remaining gaps, independent review and merge. The publication contains only this contract, its companion/gap ledger and the two navigation edits. References to separately unpublished drawing contracts use the existing coverage map, so this publication does not require the other parallel drafts.
+
+### Blind-implementer pass 11 (full)
+
+Fresh independent full review of all twenty-three rules and twenty-eight vector families: MISMATCH 0, GUESS 1, GAP 3, DISCRIM 1, GATED 5, COVERAGE 15, HARDEST 3. No numerical vector mismatch was found. The findings below have been addressed; the added declarations and cases require a fresh delta check before merge.
+
+| Finding | Disposition and result |
+|---|---|
+| GUESS R02/R05/R08 cache storage after invalidation | Clarified the existing discard operation: invalidate, release any present storage, and mark storage absent. Original Client R02 clears validity at 0xA8BAF, calls release at 0xA8BC4 when storage exists, and clears storage at 0xA8BC9. R05 does the same at 0xA9BC3/0xA9BD8/0xA9BDD before stepping. Both use Client 0xBF86 -> Fog ordinal 10043. V03(c) now asserts absent storage after radius growth. R08's existing sufficient-storage precondition is retained; no resizing or malformed-capacity recovery policy is invented. |
+| GAP R12 collision query input | Added the signed subtile query point to section 3, separately from the lighting-coordinate radial sample. |
+| GAP R14 helper arguments | Added target offsets and ring count, with the existing full-caller radius derivation and direct isolated-helper inputs. |
+| GAP fatal outputs | Section 5 now lists the fatal assertion/termination outcomes already specified by the invalid-state rules and vectors. |
+| DISCRIM V15 first adjacent match | Added V15(c), two overlapping supplied adjacent rooms with cells 8 and 2. First-match returns 0/false; last-match would return 2/true and fails. |
+| HARDEST R14/V18 | No change: the exact duplicate-preserving target trace, interpolation and blocker precedence recomputed correctly. |
+| HARDEST R15/R16/V19/V20 | No change: cache construction, rejection-before-validation and raster order matched the explicit prepared-state contracts. |
+| HARDEST R20-R22/V25-V27 | No change: component overrides, unsigned maximum and differing initialization/callback policies matched. |
+| COVERAGE R01 invalid path/storage | No change: required dynamic/static position conditions and failure boundaries are explicit; exhaustive malformed-owner execution is unclaimed. |
+| COVERAGE R02/R03 absent/negative source requests | No change: fatal positive-source and nonpositive no-op branches are explicit; V28(c) also reaches the positive absent-source setter assertion. |
+| COVERAGE R04 request truncation | No change: low-sixteen-bit conversion is explicit; exhaustive high-word input coverage is unclaimed. |
+| COVERAGE R05 missing/ownerless/overshoot | No change: lookup preservation, ownerless suppression and exact signed stepping without an overshoot clamp are explicit. These branches introduce no unknown operator or fallback. |
+| COVERAGE R06/R07 guard/color/overflow branches | No change: the guards, byte extraction and wrapped sum consume explicit local and numeric contracts. |
+| COVERAGE R08 low-quality kind 0/cache growth | Cache-growth release now has V03(c). No change to dispatch coverage: sufficient prepared storage and the quality selector remain explicit; complete new rebuild gameplay is not claimed. |
+| COVERAGE R09 owner/radius endpoints | No change: all category and invalid-radius selections are explicit; the vectors do not claim exhaustive endpoints. |
+| COVERAGE R12 missing/multiple rooms | Multiple matching rooms now have V15(c). Other missing-data cases retain the explicit unmasked 39 sentinel, distinguished from valid-cell masking by existing vectors. |
+| COVERAGE R13 owner blockers | No change: a nonzero query maps explicitly to blocker 16; the query and fill stages retain separate supplied-input boundaries. |
+| COVERAGE R15 invalid/fatal/build sweep | No change: invalid and fatal conditions and successful storage preconditions are explicit; the separate sweep/cache fixtures do not claim a complete new combined runtime capture. |
+| COVERAGE R16 opaque shadow skip | No change: s>=16 has an explicit skip result; exhaustive shadow values are unclaimed. |
+| COVERAGE R19 absent unit/primary | No change: absent-unit ClearTemporary is a no-op, while dual cleanup supplies a valid unit and separately guards each association. |
+| COVERAGE R20 invalid/other overrides | No change: invalid guards and valid override domains are explicit; the fixed tables do not require invented malformed-index recovery. |
+| COVERAGE R21/R22 remaining conditions | No change: record/source guards and initializer-only conditions retain their stated results and observation limits. |
+| COVERAGE R23 negative initial/positive target | No change: nonpositive creation is already discriminated by V28(c); a negative initial radius takes that same absent-source then positive-target fatal path. |
+
+A possible Overlay-field dependency concern was withdrawn after checking the local schema evidence. The dependency summary was clarified: GDA supplies generic descriptor conversion, while local field identities are supported by this contract and companion. This changes no binding or prepared-input boundary.
+
+### Independent publication and evidence audit
+
+A separate read-only reviewer found no critical or important publication blocker. It checked the exact five-file scope and 124 local Markdown links/anchors against current-main dependencies; original Client/Common/Fog hashes; the original overlay light instructions and numeric field descriptors; and the private runtime record supporting V22(c). The audit independently verified synchronous H-to-N head selection, N.next=H, complete windows, zero dropped records, position/radii/RGB, preserved primary light, temporary attachment and all three loaded-code range fingerprints. It retained the collision case's narrow scope and all five gap categories. No implementation, parallel draft, raw capture, game asset or private reconstruction record is included.
+
+Its minor stale counter-producer phrase was corrected to distinguish the identified R11 producer from wider scheduler eligibility. PR reviewer links and completed-review wording are updated in the publication description. The cache clarification above was separately checked against the original instructions, including the conditional release and unconditional absent-storage writes. No source behavior, runtime coverage or remaining integration gate is promoted by those publication edits.
