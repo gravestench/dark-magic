@@ -35,15 +35,16 @@ function M.restore_mana(vitals, amount_raw)
     return restored - current
 end
 
--- Health remains projected as whole points in the current player-vitals
--- contract. Accepting raw 8.8 amounts preserves the Diablo operation boundary
--- and makes the eventual fully fixed-point health migration mechanical.
+-- Poison already stores the fractional deficit below the ceiling projection.
+-- Healing uses that same remainder instead of rounding away each frame's gain.
 function M.restore_health(vitals, amount_raw)
-    assert(amount_raw >= 0 and amount_raw % 256 == 0, "health restoration must be whole 8.8 points")
-    local current = vitals:get("health")
-    local restored = math.min(current + amount_raw / 256, vitals:get("max_health"))
-    vitals:set("health", restored)
-    return (restored - current) * 256
+    assert(amount_raw >= 0 and amount_raw == math.floor(amount_raw), "health restoration must be nonnegative 8.8 units")
+    local current = vitals:get("health") * 256 - vitals:get("poison_remainder_raw")
+    local restored = math.min(current + amount_raw, vitals:get("max_health") * 256)
+    local projected = math.floor((restored + 255) / 256)
+    vitals:set("health", projected)
+    vitals:set("poison_remainder_raw", projected * 256 - restored)
+    return restored - current
 end
 
 return M
