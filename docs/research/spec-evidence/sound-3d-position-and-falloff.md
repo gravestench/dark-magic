@@ -58,9 +58,9 @@ The original radius constants are exact binary 32-bit values: outer map 400/700/
 
 ### T01 effective text cell
 
-Initial collection, 2026-10-29: an owned vanilla lod-113c member read effective data/global/excel/sounds.txt through Storm. Offset 0, requested length 4000, returned 4000 from total size 505304. The encoded response body was decoded; complete header and target row each had 25 columns. Header-name parsing selected Sound=cursor_pass, explicit Index=1; raw Falloff text cell was 1, decimal integer 1. Coverage is sufficient for this cell, not full table absence claims. Effective-file fingerprint, physical supplying archive and complete override inventory were not captured.
+Initial collection, 2026-10-29: a reported vanilla LoD 1.13c runtime supplied effective data/global/excel/sounds.txt through Storm. Offset 0, requested length 4000, returned 4000 from total size 505304. The encoded response body was decoded; complete header and target row each had 25 columns. Header-name parsing selected Sound=cursor_pass, explicit Index=1; raw Falloff text cell was 1, decimal integer 1. Coverage is sufficient for this cell, not full table absence claims. Effective-file fingerprint, physical supplying archive and complete override inventory were not captured.
 
-Continued collection on a separately owned vanilla lod-113c member read client loaded sound-table base and count from globals 0x11c24c/0x11c250, obtaining count 4699. It read 17 bytes beginning at record index 1's field 0x47; the first four bytes decode to u32 1. The loader descriptor and loaded-field match corroborate the compiled selector for this named identity. This does not establish whole-table correspondence or runtime confirmation of a radius/attenuation vector. Heap addresses and original fixture bytes are preserved privately.
+A separate collection on a reported vanilla LoD 1.13c runtime read client loaded sound-table base and count from globals 0x11c24c/0x11c250, obtaining count 4699. It read 17 bytes beginning at record index 1's field 0x47; the first four bytes decode to u32 1. The loader descriptor and loaded-field match corroborate the compiled selector for this named identity. This does not establish whole-table correspondence or runtime confirmation of a radius/attenuation vector. Heap addresses and original fixture bytes are preserved privately.
 
 ## Backend conversion and remaining device boundary
 
@@ -80,19 +80,19 @@ Existing voices call property updating only after state, start/duration, active-
 
 ## Earlier runtime attempt
 
-The first owned vanilla LoD 1.13c member was a level 1 expansion Barbarian, Normal, Rogue Encampment. Initial arming before D2Client loaded failed. Source-register dereference was rejected because the interface did not capture EBX. Entry-only traces at D2Client 0x5dc70 and 0x5d1d0 read four records each, with zero reported dropped records; both eventually capped at 30. Calls came from 0x5d23a and 0x893a2 respectively. Floating return values and source-state outputs were missing. Integer return registers from a floating-return helper were not treated as radii. Both traces were already stopped when disarm was attempted, and the owned member was quit. These records remain inconclusive for numerical vectors.
+On 2026-10-29, the original-profile capture used a level-1 Expansion Barbarian in Normal Rogue Encampment. An initial capture was invalid because D2Client was not yet loaded. Entry-only captures at D2Client 0x5dc70 and 0x5d1d0 contain four inspected records each, with zero reported dropped records and configured caps of 30. Calls came from 0x5d23a and 0x893a2 respectively. Required source-register values, floating return values and source-state outputs were not captured. Integer return registers from a floating-return helper were not treated as radii. These records remain inconclusive for numerical vectors.
 
-## C02 authorized source-property captures
+## C02 source-property captures
 
-Collection date 2026-10-29, separately owned vanilla LoD 1.13c launch, original Game executable identity matching the manifest, level 1 expansion Barbarian in Normal Rogue Encampment. Only owned disposable runtime state was used. No save enumeration, save editing, memory write or function call was used. Human authorization explicitly covered no-force tracing. All probes armed without force and source/module resolution was recorded.
+Collection date 2026-10-29, reported vanilla LoD 1.13c profile, original Game executable identity matching the manifest, level-1 Expansion Barbarian in Normal Rogue Encampment. Source/module correspondence was recorded. These observations did not use live-state writes or synthetic function calls.
 
 | Vector / boundary | Source profile | Date | Module + RVA | Records | Result |
 |---|---|---|---|---:|---|
-| S3D-V03, S3D-V04 base cases | Owned vanilla LoD 1.13c launch; table limits in T01 | 2026-10-29 | D2Client 0x88350, caller 0x89071 | 12 read, dropped 0, 12 cap | Matching finite cache inputs and complete 40-byte target window; two cases below |
-| Additional cache preparation | Same owned launch | 2026-10-29 | D2Client 0x88350, caller 0x89071 | 8 read, dropped 0, 8 cap | Matching repeated raw positions after movement, not additional vector promotions |
-| Position producer preparation | Same owned launch | 2026-10-29 | D2Common 0x2ffe0 | 12 read, dropped 0, 12 cap | Complete accessor input/output windows; no complete relative-position vector capture |
-| Backend scalar preparation | Same owned launch | 2026-10-29 | D2Sound 0x6e20 | 12 read initially, then 8; dropped 0 | Retained requested-amplitude writes observed; final backend method not captured |
-| Backend conversion preparation | Same owned launch | 2026-10-29 | D2Sound 0xaccc | 24 read, dropped 0 | Integer conversion outputs observed; partial matching only, no S3D-V07 promotion |
+| S3D-V03, S3D-V04 base cases | Reported vanilla LoD 1.13c profile; table limits in T01 | 2026-10-29 | D2Client 0x88350, caller 0x89071 | 12 read, dropped 0, 12 cap | Matching finite cache inputs and complete 40-byte target window; two cases below |
+| Additional cache preparation | Same runtime profile | 2026-10-29 | D2Client 0x88350, caller 0x89071 | 8 read, dropped 0, 8 cap | Matching repeated raw positions after movement, not additional vector promotions |
+| Position producer preparation | Same runtime profile | 2026-10-29 | D2Common 0x2ffe0 | 12 read, dropped 0, 12 cap | Complete accessor input/output windows; no complete relative-position vector capture |
+| Backend scalar preparation | Same runtime profile | 2026-10-29 | D2Sound 0x6e20 | 12 read initially, then 8; dropped 0 | Retained requested-amplitude writes observed; final backend method not captured |
+| Backend conversion preparation | Same runtime profile | 2026-10-29 | D2Sound 0xaccc | 24 read, dropped 0 | Integer conversion outputs observed; partial matching only, no S3D-V07 promotion |
 
 The first cache capture's alternating source cases were:
 - Input position (320,80,640), retained raw position already (320,80,640), retained distanceKey already 108800; complete target window showed no changes. This matches S3D-V03's exact retained outputs. It is a repeated-value case, not proof that a previously different cache was overwritten.
@@ -101,7 +101,7 @@ Later repeated inputs (320,-16,640) retained key 102656, and (662,2648,640) reta
 
 Backend source captures included requested amplitude 99, retained prior amplitude 255, source factor zero and valid underlying buffer. Source offset 0x38 changed to 99. Backend scalar global 0x15994 was read as 255; device mode 0x16598 as 0. The conversion trace includes a call from return site 0x6e71 with input-source identity matching this source and integer result 99, followed by conversion from 0x6e90 yielding -821. This is consistent with 2000*log₁₀(99/255) truncated toward zero. The capture did not observe the final backend method and did not simultaneously capture every ordinary-division environment condition; S3D-R06 remains static and S3D-V07 remains runtime_observed no.
 
-A relative-position entry probe was overwritten by a later stopped-slot reuse before its records were read; nothing from that attempt is credited as position-vector evidence. All final owned probe locations were disarmed or reported stopped/not armed; the owned member quit successfully. Private records preserve exact fixture encodings, slot/member details and captured windows separately from public evidence.
+A separate relative-position entry capture was not retained; no position-vector assertion is credited to it. Exact fixture encodings and raw capture windows are retained privately.
 
 ## Observation procedure
 

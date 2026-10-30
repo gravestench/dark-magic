@@ -47,7 +47,7 @@ The client helper `0x89640` tests signed positive modulus, reads seed words from
 
 ## T01 named data cells
 
-Reuse date and collection date: 2026-10-29, owned vanilla LoD 1.13c launch in the coordinating audio investigation. Effective `data/global/excel/soundenviron.txt` was read through the game's Storm loader, offset 0 requested length 60000, returned 5741/5741 bytes. The complete encoded body was decoded, its tab-separated header parsed by name, and 50 complete rows identified. The cited row is selected by `Handle = ESOUNDENVIRON_WILDERNESS`, explicit `Index = 2`; no positional indexing assumption is needed.
+Reuse date and collection date: 2026-10-29, reported vanilla LoD 1.13c profile. Effective `data/global/excel/soundenviron.txt` was read through the game's Storm loader, offset 0 requested length 60000, returned 5741/5741 bytes. The complete encoded body was decoded, its tab-separated header parsed by name, and 50 complete rows identified. The cited row is selected by `Handle = ESOUNDENVIRON_WILDERNESS`, explicit `Index = 2`; no positional indexing assumption is needed.
 
 | Named column | Raw cell | Interpretation / support |
 |---|---|---|
@@ -74,13 +74,13 @@ Candidate `0x8ad30` is called by `0x8afd0`, whose inputs derive from a three-par
 
 ## Observation procedure
 
-SAW-O01: use matching original LoD 1.13c, an expansion character in Normal and an area with differing day/night environment entries. Capture local player seed, phase, selected environment fields, audio counter and timer state immediately before the selection/timer stages and after their writes. Compare synthetic supplied cases only when all inputs match; otherwise construct a fully specified vector from established rules before promotion. For timer initialization, account for preceding playback's seed effects by sampling at the timer-stage entry. Record subsequent event playback separately. Phase is now bound to the world-clock cycle, but no phase-transition observation is claimed. No runtime trace has yet been armed for this candidate; authorization for tracing an owned responsive member is recorded. Runtime confirmation remains possible and uncompleted.
+SAW-O01: use matching original LoD 1.13c, an expansion character in Normal and an area with differing day/night environment entries. Capture local player seed, phase, selected environment fields, audio counter and timer state immediately before the selection/timer stages and after their writes. Compare synthetic supplied cases only when all inputs match; otherwise construct a fully specified vector from established rules before promotion. For timer initialization, account for preceding playback's seed effects by sampling at the timer-stage entry. Record subsequent event playback separately. Phase is now bound to the world-clock cycle, but no phase-transition observation is claimed. No matching gameplay capture has been recorded for this candidate. Runtime confirmation remains possible and uncompleted.
 
 ## Search and self-review
 
-The investigation followed candidate functions, located audio-update root and scalar output writes, resolved six common-module import targets, read available matched reconstructions first, corroborated timer/random decoding against original-image listing, and reused complete effective table evidence under its existing limitations. Interactive analysis had no running shared instance; read-only original instruction listings supplied a fallback. No shared target was switched. Complete weather and playback callee closure and gameplay observation remain open; the full search ladder is not claimed exhausted.
+The investigation followed candidate functions, located audio-update root and scalar output writes, resolved six common-module import targets, read available matched reconstructions first, corroborated timer/random decoding against original-image listing, and reused complete effective table evidence under its existing limitations. Complete weather and playback callee closure and gameplay observation remain open; the full search ladder is not claimed exhausted.
 
-Self-review preserves the distinction between supplied verified stages and gated actual playback. No column name is used to derive weather semantics. Initial numeric vector calculations were independently recomputed with integer arithmetic. Fresh blind-reader review is pending the coordinator; no approval is inferred.
+Self-review preserves the distinction between supplied verified stages and gated actual playback. No column name is used to derive weather semantics. Initial numeric vector calculations were independently recomputed with integer arithmetic. Fresh blind-reader review had not yet run at this initial revision.
 
 Mechanical lint: initial run 0 errors / 18 warnings. The glued predicate token was corrected. Remaining history warnings name the scheduler's retained previous-event state, which is current behavior; matched-reconstruction warnings describe verification methods with original public addresses and no private source paths. These warnings were reviewed and retained.
 

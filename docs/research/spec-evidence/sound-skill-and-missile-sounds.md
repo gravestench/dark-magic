@@ -159,7 +159,7 @@ and does not establish a contradiction in static selection arithmetic.
 ## Review state
 
 Self-review preserves the supplied-input boundary and gated producer/device
-integration. Fresh blind reader review remains pending coordination.
+integration. Fresh blind reader review had not yet run at this initial revision.
 
 Fresh blind reader full pass 1 reported no behavioral MISMATCH (0), with
 no ungated behavioral GUESS. Exact other list counts were not supplied to

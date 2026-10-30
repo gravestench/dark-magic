@@ -27,7 +27,7 @@ The initial client candidates and additional helpers have no byte-matched C entr
 
 The coverage candidates were leads. Output-side inspection finds D2Client 0x22CA0, 0x22C10 and 0x23C00 calling 0x88A70, the common cue request lead. Incoming references locate 0x23170 and 0x24490 calling 0x22CA0, 0x23F20 calling 0x22C10, and 0x4F4A0 calling 0x23C00. The latter call follows 0x237E0 in the read local tail. A reference from 0x1C150 to 0x23C00 is declared but its executed call site was not established in this pass. These are partial caller links, not complete client frame/action dispatch chains.
 
-The discovery ladder has partial caller/output/data anchors; it is not exhausted. No claim of “not found” is made. Ghidra instance discovery returned no running instances. Original-image native disassembly subsequently corroborated the encoded instruction runs for 0x22C10, 0x22FB0 and 0x895D0–0x8968D. Loader descriptor instruction bytes were also checked against the original D2Common image. Callee and dispatch gates remain. A member was subsequently allocated exclusively for the text-cell read in T01 and closed afterward. No integration vector was executed; launch discovery and archive reads do not establish gameplay confirmation.
+The discovery ladder has partial caller/output/data anchors; it is not exhausted. No claim of “not found” is made. Original-image native disassembly corroborated the encoded instruction runs for 0x22C10, 0x22FB0 and 0x895D0–0x8968D. Loader descriptor instruction bytes were also checked against the original D2Common image. Callee and dispatch gates remain. T01 provides a narrow text-cell read; no integration vector was executed, and archive contents do not establish gameplay confirmation.
 
 ## Reading rationale and caveats
 
@@ -75,7 +75,7 @@ Self-review on 2026-10-29 recomputed V01 as cue 102/ticks 101 and 102 despite re
 
 ## Observation procedure
 
-USN-O01 is pending. Use an independently owned, fingerprinted original Expansion 1.13c single-player session, a newly copied test character, Normal difficulty and an ordinary nearby monster. Record effective kind/class/mode and selected record at entry, then action and movement requests with their arguments and results. First resolve the static selectors and table bindings; only then specify exact expected values for a chosen monster row. Observe idle, movement, attack and hit/death transitions separately. Capture actual tick differences and random inputs where claimed, preserving admission failures separately from selected cues. Do not infer a matching request solely from audible similarity, or infer absence from a zero-record trace without checking trigger and collection validity.
+USN-O01 is pending. Use a fingerprinted original Expansion 1.13c single-player game and a test character, Normal difficulty and an ordinary nearby monster. Record effective kind/class/mode and selected record at entry, then action and movement requests with their arguments and results. First resolve the static selectors and table bindings; only then specify exact expected values for a chosen monster row. Observe idle, movement, attack and hit/death transitions separately. Capture actual tick differences and random inputs where claimed, preserving admission failures separately from selected cues. Do not infer a matching request solely from audible similarity, or infer absence from a zero-record trace without checking trigger and collection validity.
 
 ## Review and limitations
 
@@ -83,11 +83,11 @@ USN-R02b is verified statically only for supplied action-stage inputs. Other beh
 
 ## Table record T01
 
-Date 2026-10-29; source profile: independently allocated vanilla LoD Expansion `lod-113c` launch, title-screen schema `lod-113c`. The build inventory identifies the original Game.exe fingerprint from the source manifest; loaded-module full fingerprints and override inventory were not captured. No data override was requested or reported in this allocation. This is a text-cell source-profile observation, not proof of unmodified compiled tables.
+Date 2026-10-29; source profile: reported vanilla LoD Expansion 1.13c (`lod-113c`). The original Game.exe profile fingerprint matches the source manifest; loaded-module full fingerprints and complete override inventory were not captured. No data override was reported. This is a text-cell source-profile observation, not proof of unmodified compiled tables.
 
 Effective virtual path: `data/global/excel/monsounds.txt`, read through the game's Storm loader. Initial range 0–1000 returned 1000 of 22927 bytes. A second request at offset 0 for 22927 bytes returned all 22927 bytes. The full base-64 body was decoded to 22927 bytes and split as tab-separated text by the complete 41-column header. Row selection uses named `Id=act1hire`, not a numeric row assumption. The raw `FsCnt` cell is `2`, interpreted as decimal integer 2, supporting USN-R05. Other separately inspected cells were `Footstep=medium_walk_dirt_1`, `FsOff=0`, `FsPrb=100`, and blank `Flee`; these do not establish execution semantics.
 
-Full file coverage was obtained; effective-file hash, physical supplying MPQ and compiled correspondence were not captured. No gameplay vector was observed or promoted. The owned session was closed after this read; no hook was armed and no memory was written.
+Full file coverage was obtained; effective-file hash, physical supplying MPQ and compiled correspondence were not captured. No gameplay vector was observed or promoted. The data read did not use live-state writes.
 
 ## Fresh blind-implementer review
 

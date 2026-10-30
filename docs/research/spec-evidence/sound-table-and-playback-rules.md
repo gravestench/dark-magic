@@ -80,9 +80,8 @@ The existing coverage candidates and audio research document were checked;
 the latter's modern design suggestions and 1.14d data are not 1.13c evidence.
 Search anchored on the loader string `sounds.txt` and SoundHdr.cpp assertion,
 then original-image direct calls into the named playback candidates. Root,
-output, data and string anchors were pursued. Ghidra instance discovery on
-2026-10-29 reported no running instances, so no Ghidra reading is claimed.
-Existing disassembly was used read-only; only the transition stage's encoded
+output, data and string anchors were pursued. This initial record uses
+disassembly rather than a Ghidra reading; only the transition stage's encoded
 instruction run was independently byte-corroborated in this record.
 This is not a completed six-rung absence search.
 
@@ -107,11 +106,11 @@ otherwise recompute the same rule using actual measured inputs. Establish
 the producer and its duration units first: an audible fade alone does not
 identify this stage. No memory writes or synthetic function calls are needed.
 
-Collection setup on 2026-10-29 first attempted D2Client RVA 0x5d7a0 at the
-title screen; it failed because D2Client was not loaded. This is an invalid
-capture, not a quiet branch. Entering single player with an Expansion level-1
-Barbarian in town loaded D2Client and the same trace arm succeeded. This
-admission entry cannot itself verify the transition's volume writes. No
+The initial capture attempt on 2026-10-29 at D2Client RVA 0x5d7a0 was invalid
+because D2Client was not loaded; it is not evidence of a quiet branch. A
+subsequent original-profile single-player capture with an Expansion level-1
+Barbarian in town recorded the admission entry. That entry cannot itself
+verify the transition's volume writes. No
 STP-R02 vector has a matching gameplay observation.
 
 The successful admission capture returned four inspected records, sequences
@@ -121,9 +120,8 @@ was changed respectively to 2770, 2769, 2771 and left 2768; admission returned
 nonzero slot results in all four records. The argument window was complete
 (88 requested and returned bytes). These are identity and group-selection
 observations, not verified STP-R03 results: their RNG state and all selector
-inputs were not captured. Later the trace reached its 60-record cap and
-reported already stopped when disarm was requested. The owned game was then
-closed. No sequence beyond the four inspected records is claimed here.
+inputs were not captured. The capture reached its 60-record cap; no sequence
+beyond the four inspected records is claimed here.
 
 An independent native instruction listing was also read for the complete
 group selector 0x5ee70–0x5ef4b, corroborating its encoded instruction runs.
@@ -134,7 +132,7 @@ open, rather than because a group weighting rule was assumed from a header.
 
 The current document remains draft. Self-review separates narrow data proof,
 the supplied-input transition stage and unresolved integration. Fresh blind
-reader review is pending coordination; no approval is inferred.
+reader review had not yet run at this initial revision.
 
 Fresh blind reader full pass 1 (2026-10-29) reported MISMATCH 0, GUESS 0,
 GAP 0, DISCRIM 4, COVERAGE 6 and HARDEST 3. Discrimination findings 1–3
@@ -201,7 +199,7 @@ reason T01 remains text-cell evidence only.
 
 The context pointer has several writers, including D2Client 0xa6674. That
 routine was read, but its wider unit/context lifetime was not closed.
-An owned in-game read of the pointer and its target identified unit type 0,
+An in-game read of the pointer and its target identified unit type 0,
 unit id 1, matching the current single-player character. This corroborates
 the player-context seed source for that case; it is not a proof that every
 pointer assignment or earlier record uses the same player. Supplied seed
@@ -259,7 +257,7 @@ and retirement remain STP-Q01/STP-Q02. The fresh-instance allocator at
 dependency is not closed here. No complete request admission contract is
 claimed from these additional leads.
 
-### Additional owned runtime observations
+### Additional runtime observations
 
 Source profile: reported vanilla lod-113c, new level-1 Barbarian, Normal,
 Rogue Encampment; 2026-10-29. The seed context header read matched unit type
@@ -271,8 +269,7 @@ baseline; complete effective archive/override identities remain uncaptured.
 | group-selection follow-up, no promoted vector | reported vanilla Expansion 1.13c | 2026-10-29 | D2Client +0x5ee70, caller return +0x5d7dd | 6 inspected, dropped 0 | base 2768 returned 2769,2771,2770,2768,2771,2769; seed/history snapshots at each entry absent |
 | buffered start follow-up, partial STP-V18 assertions | same profile | 2026-10-29 | D2Sound +0x6f30, caller return D2Client +0x5d958 | 4 inspected, dropped 0 | valid 32-byte context windows, entering marker 0 changed to 1, wrapper returned 1; exact device HRESULT and inner operation log unobserved |
 
-Both traces stopped at their configured record caps (16 and 4 respectively)
-and disarm requests reported already stopped. The owned game was closed.
+Configured capture caps were 16 and 4 records respectively.
 No complete STP-V08–STP-V19 vector is claimed runtime-observed: group draws
 and entry seed/history, and the device wrapper's exact HRESULT/operation
 sequence, were not collected. Later idle reads of the sound cache confirmed

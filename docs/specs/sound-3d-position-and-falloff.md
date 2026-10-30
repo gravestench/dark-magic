@@ -161,7 +161,7 @@ Cases are independent supplied-input stages, with no other persistent operations
   - Trace: neither x nor y clamps; 320*320+80*80=108800; raw components copied unchanged.
   - Outputs: retained position (320,80,640), distanceKey 108800.
   - Discriminates: including z produces 518400 instead of 108800.
-  - runtime_observed: yes (1.13c, 2026-10-29, [C02](../research/spec-evidence/sound-3d-position-and-falloff.md#c02-authorized-source-property-captures)).
+  - runtime_observed: yes (1.13c, 2026-10-29, [C02](../research/spec-evidence/sound-3d-position-and-falloff.md#c02-source-property-captures)).
   - (a) Inputs: source position (320,80,640), retained position (0,0,0), distanceKey 0. Draws: none. Outputs: retained position (320,80,640), distanceKey 108800. runtime_observed: no.
 
 - **S3D-V04** Cache clamps key but not position (S3D-R04; boundary: supplied-input stage)
@@ -171,7 +171,7 @@ Cases are independent supplied-input stages, with no other persistent operations
   - Trace: y clamps to 2000 for the key only; 681*681+2000*2000=4463761.
   - Outputs: retained position (681,2726,640), distanceKey 4463761.
   - Discriminates: using unclamped y changes the key; storing clamped y incorrectly retains 2000.
-  - runtime_observed: yes (1.13c, 2026-10-29, [C02](../research/spec-evidence/sound-3d-position-and-falloff.md#c02-authorized-source-property-captures)).
+  - runtime_observed: yes (1.13c, 2026-10-29, [C02](../research/spec-evidence/sound-3d-position-and-falloff.md#c02-source-property-captures)).
   - (a) Inputs: source position (-3000,4000,9), retained position (0,0,0), distanceKey 0. Draws: none. Outputs: retained position (-3000,4000,9), distanceKey 8000000. runtime_observed: no.
 
 - **S3D-V05** Supplied amplitude falls between radii (S3D-R05; boundary: supplied-input stage)

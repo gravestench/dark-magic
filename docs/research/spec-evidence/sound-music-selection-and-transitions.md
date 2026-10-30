@@ -52,7 +52,7 @@ MUS-R05b unresolved paths include request submission at controller 0x45849..0x45
 
 ## T01 Effective song cells
 
-Source profile: fleet-reported vanilla LoD launch key lod-113c, family LoD, version 1.13c, no data overrides reported. Game executable profile hash matches the manifest Game.exe value. Runtime loaded DLL hashes and physical supplying archive were not captured; this limits equivalence claims. Date: 2026-10-29.
+Source profile: reported vanilla LoD profile lod-113c, family LoD, version 1.13c, no data overrides reported. Game executable profile hash matches the manifest Game.exe value. Runtime loaded DLL hashes and physical supplying archive were not captured; this limits equivalence claims. Date: 2026-10-29.
 
 Storm-loader virtual path: data/global/excel/soundenviron.txt. Requested offset 0, length 60000. Success; returned 5741 bytes, total size 5741; complete coverage of the returned file. Base64 bytes were decoded and parsed as tab-separated values by exact header names, retaining complete rows. Effective-file SHA-256: d69131977215f8d3ac91326ffa708fad24eeddb61efae3965cf4b4d9d41de90c. Rows use explicit Handle and Index fields; named identities and explicit indices are cited, not inferred positional numbering.
 
@@ -73,9 +73,9 @@ MUS-O02: in the same original game, remain in a level with nonzero requested son
 
 | Vector | Source profile | Date | Module + RVA | Records | Result |
 |---|---|---|---|---:|---|
-| MUS-O01, MUS-O02 | lod-113c vanilla reported profile | 2026-10-29 | D2Client + 0x45660 intended | 0 | no observation: member reached character-creation menu, then repeated state/input requests timed out; trace admission rejected before arming |
+| MUS-O01, MUS-O02 | lod-113c vanilla reported profile | 2026-10-29 | D2Client + 0x45660 intended | 0 | no usable function capture; initial collection did not provide an attributable gameplay measurement |
 
-During the initial attempt, no trace was armed and no assertion was runtime-confirmed. Automatic review rejected invasive function tracing while that owned member was unresponsive; additional explicit permission was requested. No workaround instrumentation was attempted. Graceful close timed out; the exclusively owned container slot was then stopped successfully. The archive read preceded the timeouts and is retained only as table evidence.
+The initial collection produced no gameplay assertion eligible for runtime confirmation. Its archive read is retained only as table evidence.
 
 ## Search coverage and remaining evidence
 
@@ -93,26 +93,26 @@ HARDEST outcomes: no change for sequential bookmark overwrite (MUS-V11 explicitl
 
 Final mechanical validation on 2026-10-29: 0 error(s), 16 warning(s). Warnings were reviewed: temporal field names describe current retained state, and source-reading method names describe public verification methods rather than private reconstruction paths. No implementation or user approval is asserted.
 
-## Authorized runtime follow-up — 2026-10-29
+## Runtime follow-up — 2026-10-29
 
-The maintainer explicitly authorized fleet function traces on an owned, responsive 1.13c member. A new exclusively allocated vanilla lod-113c member reached single-player gameplay with the disposable level-1 Expansion Barbarian fixture in Rogue Encampment. State reads were responsive before arming. Runtime loaded-image hashes and difficulty were not separately captured; the reported launch profile remains the identity limit. No save contents are published.
+A separate reported vanilla LoD 1.13c collection used single-player gameplay with a level-1 Expansion Barbarian in Rogue Encampment. Runtime loaded-image hashes and difficulty were not separately captured; the reported profile remains the identity limit.
 
 | Vector / purpose | Source profile | Date | Module + RVA | Records read | Result |
 |---|---|---|---|---:|---|
-| MUS-O01 controller identity | vanilla lod-113c reported profile | 2026-10-29 | D2Client + 0x45660, caller return +0x5f040 | 12 initial records, dropped 0 | matching dispatch identity and consecutive tick inputs only; initial remaining records were not retained before recorder-slot reuse |
-| MUS-O01 stationary paired state | same newly owned member | 2026-10-29 | D2Client + 0x45660 | 220 complete records, dropped 0 | audio ticks 5132 through 5351; four-byte stack cleanup; paired state snapshots inside that interval are consistent with unchanged request behavior, not an atomic vector capture |
-| MUS-O02 backend position query | same newly owned member | 2026-10-29 | D2Sound + 0x6850, caller return D2Client +0x45917 | 7 complete records, dropped 0 | controller reached position query; all captured object windows returned the requested 80 bytes; no global bookmark-write capture |
-| eligibility query B | same newly owned member | 2026-10-29 | D2Sound + 0x9ac0 | 10 complete records, dropped 0 | four records have caller return D2Client +0x45718; all ten return 50; this does not establish a Boolean-only return or global's wider meaning |
+| MUS-O01 controller identity | vanilla lod-113c reported profile | 2026-10-29 | D2Client + 0x45660, caller return +0x5f040 | 12 initial records, dropped 0 | matching dispatch identity and consecutive tick inputs only; only these 12 initial records were retained; the remainder of that capture is incomplete |
+| MUS-O01 stationary paired state | same original-game collection | 2026-10-29 | D2Client + 0x45660 | 220 complete records, dropped 0 | audio ticks 5132 through 5351; four-byte stack cleanup; paired state snapshots inside that interval are consistent with unchanged request behavior, not an atomic vector capture |
+| MUS-O02 backend position query | same original-game collection | 2026-10-29 | D2Sound + 0x6850, caller return D2Client +0x45917 | 7 complete records, dropped 0 | controller reached position query; all captured object windows returned the requested 80 bytes; no global bookmark-write capture |
+| eligibility query B | same original-game collection | 2026-10-29 | D2Sound + 0x9ac0 | 10 complete records, dropped 0 | four records have caller return D2Client +0x45718; all ten return 50; this does not establish a Boolean-only return or global's wider meaning |
 
 The complete controller window contains each tick from 5132 to 5351 once. Within it, paired live-state reads at audio tick 5187 and 5230 both had requested song 4673, cached area identity 1 and bookmark tick 5166. Thus the request and bookmark tick remained the same across the two reads, consistent with MUS-R03's unchanged-request case. These reads do not capture the globals on each function entry and return, so they do not establish every invocation's before/after state or the exact inputs of MUS-V07.
 
 A checked live row for requested song 4673 had Block 1 = 3002253, Block 2 = -1, Block 3 = -1. The per-song stored bookmark read was 3002253. The seven backend-return positions were 2221458, 2332585, 2443746, 2554906, 2666012, 2777136 and 2888292; every one is nonnegative and below 3002253, so MUS-R04's supplied-input calculation would select 3002253. The matching stored value is corroboration only: the bookmark reads and position calls were not paired atomically with the global write and bookmark tick, so MUS-V09 and MUS-O02 are not marked matched. Backend position units, resume behavior and audible transitions remain unverified.
 
-A trace of the client position-wrapper entry at 0x87de0 was refused for an unrecognized prologue. No force option was used. The backend entry at 0x6850 accepted normal tracing. An initial eligibility-A capture was replaced by later slot reuse before its records were read; no observation is claimed for it. The observation collector's windows accept register or stack-derived pointers and do not capture arbitrary controller globals on entry/return; this is the current completeness limitation.
+No client position-wrapper capture at 0x87de0 or usable initial eligibility-A capture is available. The backend entry at 0x6850 supplied the position-query records listed above. The captured windows contain register/stack-derived object inputs but not arbitrary controller globals on each entry/return; this is the current completeness limitation.
 
-No behavioral rule label or vector runtime flag is promoted. All captures were capped, the retained records' loss counters were checked, tracing was stopped or had already stopped at its cap, and the exclusively owned member accepted graceful quit. The earlier approval blocker is resolved; MUS-Q03 remains an observation-completeness gap. A broader listing of shared-host character saves was rejected by automatic review for unrelated private-save exposure; no workaround was attempted. Only the owned member's disposable fixture was inspected.
+No behavioral rule label or vector runtime flag is promoted. Configured capture caps and the retained records’ loss counters were checked. MUS-Q03 remains an observation-completeness gap.
 
-Follow-up review disposition: this adds limited observation evidence and resolves the permission blocker without changing behavior, input contracts, vectors, expected results, labels or gate boundaries. The existing fresh-reader result remains applicable.
+Follow-up review disposition: these limited observations leave behavior, input contracts, vectors, expected results, labels and gate boundaries unchanged. The existing fresh-reader result retains its original scope.
 
 
 ## Static producer recheck — 2026-10-29
