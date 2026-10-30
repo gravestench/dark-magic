@@ -88,8 +88,8 @@ func (controller *MovementController) moveTarget() *MoveTarget {
 	return &result
 }
 
-// clearMoveTarget consumes pointer intent when keyboard input, arrival, or a world transition supersedes it.
-func (controller *MovementController) clearMoveTarget() {
+// ClearMoveTarget consumes pointer intent when another player action supersedes it.
+func (controller *MovementController) ClearMoveTarget() {
 	controller.mu.Lock()
 	controller.target = nil
 	controller.mu.Unlock()

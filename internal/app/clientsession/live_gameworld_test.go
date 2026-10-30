@@ -62,6 +62,7 @@ func TestConnectSelfHostedEntersLiveGeneratedGameworld(t *testing.T) {
 // Keeping cancellation handles beside their result channels makes orderly shutdown part of the fixture contract.
 type liveGameworldFixture struct {
 	host        *gameserver.Host
+	tickets     *gameserver.TicketAuthority
 	server      *sessionquic.Server
 	endpoint    realm.GameEndpoint
 	clientTLS   *tls.Config
@@ -107,6 +108,20 @@ func newLiveGameworldFixture(t *testing.T, ctx context.Context) liveGameworldFix
 		t.Fatal(err)
 	}
 
+	destination, err := playeradapter.NewDestination(10, 10, 100, 100, 1, 2)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	return serveLiveGameworld(t, ctx, host, destination)
+}
+
+func serveLiveGameworld(t *testing.T,
+	ctx context.Context,
+	host *gameserver.Host,
+	destination playeradapter.Destination) liveGameworldFixture {
+	t.Helper()
+
 	runContext, stopRun := context.WithCancel(ctx)
 
 	runErrors := make(chan error, 1)
@@ -133,11 +148,6 @@ func newLiveGameworldFixture(t *testing.T, ctx context.Context) liveGameworldFix
 
 	t.Cleanup(func() { _ = server.Close() })
 
-	destination, err := playeradapter.NewDestination(10, 10, 100, 100, 1, 2)
-	if err != nil {
-		t.Fatal(err)
-	}
-
 	profiles, err := serverapp.NewRemoteProfileAdmissions(host, tickets, serverapp.RemoteProfileConfig{
 		Credential: "profile-secret", PrincipalID: "local-account", PlayerID: "alice",
 		Destination: destination, Lifetime: time.Minute,
@@ -155,6 +165,7 @@ func newLiveGameworldFixture(t *testing.T, ctx context.Context) liveGameworldFix
 
 	return liveGameworldFixture{
 		host:        host,
+		tickets:     tickets,
 		server:      server,
 		endpoint:    realm.GameEndpoint{Address: server.Addr(), TLSFingerprint: fingerprint},
 		clientTLS:   clientTLS,

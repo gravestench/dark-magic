@@ -18,6 +18,32 @@ local function integer(row, key, fallback)
     return math.floor(tonumber(row[key]) or fallback or 0)
 end
 
+local function asset(name)
+    return name and name ~= "" and "data/global/items/" .. name .. ".dc6" or ""
+end
+
+local function body_slots(row, kind)
+    if kind == "weapon" then return "rarm,larm" end
+    for _, item_type in ipairs(records.load("data/global/excel/ItemTypes.txt")) do
+        if (item_type.Code or item_type.code) == row.type then
+            local result = {}
+            for _, field in ipairs({"BodyLoc1", "BodyLoc2"}) do
+                local slot = item_type[field]
+                if slot and slot ~= "" then result[#result + 1] = slot end
+            end
+            return table.concat(result, ",")
+        end
+    end
+    return ""
+end
+
+local function composite(row)
+    local tokens = {"HD","TR","LG","RA","LA","RH","LH","SH","S1","S2","S3","S4","S5","S6","S7","S8"}
+    local token = tokens[integer(row, "component", -1) + 1]
+    local appearance = string.upper(row.alternategfx or "")
+    return token and appearance ~= "" and token .. "=" .. appearance or ""
+end
+
 local function converted(row, kind)
     return {
         code = row.code,
@@ -35,6 +61,22 @@ local function converted(row, kind)
         base_cost = integer(row, "cost"),
         uber = (row.ubercode or "") ~= "",
         class_specific = (row.type or "") == "class",
+        material_flags = integer(row, "bitfield1"),
+        body_slots = body_slots(row, kind),
+        belt_eligible = integer(row, "belt") ~= 0,
+        inventory_dc6 = asset(row.invfile),
+        world_dc6 = asset(row.flippyfile),
+        world_animated = true,
+        composite = composite(row),
+        weapon_class = string.upper(row.wclass or ""),
+        melee_weapon_class = string.upper(row.wclass or ""),
+        melee_range = kind == "weapon" and 1 + integer(row, "rangeadder") or 0,
+        physical_min = integer(row, "mindam") * 256,
+        physical_max = integer(row, "maxdam") * 256,
+        attack_rate = kind == "weapon" and -integer(row, "speed") or 0,
+        defense = integer(row, "minac"),
+        base_defense_max = integer(row, "maxac"),
+        speed_penalty = kind == "armor" and integer(row, "speed") or 0,
     }
 end
 
