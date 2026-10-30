@@ -458,8 +458,8 @@ All D2Client.
 | Candidate spec | Original source | Data tables and columns | 1.13c entry points | Status | Notes |
 |---|---|---|---|---|---|
 | [draw-light-map-and-light-radius](draw-light-map-and-light-radius.md) | `DRAW\dLightMap` | Radius/color, prepared object/missile/monster fields, component light selection, separate light associations, collision inputs, shadow scratch/cache and map-cell writes | `0xA8C20`, `0xA9B50`, `0xA9100`, `0xA8A40` | written | Draft: prepared-input shadow/raster, temporary/projectile/monster/overlay light and cleanup stages verified; collision masking and one temporary-light creation/attachment case runtime-confirmed. Source/world producers and remaining gameplay observations stay explicit. `0x1BC0` was rejected as a sprite-composition lead; see companion. |
-| draw-room-and-ambient-lighting | `DRAW\dLightMap` | Levels, LvlTypes lighting | `0x4F770`, `0xA8520` | candidate | May merge with the row above. |
-| draw-palette-shifts | `GAME\PalShift` | States colorshift, colorpri; MonStats2 Utrans | `0x538F0`, `0x53B20`, `0x539E0`, `0x40190` | candidate | |
+| [draw-room-and-ambient-lighting](draw-room-and-ambient-lighting.md) | `DRAW\dLightMap`, D2Common environment | Prepared Levels intensity/RGB; room overrides, stored environment fallback and base map | `0xA9C90`, `0xA9A20`; Common `0x3C6A0`, `0x44D90` | written | Draft: prepared room selection and inclusive base-map initialization static; one prepared level-1 read/output replacement runtime-confirmed. Changing level-8/environment values, wider compiled correspondence and other gameplay observations remain gated. `0x4F770` is audio and `0xA8520` an obstruction lookup, not ambient roots. |
+| [draw-palette-shifts](draw-palette-shifts.md) | `GAME\PalShift` | Prepared monster palette banks, selector, optional global tables and sparse alternate translation; state/Utrans producers remain unresolved | `0x53A30`, `0x53B20`, `0x53C30`, `0x6C490` | written | Draft: supplied-table selection and remapping static; present-player rejection runtime-confirmed. Asset lifetime, state/variant selector production, authored binding and remaining gameplay confirmation gated. No global screen-palette claim. |
 | draw-unit-color-transform-and-glow | `ENGINE\GfxUtil` | Items InvTrans; MonStats2 | `0x6DEE0`, `0x6DFE0`, `0x52200` | candidate | |
 | draw-unit-sprite-composition | `ENGINE\Gfx` | COF layers; MonStats2 components | `0x6C490`, `0x6CC00`, `0x6BF30` | candidate | Large. |
 | draw-overlays | `ENGINE\Gfx` | Overlay; States overlay columns | `0x6B300`, `0x2A590`, `0x40450` | candidate | |
@@ -468,7 +468,7 @@ All D2Client.
 | draw-particles-and-weather | `ENGINE\Particle` | Levels weather | `0x80700`, `0x804C0`, `0xC7FB0` | candidate | |
 | draw-view-perspective-and-screen-shake | `GAME\View` | none | `0x8A090`, `0x8AFD0`, `0xC4830` | candidate | |
 | draw-unit-selection-and-hover | `GAME\Select` | MonStats2 selectable, bounds | `0x51650`, `0x16E50`, `0x6A550` | candidate | |
-| draw-screen-fades | `ENGINE\Gfx`, `UI\dialog` | none | `0x10EC0`, `0x524D0` | candidate | Small; may fold into the view row. |
+| [draw-screen-fades](draw-screen-fades.md) | `ENGINE\Gfx` | Elapsed-time deadline, view geometry and graphics request | `0x10E90`, `0x10EA0`, `0x10EC0` | written | Draft: start/cancel/expiration and supplied rectangle request static; gameplay eligibility, backend pixels and runtime observations gated. `0x524D0` belongs to ambient tint, not this timed overlay. |
 
 ## sound
 

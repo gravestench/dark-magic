@@ -1,0 +1,13 @@
+# Gaps: draw-palette-shifts
+
+Spec: [Monster palette shifts](../../specs/draw-palette-shifts.md)
+
+## Open evidence gaps
+
+| Gap | Kind | Affects | Blocked assertions / boundary | Missing evidence | Attempted (date, sources, result) | Would close it |
+|---|---|---|---|---|---|---|
+| Asset lifetime | integration | PLS-Q01, PLS-R06 | Actual asset availability, failure/cleanup; supplied-table PLS-R01..PLS-R05 remain available | Complete file-helper, publication, cleanup and failure paths | 2026-10-29: D2Client initialization/loader/cache paths and original asset-name strings read; loader's local file helpers remain unresolved | Complete original entry-to-publication and shutdown reads with permitted observed load |
+| Selector precedence | behavior | PLS-Q02, PLS-R07 | State/unique/monster appearance production; supplied-selector stage remains available | Full creation/update path, state-table consumer, every local helper | 2026-10-29: D2Client creation selector/random helper and rendering getter read; producer overrides located but incomplete | Trace state/variant producers through final selector writes, effective named-cell records where needed |
+| Transformation-kind binding | integration | PLS-Q03, PLS-R04, PLS-R05 | Archive-to-prepared-record meaning only; explicit kind input remains available | Descriptor/compiler correspondence and compiled record confirmation | 2026-10-29: original consumer checks byte equal to 2; column identity not established | Read descriptor and compiler, then corroborate one effective named cell/compiled byte |
+| Selector domain outside local banks | behavior | PLS-Q04, PLS-R03, PLS-R04 | No-global selectors outside 0..7; valid supplied bank domain remains available | Valid producer domain and buffer-availability proof | 2026-10-29: consumer has no no-global clamp; creation contains later clamping but later producers remain unread | Complete producers and demonstrate reachable selectors/assets without inventing safe fallback |
+| Gameplay confirmation beyond player rejection | observation | PLS-Q05, PLS-O01, PLS-V01..PLS-V06 | Remaining runtime-confirmation claims only; matched PLS-V07 remains available | Complete matching monster-selection/preparation inputs and outputs | 2026-10-29: owned vanilla gameplay campaign matched PLS-V07 in three complete single-target records. Monster-cache and class-19 preparation observations remained partial; the latter lacked full alternate-bank before-images. | Capture reached monster selections and complete preparation before/after values within measured capture limits; do not infer actual unit from global focus or pair independent record streams |

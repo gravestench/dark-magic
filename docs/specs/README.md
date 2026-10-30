@@ -82,6 +82,9 @@ specs to the project's tracker and are the only place issue numbers appear.
 | Spec | Issues | Parent |
 |------|--------|--------|
 | [draw-light-map-and-light-radius](draw-light-map-and-light-radius.md) | #468 (spec; light-map and radius slice) | #362 |
+| [draw-room-and-ambient-lighting](draw-room-and-ambient-lighting.md) | #468 (spec; draft with evidence gates) | #362 |
+| [draw-palette-shifts](draw-palette-shifts.md) | #468 (spec; draft with evidence gates) | #362 |
+| [draw-screen-fades](draw-screen-fades.md) | #468 (spec; draft with evidence gates) | #362 |
 
 ### Monsters (`monster-`)
 
