@@ -19,7 +19,8 @@ func TestDecodedQuestRewardAndDifficultyRestoreIdentically(t *testing.T) {
 		"d2legacy.items": map[string]any{"owner": "alice", "inventory_width": 4.0,
 			"inventory_height": 4.0, "belt_capacity": 4.0, "items": []any{}},
 		"d2legacy.interactions": map[string]any{"owner": "alice", "targets": []any{
-			map[string]any{"id": "npc:akara", "npc": "akara", "x": 10.0, "y": 12.0, "radius": 3.0},
+			map[string]any{"id": "npc:akara", "npc": "akara", "x": 10.0, "y": 12.0, "radius": 3.0,
+				"act": 1, "level_id": 1, "selectable": true},
 		}},
 	}
 	engine := gameecs.New()

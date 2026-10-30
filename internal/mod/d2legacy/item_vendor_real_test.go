@@ -59,5 +59,10 @@ func TestOwnedAkaraConsumablePurchases(t *testing.T) {
 		config.records[path] = values
 	}
 
-	runLuaCase(t, source, path, "higher_level_purchases_keep_distinct_items_and_restore_supply", config)
+	for _, name := range []string{
+		"higher_level_purchases_keep_distinct_items_and_restore_supply",
+		"den_keeps_quotes_debits_supply_and_reward_across_checkpoint",
+	} {
+		t.Run(name, func(t *testing.T) { runLuaCase(t, source, path, name, config) })
+	}
 }
