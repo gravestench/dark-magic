@@ -182,15 +182,15 @@ D2Client cltst VA `0x6FB8E928` (53), cltdo VA `0x6FB8EA48` (96).
 
 | Candidate spec | Original source | Data tables and columns | 1.13c entry points | Status | Notes |
 |---|---|---|---|---|---|
-| skill-monster-maggots-and-burrowing | D2Game `SKILLS\SkillMonst` | Skills srvst/srvdo, aux params | st 43 `0xB31B0`, st 51 `0xB2FA0`, do 87 `0xB42D0` | candidate | Egg laying, submerge/emerge. |
-| skill-monster-spawning | `SKILLS\SkillMonst` and an unnamed file | Skills, MonStats | do 91 `0xB5E50`; do 135 `0xCDC0`; do 133 `0xC5D0` | candidate | Also cry for help (do 128). |
-| skill-monster-resurrect-and-heal | `SKILLS\SkillMonst` | Skills | do 97 `0xB5BD0`; do 96 `0xB3770`; st 61 `0xC1B0` | candidate | Also blood suck. |
-| skill-monster-melee-specials | `SKILLS\SkillMonst` | Skills | do 83 `0xB4660`; do 92 `0xB5600`; do 109 `0xB6790` | candidate | Also leap, swarm move, eat, whip/stomp (RVA `0xC000`-`0xE000`). |
-| skill-monster-missiles-and-novas | `SKILLS\SkillMonst` | Skills, Missiles | do 88 `0xB56C0`; do 99 `0xB52A0`; do 95 `0xB6A60` | candidate | Also turrets 105/106, do 110, 148/149. |
-| skill-monster-teleport | `SKILLS\SkillMonst` | Skills | do 98 `0xB46B0`; do 129 `0xDBD0` | candidate | |
-| skill-monster-diablo | `SKILLS\SkillMonst` | Skills | do 103 `0xB3F10`; do 100 `0xB3D60`; do 104 `0xB4410`; do 152 `0xB6840` | candidate | |
-| skill-monster-curse-and-aura | `SKILLS\SkillMonst` | Skills | do 112 `0xB5950`; do 111 `0xB39F0` | candidate | |
-| skill-monster-baal | unnamed file | Skills | do 140 `0xCB30`; do 141 `0xCA20`; do 139 `0xD290` | candidate | |
+| [skill-monster-maggots-and-burrowing](skill-monster-maggots-and-burrowing.md) | D2Game `SKILLS\SkillMonst` | Skills srvst/srvdo, aux params | st 43 `0xB31B0`, st 51 `0xB2FA0`, do 87 `0xB42D0` | written | Egg laying, submerge/emerge. Draft; [open evidence gaps](../plans/gaps/skill-monster-maggots-and-burrowing.md). |
+| [skill-monster-spawning](skill-monster-spawning.md) | `SKILLS\SkillMonst` and an unnamed file | Skills, MonStats | do 91 `0xB5E50`; do 135 `0xCDC0`; do 133 `0xC5D0` | written | Also cry for help (do 128). Draft; [open evidence gaps](../plans/gaps/skill-monster-spawning.md). |
+| [skill-monster-resurrect-and-heal](skill-monster-resurrect-and-heal.md) | `SKILLS\SkillMonst` | Skills | do 97 `0xB5BD0`; do 96 `0xB3770`; st 61 `0xC1B0` | written | Also blood suck. Draft; [open evidence gaps](../plans/gaps/skill-monster-resurrect-and-heal.md). |
+| [skill-monster-melee-specials](skill-monster-melee-specials.md) | `SKILLS\SkillMonst` | Skills | do 83 `0xB4660`; do 92 `0xB5600`; do 109 `0xB6790` | written | Also leap, swarm move, eat, whip/stomp (RVA `0xC000`-`0xE000`). Draft; [open evidence gaps](../plans/gaps/skill-monster-melee-specials.md). |
+| [skill-monster-missiles-and-novas](skill-monster-missiles-and-novas.md) | `SKILLS\SkillMonst` | Skills, Missiles | do 88 `0xB56C0`; do 99 `0xB52A0`; do 95 `0xB6A60` | written | Also turrets 105/106, do 110, 148/149. Draft; [open evidence gaps](../plans/gaps/skill-monster-missiles-and-novas.md). |
+| [skill-monster-teleport](skill-monster-teleport.md) | `SKILLS\SkillMonst` | Skills | do 98 `0xB46B0`; do 129 `0xDBD0` | written | Draft; [open evidence gaps](../plans/gaps/skill-monster-teleport.md). |
+| [skill-monster-diablo](skill-monster-diablo.md) | `SKILLS\SkillMonst` | Skills | do 103 `0xB3F10`; do 100 `0xB3D60`; do 104 `0xB4410`; do 152 `0xB6840` | written | Draft; [open evidence gaps](../plans/gaps/skill-monster-diablo.md). |
+| [skill-monster-curse-and-aura](skill-monster-curse-and-aura.md) | `SKILLS\SkillMonst` | Skills | do 112 `0xB5950`; do 111 `0xB39F0` | written | Draft; [open evidence gaps](../plans/gaps/skill-monster-curse-and-aura.md). |
+| [skill-monster-baal](skill-monster-baal.md) | unnamed file | Skills | do 140 `0xCB30`; do 141 `0xCA20`; do 139 `0xD290` | written | Draft; [open evidence gaps](../plans/gaps/skill-monster-baal.md). |
 
 ## monster
 

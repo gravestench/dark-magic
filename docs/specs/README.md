@@ -54,6 +54,15 @@ specs to the project's tracker and are the only place issue numbers appear.
 | [skill-cast-start-and-do-dispatch](skill-cast-start-and-do-dispatch.md) | #486 (spec); #387 (gameplay) | #442 |
 | [skill-leveled-damage-tohit-and-elements](skill-leveled-damage-tohit-and-elements.md) | #487 (spec); #387 (gameplay) | #442 |
 | [skill-calc-expressions](skill-calc-expressions.md) | #485 (spec); #387 (gameplay) | #442 |
+| [skill-monster-maggots-and-burrowing](skill-monster-maggots-and-burrowing.md) | #466 (spec; draft) | #362 |
+| [skill-monster-spawning](skill-monster-spawning.md) | #466 (spec; draft) | #362 |
+| [skill-monster-resurrect-and-heal](skill-monster-resurrect-and-heal.md) | #466 (spec; draft) | #362 |
+| [skill-monster-melee-specials](skill-monster-melee-specials.md) | #466 (spec; draft) | #362 |
+| [skill-monster-missiles-and-novas](skill-monster-missiles-and-novas.md) | #466 (spec; draft) | #362 |
+| [skill-monster-teleport](skill-monster-teleport.md) | #466 (spec; draft) | #362 |
+| [skill-monster-diablo](skill-monster-diablo.md) | #466 (spec; draft) | #362 |
+| [skill-monster-curse-and-aura](skill-monster-curse-and-aura.md) | #466 (spec; draft) | #362 |
+| [skill-monster-baal](skill-monster-baal.md) | #466 (spec; draft) | #362 |
 
 ### Missiles (`missile-`)
 
@@ -129,7 +138,7 @@ reviews new boundaries before drafting. Original 1.13c evidence does not settle 
 | #377 | Running stamina drain does not establish spending Vitality or rescaling current stamina | Attribute-spend handler and ordered current/maximum stamina writes |
 | #376 | Path collision candidates need route-versus-step category coverage | Player, hireling, summon, townsfolk and corpse conditions at both consumers |
 | #374 | Party XP and gold pickup have separate specs; kill/owned-unit/quest credit and broader loot ownership still need their own boundary assessment | Each consumer's eligibility/distance rules; do not infer universal sharing from XP or gold pickup alone |
-| #466 | Inventory monster skill bindings, then review the existing nine proposed behavior families | Include shared player skills used by monsters, AI selection/handoff, server/client handlers, missiles/summons and difficulty |
+| #466 | Nine Monster skills family drafts are indexed above | Successful handler/callee paths, AI/frame handoff, shared player-skill bindings, effect integration and gameplay observations remain explicitly gated in the individual contracts |
 | #467 | Playback, positional sound, ambience and music selection/transition candidates | D2Client selection roots, D2Sound execution, effective table bindings and exact transition/loop/fade behavior |
 | #468 | Light-map/radius, ambient lighting, palette/fade candidates and the existing world-clock consumer | Original rendering consumers and how world/quest state reaches them |
 
