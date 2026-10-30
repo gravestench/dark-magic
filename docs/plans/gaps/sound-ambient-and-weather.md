@@ -1,0 +1,12 @@
+# Gaps: sound-ambient-and-weather
+
+Spec: [Ambient and weather sound](../../specs/sound-ambient-and-weather.md)
+
+## Open evidence gaps
+
+| Gap | Kind | Affects | Blocked assertions / boundary | Missing evidence | Attempted (date, sources, result) | Would close it |
+|---|---|---|---|---|---|---|
+| Producer integration | integration | SAW-Q01, SAW-R01, SAW-R02 | Full eligibility/phase/level binding; supplied stages remain available | Malformed-record behavior and runtime data correspondence; cycle and level field identities now bound | 2026-10-29: audio root, controller and six common accessor targets read; loader descriptors corroborated; complete effective environment text read reused; current-act cycle accessor and Levels.SoundEnv loader/getter chain now bound | Full producer chains and compiled-table identity |
+| Weather meaning | behavior | SAW-Q02, SAW-R04b | Generated intensity, invalid amplitude conversion and named sound binding; supplied accessor and valid caller conversion remain available | Complete intensity state/timing/RNG producer; nonfinite/out-of-range conversion and named cue-64 data binding | 2026-10-29: Rain/Mud accessor chain closed; full controller and finite float-conversion helper read/native-corroborated; retained-cue request and valid conversion now SAW-R05; nested intensity producer remains open | Close intensity producer and exceptional input behavior, establish exact effective sound binding |
+| Playback/event integration | integration | SAW-Q03, SAW-R04b | Actual audible transitions/voice lifetime, position/acoustic/auxiliary effects and dependency-owned draws; full caller request/direct-draw subset remains available | Complete nested playback/stop/cleanup and auxiliary contracts | 2026-10-29: complete controller orchestration and direct due-event success/failure path verified as SAW-R05 with full caller fixtures; matched volume/position/stop wrappers read; downstream effects unresolved | Close nested execution contracts while preserving caller order and supplied-result boundaries |
+| Gameplay confirmation | observation | SAW-Q04, SAW-O01, SAW-O02, SAW-R01, SAW-R02, SAW-R04a, SAW-R05 | Runtime-confirmed labels only | Complete matching selection/timer/full-caller input-output observations | 2026-10-29: static collection locations and tool-neutral requirements established; no matching SAW gameplay capture recorded | Attributable complete original-game records matching vectors |

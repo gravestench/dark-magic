@@ -86,6 +86,17 @@ specs to the project's tracker and are the only place issue numbers appear.
 | [draw-palette-shifts](draw-palette-shifts.md) | #468 (spec; draft with evidence gates) | #362 |
 | [draw-screen-fades](draw-screen-fades.md) | #468 (spec; draft with evidence gates) | #362 |
 
+### Sound (`sound-`)
+
+| Spec | Issues | Parent |
+|------|--------|--------|
+| [sound-table-and-playback-rules](sound-table-and-playback-rules.md) | #467 (spec; draft with evidence gates) | #362 |
+| [sound-3d-position-and-falloff](sound-3d-position-and-falloff.md) | #467 (spec; draft with evidence gates) | #362 |
+| [sound-unit-sound-selection](sound-unit-sound-selection.md) | #467 (spec; draft with evidence gates) | #362 |
+| [sound-ambient-and-weather](sound-ambient-and-weather.md) | #467 (spec; draft with evidence gates) | #362 |
+| [sound-skill-and-missile-sounds](sound-skill-and-missile-sounds.md) | #467 (spec; draft with evidence gates) | #362 |
+| [sound-music-selection-and-transitions](sound-music-selection-and-transitions.md) | #467 (spec; draft with evidence gates) | #362 |
+
 ### Monsters (`monster-`)
 
 | Spec | Issues | Parent |
