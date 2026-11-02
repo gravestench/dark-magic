@@ -17,7 +17,7 @@ Client skill cue selection, missile TravelSound/HitSound/ProgSound requests, and
 
 ## 2. Trigger and ownership
 
-D2Client processes active state definitions and dispatches the selected client active handler. One such handler selects skill sounds using the unit and a supplied skill identifier. The state-dispatch-to-skill-identifier integration is SMS-Q01. This contract specifies the resulting request log, consuming sound playback as a separately gated operation. It does not equate a successful handler return with audible playback or define a server tick cadence.
+D2Client shares a callback table between active-state processing and skill execution. The original data selects the type-specific sound handler through Jab’s ordinary skill callback, and the progressive handler through Cobra Strike’s progressive callbacks. The original States table selects neither handler. Complete producer eligibility and scheduling remain SMS-Q01/SMS-Q02. This contract specifies the resulting request log, consuming sound playback as a separately gated operation. It does not equate a successful handler return with audible playback or define a server tick cadence.
 
 ## 3. Inputs and data
 
@@ -35,13 +35,15 @@ D2Client processes active state definitions and dispatches the selected client a
 | progressive stat value | supplied associated-list stat read at layer 0 | signed 32-bit | clamped to 1..3 when eligible |
 | prgsound, prgoverlay | supplied Skills fields | signed 16-bit identities | bases for progressive sound and overlay requests |
 | overlay request | supplied operation | logs identity, emitter, selector 2 and five zero auxiliary values | opaque result ignored by progressive sound stage |
+| state transition | supplied state edge | on or off | selects the on-sound or off-sound decision in SMS-R04a |
 | prior state membership, onsound, offsound | supplied state membership and States fields | boolean; signed 16-bit cue identities | selects state-transition request |
 | notondead and unit mode | supplied States flag and unit mode | boolean; unsigned mode identity | skips on-sound stage for player mode 17 or monster mode 12 when flagged |
 | TravelSound and created missile | supplied missile creation result and Missiles field | optional missile; signed 16-bit cue | post-creation travel request |
 | HitSound | supplied Missiles field | signed 16-bit cue | request after collision/callback admission |
 | ProgSound, previous progress counter, current progress counter | supplied Missiles field and missile/path progress state | signed 16-bit cue; 32-bit counters compared for equality | progression sound decision and counter write |
+| current path context presence | supplied missile/path state | boolean | absent context supplies current counter 0 in SMS-R04c |
 
-Origin and Binding: the original descriptors associate the named sound fields with prepared record values; client code fixes the selector tests, cue sign policies and progressive clamp. Actual linked row values remain unresolved under SMS-Q01/SMS-Q02/SMS-Q03. No shipped row values or complete name-link resolution are asserted. [Loader binding evidence](../research/spec-evidence/sound-skill-and-missile-sounds.md#bindings) identifies descriptor associations. GDA-R11a supplies record identity and the progressive flag schema; complete local sound-name linking remains gated. The animation marker's numeric value does not itself establish a semantic action name or cadence.
+Origin and Binding: the original descriptors associate the named sound fields with prepared record values; client code fixes the selector tests, cue sign policies and progressive clamp. The [dated continuation](../research/spec-evidence/sound-skill-and-missile-sounds.md#original-data-and-producer-continuation--2026-10-30) records narrow effective-file cells and separate compiled correspondence for candidate skill, state and missile fixtures. These data reads do not confirm gameplay execution or complete generic name linking. [Loader binding evidence](../research/spec-evidence/sound-skill-and-missile-sounds.md#bindings) identifies descriptor associations. GDA-R11a supplies record identity and the progressive flag schema; complete local sound-name linking remains gated. The animation marker's numeric value does not itself establish a semantic action name or cadence.
 
 ## 4. Rules (execution order)
 
@@ -49,9 +51,9 @@ Origin and Binding: the original descriptors associate the named sound fields wi
 
 **SMS-R02** Type-specific cue [verified in 1.13c code (static)]. With selector 3 and valid record, type 0 selects signed `dosound a`; type 1 selects signed `dosound b`. Other types select nothing. If the selected cue is strictly positive, request sound with that cue, this unit as emitter and three zero extra values. Otherwise make no request. Ignore the supplied request operation's result. Return 1 in all cases in this rule. No draw occurs.
 
-**SMS-R03a** Progressive request selection [verified in 1.13c code (static)]. At the supplied active-handler boundary, an invalid skill id or absent record returns 0 without requests. Otherwise initialize adjustment to 0. Only if progressive is true, aurastate is nonnegative and below state count, `aurastat1` is nonnegative and below stat count, and the associated state list is present, read that list's `aurastat1` at layer 0 and set adjustment to clamp(value, 1, 3) - 1. The read and clamp use signed 32-bit values. Sign-extend prgoverlay and prgsound to 32 bits and add adjustment to each. Request the resulting overlay first, with emitter, selector 2 and five zero auxiliary values; then request the resulting sound with emitter and three zero values. Neither zero nor negative identities suppress these local requests. Ignore both opaque operation results and return 1. No local random draw occurs; dependency-internal effects are outside this stage.
+**SMS-R03a** Progressive request selection [verified in 1.13c code (static)]. At the supplied progressive callback boundary, an invalid skill id or absent record returns 0 without requests. Otherwise initialize adjustment to 0. Only if progressive is true, aurastate is nonnegative and below state count, `aurastat1` is nonnegative and below stat count, and the associated state list is present, read that list's `aurastat1` at layer 0 and set adjustment to clamp(value, 1, 3) - 1. The read and clamp use signed 32-bit values. Sign-extend prgoverlay and prgsound to 32 bits and add adjustment to each. Request the resulting overlay first, with emitter, selector 2 and five zero auxiliary values; then request the resulting sound with emitter and three zero values. Neither zero nor negative identities suppress these local requests. Ignore both opaque operation results and return 1. No local random draw occurs; dependency-internal effects are outside this stage.
 
-**SMS-R03b** Other skill phase integration [unresolved]. Start-sound, ordinary do-sound, progressive scheduling and actual overlay/voice effects remain gated by SMS-Q02. SMS-R03a verifies supplied progressive selection and call order, not how often the active handler executes.
+**SMS-R03b** Other skill phase integration [unresolved]. Start-sound, ordinary do-sound, progressive scheduling and actual overlay/voice effects remain gated by SMS-Q02. SMS-R03a verifies supplied progressive selection and call order, not how often the callback executes.
 
 **SMS-R04a** Supplied state-transition cue stage [verified in 1.13c code (static)]. For an existing unit and valid supplied state record, the on stage first checks notondead: when set, player mode 17 or monster mode 12 skips sound selection. Otherwise a previously absent state requests onsound exactly when its signed 16-bit value is nonnegative; a previously present state makes no on request. The off stage requests offsound exactly when the state was previously present and its signed 16-bit value is nonnegative. Every request uses the unit emitter and three zero auxiliary values. Results are ignored. Zero is forwarded by these stages; audible admission remains separate. Membership mutation, attached-list removal and overlay effects surrounding these decisions are not supplied-stage effects.
 
@@ -82,14 +84,18 @@ Origin and Binding: the original descriptors associate the named sound fields wi
 | Output | Rule |
 |---|---|
 | handler result 0 or 1 | SMS-R01, SMS-R02 |
+| whether skill-record lookup occurs | SMS-R01 |
 | request log entry containing cue, emitter and three zero extra values | SMS-R02 |
 | ordered overlay and sound request log, handler result | SMS-R03a |
+| whether the layer-zero associated-list stat read occurs | SMS-R03a |
 | state-transition sound request log | SMS-R04a |
 | created-missile travel request log | SMS-R04b |
-| progression request log and previous-counter write | SMS-R04c |
+| ordered progression request and previous-counter write events, final previous counter | SMS-R04c |
 | admitted missile-hit request log | SMS-R04e |
 
 The SMS-R01/SMS-R02 type-specific handler writes no gameplay state. SMS-R04c separately writes the retained client progression counter listed above. Actual voice mutations remain SMS-Q04.
+
+For SMS-R04c, acceptance observes the request and counter-write events in their execution order, including writes that leave the numeric counter unchanged. This observation adds no mutation to the supplied sound operation.
 
 ## 6. Branches and edge cases
 
@@ -97,7 +103,7 @@ For SMS-R01/SMS-R02, selector rejection precedes invalid-skill rejection. The se
 
 ## 7. Open questions
 
-**SMS-Q01** [unresolved] Establish complete state-dispatch scheduling, originating-skill stat production and the animation marker's complete frame/sequence progression. Located marker writes establish its animation source, not a gameplay action name or cadence. This gates integration, not supplied-input SMS-R01/SMS-R02.
+**SMS-Q01** [unresolved] Establish complete shared-table skill/state producer eligibility and scheduling, originating-skill stat production and the animation marker's complete frame/sequence progression. Located marker writes establish its animation source, not a gameplay action name or cadence. This gates integration, not supplied-input SMS-R01/SMS-R02.
 
 **SMS-Q02** [unresolved] Trace stsound/dosound/prgsound consumers and progressive adjustment dependencies, including animation/event timing and delayed or success-only paths.
 
@@ -248,12 +254,12 @@ Each vector starts with an empty sound request log. The supplied request operati
   - Seeds: no draw.
   - Draws: none locally in every case.
   - Trace: 77>0 and previous 5 is nonzero and differs from 6; request then store current.
-  - Outputs: requests=[(77,M,0,0,0)]; previous counter 6, written after request.
-  - (a) Inputs: previous counter 0. Outputs: requests=[]; previous counter 6.
-  - (b) Inputs: current counter 5. Outputs: requests=[]; previous counter 5.
-  - (c) Inputs: ProgSound 0. Outputs: requests=[]; previous counter 5, no write.
-  - (d) Inputs: current path context absent. Outputs: requests=[(77,M,0,0,0)]; previous counter 0, written after request.
-  - Discriminates: requesting on the first nonzero counter, requesting on equality, suppressing the transition to missing-context zero, or conditioning writes on request success changes exact outputs.
+  - Outputs: ordered events=[sound(77,M,0,0,0), write previous counter(M,6)]; requests=[(77,M,0,0,0)]; final previous counter 6.
+  - (a) Inputs: previous counter 0. Outputs: ordered events=[write previous counter(M,6)]; requests=[]; final previous counter 6.
+  - (b) Inputs: current counter 5. Outputs: ordered events=[write previous counter(M,5)]; requests=[]; final previous counter 5.
+  - (c) Inputs: ProgSound 0. Outputs: ordered events=[]; requests=[]; previous counter 5, no write.
+  - (d) Inputs: current path context absent. Outputs: ordered events=[sound(77,M,0,0,0), write previous counter(M,0)]; requests=[(77,M,0,0,0)]; final previous counter 0.
+  - Discriminates: requesting on the first nonzero counter, requesting on equality, suppressing the transition to missing-context zero, conditioning writes on request success, or writing before the request changes exact outputs or their ordered event sequence.
   - runtime_observed: no
 
 - **SMS-V16** Admitted hit cue policy (SMS-R04e; boundary: supplied-input stage)
@@ -269,11 +275,13 @@ Each vector starts with an empty sound request log. The supplied request operati
 
 ### 8.2 Observation vectors
 
-**SMS-O01** Exercise the active handler on a unit with measured selector 3 and known skill record, recording the selected cue, request arguments and handler result. [Reproduction requirements](../research/spec-evidence/sound-skill-and-missile-sounds.md#observation).
+**SMS-O01** Exercise Jab's ordinary client callback on a legally prepared Amazon with measured selector 3 and known skill record, recording the selected cue, request arguments and handler result. Full producer eligibility, timing and a matching attributable capture remain SMS-Q01/SMS-Q05. [Reproduction requirements](../research/spec-evidence/sound-skill-and-missile-sounds.md#observation).
+
+**SMS-O02** Partial original-game Fire Bolt producer/request/retirement observation. The [dated capture record](../research/spec-evidence/sound-skill-and-missile-sounds.md#capture-validity-and-remaining-observation) distinguishes measured inputs and voice identity from unobserved hit, cadence and audible-output assertions. It does not match a complete supplied-input vector or close SMS-Q01–SMS-Q05.
 
 ## 9. Acceptance and dependencies
 
-SMS-V01–SMS-V16 establish partial acceptance of supplied-input selection and request/counter stages. Full reproduction additionally requires SMS-Q01–SMS-Q04 and matching original-runtime observations for each verified rule. Depends on GDA-R11a for skill-record identity, GDA-R11a's progressive flag schema and GDA-R13 for state field identity; complete name linking remains gated. Actual playback consumes STP-R03b/STP-R04b, both unresolved. No damage or movement dependency is needed for these supplied stages.
+SMS-V01–SMS-V16 establish partial acceptance of supplied-input selection and request/counter stages. Full reproduction additionally requires SMS-Q01–SMS-Q04 and matching original-runtime observations for each verified rule. Depends on GDA-R11a for skill-record identity, GDA-R11a's progressive flag schema and GDA-R13 for state field identity; complete name linking remains gated. Actual playback consumes STP-R03b/STP-R04b; complete spatial/device integration remains gated by STP-Q01/STP-Q02. No damage or movement dependency is needed for these supplied stages.
 
 ## 10. Related specs
 
@@ -281,4 +289,4 @@ SMS-V01–SMS-V16 establish partial acceptance of supplied-input selection and r
 
 ## Appendix A. Provenance
 
-Original Expansion 1.13c Windows x86, D2Client and D2Common identities in the [source manifest](../research/source-manifest.md). Static reading on 2026-10-29 supports the supplied handler stage. No shipped data cell or runtime observation is claimed. The [companion](../research/spec-evidence/sound-skill-and-missile-sounds.md) records corrected candidate identities and limitations.
+Original Expansion 1.13c Windows x86, D2Client and D2Common identities in the [source manifest](../research/source-manifest.md). Static reading on 2026-10-29 supports the supplied handler stage. The 2026-10-30 continuation identifies effective data cells and separate compiled correspondence, correcting the candidate producer route. It records partial original-game Fire Bolt producer/request/retirement observations; no complete vector match or audible-lifetime verification is claimed. The [companion](../research/spec-evidence/sound-skill-and-missile-sounds.md) records corrected candidate identities and limitations.

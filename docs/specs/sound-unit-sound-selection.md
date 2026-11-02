@@ -24,7 +24,7 @@ D2Client owns the candidate selection operations. Calls from monster presentatio
 | Input | Semantic source | Width and format | Meaning |
 |---|---|---|---|
 | Unit | Client unit state | Logical optional unit | Emitter whose sound is requested |
-| Effective unit kind, class and mode | Unit identity conversion | Integer; exact conversion unresolved | Selects player/monster branches |
+| Effective unit kind, class and mode | Unit identity conversion | Integer; conversion integration remains USN-Q01 | Selects player/monster branches |
 | Creature sound record | Candidate sound-record lookup | Optional logical record | Source of action, movement and secondary cue selections; field meanings gated |
 | Current tick and previous cue tick | Client presentation timing | Unsigned 32-bit values | Timing comparisons; tick duration unresolved |
 | Presentation seed | Client-local random state | Two unsigned 32-bit words | Candidate variation and chance draws; ownership confirmation gated |
@@ -58,7 +58,7 @@ The candidate movement path tests effective kind and mode, compares animation pr
 
 **USN-R04** Shared movement variation and cooldown [unresolved]
 
-The candidate variation path has a shared elapsed-tick gate and consumes a presentation random draw before requesting a cue variant. Its dispatch, random-state ownership, timing units and cue argument meanings are gated by USN-Q01 and USN-Q04.
+The candidate Flee path has a shared elapsed-tick gate and consumes a local-player presentation random draw to choose a delay of 6..8 ticks before requesting the unchanged Flee cue. Complete event production, timing units and playback integration remain gated by USN-Q01 and USN-Q04; the complete computation reading is recorded in the companion.
 
 **USN-R05** Named movement-count data cell [verified in 1.13c data]
 
@@ -92,9 +92,9 @@ Missing unit, missing records, alternate creature forms, zero cue, special fixed
 
 - **USN-Q01** [unresolved] Establish the complete client dispatch roots and identity conversion, including player transformations. Read all local and imported callees and corroborate encoded instruction runs against the matching image.
 - **USN-Q02** [unresolved] Bind default and alternate record selection to original data-loader fields and effective archive cells; distinguish unique-monster and other override conditions.
-- **USN-Q03** [unresolved] Establish the full action-event entry, original asset association of fixed cue 2692, clock tick duration and playback admission. None gates the supplied-result selection and timing arithmetic in USN-R02b.
+- **USN-Q03** [unresolved] Establish the full action-event entry, clock tick duration and playback admission. The original asset association of fixed cue 2692 is now independently bound to creature_chicken_1 / `ambient\creature\chicken1.wav` in effective text and the compiled runtime record. None gates the supplied-result selection and timing arithmetic in USN-R02b.
 - **USN-Q04** [unresolved] Complete movement phase arithmetic, primary/secondary cues, random draw order, shared cooldown and variation semantics.
-- **USN-Q05** [unresolved] Confirm established selection and request assertions on an owned original runtime after static gates close. No gameplay observation has been collected.
+- **USN-Q05** [unresolved] Confirm established selection and request assertions on an owned original runtime after static gates close. Bounded movement and request observations were collected on 2026-10-30; their partial assertion coverage does not confirm a whole existing vector.
 
 ## 8. Test vectors
 
@@ -153,4 +153,4 @@ Depends on: unit identity and numeric/RNG contracts only where specific rule ref
 
 ## Appendix A. Provenance
 
-Evidence build: original Expansion 1.13c Windows x86. The [source manifest](../research/source-manifest.md) identifies the original D2Client and D2Common artifacts. The [companion](../research/spec-evidence/sound-unit-sound-selection.md) records 2026-10-29 disassembly readings, byte-matched imported helper readings, a narrow effective text-table cell read, misleading labels and remaining dispatch/callee limits. No gameplay vector is runtime-confirmed.
+Evidence build: original Expansion 1.13c Windows x86. The [source manifest](../research/source-manifest.md) identifies the original D2Client and D2Common artifacts. The [companion](../research/spec-evidence/sound-unit-sound-selection.md) records 2026-10-29 disassembly readings, byte-matched imported helper readings, a narrow effective text-table cell read, misleading labels and remaining dispatch/callee limits. No complete gameplay vector is runtime-confirmed. The companion also records 2026-10-30 producer readings, effective/compiled data correspondence and bounded partial movement observations.

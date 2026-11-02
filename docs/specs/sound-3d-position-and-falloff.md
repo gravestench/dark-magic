@@ -25,12 +25,16 @@ D2Client's enabled audio update invokes active-source coordination after ambienc
 |---|---|---|---|
 | listener and emitter presentation position | Local player and source unit, or supplied accessor results | Two i32 projected-position components each | Inputs to ordinary listener-relative placement; these are not raw world subtile coordinates |
 | sound identity | Selected sound record | i32 | Identity 2599 takes a separate gated transform |
-| source position | Supplied relative source location | Three finite IEEE binary 32-bit floats | Raw position retained by the cache |
+| source position | Supplied relative source location | Three finite IEEE binary 32-bit floats; S3D-R04 additionally requires integer-valued x/y | Raw position retained by the cache; fractional x/y cache arithmetic remains S3D-Q02 |
+| position cache and prior retained state | Supplied valid cache with retained position and distanceKey | Three retained binary 32-bit position components and one binary 32-bit key | S3D-R04 requires a valid cache; each vector supplies the prior position/key that the operation overwrites |
+| sound-record validity | Supplied resolved sound record | Boolean precondition, true for S3D-R02 | Radius lookup requires a valid record; invalid-record access has no specified safe fallback |
 | distance selector | Loaded Sounds.Falloff, or supplied value | u32 | Selects inner/outer distance bounds |
+| outer and inner distance bounds | Supplied radius results from S3D-R02 | Two finite binary 32-bit floats | Inputs to S3D-R05; division requires unequal bounds when it executes and a representable signed conversion result |
 | base amplitude | Supplied result after option/duck scaling | i32 | Input to local distance calculation |
 | record volume | Loaded sound record or supplied Volume | u8 | Multiplies the distance-stage amplitude |
 | backend amplitude scalar | Device amplitude scalar, supplied | i32, 0..255 for verified backend stage | Multiplies a requested source amplitude |
 | requested amplitude | Supplied client amplitude | i32, 0..255 for verified backend stage | Stored and converted to backend volume |
+| prior retained requested amplitude | Supplied valid source state | i32 | Starting amplitude state overwritten by S3D-R06; V07/V08 supply its exact prior value |
 | distance factor | Supplied source factor | Finite binary 32-bit float, 0..1 | Amplitude multiplier is 1 minus this value when not handled by backend |
 | backend handles factor | Supplied device/source condition | Boolean | Selects whether local factor multiplication is bypassed |
 | source validity | Supplied live source with valid underlying buffer | Boolean precondition | Backend scalar stage requires a valid source |
@@ -71,7 +75,7 @@ For sound identity other than 2599, with supplied projected integer positions, c
 
 **S3D-R04** Position cache and bounded distance key [runtime-confirmed (1.13c)]
 
-For finite supplied source position x/y/z with integer-valued x/y and a valid cache, first copy all three raw binary 32-bit components unchanged into retained position. Separately clamp x and y individually to [-2000,2000], square the clamped values and add the squares as distanceKey. These products and the sum are exact integers representable in binary 32-bit storage. Do not include z. Do not replace the retained raw position with the clamped values. No random draw occurs. Matching observations cover the ordinary and positive-y clamp cases named under S3D-V03 and S3D-V04; they do not establish every integer input branch. Fractional x/y precision behavior remains S3D-Q02.
+For finite supplied source position x/y/z with integer-valued x/y and a valid cache, first copy all three raw binary 32-bit components unchanged into retained position. Separately clamp x and y individually to [-2000,2000], square the clamped values and add the squares as distanceKey. These products and the sum are exact integers representable in binary 32-bit storage. Do not include z. Do not replace the retained raw position with the clamped values. No random draw occurs. Matching observations cover the repeated-value and different-prior-state ordinary and positive-y clamp cases named under S3D-V03 and S3D-V04; they do not establish every integer input branch. Fractional x/y precision behavior remains S3D-Q02.
 
 **S3D-R05** Supplied distance-amplitude stage [verified in 1.13c code (static)]
 
@@ -164,6 +168,8 @@ Cases are independent supplied-input stages, with no other persistent operations
   - runtime_observed: yes (1.13c, 2026-10-29, [C02](../research/spec-evidence/sound-3d-position-and-falloff.md#c02-source-property-captures)).
   - (a) Inputs: source position (320,80,640), retained position (0,0,0), distanceKey 0. Draws: none. Outputs: retained position (320,80,640), distanceKey 108800. runtime_observed: no.
 
+  - (b) Inputs: source position (219,-86,640), retained position (224,-80,640), distanceKey 56576. Draws: none. Trace: 219²+(-86)²=55357; replace the prior raw coordinates and key. Outputs: retained position (219,-86,640), distanceKey 55357. Discriminates: retaining old state leaves (224,-80,640)/56576; including height gives 464957. runtime_observed: yes (1.13c, 2026-10-30, [C03](../research/spec-evidence/sound-3d-position-and-falloff.md#c03-moving-source-cache-writes)).
+
 - **S3D-V04** Cache clamps key but not position (S3D-R04; boundary: supplied-input stage)
   - Inputs: source position (681,2726,640); retained position (681,2726,640), distanceKey 4463761.
   - Seeds: no draw.
@@ -173,6 +179,8 @@ Cases are independent supplied-input stages, with no other persistent operations
   - Discriminates: using unclamped y changes the key; storing clamped y incorrectly retains 2000.
   - runtime_observed: yes (1.13c, 2026-10-29, [C02](../research/spec-evidence/sound-3d-position-and-falloff.md#c02-source-property-captures)).
   - (a) Inputs: source position (-3000,4000,9), retained position (0,0,0), distanceKey 0. Draws: none. Outputs: retained position (-3000,4000,9), distanceKey 8000000. runtime_observed: no.
+
+  - (b) Inputs: source position (679,2716,640), retained position (681,2726,640), distanceKey 4463761. Draws: none. Trace: y clamps to 2000 only for the key; 679²+2000²=4461041. Outputs: retained position (679,2716,640), distanceKey 4461041. Discriminates: unchanged state retains 4463761; storing clamped y retains 2000. runtime_observed: yes (1.13c, 2026-10-30, [C03](../research/spec-evidence/sound-3d-position-and-falloff.md#c03-moving-source-cache-writes)).
 
 - **S3D-V05** Supplied amplitude falls between radii (S3D-R05; boundary: supplied-input stage)
   - Inputs: relative position (500,0,640); outer 1000, inner 200, baseAmplitude 200, recordVolume 128.
@@ -219,7 +227,7 @@ Cases are independent supplied-input stages, with no other persistent operations
 
 ## 9. Acceptance and dependencies
 
-Partial acceptance covers S3D-R01/T01 and S3D-R02 through S3D-R06 with S3D-V01 through S3D-V08, only at their stated supplied-input boundaries. S3D-R04 has matching named cases; other verified stages retain observation gaps. Full reproduction additionally requires S3D-R07 and its integration gates. Neither scalar requests nor unchanged cache captures establish audible output or complete moving-emitter parity.
+Partial acceptance covers S3D-R01/T01 and S3D-R02 through S3D-R06 with S3D-V01 through S3D-V08, only at their stated supplied-input boundaries. S3D-R04 has matching named cases; other verified stages retain observation gaps. Full reproduction additionally requires S3D-R07 and its integration gates. Neither scalar requests nor cache captures establish audible output or complete moving-emitter parity.
 
 **Depends on:** The arithmetic notation in section 1 of [numeric foundations](core-numeric-and-rng-foundations.md); the local conversion rules here are supported by the client/audio helpers mapped in the companion. All inputs crossing unresolved producer boundaries are supplied explicitly.
 
@@ -227,7 +235,7 @@ Partial acceptance covers S3D-R01/T01 and S3D-R02 through S3D-R06 with S3D-V01 t
 
 ## 10. Related specs
 
-[Sound table and playback rules](sound-table-and-playback-rules.md) owns voice admission and lifecycle. Its unresolved STP-R04b device boundary is not established by the positional scalar calculations.
+[Sound table and playback rules](sound-table-and-playback-rules.md) owns voice admission and lifecycle. Its STP-Q02 external-device integration boundary remains unresolved and is not established by the positional scalar calculations.
 
 ## Appendix A. Provenance
 
