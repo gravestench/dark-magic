@@ -4,6 +4,42 @@ return test.suite({
     profile = "module",
     tier = "fast",
     cases = {
+        test.case("DMI_V01_physical_reduction_before_resistance", {
+            test.run(function()
+                local mitigation = require("d2legacy.policy.mitigation")
+                -- Supplied raw units: this checks ordering, not attacker predicates or callbacks.
+                local defense = {
+                    values = { physical_resist = 25, physical_reduction_raw = 1280 },
+                    get = function(self, name)
+                        return self.values[name]
+                    end,
+                }
+                test.expect(mitigation.apply(5120, "physical", defense)):equals(2880)
+            end),
+        }),
+        test.case("physical_reduction_boundary_compatibility", {
+            test.run(function()
+                local mitigation = require("d2legacy.policy.mitigation")
+                local cases = {
+                    { reduction = 0, resistance = 25, expected = 750 },
+                    { reduction = 20, resistance = 0, expected = 980 },
+                    { reduction = 1000, resistance = 25, expected = 0 },
+                    { reduction = 1280, resistance = 25, expected = 0 },
+                }
+                for _, case in ipairs(cases) do
+                    local defense = {
+                        values = {
+                            physical_resist = case.resistance,
+                            physical_reduction_raw = case.reduction,
+                        },
+                        get = function(self, name)
+                            return self.values[name]
+                        end,
+                    }
+                    test.expect(mitigation.apply(1000, "physical", defense)):equals(case.expected)
+                end
+            end),
+        }),
         test.case("clamps_resistance_and_preserves_integer_order", {
             test.run(function()
                 local mitigation = require("d2legacy.policy.mitigation")
@@ -23,8 +59,8 @@ return test.suite({
                     end,
                 }
                 test.assert(
-                    mitigation.apply(1000, "physical", defense) == 730,
-                    [=[mitigation.apply(1000, "physical", defense) == 730]=]
+                    mitigation.apply(1000, "physical", defense) == 735,
+                    [=[mitigation.apply(1000, "physical", defense) == 735]=]
                 )
                 test.assert(
                     mitigation.apply(1000, "fire", defense) == 50,

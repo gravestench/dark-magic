@@ -9,10 +9,67 @@ local enter = fixtures.player_entry({
     max_health = 10,
 })
 
+-- DMI-V01: (5120 - 1280) * 75% = 2880 raw damage before the
+-- current whole-health compatibility boundary commits 11 health (2816 raw).
+local function assert_physical_order()
+    local ecs = require("engine.ecs/v1")
+    local damage = require("d2legacy.policy.damage")
+    local player = ecs.query({ all = { "d2legacy.player.identity" } })[1]
+    local vitals = ecs.get(player, "d2legacy.player.vitals")
+    local defense = ecs.get(player, "d2legacy.combat.defense")
+    test.assert(vitals:get("health") == 50, "pre-damage health is 50 on both timelines")
+    test.assert(vitals:get("max_health") == 50, "maximum health is 50 on both timelines")
+    test.assert(defense:get("physical_resist") == 25, "stored physical resistance is 25")
+    test.assert(defense:get("physical_reduction_raw") == 1280, "stored flat physical reduction is 1280")
+    local result = damage.resolve(player, { physical = 5120 }, ecs)
+    test.assert(result.rolled.physical == 5120, "DMI-V01 rolled physical damage is 5120 raw")
+    test.assert(result.mitigated.physical == 2880, "DMI-V01 reduces flat damage before resistance")
+    test.assert(result.damage_raw == 2816, "whole-health storage commits 2816 raw damage")
+    test.assert(result.remaining_health_raw == 9984, "whole-health storage leaves 9984 raw health")
+    test.assert(vitals:get("health") == 39, "production resolver commits 39 whole health")
+end
+
 return test.suite({
     profile = "authority",
     tier = "fast",
     cases = {
+        test.case("DMI_V01_production_physical_order", {
+            test.submit_system({
+                tick = 1,
+                sequence = 1,
+                kind = "system.player.enter",
+                payload = fixtures.player_entry({ health = 50, max_health = 50 }),
+            }),
+            test.step(1),
+            test.run(function()
+                local ecs = require("engine.ecs/v1")
+                local player = ecs.query({ all = { "d2legacy.player.identity" } })[1]
+                ecs.create({
+                    ["d2legacy.stat.source"] = {
+                        target = player,
+                        source_id = "armor:physical",
+                        stat = "physical_resist",
+                        value = 25,
+                    },
+                })
+                ecs.create({
+                    ["d2legacy.stat.source"] = {
+                        target = player,
+                        source_id = "armor:flat",
+                        stat = "physical_reduction_raw",
+                        value = 1280,
+                    },
+                })
+            end),
+            -- Checkpoint the derived defense inputs before either damage call.
+            test.step(1),
+            test.run(assert_physical_order),
+            test.restore_checkpoint(),
+            test.run(assert_physical_order),
+            -- Checkpoint the post-damage state before comparing continuation.
+            test.step(1),
+            test.expect_checkpoint_parity(1),
+        }),
         test.case("derived_mitigation_and_lethal_damage_vectors", {
             test.submit_system({
                 tick = 1,
@@ -90,8 +147,8 @@ return test.suite({
                     [=[mitigation.apply(1000, "lightning", defense) == 500]=]
                 )
                 test.assert(
-                    mitigation.apply(1000, "physical", defense) == 730,
-                    [=[mitigation.apply(1000, "physical", defense) == 730]=]
+                    mitigation.apply(1000, "physical", defense) == 735,
+                    [=[mitigation.apply(1000, "physical", defense) == 735]=]
                 )
                 local mixed_target = ecs.create({
                     ["d2legacy.monster.stats"] = {
@@ -115,10 +172,10 @@ return test.suite({
                     mixed.channel == "mixed"
                         and mixed.rolled.physical == 1000
                         and mixed.rolled.fire == 1000
-                        and mixed.mitigated.physical == 730
+                        and mixed.mitigated.physical == 735
                         and mixed.mitigated.fire == 500
-                        and mixed.damage_raw == 1230
-                        and mixed.remaining_health_raw == 3770,
+                        and mixed.damage_raw == 1235
+                        and mixed.remaining_health_raw == 3765,
                     [=[typed channels remain independent through mitigation and join only at health commit]=]
                 )
                 local poison_target = ecs.create({

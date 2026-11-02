@@ -19,7 +19,7 @@ function M.apply(raw, channel, defense, monster_target)
     end
     if channel == "physical" then
         local resistance = math.max(-100, math.min(100, defense:get("physical_resist")))
-        return math.max(0, percent(raw, resistance) - defense:get("physical_reduction_raw"))
+        return math.max(0, percent(raw - defense:get("physical_reduction_raw"), resistance))
     end
     if monster_target and channel == "magic" then
         local resistance = math.max(-100, math.min(100, defense:get("magic_resist")))
