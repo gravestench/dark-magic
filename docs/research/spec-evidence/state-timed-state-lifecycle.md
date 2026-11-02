@@ -549,7 +549,7 @@ V18 and V19 cases against the spec and named dependencies before consulting this
 The result was MISMATCH 0 and no remaining GUESS, GAP or DISCRIM finding for those supplied
 verified assertions after the two fixture/boundary clarifications. Independent evidence and
 publication reviewers checked the four source relationships, evidence labels, ownership,
-local links and document scope. The prior full-corpus runs remain applicable to unchanged
+local links and document scope. The prior full-contract runs remain applicable to unchanged
 vector families; this delta pass covers the newly changed assertions. This combined review
 completes the applicable blind-implementer check for the current contract.
 
@@ -558,3 +558,209 @@ publication pass. Queue ordering, actual list free/attach/stat effects, mask pro
 state synchronization, client callbacks, transitions, auxiliary effects and runtime
 confirmation remain gated exactly as in the spec and [gap record](../../plans/gaps/state-timed-state-lifecycle.md).
 No 1.14d parity is claimed.
+
+## Direct-stat and ordinary-list closure — 2026-10-31
+
+The original D2Common image was freshly hashed at 679936 bytes/SHA-256
+`59fa5928522f566f2bf99675571206ad70df889c89d3d07fa87edf5083e06e10`, matching
+LOD113C-D2COMMON. Fog was independently hashed at 212992 bytes/SHA-256
+`96c05770ab06b71a7a2d6abe5dc7c2f943b30ac8fe367e44bdbad7e2643bb863`, matching
+LOD113C-FOG. No archive identity follows from these binary matches. Original-image instruction
+listings supplied checks for encoded spans.
+
+Compatible investigations dated 2026-10-30 for healing storage and ordinary teleport
+lists were checked for these same artifact/helper identities. Those investigations are
+separately retained reuse context; the generic proof is recorded through the original
+function identities, methods and rationale below. Their life and source-unit-stat data
+controls are not asserted here or generalized to other definitions. The shared rules take
+definition controls explicitly and assert no new archive cell. The complete
+original-image overlap-safe movement record from 2026-10-30 is reused at its actual date;
+its forward and backward overlap branches, count/alignment cases and dispatch tables were
+read. New readings used byte-equivalent higher-level reconstruction where available,
+otherwise original instructions. Private reading paths, instruction captures and integrity
+records are retained separately.
+
+### Function and import closure
+
+All descriptions here are analyst labels. The dispatch roots remain the type-12 and timed
+skill chains above. Their free/unlink and list-writer calls reach these same generic functions;
+the teleport producer's Common 0x33020 -> 0x32CA0 is an additional compatible creation/attach
+consumer, not a second authority for the generic rules.
+
+| Artifact | RVA / export | Supported assertions | Method and limit |
+|---|---|---|---|
+| LOD113C-D2COMMON | 0x3A280 / #10261 | STL-R06e own replacement and changed result | Complete original instruction body; calls exact search, insertion/removal, propagation and conditional collection |
+| LOD113C-D2COMMON | 0x382B0 | Exact own/resolved search | Byte-equivalent higher-level reconstruction read first; signed key comparison, absent returns -1 |
+| LOD113C-D2COMMON | 0x38270; 0x38640 | Unique insertion and neighboring-entry shift | Complete instruction reading; prepared capacity avoids reallocating import; inserts zero-valued entry before caller's value write |
+| LOD113C-D2COMMON | 0x381A0 | Removal and retained neighbors | Full 128-byte original-image instruction listing checked; shifts trailing entries, decrements count, only requests shrink when unused capacity exceeds 8 |
+| LOD113C-D2COMMON | 0x2320 | Overlap-safe trailing-entry movement | Compatible 2026-10-30 complete original-image reading reused; no owned calls; applies to both own/resolved and collected-key shifts |
+| LOD113C-D2COMMON | 0x39F70 -> 0x389E0 | STL-R06d direct resolved mutation and ancestor stopping | Complete local original-image listings checked; both definition controls zero select direct addition; callback and marker controls false exclude indirect output calls |
+| LOD113C-D2COMMON | 0x38550 -> 0x38160 | STL-R06e changed-key eligibility, sorted unique insertion | Full original-image branch/table reading, including all encoded search bytes; prepared capacity excludes reallocation |
+| LOD113C-D2COMMON | 0x3A3B0 | STL-R05a ordinary unlink through callback invocation | Full 528-byte original-image listing checked; ordinary-list branches exclude extended rebuild; selected subtraction calls the verified direct propagation path |
+| LOD113C-D2COMMON | 0x3A7D0 / #10807 | STL-R06f ordinary attach | Full 544-byte original-image listing checked; unlink precedes ancestry refusal; ordinary-list branches exclude extended rebuild |
+| LOD113C-D2COMMON | 0x3A9F0 | Residual STL-R05 release boundary | Byte-equivalent reconstruction read first; unlink precedes buffer/list deallocations; imported release and extended recursive cleanup are not promoted |
+| LOD113C-FOG | 0x26798 / #10259, exported gdwBitMasks | Definition-bit interpretation | Common imported data slot RVA 0x890B0 resolves to this array; original image entries at indices 2/3/4 are 4/8/16; these are engine constants, not table cells |
+
+The prepared-storage condition is deliberately exact: count/capacity are valid nonnegative
+signed 16-bit values; insertion has a free slot; after any removal capacity minus count is
+at most 8. Therefore these paths make no allocator call. They include real absent-entry
+insertion, deletion, neighbor shifts, zero retention and unique collection, rather than
+supplying a successful writer result. Counts/capacities describe the original evidence
+scenario; they impose no object layout or allocation API on an implementation. Reallocation
+and failures remain a distinct unverified path, not an assumed successful dependency.
+The residual resize import is Common thunk 0x9252/IAT 0x890AC -> Fog #10047/RVA
+0x1CDA0 -> 0x1BDD0. The matched higher-level front end was read; it selects the pool
+condition and logs/shuts down on a null result, so successful storage cannot simply be
+assumed for all calls. Common release thunk 0x9228/IAT 0x890CC resolves to Fog
+#10046/RVA 0x1CCC0 -> 0x1B0C0; its forwarding instructions were read, while the full
+heap/output boundary remains open. Fog RVA 0x20D7 is the linked runtime-library realloc
+member rather than an available higher-level source record; its original instructions
+were read as a lead into the residual heap branches. No successful allocator or release
+behavior is added to the contract by these import resolutions.
+
+### Semantic controls and writes
+
+The original record/control mapping is retained here rather than in the behavioral contract:
+
+| Semantic term | Original input / write |
+|---|---|
+| Own entries / resolved entries / collected keys | List +0x24 / +0x48 / +0x50; original key stores stat in high 16 bits and layer in low 16 bits |
+| Parent / next / previous / associated unit | List +0x34 / +0x2C / +0x30 / +0x04 |
+| Base primary / secondary heads | Extended list +0x3C / +0x40 |
+| Direct-stat controls | ItemStatCost compiled bytes +0x51 and +0x52 both zero |
+| retainResolvedZero | Definition byte +0x50 nonzero retains resolved zero |
+| filteredStat | Definition byte +0x04 intersected with gdwBitMasks[2] |
+| notifyResolvedChange | Definition byte +0x05 intersected with gdwBitMasks[3]; registered callback at receiving list +0x5C is an additional guard |
+| dependentMarker | Definition byte +0x53; positive direct result can set list flag 0x20000000; the new direct slice supplies zero |
+| collectChangedKey | Definition byte +0x05 intersected with gdwBitMasks[4] |
+| State storage / secondary / filtered application / mode bound | List flags 0x80000000 / 0x2000 / 0x40000000 / 4 |
+| Mode-bound traversal enabled on base | Base flag 2 set by attachment; consumed as expiryFlag in RLI-R04b |
+
+The writer computes delta before mutating the entry but calls propagation only after the
+own-entry store/removal. With unchanged own input it returns before any collection; it does
+not compare the request to the resolved total. Direct propagation starts at the list itself
+for an extended source, otherwise at its parent. It adds before checking the receiving
+ancestor's secondary/filter barrier. A secondary source suppresses propagation before the
+first receiver. This distinguishes three superficially similar filtering tests.
+
+Changed-key dispatch at Common 0x38630 contains nine selectors for stat identities 6..14.
+Selectors for 6,8,10,13,14 choose immediate return 0x38625; 7,9,11,12 continue to definition
+eligibility. The collector is unique by the whole stat/layer key. STL-V20 exercises insertion
+between neighbors and an existing key separately; it also checks the hard-coded stat-6
+exclusion and owner-type guard. The list writer's collection requires an extended list with
+owner type 0, not a guessed current target-type predicate. The separate unit-facing writer
+0x3A740 can request additional collection and is not part of STL-R06e's return contract.
+
+Unlink saves the old associated unit and parent, clears its links and association, subtracts
+selected contributions from the saved parent, and then invokes a present removal callback
+with the saved unit, state and list. The list's own array is still readable. Secondary lists
+stop before subtraction/callback. A parentless primary list can still callback if its saved
+association is present. The callback body is not inferred from its invocation; STL-R11 owns
+the generic callback's stated request behavior, and its refresh integration remains gated.
+
+Attach validates the target's base before unlink. With a valid base it unlinks before
+checking identity against the base ancestry. Thus an attempted cycle can have real detach
+and callback effects before attachment is refused. Ordinary attachment links first and then
+applies entries. Secondary attachment skips contributions. Full versus filtered selection
+and saved filteredApply on unlink use the same definition-bit exclusion. No local state-bit
+or expiry-event write occurs in these operations. STL-V21/22 distinguish those stored totals,
+chain changes and callback snapshots; no lifecycle outcome is replaced with a supplied
+successful writer result. Callback bodies in these fixtures record and return without
+mutating graph or metadata, making the subsequent attachment inputs explicit.
+
+### Residual integration boundaries
+
+No full STL-Q07 gap is closed. STL-R05 still needs actual allocation release and extended
+recursive cleanup; STL-R06b/R06c still need other definitions, dependent formula/expansion,
+notification effects, extended-list rebuilding and resize/failure effects. Common 0x39CE0
+was read as the alternate dependent propagation entry; it reaches calculation 0x39530,
+resolved replacement 0x38940 and recursive definition processing. The computing formula's
+full applicable callee closure is not established here. These paths retain their gates.
+
+The direct prepared-storage slice is available to healing's MRH-Q01, link-state MTP-Q03 and
+curse MCA-Q04 only when their consumer establishes the exact definition/list/storage inputs.
+It does not close any complete consumer gap. Their existing named original-profile controls
+may be reused within their own recorded limits; actual allocated/resized storage and other
+callbacks require the residual shared proof. No consumer file is changed by this record.
+
+OWD-R06b/OWD-Q13 still own alternate curse lookup/application policy. OWD-R07b still owns
+replacement selection and its detach/free request order. New ordinary unlink evidence
+supports only a compatible invoked shared operation; it does not verify those callers or
+their full release/attachment/event outcomes (OWD-Q09/OWD-Q12). RLI-Q02 still owns the actual
+room/update queue and disguise bookkeeping; neither contribution arithmetic nor a callback
+snapshot establishes those writes. RLI-Q03 can consume the new direct slice but remains open
+for real free/extended/resize/indirect integration. No update-queue or curse policy authority
+is duplicated here.
+
+### Observation and verification limits
+
+No matching gameplay observation is recorded for the new lifecycle assertions. STL-Q08
+and every document-level draft gate remain. STL-V20..22 are static executable fixtures,
+not gameplay observations.
+
+## Blind review 1 — 2026-10-31 (full)
+
+A fresh smaller reader recomputed all executable vectors from the behavioral contracts,
+without game code, analysis service or gameplay tools. Counts: MISMATCH 1, GUESS 0, GAP 0,
+DISCRIM 0, GATED 8 categories, COVERAGE 5 advisory groups, HARDEST 3.
+
+- MISMATCH: the initial STL-V22(d) passed secondary B as the attach propagation source
+  while expecting a secondary receiver to update. Source guard and receiving barrier are
+  distinct. Original Common 0x39F70 confirms the mismatch. The case now explicitly
+  propagates from ordinary L into secondary B; a separate STL-V22(j) asserts attach-source
+  suppression. A new full reader is required and was dispatched.
+- COVERAGE: secondary receiving barrier is now STL-V22(d). The other changed-key exclusions
+  share the checked exclusion table with tested stat 6; no change, branch-wide coverage is
+  not claimed. Invalid/missing definitions and identities outside the direct definition
+  input domain remain outside the stored-mutation fixtures; no guessed result is added.
+  Null attach inputs are outside STL-R06f's explicit non-null precondition; self/base cycles
+  share the checked identity refusal and are not additional promised vector branches.
+  Countdown wrap and further signed expiry boundaries are unchanged older-rule advisory
+  coverage, not needed to distinguish the new direct-mutation assertions.
+- HARDEST: source/receiver distinction is resolved by the two separate cases. Wrapped
+  delta/result in STL-V20(f) is intentional: INT_MIN-INT_MAX wraps to 1, so resolved 100
+  becomes 101 and resolved INT_MAX becomes INT_MIN; no change. STL-V22(h) intentionally
+  preserves unlink and callback effects before cycle refusal, directly supported by the
+  checked attach/unlink sequence; no change.
+- The reader initially labeled four alternatives rejected by existing vectors as DISCRIM
+  findings, then corrected the classification to DISCRIM 0. No behavioral edit follows
+  from successful discrimination checks. The documented gates remain open.
+
+## Blind review 2 — 2026-10-31 (fresh full, final applicable)
+
+A second fresh smaller reader read the resulting contract and cited dependency specs only,
+independently recomputing STL-V01 through STL-V22 and treating gated candidate assertions
+as gated. Counts: MISMATCH 0, GUESS 0, GAP 0, DISCRIM 0, GATED 7 vector groups,
+COVERAGE 8 advisory groups, HARDEST 3. No behavioral edit followed this pass.
+
+Every advisory receives no change: malformed/wrapped event domain and object failure remain
+STL-Q10; countdown wrap and retained due state-storage behavior retain the exact STL-R04
+contract and its existing limits; full free/release remains STL-R05/STL-Q07; disguise/mask
+production remains STL-R07a/STL-R12b; stat-slot/paired/refresh integration remains
+STL-R10b/STL-Q07; sender/client integration remains STL-Q01/STL-Q02; transitions remain
+STL-Q03. These are recorded gates or wider branch coverage, not missing decisions in the
+new prepared direct-stat assertions. No exhaustive observation or branch coverage is claimed.
+
+HARDEST STL-V22, STL-V21 and STL-V20 receive no change: the source/receiver/filter conditions,
+callback snapshots and wrapped/unique-key results are explicit, and all outputs were
+recomputed successfully. The final applicable reader stopping rule is met; draft status
+and all full integration/observation gates remain.
+
+## Reconciled publication blind review — 2026-11-02 (fresh full)
+
+A fresh smaller blind implementer recomputed STL-V01 through STL-V22 against the
+combined contract and cited dependency specs, without implementation or original-game
+tools. The accepted publication refinements are retained: literal state-on values,
+duration-evaluation-before-lookup, secondary-list retention, saved-successor traversal
+and the explicit exclusion of a type-1 unit without loaded monster data.
+
+Counts: MISMATCH 0, GUESS 0, GAP 0, DISCRIM 0. The reader reported no additional
+actionable coverage advisory; this does not claim exhaustive branch coverage. The
+documented direct-definition/prepared-storage, release/extended/dependent and other
+integration/observation gates remain. No gameplay observation or new source reading
+is established by the reader pass.
+
+HARDEST STL-V20, STL-V21 and STL-V22 receive no change: wrapped own/resolved arithmetic,
+unlink/subtraction/callback/reattachment order, filtering and secondary source/receiver
+distinctions are explicit and recomputed successfully. The applicable blind-reader
+stopping rule is met for this resulting contract; its draft status is unchanged.
