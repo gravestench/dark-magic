@@ -23,6 +23,7 @@ D2Client invokes the examined ambient controller from the enabled audio update b
 
 | Input | Semantic source | Width and format | Meaning |
 |---|---|---|---|
+| eligible update and valid environment | Supplied controller-entry preconditions | Boolean preconditions, true for SAW-R01/SAW-R05 | Audio update has the required player/room/level and a valid prepared environment; missing or malformed producer state remains SAW-Q01 |
 | phase | Current act world-clock cycle, WCK-R01 through WCK-R03; supplied | i32 | Values 1 through 3 select the first pair; other values select the second |
 | environment | Selected environment record, supplied | Four sound identities, u32 delay | `Day Ambience`, `Night Ambience`, `Day Event`, `Night Event`, `Event Delay` |
 | selected event and previous event | Selection output and retained scheduler state | i32 identities | Distinguish a changed event selection |
@@ -34,18 +35,19 @@ D2Client invokes the examined ambient controller from the enabled audio update b
 | random state | Local client's player seed, supplied | Pair of u32 words | Direct timer draws; independent initial value required |
 | retained ambience identity/handle | Controller state | signed 32-bit identity; unsigned 32-bit handle | Previous ambience and its playback request result |
 | retained weather identity/handle | Controller state | signed 32-bit identity; unsigned 32-bit handle | Previous weather cue and request result; distinct from the current selected weather cue |
-| first/second intensity readings | SAW-R04a accessor results, supplied | finite `binary32` | First zero suppresses conversion; otherwise convert the second reading |
-| current weather amplitude | Supplied volume-read operation | signed 32-bit | Current amplitude associated with weather handle |
+| weather eligibility result | SAW-R04a predicate result, supplied to SAW-R05 | Boolean | Selects current weather cue 64 or 0 |
+| first/second intensity readings | SAW-R04a accessor results, supplied | Finite binary 32-bit floats; the second reading multiplied by 255 must be within signed 32-bit range for SAW-R05 conversion | First zero suppresses conversion; otherwise convert the second reading |
+| handle-amplitude state and current weather amplitude | Supplied starting handle-amplitude map or prescribed volume-read result | Unsigned 32-bit handle keys with signed 32-bit amplitude values | Starting state used by SetVolume/ReadVolume; the full-caller fixtures supply initial amplitudes for returned handles |
 | level identity and retained last level | Initial eligible level and controller state | signed 32-bit | Control final auxiliary eligibility requests |
 | environment identity | Prepared level SoundEnv, supplied | unsigned byte, promoted to 32-bit | Acoustic-update request input |
-| auxiliary eligibility A/B | Supplied environment fields | signed 32-bit identities | Two optional nonzero enable requests; header binding and downstream effects unresolved |
+| auxiliary eligibility A/B | Supplied environment fields | signed 32-bit identities | Material 1/Material 2 select the two optional nonzero enable requests; downstream effects remain SAW-Q03 |
 | supplied audio operations | Request, transition, volume, cleanup, stop, position, acoustic and auxiliary operations below | Ordered call log, prescribed returns and seed effects | Define the local caller boundary; real voice/backend execution remains gated |
 
 | Mapping / constant | Origin | Binding |
 |---|---|---|
 | Phase interval 1..3, division by 3 | Engine code | Fixed by original code |
 | Named environment fields | Table data with client loader descriptors | Resolved from supplied record; text/compiled identity remains SAW-Q01 |
-| Weather cue 64; transition duration 250; amplitude multiplier 255; amplitude step 6; event distance 450..750 and vertical offset -100..100 | Engine code | Fixed by original code; cue 64 has no table-name assertion here |
+| Weather cue 64; transition duration 250; amplitude multiplier 255; amplitude step 6; event distance 450..750 and vertical offset -100..100 | Engine code | Fixed by original code; cue 64 matches the named scene_rain record in SAW-R03 |
 
 No original cell value is required by the synthetic executable vectors. [T01](../research/spec-evidence/sound-ambient-and-weather.md#t01-named-data-cells) records narrow original-profile cells separately.
 
@@ -61,9 +63,11 @@ Boundary: enter the timer stage after preceding ambient/weather calls. If select
 
 Draw `a` with modulus `m`. Store `interval = low32(D + a - q)`. Draw `b` with modulus interpreted from interval. Store `lastTick = low32(tick - b)` and `previousEvent = selectedEvent`. Writes and arithmetic are u32, wrapping at 32 bits. Seed owner is the local client's player seed; this does not establish the seed's initialization or draws made by preceding playback calls. This rule covers initialization only; the same update subsequently evaluates event eligibility under SAW-R04b.
 
-**SAW-R03** Named environment cells [verified in 1.13c data]
+**SAW-R03** Named environment and weather cue cells [verified in 1.13c data]
 
-For `ESOUNDENVIRON_WILDERNESS`, explicit `Index = 2`, the effective text values are `Day Ambience = 70`, `Night Ambience = 71`, `Day Event = 192`, `Night Event = 197`, and `Event Delay = 250`. These named cells in [T01](../research/spec-evidence/sound-ambient-and-weather.md#t01-named-data-cells) do not establish compiled runtime correspondence or audible behavior.
+For `ESOUNDENVIRON_WILDERNESS`, explicit `Index = 2`, the effective text values are `Day Ambience = 70`, `Night Ambience = 71`, `Day Event = 192`, `Night Event = 197`, and `Event Delay = 250`. These named cells in [T01](../research/spec-evidence/sound-ambient-and-weather.md#t01-named-data-cells) match the sampled loaded environment record under [C01](../research/spec-evidence/sound-ambient-and-weather.md#c01-named-loaded-record-correspondence).
+
+The fixed weather cue 64 matches Sound = scene_rain, explicit Index = 64, with FileName = `ambient\scene\rain2.wav`, Volume = 200, Loop = 1 and Falloff = 1 in effective data/global/excel/sounds.txt. [T02](../research/spec-evidence/sound-ambient-and-weather.md#t02-weather-cue-binding) and C01 corroborate these named cells and the loaded cue-64 record. The controller still chooses literal cue 64 from code; this correspondence does not turn its choice into a configurable name lookup. Neither sampled correspondence establishes whole-table compilation or audible playback.
 
 **SAW-R04a** Weather predicate and intensity selection [verified in 1.13c code (static)]
 
@@ -94,7 +98,7 @@ Only step 3's target-amplitude comparison uses the computed weather amplitude; i
 |---|---|---|---|---|
 | SAW-R01 | Supplied environment pair | verified in 1.13c code (static) | none locally; producer integration SAW-Q01 | SAW-V01 |
 | SAW-R02 | Direct initial timer draws/writes | verified in 1.13c code (static) | none locally; preceding calls and later event execution SAW-Q03 | SAW-V02, SAW-V03 |
-| SAW-R03 | Named text cells | verified in 1.13c data | none | T01 |
+| SAW-R03 | Named environment and cue cells | verified in 1.13c data | none for named sampled correspondence; whole compilation SAW-Q01 | T01, T02, C01 |
 | SAW-R04a | Supplied weather predicate/intensity | verified in 1.13c code (static) | none locally; prepared-record and intensity-producer integration SAW-Q01/SAW-Q02 | SAW-V04 |
 | SAW-R04b | Audible transitions and weather/event execution | unresolved | SAW-Q02, SAW-Q03: full playback/weather integration | none |
 | SAW-R05 | Full eligible supplied-operation caller | verified in 1.13c code (static) | SAW-Q01/Q02/Q03 gate real producers and nested playback/position/acoustic/auxiliary effects | SAW-V05–SAW-V09 |
@@ -107,7 +111,8 @@ Only step 3's target-amplitude comparison uses the computed weather amplitude; i
 | Scheduler interval, last tick, previous event; direct seed updates | SAW-R02 |
 | Returned weather eligibility and selected intensity | SAW-R04a |
 | Audible ambience, weather and event playback | SAW-R04b; gated |
-| Ordered audio-operation request log; retained ambience/weather identities and handles; last-level identity; direct due-event seed/interval/last-tick updates | SAW-R05 |
+| Ordered audio-operation log; retained ambience/weather identities and handles; last-level identity; scheduler state (previous event, interval, last tick) and seed updates or retention | SAW-R05 |
+| Handle-amplitude map updates made by supplied SetVolume operations | SAW-R05 |
 
 SAW-R03 is data-only and performs no runtime write.
 
@@ -117,8 +122,8 @@ SAW-R01 covers phases outside 1..3 without guessing day/night clock boundaries. 
 
 ## 7. Open questions
 
-- **SAW-Q01** [unresolved] Establish missing-record behavior, compiled/text correspondence and update cadence. The phase accessor is bound to the current act world-clock cycle and the level byte to Levels.SoundEnv; full data/runtime integration remains open. Supplied-input SAW-R01 and SAW-R02 remain available.
-- **SAW-Q02** [unresolved] Complete the stored-intensity producer, its update scheduling, invalid/out-of-range amplitude conversion, the named data binding of fixed cue 64 and outside/inside semantics. SAW-R04a establishes the supplied-input Rain predicate/intensity selection; SAW-R05 establishes valid-range conversion and the retained-identity request rule, without those producer/audible effects.
+- **SAW-Q01** [unresolved] Establish missing-record behavior, complete compiled/text correspondence and update cadence; SAW-R03 establishes the named sampled correspondence only. The phase accessor is bound to the current act world-clock cycle and the level byte to Levels.SoundEnv; full data/runtime integration remains open. Supplied-input SAW-R01 and SAW-R02 remain available.
+- **SAW-Q02** [unresolved] Complete the stored-intensity producer, its update scheduling, invalid/out-of-range amplitude conversion, outside/inside semantics and full weather integration. The named cue-64 binding is established by SAW-R03. SAW-R04a establishes the supplied-input Rain predicate/intensity selection; SAW-R05 establishes valid-range conversion and the retained-identity request rule, without those producer/audible effects.
 - **SAW-Q03** [unresolved] Complete nested playback, cleanup, stop, position, acoustic and auxiliary effects, including any dependency-owned RNG. SAW-R05 establishes the full eligible caller's request order, supplied success/failure branches and direct draws; these remain available without claiming audible integration.
 - **SAW-Q04** [unresolved] Gameplay observations are pending for SAW-R01, SAW-R02, SAW-R04a and SAW-R05. No attributable complete input/output capture is available for their vectors.
 
@@ -224,7 +229,7 @@ Full-caller fixtures SAW-V05–SAW-V09 use these defaults unless overridden: pha
 
 ## 9. Acceptance and dependencies
 
-SAW-V01 through SAW-V09 establish SAW-R01, SAW-R02, SAW-R04a and SAW-R05 at their supplied-input stages; SAW-R03 is T01. Full reproduction additionally requires resolving SAW-R04b, producer integration SAW-Q01, and attributable observations. Partial acceptance does not establish complete weather execution or ambient sound parity.
+SAW-V01 through SAW-V09 establish SAW-R01, SAW-R02, SAW-R04a and SAW-R05 at their supplied-input stages; SAW-R03 is T01/T02 with the named loaded-record correspondence in C01. Full reproduction additionally requires resolving SAW-R04b, producer integration SAW-Q01, and attributable observations. Partial acceptance does not establish complete weather execution or ambient sound parity.
 
 **Depends on:** NRF-R01 and NRF-R02 in [numeric foundations](core-numeric-and-rng-foundations.md), for the numerical step/modulus operation only. Seed ownership here is client-specific. [World clock](drlg-world-clock.md) WCK-R01 through WCK-R03 own the cycle consumed as phase, preserving their evidence labels and presentation gates. GDA-R03a/GDA-R03b in [game-data table records](core-game-data-table-records.md) support descriptor identity/direct conversion; GDA-R02/GDA-R03d full compilation remains gated. STP-R05 in [playback](sound-table-and-playback-rules.md) owns scheduling requests against supplied voices, while STP-R03b/STP-R04b request/device integration remains unresolved. S3D-R04 in [positional sound](sound-3d-position-and-falloff.md) owns supplied integer-position cache updates; full position request and playback execution remain gated. SAW-R05's request log is available without asserting those nested effects.
 
@@ -236,4 +241,4 @@ SAW-V01 through SAW-V09 establish SAW-R01, SAW-R02, SAW-R04a and SAW-R05 at thei
 
 ## Appendix A. Provenance
 
-Original Expansion 1.13c Windows x86; [manifest](../research/source-manifest.md) identifies D2Client and D2Common. Read date 2026-10-29. Static disassembly, available matched reconstruction and original-image instruction listing support the verified supplied stages. Named data cells reuse the same-date owned vanilla loader record with its original limits. Runtime vectors remain unobserved; the [companion](../research/spec-evidence/sound-ambient-and-weather.md) gives source mapping and pending gates.
+Original Expansion 1.13c Windows x86; [manifest](../research/source-manifest.md) identifies D2Client, D2Common, D2Sound and Fog. Read dates 2026-10-29 and 2026-10-30. Static disassembly, available matched reconstruction and original-image instruction listing support the verified supplied stages. Named environment cells retain the original collection limits; the 2026-10-30 effective-file reads and sampled loaded records corroborate the named environment and cue binding. Runtime vectors remain unobserved; the [companion](../research/spec-evidence/sound-ambient-and-weather.md) gives source mapping and pending gates.
