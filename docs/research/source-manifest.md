@@ -11,27 +11,46 @@ Binary evidence profile: original Lord of Destruction Expansion 1.13c for Window
 Historical data-profile identity has the limits stated below; binary identity alone does
 not establish an unmodified archive set.
 All files below are 32-bit x86 PE images (`Machine=0x014C`, `PE32=0x010B`), with
-little-endian numeric storage. Fingerprints were captured on 2026-10-14.
+little-endian numeric storage. The original entries were fingerprinted on 2026-10-14;
+D2Win and D2CMP were additionally fingerprinted on 2026-10-30; the graphics
+backends, D2Gfx and D2Net were additionally fingerprinted on 2026-10-31. These
+newly registered entries were independently rechecked on 2026-11-02.
 
 | Artifact id | Original filename | Bytes | SHA-256 |
 |---|---|---:|---|
 | `LOD113C-D2COMMON` | `D2Common.dll` | 679936 | `59fa5928522f566f2bf99675571206ad70df889c89d3d07fa87edf5083e06e10` |
 | `LOD113C-D2GAME` | `D2Game.dll` | 1138688 | `24b293b86f95bea0228826c502ea04737ba21b91ca9832e52aac4b11fef14f53` |
 | `LOD113C-D2CLIENT` | `D2Client.dll` | 1093632 | `dd8bc6025de921216a97c17f97cd1a50fbb85926e838ec60e13451448836d906` |
+| `LOD113C-D2WIN` | `D2Win.dll` | 147456 | `a9afb52d5116f77534f3e83eeb71e6d2d980a6b1c59be5dd38d503c2334730fb` |
 | `LOD113C-D2SOUND` | `D2Sound.dll` | 98304 | `b24dfb0159c76867e7f3d14602e73bccc37d59b7c8d2def88213b01084b61a72` |
 | `LOD113C-FOG` | `Fog.dll` | 212992 | `96c05770ab06b71a7a2d6abe5dc7c2f943b30ac8fe367e44bdbad7e2643bb863` |
 | `LOD113C-STORM` | `Storm.dll` | 372736 | `4b5fcaf87c98676e6be94f980b06b893c50f1505343cbbf038c5b331a2da2d5b` |
 | `LOD113C-GAME` | `Game.exe` | 61440 | `74fe9c092a521f7710392548c82f81544e531107db2358617e83818874db40a2` |
+| `LOD113C-D2GFX` | `D2Gfx.dll` | 77824 | `50284647a28e8839028e8acb021a6ebe48c006e431139969ccd0fe126e6e8811` |
+| `LOD113C-D2GDI` | `D2Gdi.dll` | 53248 | `8737430c828031b29e8c5e59684faba050a7bf3c7cae38d34fa530212cd16047` |
+| `LOD113C-D2DDRAW` | `D2DDraw.dll` | 69632 | `32be89c456cd229c5eb9873c0488515539e6a22062b9ab5c2166af16eb05909c` |
+| `LOD113C-D2D3D` | `D2Direct3D.dll` | 110592 | `61d3b38b852138173835bbf5e7398dbe19240da5445aa7489b4cc4bebb4dc519` |
+| `LOD113C-D2GLIDE` | `D2Glide.dll` | 98304 | `7cf5907e9eb19b783b73fa45a5a7aa4491cb750e0d83df8c59b12d089310db6a` |
+| `LOD113C-D2NET` | `D2Net.dll` | 49152 | `99af2f04a87fdbd91810be963df9c365cef529ae22e6a345193ba5018e9910c9` |
+| `LOD113C-D2CMP` | `D2CMP.dll` | 163840 | `2ee205f484161c5ed854f30aed12565a7ac3e97fd1a838e697aaefe4dc349756` |
 
 | Artifact id | Preferred image base | File version resource | Product version resource |
 |---|---|---|---|
 | `LOD113C-D2COMMON` | `0x6FD50000` | Not available | Not available |
 | `LOD113C-D2GAME` | `0x6FC20000` | Not available | Not available |
 | `LOD113C-D2CLIENT` | `0x6FAB0000` | Not available | Not available |
+| `LOD113C-D2WIN` | `0x6F8E0000` | Not available | Not available |
 | `LOD113C-D2SOUND` | `0x6F9B0000` | Not available | Not available |
 | `LOD113C-FOG` | `0x6FF50000` | Not available | Not available |
 | `LOD113C-STORM` | `0x6FBF0000` | `1.08b` | Empty |
 | `LOD113C-GAME` | `0x00400000` | `1, 0, 13, 60` | `1, 0, 13, 257` |
+| `LOD113C-D2GFX` | `0x6FA80000` | Not available | Not available |
+| `LOD113C-D2GDI` | `0x6F870000` | Not available | Not available |
+| `LOD113C-D2DDRAW` | `0x6F8C0000` | Not available | Not available |
+| `LOD113C-D2D3D` | `0x6F880000` | Not available | Not available |
+| `LOD113C-D2GLIDE` | `0x6F850000` | Not available | Not available |
+| `LOD113C-D2NET` | `0x6FBF0000` | Not available | Not available |
+| `LOD113C-D2CMP` | `0x6FE10000` | Not available | Not available |
 
 The build label identifies the source bundle. A DLL's resource version can differ from
 that label; matching the exact file fingerprint establishes whether a cited location
