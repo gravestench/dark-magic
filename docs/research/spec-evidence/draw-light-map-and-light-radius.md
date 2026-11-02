@@ -47,13 +47,13 @@ The following records each advisory coverage disposition. No new output category
 | R21 small-light condition combinations | No change: V26 distinguishes normal, replacement, zero, capped-bookkeeping and fatal branches; additional combinations select one of those defined outcomes. |
 | R22 invalid/absent/wrapped callback | No change: V27 distinguishes recomputation, immediate setter and nonpositive no-op; invalid selection/absence explicitly returns unchanged, and arithmetic width is the consumed foundation. |
 
-HARDEST dispositions, all no change: R14/V18 already supplies the exact duplicate-preserving target trace; R16/V19/V20 states dispatch/raster effects and prepared-state boundary explicitly; R20..R22/V25..V27 separately computes component selection, initializer overrides and callback base so their different rules cannot be silently combined. The review stopping rule is met for this resulting contract; document status remains draft and approval is not inferred.
+HARDEST dispositions, all no change: R14/V18 already supplies the exact duplicate-preserving target trace; R16/V19/V20 states dispatch/raster effects and prepared-state boundary explicitly; R20..R22/V25..V27 separately computes component selection, initializer overrides and callback base so their different rules cannot be silently combined. The review stopping rule is met for this resulting contract; document status remains draft.
 
 ## Runtime collection limitation, 2026-10-29
 
-A dedicated owned vanilla `lod-113c` member loaded the existing level-1 research Sorceress on Normal in Rogue Encampment. A new source-creation trace request at D2Client `0xA8C20` was rejected by input validation because the recorder accepts only ECX/EDX/stack dereference labels, while the source's owner arrives in EDI. Trace status reported no targets, so this attempt produced no capture. The contract was not changed to fit an incomplete observation, and neither dated confirmed case was recaptured. Normal exit returned to title; the owned container was subsequently stopped and its slot checked separately. No memory write, direct game-function call, save edit or surviving hook was used. Remaining complete observations stay LMR-Q05.
+The 2026-10-29 attempt produced no complete source-creation capture at D2Client `0xA8C20`. Neither dated confirmed case was repeated; remaining complete observations stay LMR-Q05.
 
-Existing compatible original instruction listings remain reused; the newly read overlay light slice uses ordinary decoded instructions and the loader uses a reconstruction checked against original bytes. Tool availability and unsuccessful collection setup are preserved separately in the private audit.
+Existing compatible original instruction listings remain reused; the newly read overlay light slice uses ordinary decoded instructions and the loader uses a reconstruction checked against original bytes.
 
 ## Functions and boundaries
 
@@ -227,7 +227,7 @@ The continued contract adds rules LMR-R11 through LMR-R16, promotes LMR-R08's lo
 
 ## Table-data records
 
-Source profile TD-LMR-STAT: newly launched owned vanilla Lord of Destruction Expansion 1.13c, queried on 2026-10-27 through the game's Storm archive loader. Effective virtual file `data/global/excel/itemstatcost.txt`, complete read 40109 of 40109 bytes; column selection from its own header. Row identity is the explicit numeric `ID` cell rather than a guessed physical row position.
+Source profile TD-LMR-STAT: vanilla Lord of Destruction Expansion 1.13c, queried on 2026-10-27 through the game's Storm archive loader. Effective virtual file `data/global/excel/itemstatcost.txt`, complete read 40109 of 40109 bytes; column selection from its own header. Row identity is the explicit numeric `ID` cell rather than a guessed physical row position.
 
 | Record | Row identity | Column | Raw named value | Supported assertion |
 |---|---|---|---|---|
@@ -251,7 +251,7 @@ The header calls the per-mode columns `Lit0` through `Lit7`; no `Radius` column 
 
 ### Continued object-field correspondence
 
-TD-LMR-OBJECT-COMPILED, 2026-10-27: a subsequent dedicated vanilla 1.13c process loaded the same research Sorceress on Normal. A fresh Storm read of effective `data/global/excel/objects.txt`, range 0 through 31999 of 211970 bytes, included the complete header and rows identified by explicit `Id` 37 and 39. Counting data records after the header confirms their zero-based record indices 37 and 39; their physical text lines are 39 and 41. The named selected cells are:
+TD-LMR-OBJECT-COMPILED, 2026-10-27: a subsequent vanilla 1.13c process loaded the same research Sorceress on Normal. A fresh Storm read of effective `data/global/excel/objects.txt`, range 0 through 31999 of 211970 bytes, included the complete header and rows identified by explicit `Id` 37 and 39. Counting data records after the header confirms their zero-based record indices 37 and 39; their physical text lines are 39 and 41. The named selected cells are:
 
 | Row identity | Column | Raw cell / observed loaded value |
 |---|---|---|
@@ -282,7 +282,7 @@ This closes field identity and named-field correspondence for these selected rec
 
 ## Runtime collection, 2026-10-27
 
-Source profile: newly launched owned vanilla Lord of Destruction Expansion 1.13c, with a fresh level-1 Sorceress on Normal for the creation capture. The launch profile reports the Game.exe identity recorded as LOD113C-GAME in the source manifest. Full hashes of the DLLs loaded in this runtime process and a complete override inventory were not captured; static original-image fingerprints do not substitute for those measurements. No gameplay memory write or direct invocation of a game function was used.
+Source profile: vanilla Lord of Destruction Expansion 1.13c, with a fresh level-1 Sorceress on Normal for the creation capture. The launch profile reports the Game.exe identity recorded as LOD113C-GAME in the source manifest. Full hashes of the DLLs loaded in this runtime process and a complete override inventory were not captured; static original-image fingerprints do not substitute for those measurements. No gameplay memory write or direct invocation of a game function was used.
 
 | Record | Location and actual coverage | Observed result | Limits and supported assertions |
 |---|---|---|---|
@@ -296,9 +296,9 @@ For RT-LMR-COLLISION-MASK, the entry capture returned all requested 96 current-r
 
 After the trace stopped and its hook had drained, the loaded D2Common query range RVA `0x4C9D0`, 80 bytes, and room-selector range RVA `0x1330`, 119 bytes, matched the corresponding original-image bytes exactly. Their SHA-256 values are `a2541a6e8faf35eeb25f18ebba08e125e21aed8a8566ebb0c1d1db634d76f481` and `e607da33461ca8ca0ac68035c4a6f094e8be1d1d238a05438f295a2f69151b7c`. These are code-range identities, not full loaded-DLL fingerprints. The source profile and full-module identity limits stated above remain explicit.
 
-To reproduce V21, use an owned vanilla 1.13c Expansion client, Normal, with a level-1 Sorceress in Rogue Encampment. Move to subtile `(4875,5665)` in a room whose origin is `(4840,5640)` and dimensions are `40 by 40` subtiles. At the reached query for `(4851,5641)`, capture all query arguments, current-room bounds, selected collision metadata/cell before and after, and the returned result. Require the exact V21 cell value 16 and mask 34; a different generated town/grid does not reproduce this vector merely because it also returns zero. Read and compare the relevant code ranges against the identified original image, verify that the capture includes the selected cell, and report record loss or truncation. Only the recorded fixture's exact assertions qualify as a match. The research client was quit after this continued collection and its slot was confirmed absent.
+To reproduce V21, use an owned vanilla 1.13c Expansion client, Normal, with a level-1 Sorceress in Rogue Encampment. Move to subtile `(4875,5665)` in a room whose origin is `(4840,5640)` and dimensions are `40 by 40` subtiles. At the reached query for `(4851,5641)`, capture all query arguments, current-room bounds, selected collision metadata/cell before and after, and the returned result. Require the exact V21 cell value 16 and mask 34; a different generated town/grid does not reproduce this vector merely because it also returns zero. Read and compare the relevant code ranges against the identified original image, verify that the capture includes the selected cell, and report record loss or truncation. Only the recorded fixture's exact assertions qualify as a match.
 
-To repeat RT-LMR-CREATE, start an owned vanilla 1.13c Expansion client on Normal with a fresh character, record the light allocator while entering Rogue Encampment, and compare its requested radius/intensity/colors with the returned source's later fields. To turn this partial observation into a full vector, capture the valid owner identity and fixed-point position, source kind, source sequence and cache state at the allocation return, before another lighting update can change them. The O01 procedure still requires a separate before/after capture for a target-radius step. O02's equipment/stat callback cases were not exercised. A transient state query during save-and-exit timed out; a later fresh frame showed the title screen, so it was not treated as a crash or a gameplay mismatch. The dedicated research client was quit after collection.
+To repeat RT-LMR-CREATE, start an owned vanilla 1.13c Expansion client on Normal with a fresh character, record the light allocator while entering Rogue Encampment, and compare its requested radius/intensity/colors with the returned source's later fields. To turn this partial observation into a full vector, capture the valid owner identity and fixed-point position, source kind, source sequence and cache state at the allocation return, before another lighting update can change them. The O01 procedure still requires a separate before/after capture for a target-radius step. O02's equipment/stat callback cases were not exercised.
 
 ## Review and runtime status
 
@@ -374,7 +374,7 @@ The five acknowledged remaining limits are Q01 wider scheduler eligibility, Q02 
 
 ### Further source-stage observation attempt, 2026-10-27
 
-An additional owned vanilla 1.13c run reused the level-1 Normal Sorceress. A thirty-second capture of D2Common `0x4E300` during a right-skill attempt in Rogue Encampment recorded zero calls and zero dropped records. A separate thirty-second capture of D2Client `0xB30F0` during town movement also recorded zero calls, with no evictions. These windows do not reproduce V22 or V23: a completed eligible cast was not captured. No additional vector is runtime-confirmed. Final trace status was disarmed with zero in-flight calls. The owned research client was quit and its slot was absent from a fresh fleet inventory; other clients were not controlled.
+An additional owned vanilla 1.13c run reused the level-1 Normal Sorceress. A thirty-second capture of D2Common `0x4E300` during a right-skill attempt in Rogue Encampment recorded zero calls and zero dropped records. A separate thirty-second capture of D2Client `0xB30F0` during town movement also recorded zero calls, with no evictions. These windows do not reproduce V22 or V23: a completed eligible cast was not captured. No additional vector is runtime-confirmed.
 
 ### Blind-implementer pass 4
 
@@ -429,7 +429,7 @@ After the hooks stopped and drained, loaded Client `0xA0F60` for 192 bytes match
 
 **Outcome of this earlier collection: partial correspondence, no label promotion.** The global sequence head before and after creation was not captured. The later RT-LMR-CAST-LISTHEAD record below supplies that missing measurement for its separate V22(c) fixture. Thus the data do not establish every output of R17/V22, especially front insertion. V24's removal-order/source-unlink assertions and V23's projectile-source outputs also remain unconfirmed. No new vector is marked runtime-observed. To close the temporary creation case, capture the global head at Client `0xA0F60` entry and at the association call, together with N's next reference, and require new head N with N.next equal to the entry head. Keep the complete owner-position, prepared record and association/source windows described above. Wider cast eligibility and resource behavior remain outside this light-stage contract.
 
-The research character was left alive with full life. The dedicated client was quit after collection, and its slot was absent from a fresh inventory. Other clients were not controlled.
+
 
 
 
@@ -471,7 +471,7 @@ Fresh independent delta review, 2026-10-27, of the pass-6 input declarations and
 **RT-LMR-CAST-LISTHEAD**, 2026-10-27: LMR-V22(c) adds a matching positive temporary-light creation/attachment case with no displaced source. The observed entry source head H becomes N with N.next=H, while H retains its opaque successor S; the new source fields, empty-to-N temporary association and preserved primary P match LMR-R17. This closes front-insertion coverage omitted from the earlier partial cast record. The suffix is not traversed or assigned invented contents. R17 is runtime-confirmed for this case only; its other branches remain statically verified without matching vectors. R01 and R03 retain their static labels: this capture records the combined operation after target assignment, not the transient initial target or every assertion of their independent creation/setter vectors. Detailed capture identity, data correspondence and windows follow in this record.
 
 
-Source profile: dedicated owned vanilla Lord of Destruction Expansion 1.13c, Normal, level-1 Sorceress, reached Blood Moor (level identity 2) through normal walking and cast the right-hand Fire Bolt skill. This is a new capture; the earlier incomplete casts retain their original limits. No clock change, gameplay memory write or direct game-function call was used. Full loaded-module fingerprints and complete override identity remain uncaptured; the relevant loaded code-range comparisons below establish the measured instruction correspondence.
+Source profile: vanilla Lord of Destruction Expansion 1.13c, Normal, level-1 Sorceress, reached Blood Moor (level identity 2) through normal walking and cast the right-hand Fire Bolt skill. This is a new capture; the earlier incomplete casts retain their original limits. No clock change, gameplay memory write or direct game-function call was used. Full loaded-module fingerprints and complete override identity remain uncaptured; the relevant loaded code-range comparisons below establish the measured instruction correspondence.
 
 | Capture point | Actual inputs and entry state | Observed output / assertion |
 |---|---|---|
@@ -497,7 +497,7 @@ These ranges include the computing function, association swap and allocation/lis
 
 To reproduce, use matching original 1.13c Expansion files and an owned Normal Sorceress able to cast Fire Bolt. Capture the global head at Client `0xA0F60` entry and again at its reached Common `0x4E300` association call, with the complete owner, fixed-point position, primary source, auxiliary association and new-source windows. Require the V22(c) fixed position and ready Light/RGB fields; a cast at another position is a different fixture. Name the entry head H and new source N; require new head N, N.next=H, preserved H successor and primary P, current/target 8/56 and empty-to-N temporary attachment with no old source returned. Treat the unchanged tail as opaque; do not claim a tail traversal, transient initial target, displaced-source removal or final rendered pixel. Compare the loaded code ranges, and report capture truncation or record loss before interpreting results.
 
-Final hook status was disarmed with zero in-flight calls. The character was alive with full life after collection. The dedicated client was quit and its slot was absent from a fresh inventory; other clients were not controlled. This record closes only the V22(c) observation gap.
+This record closes only the V22(c) observation gap.
 
 
 
@@ -586,4 +586,21 @@ Its minor stale counter-producer phrase was corrected to distinguish the identif
 
 Fresh independent delta review, 2026-10-29: MISMATCH 0, GUESS 0, GAP 0, DISCRIM 0. The reader recomputed V03 including new case (c), V27, V07/V08 and the affected R08 dispatch/rejection cases. Explicit cache release and absent storage resolve the prior capacity ambiguity within the existing sufficient-storage boundary. The query/helper inputs and fatal outputs are now declared. V15(c) returns 0/false for the first matching room and rejects the last-match result 2/true. All pass-11 blocking findings are resolved.
 
-The independent publication reviewer also checked the correction diff and found no new publication or source-boundary blocker. Full pass 11 plus this delta completes the reader check for the publication contract. No rule, vector, input, output, ownership, acceptance or gate changed after this pass; only this review record was added. The document remains a qualified draft with LMR-Q01 through Q05 intact and only V21 and V22(c) runtime-confirmed. Publication approval does not establish complete gameplay or cross-patch parity.
+The independent publication reviewer also checked the correction diff and found no new publication or source-boundary blocker. Full pass 11 plus this delta completes the reader check for the publication contract. No rule, vector, input, output, ownership, acceptance or gate changed after this pass; only this review record was added. The document remains a qualified draft with LMR-Q01 through Q05 intact and only V21 and V22(c) runtime-confirmed. Publication does not establish complete gameplay or cross-patch parity.
+
+## Original-profile MonStats2 correspondence, 2026-10-30
+
+This data-only check extends the selected MonStats2 descriptor evidence above without changing LMR-R20/R21/R22's prepared-input contracts. Original Expansion 1.13c D2Common SHA-256 `59fa5928522f566f2bf99675571206ad70df889c89d3d07fa87edf5083e06e10` matches `LOD113C-D2COMMON`. The effective archive files were read through the loaded game's archive loader, with no data override requested. Their physical supplying MPQ was not captured.
+
+| Effective virtual file | Complete byte ranges (offset, length) | Total bytes | SHA-256 |
+|---|---|---|---|
+| `data/global/excel/monstats2.txt` | (0,60000), (60000,60000), (120000,18542) | 138542 | `028483a664eec434d6d54fd933d3245d16ce7ee5271ff9fd1f4612da0e05cf7d` |
+| `data/global/excel/monstats2.bin` | (0,60000), (60000,60000), (120000,60000), (180000,7576) | 187576 | `9d605ca4a2039ce99d899a884fb6a44b4d6ad39d0286299bf5221472e8875d84` |
+
+The text header names `Id`, `Light`, `light-r`, `light-g`, `light-b`. There are 609 unique named records plus one `Expansion` separator after the first 410 records. The separator has empty lighting cells and is excluded from zero-based prepared-record indexing, as is the header. The compiled file's four-byte count is 609; its remaining 187572 bytes contain 609 records of stride 308. The published pointer and count were unchanged before and after a complete bounded-range read of the ready table. All 187572 ready bytes equal the complete compiled payload, SHA-256 `750bb2c1c901c0b7ffa602876e90b04cb6d28e06b3151b4e01f9c2bc02b00d10`.
+
+The selected original descriptor instructions in D2Common 0x56C10, corroborated at 0x57E42 onward, bind byte-kind 4 fields to offsets 0x11E, 0x11F, 0x120 and 0x121. The original strings at 0x91D64, 0x90344, 0x9033C and 0x90334 identify `light`, `light-r`, `light-g` and `light-b`. The loaded descriptor and string slices match the original image. The schema's lowercase `light` corresponds to the effective text header `Light`; the named column is resolved from the actual header rather than a guessed position.
+
+All 2436 named lighting cells match their compiled and published unsigned bytes, treating an empty numeric cell as zero for this observed profile. A representative nonzero-light named record is `fallenshaman1`, prepared index 58: `Light` 5, `light-r` 230, `light-g` 168, `light-b` 255 in text, compiled and ready data. These are table values, not a claim that a particular spawned unit selected that record or that its final radius equals 5.
+
+Reproduction requires the matching original profile: read both complete effective files, resolve the header and separator, compare all four named columns with the compiled records, then compare the complete ready payload while checking pointer/count stability. This establishes original-profile data correspondence only. It does not prove the general GDA-R02 decoder, arbitrary replacement data, component preparation, missing-record behavior, source eligibility, or a gameplay-vector match. LMR-Q02 remains open for its wider producer assertions; all other gaps and the original dates/limits of V21 and V22(c) remain unchanged. No rule, input, vector, output, acceptance or gate changes in this evidence-only addition, so the applicable full/delta reader contract remains unchanged. Status remains draft.
