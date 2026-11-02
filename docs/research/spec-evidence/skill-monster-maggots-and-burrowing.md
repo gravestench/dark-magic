@@ -132,7 +132,7 @@ Relocation Game 0xE19C0 is the exact MTP-R10 operation: game/unit/current room/c
 
 ### Actual descent expression and existing-stat reads
 
-The valid MagottDown action sets its do-handled latch, calls Common ordinal 10569/RVA 0x2EEC0 and inspects the resulting animation frame values before the life stage. The complete accessor is a frame-information reader, not the collision helper suggested by an earlier label: for a monster it returns arithmetic-shifted unit animation fields. The preceding sequence-rate/animation bookkeeping retains MGB-Q03; its global consumers are not replaced by a guessed animation model.
+The valid MagottDown action sets its do-handled latch, calls Common ordinal 10569/RVA 0x2EEC0 and inspects the resulting animation frame values before the life stage. The complete accessor is a frame-information reader, not the collision helper suggested by an earlier label: for a monster it returns arithmetic-shifted unit animation fields. The 2026-10-29 record left the preceding sequence-rate/animation bookkeeping under MGB-Q03; the bounded 2026-10-30 follow-through below establishes its direct assignments while retaining broader animation consumers.
 
 From the life stage the callback evaluates Skills +0x138 (`calc1`) through the exact Common ordinal 10786 front end in context (caster, skill id, level). The matched front end and SCX contracts already read for MRH are compatible. A nonpositive result branches directly to callback result 1, with no current/max-life request. A positive result reads **current life first**, through ordinal 10973 with stat 6/layer 0, then maximum through ordinal 10913's hard-coded stat 7/layer 0. RLI-R02a/RLI-R02b apply to both selected existing arrays; this is not an assumed base-life read.
 
@@ -183,3 +183,74 @@ The reader confirmed that x=102 lies outside A and selects first neighbor B whil
 | HARDEST (1): MGB-V05(d)'s strict upper edge and first matching adjacent room | No change | The explicit rectangle ends place x=102 outside A; the stated [B,C] order chooses B, and separate grid assertions require B=false/C=true. The reader independently recomputed those outputs and rejected both incorrect alternatives |
 
 This is the final applicable continuation review. MISMATCH is zero and no unresolved GUESS/GAP/DISCRIM remains. All full-pass and focused-pass findings have recorded outcomes; no subsequent contract, vector, source label or gate edit is needed. The files remain draft with their explicit creation, other-transition, physics/storage and observation limits. Review completion does not infer user approval or runtime confirmation.
+
+## Present-monster descent preparation follow-through, 2026-10-30
+
+This record extends MGB-R09 only for a present monster with a valid loaded record. The earlier life-stage vectors retain their stage boundary. MGB-V08 covers the direct preparation and zero-expression return, without claiming complete animation production or stat storage effects.
+
+Original images freshly hashed to the manifest identities: D2Game SHA-256 `24b293b86f95bea0228826c502ea04737ba21b91ca9832e52aac4b11fef14f53`; D2Common SHA-256 `59fa5928522f566f2bf99675571206ad70df889c89d3d07fa87edf5083e06e10`. The complete applicable caller and frame-accessor instructions were read and corroborated against original-image decoding. No byte-equivalent higher-level reconstruction was available for these entries. Compatible dispatch, SCX and RLI evidence retains its existing dates and limits.
+
+| Artifact and identity | Supported operation | Exact boundary |
+|---|---|---|
+| D2Game RVA 0xB3060, action selector 86 from the existing dispatch record | Valid MagottDown caller | Original instructions through return at 0xB311D; the present-monster preparation precedes the previously established expression/stat stage |
+| D2Common ordinal 10569, RVA 0x2EEC0, reached through Game thunk 0xACA0 | Whole frame getter | Complete present-monster branch: current frame and frame-count fields each arithmetic-shifted right eight, both output writes and return; object/null assertion paths are outside this rule's preparation boundary |
+| D2Common ordinal 10853, RVA 0x32460 | Sequence-advance field correspondence | Original-image prefix through 0x324A4 shows the field used to advance sequence position and reduce remaining frames; later animation calls/effects are not consumed or verified here |
+
+At Game 0xB309C the caller ORs unit condition bit 0x40, establishing do-handled while preserving unrelated bits. The frame getter receives the unit and two distinct output locations. For the monster branch it reads current frame at unit offset 0x44 and frame-count value at 0x48; each signed arithmetic shift is by eight. The caller's first output is read at 0xB30B3. A signed-positive result skips the write; otherwise 0xB30BB stores 0 at unit offset 0x3C. The second getter output is unused by this callback; the later stack load for expression context is the original callback level, not that getter output. The expression call at 0xB30D0 follows this preparation even when its result will be zero.
+
+The field at unit offset 0x3C is described semantically as sequence advance because Common 0x3247B reads it, 0x3248C–0x32498 adds it to sequence position and applies the sequence bound, and 0x3249B–0x324A1 subtracts it from remaining frames. This identifies the field's consumer without promoting the complete animation operation, its later calls or normal-versus-sequence frame production. No claim that zeroing this field alone freezes every animation is made. The consumer's analyst label is not used as evidence.
+
+MGB-V08 uses raw current values -257, -1, 0, 255 and 256 to distinguish signed shifting and the whole-frame comparison. Its ordered observations distinguish unconditional zeroing and skipping preparation on a nonpositive expression. The raw frame-count input is 1024 and is read as 4, with no caller branch using it. These are executable supplied-input vectors, not captured gameplay. All five full questions remain open; MGB-Q03 now retains broader animation/physics rather than treating this direct preparation write as unread.
+
+Self-review and lint of this preparation extension returned 0 errors and 0 warnings. The fresh smaller full review below covers the preparation contract; earlier completed reviews above retain their earlier scope.
+
+### Fresh smaller full review of preparation, 2026-10-30
+
+The independent smaller reader used the complete contract and cited dependencies without source, gameplay or implementation inspection. Counts: MISMATCH 0, GUESS 0, GAP 0, DISCRIM 0, GATED 11, COVERAGE 5, HARDEST 3. Its 11 gate references enumerate MGB-Q01–MGB-Q05, the existing unresolved rules MGB-R05/MGB-R06, and MTP-Q02/SCD-R09c/STL-Q07/RLI-Q03; they are not 11 newly discovered gaps. No evidence label or status changed.
+
+| Finding | Outcome |
+|---|---|
+| COVERAGE: R04 negative desired | Add V03(g), requiring no request for -1 and distinguishing unsigned reinterpretation |
+| COVERAGE: R07 one missing containing room while other points resolve | Add V05(e): the left cell stays unchanged and the four current-room cross cells clear |
+| COVERAGE: MagottDown-specific interaction-trio clear | Supply initial unit interaction conditions in V05 and assert their actual clear, separately from cell conditions, in every case |
+| COVERAGE: R08 one skipped post-relocation cell | Add V06(c), preserving the left cell but setting the other four |
+| COVERAGE: R08 missing collision descriptor distinct from missing grid | V06(c) supplies an unused grid without its descriptor, distinguishing their independent prerequisites |
+| HARDEST: V03 signed schedule/retry bound | No rule change; exact ordered requests and signed/wrapped bounds remain in R04/V03 |
+| HARDEST: V05 room/cell resolution | No rule change; ordered first-containing selection and per-point guards remain in R07/V05 |
+| HARDEST: V07/V08 frame preparation, expression and life arithmetic | No rule change; V08 keeps callback preparation distinct from V07's existing life-stage boundary and the actual storage gate |
+
+Only executable cases and assertions changed after this full pass. Rules, ownership and gates are unchanged. Earlier full/focused reviews and this full review satisfy the threshold for a fresh focused delta check of V03(g), V05's unit-condition assertions/V05(e), and V06(c). Lint after the vector additions returned 0 errors and 0 warnings. No gameplay observation is claimed.
+
+The first fresh delta check returned MISMATCH 0, GUESS 0, GAP 0, DISCRIM 1, GATED 11, COVERAGE 0 outstanding and HARDEST 3. The changed cases recomputed as stated, but V05's initially false interaction condition B could not distinguish omitting that clear. The vector now starts all three interaction conditions true and requires all false. This resolves the specific alternative while preserving unrelated unit/cell conditions, cell results, rules and gates. HARDEST entries retain the full pass's unchanged signed-schedule, spatial-resolution and preparation/life-arithmetic rationale. A fresh delta check of the corrected initial condition and prior delta cases is pending; current review completion is not yet claimed.
+
+The second fresh smaller delta check recomputed all changed cases and returned MISMATCH 0, GUESS 0, GAP 0, DISCRIM 0, GATED 11, COVERAGE 0 outstanding and HARDEST 3. It confirmed negative desired produces no request; all-true unit interaction conditions distinguish omission of any clear; the unresolved left point leaves its cell unchanged while the four A points clear; and V06(c) sets the four D cross cells true while leaving D's diagonal and B's descriptor-less left cell false. A prose use of “clears” for the last case was explicitly clarified by the reader as a wording error, with those exact true/false results unchanged. All HARDEST entries retain the full pass's rationale; no behavior edit follows this final delta. The resulting preparation/vector contract meets the reader stopping rule. Draft status, all five full questions, dependency gates and absent gameplay confirmation remain unchanged.
+
+## Hatch-count production follow-through, 2026-10-30
+
+MGB-R04 now includes the actual reached count-preparation substage. Its earlier scheduling vectors retain supplied-count boundaries; MGB-V09 does not assert actual creation or final death effects. Earlier completed reader records do not review this new count assertion; a fresh full reader is required.
+
+Original D2Game RVA 0xB65E0 is independently rooted by action-table slot 84 in the existing dispatch record. The complete caller reading is reused with its earlier limits; original-image decoding was checked again through 0xB667F for the new preparation assertions. After a nonnegative class result, the call at 0xB664A invokes thunk 0xAABA, D2Common ordinal 10511/RVA 0x303A0. The existing byte-equivalent reconstruction reads the unit's skill collection and its selected current skill, returning absent when that collection is absent; the present-unit branch and selected-field read were inspected. A zero result reaches callback return 0 before sequence reset or calculation. The bounded count stage supplies the successful presence test; it does not verify AI selection or class production.
+
+At 0xB6653 the caller obtains the original callback level, not a level read from the current-skill result. Instruction 0xB6658 stores 0 to unit offset 0x3C, the sequence-advance field established above. The caller then reads the selected Skills record's `calc1` reference at offset 0x138 and invokes Game thunk 0xAC9A at 0xB6668, D2Common ordinal 10786/RVA 0x51BF0. Compatible SCX-R11 and SCX's parameter/function/arithmetic contracts own the complete selected expression execution. The returned signed count feeds the existing signed schedule at 0xB6673. Final call 0xDEEE0 remains MGB-Q01; no complete death result is inferred from its location.
+
+### MGB-D02: named expression and compiled correspondence
+
+The complete effective `data/global/excel/skills.txt` read from 2026-10-29 is reused with its original profile and limitations: 173535 bytes, contiguous coverage [0,60000), [60000,120000), [120000,173535), SHA-256 `465c28e83657540e0d7ae5b0de826d5657be7fba1aa539a85c3ca3aeea34b498`. Header-name parsing selects exact `skill` row `MaggotEgg`, explicit decimal `Id` cell 159, and raw `calc1` cell `(lvl < 5) ? lvl : min(12,5+(lvl-5)/3)`. That text alone does not establish compiler output or execution.
+
+A fresh owned original-profile 1.13c process read on 2026-10-30 separately corroborated the compiled selection: loaded Skills count 357, record stride 572, complete selected record at index 159 with stored identity 159, start/action selectors 43/84, and `calc1` reference 3547. The shared expression pool reported 5891 bytes; a successful 64-byte read starting at reference 3547 covers the selected complete 24-byte program through its terminating opcode. The selected opcode sequence is `04 10 07 05 0a 04 10 07 0c 07 05 04 10 07 05 11 07 03 13 10 01 00 16 00`. Parameter 0x10 is the caller level under SCX-R20/R21; function 0 selects the binding under SCX-R13 and signed minimum under SCX-R14. The other instructions are constants, comparison, wrapped subtraction/addition, signed division, conditional selection and termination. No random binding or stat/skill-entry producer is reached. This decoded compiled expression agrees with the named text cell without claiming a verified compiler grammar or general compilation rule.
+
+Investigation mapping: DATATBLS offsets 0xB98/0xBA0 select Skills storage/count; record offset 0x138 selects `calc1`; shared offsets 0x40/0x44 select the expression pool/count. Raw addresses, full selected records and trace calculations remain private. The process reported the original executable profile already described above, with data-override patch disabled and no active PD2 gameplay patches. Selected teleport/relocation code slices in the same process matched the original D2Game image after relocation normalization; those slices do not authenticate every loaded module or the physical archive source. Whole loaded-DLL hashes, complete external override inventory and physical supplying archive remain uncaptured, as in the reused data records. This is selected compiled-data correspondence, not a hatch gameplay observation.
+
+V09's selected program has no draws. Its negative-level cases retain the signed level without a lower floor; positive levels 5, 7, 8, 25, 26 and 100 yield 5, 5, 6, 11, 12 and 12. The INT_MIN case still evaluates the wrapped false-branch arithmetic but selects INT_MIN; the divisor is the nonzero literal 3. The isolated count stage stops before scheduling, so it claims neither placement geometry nor a creator/death result. All five full questions remain open. Self-review and lint returned 0 errors and 0 warnings; fresh full review of this extension is pending.
+
+### Fresh smaller full review of hatch count, 2026-10-30
+
+The reader recomputed the complete V01–V09 contract, including every V09 signed-level case, using the behavioral contract and cited dependencies without source, implementation or gameplay inspection. Final counts: MISMATCH 0, GUESS 0, GAP 0, DISCRIM 0, GATED 11, COVERAGE 0, HARDEST 3. The 11 enumerated gate references are MGB-Q01–MGB-Q05, MGB-R05/MGB-R06, MTP-Q02, SCX-Q01, STL-Q07 and RLI-Q03. The SCX compiler producer remains outside the valid selected-bytecode evaluation assertion; no new compiler proof is inferred.
+
+| Finding | Outcome |
+|---|---|
+| HARDEST: V03 signed schedule/counters | No change: R04 and V03 retain independent success/retry/band values, signed doubled bound and exact ordered requests |
+| HARDEST: V07 ordered percentage/wrap/clamp | No change: R09 and V07 state the operand order, wrapped addition, maximum-only clamp and replacing-storage gate |
+| HARDEST: V09 compiled expression and signed extremes | No change: R04/V09 supply the exact terminated expression, pool/context, level parameter binding, signed minimum, division and exact per-case outputs; D02 keeps text and compiled correspondence separate |
+
+No behavioral edit follows this applicable full pass. The current contract meets the reader stopping rule; all five full questions and draft status remain. No gameplay rule is runtime-confirmed.
