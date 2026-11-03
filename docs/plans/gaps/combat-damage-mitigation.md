@@ -34,3 +34,48 @@ Repo files named in the comparison: `internal/content/d2legacy/lua/d2legacy/poli
 | 7 | Items 6+ of original contradiction list (life, crit, leech, poison) | n/a | Moved to combat-damage-pipeline-order spec | n/a | n/a |
 
 Tracker items from the earlier spec's section 6 (vectors DMI-V01 to DMI-V05 on owned runtime; #383 update) were process content and were dropped; runtime capture of DMI-V01 to DMI-V05 remains open as DMI-O01 above.
+
+### Current implementation assessment (2026-11-02)
+
+Read against main `7dcf7da5c29c1cdd9dc0ba347be6ea0742b2c21e` for the proposed
+[physical-ordering plan](../combat-damage-mitigation.md). This assessment supersedes
+historical implementation claims above where they disagree. It changes no behavioral
+rule, evidence label or observation gate.
+
+| Rule | Current production owner and finding | Proposed disposition |
+|---|---|---|
+| DMI-R01 | `policy/damage.lua:resolve` passes `monster ~= nil`; `policy/mitigation.lua:apply` has no five-class hireling exclusion. | Deferred, not evidence-gated. |
+| DMI-R02 | `components/shared.lua` exposes `physical_reduction_raw`; `systems/derived_stats.lua` resolves that raw value from existing stat sources. There is no whole-stat-34 conversion, magic reduction or reductionScale here. | Supply 1280 raw for V01's 5 whole points; preserve existing units. |
+| DMI-R03 | `damage.resolve` calls per-channel mitigation directly; these functions provide no event-11 dispatch. | Deferred. |
+| DMI-R04 | These functions take no class flags/count and perform no undead/demon classification. | Deferred. |
+| DMI-R05 | No bypass flags are consumed by these functions. | Deferred. |
+| DMI-R06 | Physical currently computes `max(0, floor(raw*(100-r)/100) - physical_reduction_raw)`. V01 therefore returns 2560 instead of 2880. Initial negative bundles are rejected; negative post-reduction values are clipped. | Correct physical flat-before-percent order only; retain final clamp as an explicitly incomplete signed-record boundary. |
+| DMI-R07 | Physical resistance is clamped to [-100,100], including players. Elemental maximum fields are absolute effective caps, initialized/derived with base 75, not raw original max-resist bonus stats. `systems/derived_stats.lua` already applies difficulty penalties to player elemental resistance, so the historical assertion that penalties are simply missing is stale. Hireling penalty, pierce, magic player resistance and sanctuary still need work. | Preserve selection and existing producers; do not add 75 or apply a second difficulty penalty. |
+| DMI-R08 | `policy/damage.lua` applies fire-percent absorb after channel mitigation with cap 100; no other percent/flat absorb inputs are consumed here. | Deferred; retain current behavior in this slice. |
+| DMI-R09 | `mitigation.lua` uses `math.floor(value*(100-resistance)/100)`, not NRF-R05's signed/overflow/divide-first implementation. | V01's positive narrow arithmetic agrees; general arithmetic remains deferred. |
+| DMI-R10 | `mitigation.lua` has no RNG dependency/call; `damage.resolve` has no draw although the separate `damage.roll` function does. | Preserve this structure; full original-seed assertion coverage remains deferred. |
+
+Existing focused mitigation/damage Lua suites passed before any implementation edit.
+That baseline does not prove the new ordering: current tests explicitly expect 730 for
+raw 1000, reduction 20 and resistance 25, whereas the proposed order gives 735.
+The mixed-channel fixture likewise expects physical 730, fire 500, total 1230 and
+remaining health 3770; after this correction those become 735, 500, 1235 and 3765.
+No rule or implementation gap is marked closed by preparing the plan.
+
+### Delivered physical ordering subset (2026-11-02, uncommitted)
+
+The working-tree change over `7dcf7da5c29c1cdd9dc0ba347be6ea0742b2c21e` corrects the
+physical branch's flat-before-resistance order (DMI-R06 supplied positive subset).
+DMI-V01's raw physical assertion now returns 2880 for raw input 5120, raw reduction
+1280 and selected resistance 25. The unchanged component already stores raw reduction;
+no additional shift is applied. Existing mixed-channel expectations now have physical
+735, unchanged fire 500, total 1235 and remaining raw monster health 3765.
+The new authority test covers stat-source inputs, the production resolver and restored
+pre-damage continuation. [The plan's delivery record](../combat-damage-mitigation.md#delivered-working-tree-change-and-validation-2026-11-02)
+records actual checks and remaining validation limits. The full repository gate is not green.
+
+This closes only the selected ordering difference in historical implementation row 1.
+DMI-R06's complete signed record/loop behavior remains incomplete, and every other
+implementation/evidence gap above remains open. In particular, the final nonnegative
+clamp, current caps, overflow handling and missing original-entry inputs are retained.
+This is not full-spec acceptance, original-game runtime confirmation or issue closure.
