@@ -15,6 +15,7 @@ func TestReadFramePreservesConsecutiveMessages(t *testing.T) {
 	type message struct {
 		Text string `json:"text"`
 	}
+
 	for _, size := range []struct {
 		name          string
 		first, second int
@@ -28,27 +29,33 @@ func TestReadFramePreservesConsecutiveMessages(t *testing.T) {
 			if fragmented {
 				name = size.name + "/fragmented"
 			}
+
 			t.Run(name, func(t *testing.T) {
 				want := []message{{strings.Repeat("a", size.first)}, {strings.Repeat("b", size.second)}, {"last"}}
+
 				var wire bytes.Buffer
 				for _, value := range want {
 					if err := writeFrame(&wire, value); err != nil {
 						t.Fatal(err)
 					}
 				}
+
 				var reader io.Reader = &wire
 				if fragmented {
 					reader = iotest.OneByteReader(reader)
 				}
+
 				for index, expected := range want {
 					var got message
 					if err := readFrame(reader, &got); err != nil {
 						t.Fatalf("frame %d: %v", index+1, err)
 					}
+
 					if got != expected {
 						t.Fatalf("frame %d contents differ", index+1)
 					}
 				}
+
 				if err := readFrame(reader, &message{}); !errors.Is(err, io.EOF) {
 					t.Fatalf("end of stream: got %v, want EOF", err)
 				}
@@ -73,10 +80,13 @@ func TestReadFrameRejectsMalformedSuccessor(t *testing.T) {
 			if err := writeFrame(&wire, request{Operation: operationLeave}); err != nil {
 				t.Fatal(err)
 			}
+
 			wire.Write(suffix.wire)
+
 			if err := readFrame(&wire, &request{}); err != nil {
 				t.Fatal(err)
 			}
+
 			if err := readFrame(&wire, &request{}); !errors.Is(err, suffix.want) {
 				t.Fatalf("successor: got %v, want %v", err, suffix.want)
 			}
