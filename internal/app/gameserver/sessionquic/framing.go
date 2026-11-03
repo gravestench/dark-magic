@@ -1,7 +1,6 @@
 package sessionquic
 
 import (
-	"bufio"
 	"crypto/tls"
 	"encoding/binary"
 	"encoding/json"
@@ -88,10 +87,8 @@ func writeAll(writer io.Writer, data []byte) error {
 
 // readFrame bounds the declared body, rejects unknown fields, and requires exactly one complete JSON value.
 func readFrame(reader io.Reader, value any) error {
-	buffered := bufio.NewReaderSize(reader, 4<<10)
-
 	var size [4]byte
-	if _, err := io.ReadFull(buffered, size[:]); err != nil {
+	if _, err := io.ReadFull(reader, size[:]); err != nil {
 		return err
 	}
 
@@ -100,7 +97,9 @@ func readFrame(reader io.Reader, value any) error {
 		return ErrWire
 	}
 
-	limited := &io.LimitedReader{R: buffered, N: int64(length)}
+	// Bound the decoder's read-ahead to this frame. A per-call buffered reader
+	// could consume the next frame and discard its bytes when this call returns.
+	limited := &io.LimitedReader{R: reader, N: int64(length)}
 	decoder := json.NewDecoder(limited)
 	decoder.DisallowUnknownFields()
 
