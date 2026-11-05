@@ -167,7 +167,7 @@ func (source *MovementSource) applyFocusedInput(target *MoveTarget) (int, int, *
 	}
 
 	// Keyboard motion explicitly replaces click-to-move so an old route cannot resume after key release.
-	source.control.clearMoveTarget()
+	source.control.ClearMoveTarget()
 
 	return x, y, nil
 }

@@ -542,13 +542,13 @@ func TestD2LegacyPresentationAssetCoverageBaseline(t *testing.T) {
 	// The session resistance penalty adds DifficultyLevels.txt to the
 	// code-owned authoritative tables. It is game-rule data, not a presentation
 	// dependency.
-	// The divergent skill-ID fixture names the selected Sorceress icon sheet;
-	// this adds one static code-owned path under the existing spells prefix.
+	// The monster-loot and divergent skill-ID fixtures add static references
+	// under the existing item and spell presentation prefixes.
 	// Decoded vendor/inventory fixtures name invbsc.dc6, invhp1.dc6 and invwps.dc6 as
 	// code-owned test references. Production item pictures remain selected from
 	// records under the existing dynamic data/global/items/ prefix; none of these paths
 	// is promoted to manifest/catalog/structural-fixture verification.
-	const auditedFingerprint = "ba995ca485e0855a31ae530aaf10a7acf9315035012963b9c0d3e2f39cffabba"
+	const auditedFingerprint = "273fd8828455e812ee0e9a4ac59a2fec3585f08735147db950d2a317c73d2989"
 	if coverage.Fingerprint != auditedFingerprint {
 		t.Fatalf(
 			"presentation asset coverage changed: got %s, want audited %s; "+

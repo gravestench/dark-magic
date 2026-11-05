@@ -19,6 +19,7 @@ function M.assign_skill(side, skill_id)
 end
 
 function M.request_skill(side, x, y, target_id)
+    if side == "left" then movement.cancel_move() end
     intents.submit("player.use_skill", {
         side = side,
         target_x = x,

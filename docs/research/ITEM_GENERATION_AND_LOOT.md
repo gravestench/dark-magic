@@ -8,6 +8,37 @@ NoDrop and records that context on durable death facts. The exact expansion
 what differs from recovered behavior, and which missing semantics should become
 bounded follow-up work rather than a replacement loot engine.
 
+## Supported ground-item journey
+
+Committed monster-death drops with resolved positive-size weapon, armor or
+non-gold Misc bases now materialize through `d2legacy.items.entity`. The bridge consumes the
+already rolled facts once. It does not reroll treasure, quality or affixes.
+Generated items use one registered session-owned source layout until an
+admitted healthy active player picks them up. Killer departure therefore does
+not delete unclaimed generated loot. Pickup checks active same-level spatial
+reach, a clear line and destination capacity before transferring the exact item.
+
+`TestNaturalCombatLootPickup` uses owned records and the production generated
+entry world for potion, equipment and empty-roll cases. It also covers killer
+departure and recovery-checkpoint continuation. Lua controls cover shared reach
+refusals, racing/repeated pickup, modifier identity and bootstrap reconstruction.
+These are Dark Magic behavior checks, not retail fidelity measurements.
+
+Rolled stats and effects remain generation facts, not activated item modifiers.
+Currency, specialized item behavior, timed cleanup and durable save import
+remain outside this bridge. Imported player possessions retain the existing
+player-departure lifetime. Generated IDs combine death tick, monster ECS identity
+and drop index within the session. Trusted authored setup must not forge that
+reserved `loot:` namespace.
+
+The recovered 1.10f [TC drop path](https://github.com/ThePhrozenKeep/D2MOO/blob/1fe7444dc2cfb6bf1c2934b8901e5699a4c36913/source/D2Game/src/ITEMS/Items.cpp#L2064-L2568)
+supports the selection-to-ground-item boundary. Its free-coordinate search is
+not implemented here. The [ordinary pickup path](https://github.com/ThePhrozenKeep/D2MOO/blob/1fe7444dc2cfb6bf1c2934b8901e5699a4c36913/source/D2Game/src/ITEMS/ItemMode.cpp#L1108-L1278)
+transfers the existing ground item and leaves it on the ground when placement
+fails. Dark Magic currently selects the first free inventory rectangle only.
+Its 3.5-subtile reach and clear-line admission are engine policy, not a claim of
+native distance arithmetic, auto-equipping, auto-belting or stack merging.
+
 Read with:
 
 - [ITEM_SYSTEM.md](ITEM_SYSTEM.md)
@@ -336,36 +367,22 @@ The reliable architectural fact is that **item type can select a specialized mat
 
 The original drop path searches for free coordinates near the source unit using collision, then creates a targetable on-ground item with world collision/path state.
 
-Dark Magic should integrate generated item instances with `ContainerWorld` and semantic world targeting. A loot roll is not complete merely because it returned an item code.
+Dark Magic places supported generated item instances in authoritative `world` placement with semantic targeting. A loot roll is not complete merely because it returned an item code.
 
 Current executable boundary: an imported, player-layout-owned `world` item can
 now carry authoritative act/level/subtile state, resolve generated-room
 residency after the plan arrives, deactivate/checkpoint/reactivate on the same
 ECS entity, and remove/reacquire spatial components through pickup/re-drop
-placement transitions. Admitted pickup now validates a living active actor,
-same act/level, 3.5-subtile reach, clear line, an empty cursor, destination-local
-identity and backpack fit before transferring the exact entity. Full durable IDs
-remain distinct from bounded public targets, including after late replay and
-checkpoint restoration. Public ground facts contain presentation, not private
-item authority. Optional generation/origin facts are retained without activating
-rolled effects; a neutral session layout remains independent of player departure.
+placement transitions. Supported death results also materialize public items
+through the shared constructor. Ordinary pickup validates living/active ownership,
+range, same act/level, clear line and destination capacity before transfer.
+Generated items remain session-owned through killer departure.
 
-This is authoritative/replicated mechanism evidence, not ordinary pointer or
-natural combat proof. Monster death still records rolls without materializing
-public items. Legal drop-point search, allocation/reservation and the target
-1.14d ground lifetime described below remain outside this boundary. The recovered
-1.10f [pickup path](https://github.com/ThePhrozenKeep/D2MOO/blob/1fe7444dc2cfb6bf1c2934b8901e5699a4c36913/source/D2Game/src/ITEMS/ItemMode.cpp#L1108-L1278)
-transfers an existing ground item and refuses failed placement. Dark Magic's
-radius and backpack-only destination do not establish native distance or automatic
-belt/equipment/stack behavior.
+The bridge places items at the source unit's floored position. Legal drop-point
+search, allocation/reservation and the target 1.14d ground lifetime described
+below remain unimplemented fidelity boundaries.
 
-Game World renders existing ground items and routes their selected targets through
-the normal approach/pickup intent. Hover alone submits no pickup or skill, and
-retained art is removed on pickup or world teardown. These screen/module and decoded
-inventory checks do not supply a monster-death producer or a fresh running-client
-observation.
-
-Needed transaction:
+Target complete placement path:
 
 ```text
 loot materialization

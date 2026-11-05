@@ -11,6 +11,7 @@ type PlayerIntentController interface {
 	SetRunning(bool)
 	SetMoveTargetWithRadius(float64, float64, float64) error
 	HasMoveTarget() bool
+	ClearMoveTarget()
 }
 
 // PlayerControlModule accepts local presentation intents without granting Lua
@@ -32,6 +33,10 @@ func PlayerControlModule(controller PlayerIntentController) Module {
 				"movement_pending": commandHelp(
 					"engine.player.movement_pending()",
 					"Report whether a pointer path target remains active.",
+				),
+				"cancel_move": commandHelp(
+					"engine.player.cancel_move()",
+					"End the pending pointer route when another action takes over.",
 				),
 			},
 		),
@@ -58,6 +63,7 @@ func PlayerControlModule(controller PlayerIntentController) Module {
 					return 0
 				},
 				"movement_pending": func(state *lua.LState) int { state.Push(lua.LBool(controller.HasMoveTarget())); return 1 },
+				"cancel_move":      func(state *lua.LState) int { controller.ClearMoveTarget(); return 0 },
 			})
 			module.RawSetString("api", lua.LNumber(1))
 			state.Push(module)
