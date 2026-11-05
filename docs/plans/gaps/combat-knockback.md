@@ -20,6 +20,86 @@ Evidence: [public companion](../../research/spec-evidence/combat-knockback.md)
 
 ## Implementation gaps
 
+### Task 2 local delivery — 2026-11-05
+
+On `codex/378-missile-knockback-chance` from merged main `de6f9088`, `policy/knockback.lua:missile(context, ops)` now implements the supplied numeric state-54 guard, zero-byte guard, one real Rand(100), strict comparison and bit-preserving result OR. Adjacent `knockback_test.lua` executes the fourteen cases listed below; it first failed before the helper existed, then passed together with all eleven numeric cases. Two additional KNB-R02a preservation checks cover successful draws with result 4 becoming 12 and result 12 remaining 12; these are regression invariants, not new original-game observations. The focused command was `go test -count=1 -v ./internal/mod/d2legacy -run '^TestLuaSuites$/^d2legacy/policy/(knockback|numeric)$'`. Tests assert full result words, exact caller-owned seed mutation, unchanged non-owning seeds/fields and ordered real draw logs. These are local static 1.13c assertions, not observations.
+
+This partially delivers KNB-R02a, the supplied-result portion of R02b and their local R10a draw assertions. Actual state lookup/eligibility, durable seed ownership, the production missile transaction and physical movement remain absent at this boundary. V12b/c remain unimplemented. Existing projectile, damage, generic forced motion, named RNG and checkpoint code are unchanged. #378 remains open. All open evidence gaps below the spec remain open; no evidence label is promoted. The readiness audit below records the source/dependency comparison leading to this slice; its Task 2 implementation absence is superseded by this delivery note.
+### Readiness audit before Task 2 — 2026-11-05
+
+Baseline: branch `codex/675-numeric-foundation`, commit `85c56f14e3f62cf54439c5fb4ad9fabe565f963f`, rebased onto main `180c9f9bf08dc1bb429e258f8ba91895f4063d0b`. [PR #676](https://github.com/gravestench/dark-magic/pull/676) merged on 2026-11-05 as `de6f9088225f9a022b3b4d9bd50d07e61a6d858c`, after a clean independent review and fresh verification of all five CI jobs on that commit. This refresh is source/tracker inspection and documentation validation, not new code-test execution or original-game observation. The open evidence gaps above are unchanged.
+
+The [refreshed implementation plan](../combat-knockback.md) recommends **Task 2 alone: missile chance with a supplied state-54 predicate result**. The approved Task 2 execution uses fresh branch `codex/378-missile-knockback-chance` from merged main `de6f9088`. This slice needs no new broad foundation: it uses the delivered integer capability and real numeric Rand, with supplied chance/result/seed/state inputs. It does not implement the state getter, durable seed ownership, projectile integration or physical motion. Do not close #378 for this partial delivery.
+
+Paths below are relative to `internal/content/d2legacy/lua/d2legacy/` unless stated otherwise. The initial audit below is retained for history; its blanket prerequisite holds are superseded by the assertion-specific dispositions here.
+
+| Rule/sub-id | Current implementation/dependency finding | Refreshed disposition |
+|---|---|---|
+| KNB-R01 | No item callback policy. `policy/stat_resolution.lua:resolve` is not the selected-array/minimum getter. Monster decoding still collapses size flags. | Task 1 can accept supplied stat reads and independent size flags. Real RLI getter, lossless data publication and automatic item binding remain production dependencies; Q01/Q02 stay open. |
+| KNB-R02a | Raw u8 `knockback_value` is preserved by missile decoding/spawn; `systems/projectile.lua:apply_hit` does not perform the legacy chance stage. `policy/numeric.lua:rand` now supplies exact arithmetic. | Task 2 is locally ready after the numeric PR lands. Use real Rand(100), exact seed words and strict comparison. |
+| KNB-R02b | No legacy state-54 chance guard in the inspected contact/policy path. Named timed states do not establish RLI bitset semantics. | Task 2 accepts an already-computed RLI-shaped result: numeric 0 absent, nonzero present. Explicit zero comparison is required because Lua 0 is truthy. Actual HasState lookup/eligibility remains unaccepted. |
+| KNB-R03b | Contact filtering does not establish source-record/town permission at reaction entry. | Task 3 consumes supplied facts; real record binding remains separate. |
+| KNB-R05a | No reached lethal/state-54 SetState(92,1) reaction branch. | Task 3 can assert the supplied request only; Q11 bookkeeping/update effects remain gated. |
+| KNB-R03a | No matching common reaction kind/mode dispatch in the inspected policy path. | Task 3 consumes shared selection; subtype equivalence remains Q08. |
+| KNB-R06a | mKB-derived `mode_supported` exists; the legacy u16 KB-to-GH rewrite does not. | Task 3 local rewrite, preserving current profiles/callers. |
+| KNB-R06c | `data/monster.lua` publishes a BaseId name, not a verified numeric-base-78 binding. | Supplied valid-base/state facts permit local conversion tests; production numeric binding is still required. |
+| KNB-R04 | Immediate health/lethal facts and separate death lifecycle are not HRC reaction priorities. | Task 3 still needs the shared HRC selector; do not duplicate it inside knockback. |
+| KNB-R06b | No complete legacy result-word selector in the inspected damage/projectile policies. | Same shared HRC dependency as R04. |
+| KNB-R06d | Generic `gameplay/systems/forced_motion.lua:admit` is not the monster type-8 start handler. | Task 5 request-only assertions can supply preparation/planner operations. Full task composes Tasks 3/4; V13c still requires real RLI equal-mode behavior. Q06/Q07 effects remain gated. |
+| KNB-R07a | No legacy distance-byte/S calculation in generic forced motion; exact arithmetic is now available. | Tasks 4/5 can use supplied records/path facts. No reinterpretation of existing movement distance. |
+| KNB-R08 | Existing admission uses floating scale; numeric foundation now has wrapping operations and supplied-path integer extraction. | Task 4 is another independent local candidate, using supplied path/source/clip inputs. Preserve generic movement. |
+| KNB-R09a | Existing persistent motion representation is not the supplied type-8 path stage. | Task 4 can mutate a supplied path fixture; actual durable path ownership/binding remains a separate integration dependency. |
+| KNB-R09b | Existing movement outcomes do not establish retail collision or subsequent motion. | Supplied clip writes are locally testable; actual endpoint/motion claims remain Q07/Q10. |
+| KNB-R10a | `policy/numeric.lua:step/rand/rand_mask` and `engine.integer/v1` are delivered in #676. Named SplitMix64 streams and existing callers are preserved. | Local Task 1/2/5 draws use the real numeric module. Durable attacker/missile/defender pairs and complete callee RNG totals are not delivered; Q06 remains. |
+| KNB-R10b | `apply_hit` still uses current damage resolution/events, without the full SBA/MHD/DPO stage chain. | Task 6 remains blocked on the real shared transaction and durable result/seed/path owners. No fake test-only pipeline. |
+| KNB-R10c | No new compiled item registration/timing evidence or production binding. | Q01/Q02 unchanged; not needed for Task 2. |
+| KNB-R10d | No complete shared post-application GH-veto/reaction chain. | Task 6 consumes HRC/MHD/DPO; timing and complete integration remain outside the next slice. |
+
+The smallest next acceptance set is **seven vector IDs / fourteen cases**: V04, V05, V06a/b, V07a/b, V12a/d, V17 (85/86/100/255), V18a/b. V12b/c are not included. Supply the state-54 active-mask fixture `0x00400000` only as an input result, not as proof of its producer. Assert exact missile seed continuation, unchanged non-owning seeds, draw counts, preserved result bits and no draw for zero chance or active state. Existing `band_u32` plus conditional addition of bit 8 is sufficient; no integer API expansion is needed.
+
+Task 4 endpoint arithmetic and Task 1 supplied-stat callback are also locally eligible, but Task 2 has fewer guards/dependencies and forms one complete callable policy. Task 3's shared selector, Task 5's composed/equal-mode cases and Task 6's real transaction remain later delivery work. The existing 1.14d tests, generic forced motion, named RNG streams and checkpoint formats must retain their behavior. No child issue, code change, capture or tracker update was made by this audit.
+
+### Initial source audit — 2026-11-03
+
+Baseline: local main `7e5e0138ee448c5ce42b3b3ca8b6ca2af7cd63b0`, read in the isolated knockback-plan worktree. This is source inspection, not test execution or original-game observation. The [implementation plan](../combat-knockback.md) consumes the approved spec. Evidence gates above remain unchanged.
+
+Paths below are relative to `internal/content/d2legacy/lua/d2legacy/` unless stated otherwise.
+
+| Rule/sub-id | Current owner / code inspected | Current behavior and implementation gap | Plan disposition |
+|---|---|---|---|
+| KNB-R01 | `data/monster.lua:knockback_size`, `commands/spawn_monster.lua`, `components/shared.lua`; `policy/stat_resolution.lua:resolve` | Monster decoder collapses size to one string and rejects both flags; component stores mode_supported/size_class. No guarded supplied-stat item callback exists. Percentage stat resolution is not RLI's selected-array/minimum getter. No dKB decision input is present in the current decoded profile; historical G4 is stale. | Task 1; prerequisite lossless facts/stat getter; retain compiled binding/timing gate |
+| KNB-R02a | `data/missile_skills.lua`, `gameplay/projectile_spawn.lua`, `components/skill_actions.lua`, `systems/projectile.lua:apply_hit` | Raw u8 KnockBack becomes knockback_value and reaches projectile state; the contact path does not interpret it as a chance or use a missile seed pair. | Task 2; exact NRF prerequisite |
+| KNB-R02b | Same projectile contact path | No knockback chance-stage state-54 guard exists. Existing on-hit status behavior is not this chance gate. | Task 2; shared state predicate |
+| KNB-R03b | `systems/projectile.lua:target_snapshot/first_contact/apply_hit` | Same-act/level contact filtering exists, not reaction-entry town/source-record permission. No detached inTown shortcut is equivalent. | Task 3 at supplied reaction entry |
+| KNB-R05a | `policy/damage.lua:resolve`, current combat/death systems | Health/lethal fact handling exists; no reached lethal state-54 SetState(92,1) knockback reaction branch exists. | Task 3 local request; Q11 effects gated |
+| KNB-R03a | Projectile target_snapshot and current monster/player health paths | Contact target categories are not the specified reaction kind/mode dispatch; no common null/type/mode-0/12 branch at a knockback entry exists. | Task 3; subtype equivalence stays Q08 |
+| KNB-R06a | `data/monster.lua`, `components/shared.lua`, current damage result | mKB-derived mode_supported exists; no u16 KB-to-GH result rewrite exists. | Task 3 |
+| KNB-R06c | Same monster data and current damage result | No fallback-then-valid-base-78/freeze conversion exists; current profile is insufficient to infer valid base lookup. | Task 3; supplied lossless base/state facts |
+| KNB-R04 | `policy/damage.lua:resolve`, `systems/player_death.lua` | Immediate health/lethal facts and separate death lifecycle exist; these are not the shared HRC player/monster selection priorities. | Task 3 consumes HRC; does not replace death lifecycle |
+| KNB-R06b | `policy/damage.lua`, `systems/projectile.lua`, current melee systems | No common legacy result-word reaction selector; current damage_result.lethal is not a replacement for hit/lethal/GH/KB/block/avoidance flags. | Task 3 consumes shared selector, not a knockback-local duplicate |
+| KNB-R06d | `gameplay/systems/forced_motion.lua:admit` | Generic request admission takes distance/speed and starts a spatial transaction; it does not implement monster mGH/mKB start guards, type-8 writes or ordered ignored-return calls. | Task 5 local supplied-operation start; full effects gated |
+| KNB-R07a | forced_motion.admit; `components/shared.lua` request schema | Request distance is f64; no path distance byte with 5/10 and unsigned S=(B>>1)+1 boundary exists. | Tasks 4/5; do not change current movement distance interpretation |
+| KNB-R08 | forced_motion.admit | Uses floating scale=distance/major and continuous positions. No wrapped i32 endpoint calculation, source-kind width distinction or explicit-u16 destination branch exists. | Task 4 new policy over prerequisite path facts; current generic system unchanged |
+| KNB-R09a | forced_motion.admit and movement transaction owner | Current target_x/target_y/active request representation lacks requested first waypoint, previous count and planned/reference fields of the supplied stage. Actual progress is separately checkpointed. | Task 4 over shared path owner, never a second persistent path store |
+| KNB-R09b | generic forced motion/movement | Existing completed/partial/blocked/invalid/replaced outcomes are Dark Magic movement policy; no code-only claim that these equal original type-8 collision/motion is valid. | Gated Q07; preserve behavior/tests |
+| KNB-R10a | `policy/damage.lua:roll`; Go `internal/game/simulation/random.go:Stream/RandomStreams` | Current authority_random uses named SplitMix64 streams. It has neither the original attacker/missile/defender pair ownership nor the exact NRF draw sequence required here. | Tasks 1/2/5 require shared numeric prerequisite; never replace global RNG from knockback |
+| KNB-R10b | `systems/projectile.lua:apply_hit` | Current path resolves immediate damage and emits facts; no complete SBA/MHD/DPO shared stages exist for exact chance-before-block/avoidance/multiplier/application/reaction acceptance. | Task 6 blocked on shared transaction delivery |
+| KNB-R10c | Existing property/stat/data flow and item event evidence | No verified automatic compiled item registration/timing supplied by current knockback code; text fields alone cannot enable emission. | Gated Q01/Q02 |
+| KNB-R10d | Current projectile/damage path | No common conditional GH-veto stage reached after application; legacy defender draw order cannot be reproduced by adding one arbitrary random call. | Task 6 consumes HRC/MHD/DPO; item timing stays gated |
+
+### Prerequisite and test findings
+
+- `docs/plans/` has no direct implementation-plan files on the audited base, including no 1.13c retarget plan. Shared numeric/record gap files explicitly lack a current implementation comparison. These are missing delivery prerequisites; this audit does not approve or implement their specs. Planning refinement on 2026-11-03: the new [bounded retarget plan](../lod-113c-retarget.md) reuses existing module/ECS test profiles without admitting a playable 1.13c target. Local KNB vectors do not require a product migration. Exact numeric/stat/selector prerequisites still apply where consumed; shared production transaction and durable-state integration remain later gates. The audited base and original-game evidence are unchanged.
+- Current monster facts are published from `commands/spawn_monster.lua` and `bootstrap/population.lua`; summons/traps consume the same component. Do not broaden #378 into a cross-family schema migration. The data owner must supply lossless mGH/mKB, independent size flags, valid BaseId and source-record facts first.
+- Current `data/monster_catalog_test.lua` and `commands/spawn_monster_scaling_test.lua` assert collapsed size/mode facts. The simultaneous-flags callback vector is not evidence that current decoder rejection is already fixed.
+- `data/missile_skills_test.lua`, Go `internal/mod/d2legacy/missile_skill_real_test.go` and `adapter/movement/catalog_real_test.go` cover raw fields/owned Expansion 1.14d rows. Preserve their patch attribution.
+- Existing generic movement assertions in `gameplay/systems/movement_test.lua`, `systems/player_death_test.lua` and `systems/point_movement_skill_test.lua` cover forced-motion progress/replacement/interruption. They remain valid and outside a supplied integer endpoint stage; do not rewrite them to manufacture retail parity.
+- Go `internal/mod/d2legacy/lua_suite_test.go:TestLuaSuites` discovers adjacent `*_test.lua` modules, using suite names such as `d2legacy/policy/knockback`. New tests can reuse this runner; no new probe/command is required.
+- Current `internal/dev/tools/knockback_probe` and research focus on 1.14d. No probe changes, captures or 1.13c observations were performed in this planning task.
+
+### Historical extraction (retained, not current findings)
+
+
 The following comparison is preserved from the earlier extraction. It is historical,
 not a current implementation audit. Its wording/findings remain unchanged, including
 claims superseded by current evidence. Current original-game conclusions are the spec
