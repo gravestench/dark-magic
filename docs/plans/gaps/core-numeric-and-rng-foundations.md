@@ -37,8 +37,53 @@ they affect. No attempt, date or boundary changed.
 | Player seed producer | outside-boundary | NRF-Q08, NRF-R12a, NRF-V16 | None for creation's player-skip assertion; initial/default/loaded player seed remains unverified | Player-load producer and reseeding routes | 2026-10-14: searched the original D2Game for calls to the seed-initialization import; inspected candidates `0x11490`, `0x101E0`, `0x104F0` and `0xB9A0`; `0x11490` is item creation, no complete player-load root found | Trace actual player load/init to its seed writes |
 | Gameplay confirmation | observation | NRF-Q09, NRF-O01 to NRF-O03; verified local rules and their vectors | Runtime-confirmation claims only; static/supplied-input assertions remain eligible | Valid matching observations of the stated rule/vector cases | 2026-10-14: retained prior observation procedures and reviewed recorded idle/layout/table/global reads; no traces/actions/memory writes performed | Run a separately authorized gameplay/helper observation campaign and record actual matching coverage |
 
-No implementation comparison was requested; this file contains evidence gaps only.
 
 ## Publication review (2026-10-23)
 
 A fresh blind review found no new behavioral or integration gap beyond the NRF-Q01–NRF-Q09 rows above. NRF-V05(g)'s supplied clock providers distinguish the local counter-before-sampling order; they do not identify an actual no-parent gameplay creator or close the incoming-seed, callback, animation, live-rate or observation gates. No 1.14d comparison was performed.
+## Implementation gaps
+
+### Current audit — 2026-11-03
+
+Baseline: local main `7e5e0138ee448c5ce42b3b3ca8b6ca2af7cd63b0`, read in the knockback-plan worktree. This is a source comparison for the [minimum numeric plan](../core-numeric-and-rng-foundations.md), not a test run or new original-game investigation. Open evidence gaps above are unchanged. Verified-but-deferred rules are not recategorized as unresolved.
+
+| Rule/sub-id | Current repository comparison | Minimum-plan disposition |
+|---|---|---|
+| NRF-R01 | `internal/game/simulation/random.go:Stream` implements SplitMix64; `internal/runtime/lua/authority_rng_module.go` exposes named streams, not two-word LCG seeds. No shared NRF step exists. | Implement Lua-owned multiplier/step using generic exact native multiply/add |
+| NRF-R02 | Current authority_random rejects nonpositive limits, uses registered streams/rejection sampling, and has no supplied-pair RandMask. `deterministic_module.go` hashes a keyed input instead. Neither is interchangeable with the spec. | Implement Rand/RandMask beside existing APIs; defer RandInRange |
+| NRF-R03a | Named streams derive from world seed and purpose. No shared original child/unit seed initializer is established by these owners. | Deferred; supplied existing pairs suffice |
+| NRF-R03b | Existing stream construction is not original InitTimerState/InitSeed ordering. | Deferred |
+| NRF-R03c | No need to consume wall clocks/counters for bounded KNB fixtures; current stream constructor is not this operation. | Deferred verified supplied-clock arithmetic; Q01 creator still gated |
+| NRF-R03d | Runtime config Seed initializes named streams, not the original supplied game-seed/resource request sequence. | Deferred; Q06 integration still gated |
+| NRF-R04a | Current melee/damage/loot policies call purpose-named authority_random streams. A pure explicit-pair API can preserve argument isolation but cannot prove an original draw-site binding by itself. | Implement primitive API; leave KNB/HRC consumers to enforce their site ownership; other rows deferred |
+| NRF-R04b | No corresponding shared original monster elemental/searcher seed-site implementation was established by the inspected random owners. | Deferred; Q05 remains gated |
+| NRF-R04c | Dispatcher inspection cannot establish all callbacks' RNG totals. Current named-stream APIs do not supply the missing evidence. | Gated Q04 |
+| NRF-R05 | `policy/action_rate.lua:trunc_div` is local and restricted to positive divisors; `policy/stat_resolution.lua` uses floor. Neither is the full ordered mulDiv contract. | Defer full mulDiv; implement generic wrap/division only for KNB notation |
+| NRF-R06a | Local action-rate truncation and floor-based stat resolution do not establish all percent idioms. | Deferred; no caller migration |
+| NRF-R06b | No shared unsigned multiply-high /100 policy identified in inspected numeric/RNG owners. | Deferred; do not add unused percent policy |
+| NRF-R07 | `policy/stat_resolution.lua:resolve` resolves flat/percentage sources; it is not original diminishing math over RLI selected arrays. | Deferred; no new RLI dependency for this slice |
+| NRF-R08a | Current raw damage uses 8.8 quantities while movement uses f64 positions; converting those stores is unnecessary for supplied path words. | Consume supplied 16.16 notation only; resource/storage migration deferred |
+| NRF-R08b | Existing generic velocity/forced-motion data does not establish this original speed/marker setter. | Deferred |
+| NRF-R09a | No frame-rate change is needed by pure local vector calls. Existing fixed-tick behavior is not migrated by this plan. | Deferred |
+| NRF-R09b | Source inspection here does not resolve the original later live-rate producer. | Gated Q02 |
+| NRF-R10a | KNB local endpoints accept path units directly; current forced-motion floats are not evidence of this unusual negative tile conversion. | Units documented; converters deferred |
+| NRF-R10b | No supplied original-path high-word policy helper in inspected module/runtime arithmetic owners. World-space entity positions are a different representation. | Implement supplied-table getter through exact generic high_u16; Q03 other producers remain gated |
+| NRF-R11a | Generic forced-motion admission normalizes a continuous ray; it is not the original acceleration/direction/fixed-point step update. | Deferred; leave movement unchanged |
+| NRF-R11b | `policy/direction.lua` contains player presentation direction choices, not proof of the complete original fixed direction table. | Deferred; Q03 remains gated |
+| NRF-R12a | Existing game Seed and monster bootstrap do not establish original unit-creation draw counts. | Deferred; Q08 player producer remains gated |
+| NRF-R12b | No original item-secondary-seed contract established by named RNG construction. | Deferred |
+| NRF-R13 | No prepared original object-animation reset branch established by inspected RNG/capability owners. | Deferred; Q07 remains gated |
+
+### Shared implementation boundaries
+
+- `internal/runtime/lua/authority_rng_module.go:maximumExactLuaInteger` documents the Lua 2^53-1 exact-integer limit. A direct `lo * 0x6AC690C5 + hi` in Lua cannot implement every u32 pair. A generic Go `engine.integer/v1` capability is planned; the multiplier and draw policy stay in Lua.
+- `internal/mod/d2legacy/runtime.go:ConfigureModuleRuntime` is already shared by module test and authority compositions. `identity.go:authoritativeCapabilityVersions` and `identity_test.go:TestAuthoritativeCapabilityIdentityRejectsCompositionDrift` require the new capability to be pinned, not hidden behind a test loader.
+- Existing ownership rules classify `internal/runtime/lua/` as a mod-neutral boundary and `d2legacy/policy/` as Diablo policy. No new random manager/store/package is required.
+- Existing named-stream independence, snapshot/restore and registration tests in `internal/game/simulation/random_test.go`, runtime RNG tests in `authority_rng_module_test.go`, and keyed-purity tests in `deterministic_module_test.go` must retain their expectations. The new capability changes normal code/recipe identity, not archive schema or compatibility policy.
+- No shared `policy/numeric.lua` or `engine.integer/v1` exists on the audited base. The plan creates them; no implementation is claimed by this audit. Broader rows above are comparisons of the relevant inspected owners, not exhaustive absence proofs across the repository.
+
+## Implementation update — issue #675
+
+The approved minimum slice is now implemented in this worktree: generic `engine.integer/v1`, Lua `numeric.step/rand/rand_mask/path_integer_position`, shared runtime composition and identity pinning, with focused tests for the selected NRF assertions and KNB scalar boundaries. Task-level red/green evidence and independent reviews are recorded in the ignored per-plan workspace; final repository verification is recorded in the implementation plan. The historical audit above still describes its explicitly named base commit.
+
+This does not change original-game evidence status, resolve any open evidence row, implement deferred verified rules, create a durable unit-seed store, or establish physical knockback/1.14d parity. Current gameplay RNG implementations and their archive formats remain unchanged.

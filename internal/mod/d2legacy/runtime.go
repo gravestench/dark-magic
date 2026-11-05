@@ -531,7 +531,7 @@ func ConfigureModuleRuntime(
 	}
 
 	for _, module := range []modruntime.Module{
-		modruntime.DeterministicModule(), modruntime.WorldgenModule(),
+		modruntime.DeterministicModule(), modruntime.WorldgenModule(), modruntime.IntegerModule(),
 		modruntime.RecordsModule(records), modruntime.AnimDataModule(animationSource),
 		modruntime.AuthorityRandomModule(random),
 		modruntime.InitialDataModule(initial), adaptermovement.RulesModule(movementCatalog),

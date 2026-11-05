@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"io/fs"
 	"reflect"
+	"slices"
 	"strings"
 	"testing"
 	"testing/fstest"
@@ -80,16 +81,23 @@ func TestAuthoritativeCapabilityIdentityRejectsCompositionDrift(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	modules := make([]string, 0, len(identity.Recipe.CapabilityVersions))
-	for name, version := range identity.Recipe.CapabilityVersions {
-		modules = append(modules, name+"/"+version)
+	if got := identity.Recipe.CapabilityVersions["engine.integer"]; got != "v1" {
+		t.Fatalf("engine.integer recipe version = %q, want v1", got)
+	}
+
+	fixture := newLuaSuiteFixture(t, content.D2Legacy())
+	modules := fixture.authority.Runtime.ModuleNames()
+	integerIndex := slices.Index(modules, "engine.integer/v1")
+	if integerIndex < 0 {
+		t.Fatal("actual runtime composition omitted engine.integer/v1")
 	}
 
 	if err := validateCapabilityIdentity(identity, modules); err != nil {
 		t.Fatal(err)
 	}
 
-	if err := validateCapabilityIdentity(identity, modules[1:]); err == nil {
+	missingInteger := slices.Delete(slices.Clone(modules), integerIndex, integerIndex+1)
+	if err := validateCapabilityIdentity(identity, missingInteger); err == nil {
 		t.Fatal("runtime missing an identity-pinned capability was accepted")
 	}
 
