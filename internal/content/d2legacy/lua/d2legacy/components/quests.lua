@@ -7,6 +7,8 @@ function M.register()
     ecs.component({name="d2legacy.quest.progress",fields={
         {name="quest_id",type="i64"},{name="stage",type="i64"},
         {name="completed",type="bool"},{name="rewarded",type="bool"},
+        {name="remaining",type="i64"},{name="unsettled_rooms",type="i64"},
+        {name="population_available",type="bool"},
     }})
     ecs.component({name="d2legacy.quest.event",fields={
         {name="kind",type="string"},{name="tick",type="i64"},

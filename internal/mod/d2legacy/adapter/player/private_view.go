@@ -8,7 +8,7 @@ import (
 	"github.com/gravestench/dark-magic/internal/game/simulation"
 )
 
-const PrivateViewVersion uint32 = 2
+const PrivateViewVersion uint32 = 3
 
 // PrivateView is owner-only state needed by connected presentation. It is an
 // explicit allowlist rather than a serialized ECS snapshot, so another
@@ -18,6 +18,17 @@ type PrivateView struct {
 	Tick        uint64          `json:"tick"`
 	Items       ItemView        `json:"items"`
 	Interaction InteractionView `json:"interaction"`
+	Quest       *QuestView      `json:"quest,omitempty"`
+}
+
+type QuestView struct {
+	QuestID             int64 `json:"quest_id"`
+	Stage               int64 `json:"stage"`
+	Completed           bool  `json:"completed"`
+	Rewarded            bool  `json:"rewarded"`
+	Remaining           int64 `json:"remaining"`
+	UnsettledRooms      int64 `json:"unsettled_rooms"`
+	PopulationAvailable bool  `json:"population_available"`
 }
 
 type ItemView struct {
@@ -111,6 +122,18 @@ func ProjectPrivateView(playerID string, checkpoint simulation.Checkpoint) (Priv
 	}
 
 	view.Interaction = projectInteraction(snapshot, playerID)
+	if identities, found := findComponent(snapshot, "d2legacy.player.identity"); found {
+		if entity, _, present := findString(identities, "player", playerID); present {
+			if quests, found := findComponent(snapshot, "d2legacy.quest.progress"); found {
+				if fields, present := findInstance(quests, entity); present {
+					view.Quest = &QuestView{QuestID: intField(fields, "quest_id"), Stage: intField(fields, "stage"),
+						Completed: boolField(fields, "completed"), Rewarded: boolField(fields, "rewarded"),
+						Remaining: intField(fields, "remaining"), UnsettledRooms: intField(fields, "unsettled_rooms"),
+						PopulationAvailable: boolField(fields, "population_available")}
+				}
+			}
+		}
+	}
 
 	return view, nil
 }

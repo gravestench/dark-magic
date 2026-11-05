@@ -25,7 +25,7 @@ function M.supported(owner)
                 and location:get("level_id") == 1
                 and ecs.get(entity, "d2legacy.player.vitals"):get("health") > 0
                 and not ecs.get(entity, "d2legacy.player.death")
-                and not (quest and (quest:get("completed") or quest:get("rewarded")))
+                and not (quest and quest:get("quest_id") ~= 1 and (quest:get("completed") or quest:get("rewarded")))
                 and stats.resolve(ecs.query({ all = { "d2legacy.stat.source" } }), entity, "item_reducedprices", 0)
                     == 0
         end

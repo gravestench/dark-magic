@@ -123,6 +123,9 @@ func registerRemoteViewSchemas(t *testing.T, engine *gameecs.Engine) {
 // field that was not intentionally exposed.
 func remoteViewTestSchemas() []akara.Schema {
 	schemas := remoteIdentityAndMonsterTestSchemas()
+	schemas = append(schemas, remoteTestSchema("d2legacy.quest.progress", append(remoteTestFields(akara.FieldInt64,
+		"quest_id", "stage", "remaining", "unsettled_rooms"), remoteTestFields(akara.FieldBool,
+		"completed", "rewarded", "population_available")...)))
 	schemas = append(schemas, remotePlayerAndPresentationTestSchemas()...)
 	schemas = append(schemas, remoteItemAndInteractionTestSchemas()...)
 	schemas = append(schemas, remoteWorldTestSchemas()...)

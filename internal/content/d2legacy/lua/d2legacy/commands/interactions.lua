@@ -118,6 +118,9 @@ function M.open(command)
     local context = interaction_context(owner)
     destroy_null_target(context)
     context:set("target", entity)
+    if string.lower(target:get("npc")) == "akara" then
+        require("d2legacy.commands.quests").claim_available(owner, command.tick)
+    end
     context:set("dialogue_page", "menu")
     context:set("dialogue_line", "")
     context:set("dialogue_revision", context:get("dialogue_revision") + 1)
