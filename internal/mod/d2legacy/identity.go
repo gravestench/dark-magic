@@ -147,6 +147,7 @@ func authoritativeCapabilityVersions() map[string]string {
 		"engine.deterministic":     "v1",
 		"engine.ecs":               "v1",
 		"engine.initial_data":      "v1",
+		"engine.integer":           "v1",
 		"engine.records":           "v1",
 		"engine.worldgen":          "v1",
 	}
