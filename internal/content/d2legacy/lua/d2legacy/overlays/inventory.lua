@@ -328,7 +328,7 @@ return {
             local column = math.floor((x - self.grid_left) / self.cell_width)
             local row = math.floor((y - self.grid_top) / self.cell_height)
             local item = item_at(self.item_snapshot, column, row)
-            if item and item.code == "tsc" and held_item(self.item_snapshot) == nil then self.items.use(item.id) end
+            if item and (item.code == "tsc" or item.code == "hp1") and held_item(self.item_snapshot) == nil then self.items.use(item.id) end
         end
         self.controls:update()
 

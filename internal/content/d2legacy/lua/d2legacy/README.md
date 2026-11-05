@@ -30,6 +30,21 @@ A new reader should be able to open one file and learn one idea. Functions stay
 short, module dependencies are explicit, and comments explain legacy meaning,
 state lifetime, units, and ordering rather than restating Lua syntax.
 
+## Minor healing potion ownership
+
+Inventory and bottom-row belt right-clicks submit `item.use`. The existing item
+command authenticates the owner and checks actor, cursor and container before
+reading hp1 through `data/consumables.lua`. An admitted use writes one registered
+`d2legacy.player.potion` rate/remaining-frame relationship and invokes the shared
+item retirement helper in the same tick. No presentation code changes life.
+`systems/potions.lua` advances the rate in pre-simulation after poison, through
+`policy/resources.lua` and the existing fractional vitals deficit. The effect
+never retains a reference to its consumed item. Departure removes its owner
+relationship before removing the player. `systems/potions_test.lua` covers
+command admission, refusal, weighted overlap, death, expiry and checkpoint
+continuation. The record/rules boundary and native timing limits are in
+[`ITEM_SYSTEM.md`](../../../../../docs/research/ITEM_SYSTEM.md#bounded-minor-healing-potion-use).
+
 ## Straight-missile skill execution order
 
 1. `manifests/skill-behavior-coverage.v1.json` admits exact skill IDs to reviewed

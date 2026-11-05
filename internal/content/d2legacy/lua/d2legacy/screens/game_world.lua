@@ -962,6 +962,7 @@ return {
                 assign_skill = player.assign_skill,
                 item_snapshot = items.snapshot,
                 move_item = items.move,
+                use_item = items.use,
             })
         end
 

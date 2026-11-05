@@ -7,10 +7,11 @@ return test.suite({
         test.case("consumed_item_picture_disappears_while_inventory_stays_open", {
             test.run(function()
                 local clicked = true
+                local cursor_x = 0.5
                 test.mock_module("engine.render/v1", {}, {})
                 test.mock_module("engine.input/v1", {
                     cursor = function()
-                        return 0.5, 0.5
+                        return cursor_x, 0.5
                     end,
                     pressed = function(action)
                         return clicked and action == "pointer_secondary"
@@ -65,7 +66,7 @@ return test.suite({
                         end,
                         use = function(id)
                             used = id
-                            snapshot.items = { kept }
+                            snapshot.items = id == "bought" and { kept } or {}
                         end,
                     },
                     controls = { update = function() end },
@@ -87,6 +88,12 @@ return test.suite({
                 overlay.update(instance)
                 test.assert(not scroll.visible, "consumed scroll picture remains visible")
                 test.assert(potion.visible, "retained potion picture disappeared")
+                clicked, cursor_x = true, 1.5
+                overlay.update(instance)
+                test.expect(used):equals("potion")
+                clicked = false
+                overlay.update(instance)
+                test.assert(not potion.visible, "consumed hp1 picture remains visible")
             end),
         }),
     },

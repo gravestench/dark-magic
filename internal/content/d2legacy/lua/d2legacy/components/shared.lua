@@ -34,6 +34,11 @@ function M.register()
         { name = "manarecoverybonus", type = "i64" },
         { name = "manarecovery", type = "i64" },
     })
+    component("d2legacy.player.potion", {
+        { name = "owner", type = "entity" },
+        { name = "rate_raw", type = "i64" },
+        { name = "remaining_ticks", type = "i64" },
+    })
     -- Resource suppression is a relationship rather than a flag embedded in
     -- one skill. Multiple future effects can own independent reasons, while
     -- the mana consumer only needs to filter targets with any active source.

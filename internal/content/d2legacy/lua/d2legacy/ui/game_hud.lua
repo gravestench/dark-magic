@@ -63,7 +63,9 @@ local function refresh_hud_items(hud)
     hud.item_snapshot = snapshot
     hud.item_held = held_item(snapshot) ~= nil
 
+    local present = {}
     for _, item in ipairs(snapshot.items) do
+        present[item.id] = true
         -- One item can need separate retained nodes for separate visual roles.
         -- Reuse a stable little drawing record by authoritative item ID.
         local drawing = hud.item_nodes[item.id] or {}
@@ -99,6 +101,12 @@ local function refresh_hud_items(hud)
             elseif item.container == "held" then
                 drawing.held_node:set_position(cursor_x, cursor_y)
             end
+        end
+    end
+    for id, drawing in pairs(hud.item_nodes) do
+        if not present[id] then
+            if drawing.belt_node then drawing.belt_node:set_visible(false) end
+            if drawing.held_node then drawing.held_node:set_visible(false) end
         end
     end
 end
@@ -518,6 +526,15 @@ function M.update(hud, stats)
     -- current-frame UI input against the resulting presentation.
     M.snapshot(hud, stats)
     refresh_hud_items(hud)
+    if hud.commands.use_item and not held_item(hud.item_snapshot) and input.pressed("pointer_secondary") then
+        local x, y = input.cursor()
+        local belt = hud.definition.belt
+        local column = math.floor((x - belt.x) / belt.cell_width)
+        if column >= 0 and column < belt.columns and y >= belt.y and y < belt.y + belt.cell_height then
+            local item = belt_item(hud.item_snapshot, column)
+            if item and item.code == "hp1" then hud.commands.use_item(item.id) end
+        end
+    end
     hud.controls:update()
 end
 

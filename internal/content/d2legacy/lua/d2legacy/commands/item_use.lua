@@ -1,4 +1,4 @@
--- Owned inventory scroll use. Pair creation and consumption share one admitted tick.
+-- Owned item use. Effects and exact-item retirement share one admitted tick.
 local commands = require("engine.authority_command/v1")
 local ecs = require("engine.ecs/v1")
 local initial = require("engine.initial_data/v1")
@@ -6,6 +6,10 @@ local state = require("engine.authority_state/v1")
 local owner = require("d2legacy.items.command_owner")
 local find = require("d2legacy.items.find")
 local consume = require("d2legacy.items.consume")
+local consumables = require("d2legacy.data.consumables")
+local potions = require("d2legacy.systems.potions")
+local random = require("engine.authority_random/v1")
+local stat_sources = require("d2legacy.gameplay.stat_sources")
 local collision = require("d2legacy.gameplay.collision")
 local population = require("d2legacy.bootstrap.population")
 local warp = require("d2legacy.systems.world_warp")
@@ -88,11 +92,13 @@ function M.apply(command)
         return
     end
     local item_entity, item = find.item(layout, command.payload.item_id)
-    if not item_entity or item:get("code") ~= "tsc" or ecs.get(item_entity, "d2legacy.world.inactive") then
+    if not item_entity or ecs.get(item_entity, "d2legacy.world.inactive") then
         return
     end
     local placement = ecs.get(item_entity, "d2legacy.item.placement")
-    if not placement or placement:get("container") ~= "inventory" then
+    local code = item:get("code")
+    if not placement or (placement:get("container") ~= "inventory"
+        and not (code == "hp1" and placement:get("container") == "belt")) then
         return
     end
     for _, candidate in ipairs(ecs.query({ all = { "d2legacy.item.identity", "d2legacy.item.placement" } })) do
@@ -108,6 +114,19 @@ function M.apply(command)
     if not entity or ecs.get(entity, "d2legacy.player.vitals"):get("health") <= 0 then
         return
     end
+    if code == "hp1" then
+        local definition = consumables.load(code)
+        if not definition then return end
+        local basis = ecs.get(entity, "d2legacy.player.stamina_progression")
+        local vitality = stat_sources.resolve(ecs.query({ all = { "d2legacy.stat.source" } }), entity,
+            "vitality", basis:get("base_vitality"))
+        vitality = math.max(math.floor(vitality), 0)
+        local amount = consumables.amount(definition, ecs.get(entity, "d2legacy.player.identity"):get("class"), vitality, random)
+        potions.apply(entity, amount, definition.duration)
+        consume.destroy(item_entity)
+        return
+    end
+    if code ~= "tsc" then return end
     local location = ecs.get(entity, "d2legacy.world.location")
     -- Only the generated Act I entry pair is supported by this slice.
     if location:get("act") ~= 1 or location:get("level_id") ~= 2 then
